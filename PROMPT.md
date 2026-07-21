@@ -25,7 +25,7 @@ At the very start of every cycle, read `memories/human-directive.md`.
 ## PROJECT SELECTION & EVALUATION (MANDATORY — use the framework)
 
 Both when CHOOSING which idea to pursue AND when validating the chosen one, apply
-`docs/PROJECT_EVALUATION_FRAMEWORK.md` (the standard decision framework). Read it.
+`PROJECT_EVALUATION_FRAMEWORK.md` (the standard decision framework). Read it.
 
 - **SELECTION (Cycle 1 ranking):** Rank ideas by the framework's evidence-first
   principles. Reject or down-rank any idea justified mainly by a deadline, a

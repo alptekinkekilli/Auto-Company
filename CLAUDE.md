@@ -84,7 +84,7 @@ Humans guide direction only by editing `memories/consensus.md` under "Next Actio
 5. **Ramen profitability first** - revenue before vanity growth.
 6. **Boring technology first** - use proven tech unless new tech gives clear 10x upside.
 7. **Monolith first** - get it running first, split only when needed.
-8. **Framework-gated ideas** - both when selecting/filtering ideas and when validating the chosen one, apply `docs/PROJECT_EVALUATION_FRAMEWORK.md`. A regulation, deadline, or trend is NOT demand; never pick or scale an idea without the cheapest possible willingness-to-pay test first.
+8. **Framework-gated ideas** - both when selecting/filtering ideas and when validating the chosen one, apply `PROJECT_EVALUATION_FRAMEWORK.md`. A regulation, deadline, or trend is NOT demand; never pick or scale an idea without the cheapest possible willingness-to-pay test first.
 
 ## Collaboration Workflows
 
@@ -97,7 +97,7 @@ Team composition rules: `.claude/skills/team/SKILL.md`.
 5. **Weekly Review**: `operations-pg` -> `sales-ross` -> `cfo-campbell` -> `qa-bach` -> `ceo-bezos`
 6. **Opportunity Discovery**: `research-thompson` -> `ceo-bezos` -> `critic-munger` -> `cfo-campbell`
 
-> **Workflows 1 & 6 run through `docs/PROJECT_EVALUATION_FRAMEWORK.md`.** Opportunity Discovery uses it to filter and rank ideas (kill deadline/trend/regulation-only bets); New Product Evaluation uses its 14-section report + GO/CONDITIONAL GO/PIVOT/NO-GO/HOLD decision, gated on the cheapest willingness-to-pay test before any build.
+> **Workflows 1 & 6 run through `PROJECT_EVALUATION_FRAMEWORK.md`.** Opportunity Discovery uses it to filter and rank ideas (kill deadline/trend/regulation-only bets); New Product Evaluation uses its 14-section report + GO/CONDITIONAL GO/PIVOT/NO-GO/HOLD decision, gated on the cheapest willingness-to-pay test before any build.
 
 ## Documentation Map
 
