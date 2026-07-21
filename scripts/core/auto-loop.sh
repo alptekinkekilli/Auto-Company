@@ -58,6 +58,7 @@ FALLBACK_ENGINE="$(echo "${FALLBACK_ENGINE:-}" | tr '[:upper:]' '[:lower:]')"
 CODEX_MODEL="${CODEX_MODEL:-}"
 RESOLVED_CODEX_BIN=""
 FALLBACK_USED=0
+CYCLE_ENGINE_OVERRIDE=""
 # Rolling-window spend cap: pause the loop when spend in the last WINDOW_SECONDS
 # reaches WINDOW_BUDGET_USD (empty = disabled). Reserves quota for the operator.
 WINDOW_BUDGET_USD="${WINDOW_BUDGET_USD:-}"
@@ -520,6 +521,18 @@ run_claude_cycle() {
 
 run_engine_cycle() {
     local prompt="$1"
+    FALLBACK_USED=0
+    # Budget-forced Codex override: at the Claude window cap, run this cycle on
+    # Codex (a separate quota) instead of Claude so the company keeps working.
+    if [ "$CYCLE_ENGINE_OVERRIDE" = "codex" ] && [ -n "$RESOLVED_CODEX_BIN" ]; then
+        local _bo="$RESOLVED_ENGINE_BIN" _mo="$MODEL"
+        RESOLVED_ENGINE_BIN="$RESOLVED_CODEX_BIN"
+        MODEL="$CODEX_MODEL"
+        run_codex_cycle "$prompt"
+        RESOLVED_ENGINE_BIN="$_bo"
+        MODEL="$_mo"
+        return
+    fi
     case "$ENGINE" in
         claude)
             run_claude_cycle "$prompt"
@@ -693,14 +706,25 @@ while true; do
         cleanup
     fi
 
-    # Budget gate: reserve headroom in the rolling window for the operator.
+    # Budget gate: reserve Claude-window headroom for the operator.
+    CYCLE_ENGINE_OVERRIDE=""
     if [ -n "$WINDOW_BUDGET_USD" ]; then
         window_now="$(window_spend)"
         if awk -v s="$window_now" -v b="$WINDOW_BUDGET_USD" 'BEGIN { exit !(s + 0 >= b + 0) }'; then
-            log "[BUDGET] Window spend \$$window_now >= cap \$$WINDOW_BUDGET_USD — pausing ${BUDGET_PAUSE_SECONDS}s"
-            save_state "budget_paused"
-            sleep "$BUDGET_PAUSE_SECONDS"
-            continue
+            # Over the Claude budget: prefer offloading this cycle to Codex (a
+            # separate quota) so the company keeps working instead of pausing.
+            if [ "$FALLBACK_ENGINE" = "codex" ] && [ -z "$RESOLVED_CODEX_BIN" ]; then
+                RESOLVED_CODEX_BIN="$(resolve_codex_bin 2>/dev/null || true)"
+            fi
+            if [ "$FALLBACK_ENGINE" = "codex" ] && [ -n "$RESOLVED_CODEX_BIN" ]; then
+                CYCLE_ENGINE_OVERRIDE="codex"
+                log "[BUDGET-CODEX] Claude window \$$window_now >= cap \$$WINDOW_BUDGET_USD — offloading to Codex (preserving Claude quota)"
+            else
+                log "[BUDGET] Window spend \$$window_now >= cap \$$WINDOW_BUDGET_USD — pausing ${BUDGET_PAUSE_SECONDS}s"
+                save_state "budget_paused"
+                sleep "$BUDGET_PAUSE_SECONDS"
+                continue
+            fi
         fi
     fi
 
@@ -755,8 +779,13 @@ This is Cycle #$loop_count. Act decisively."
     # Extract result fields for status classification
     extract_cycle_metadata
 
-    # Record spend into the rolling-window ledger (for the budget gate + dashboard)
-    record_spend "$CYCLE_COST"
+    # Record spend into the rolling-window ledger — Claude cycles only. The budget
+    # guards the operator's Claude quota; Codex (fallback or budget-offload) runs
+    # on a separate quota, so as Claude entries age out the window frees and the
+    # loop returns to Claude automatically.
+    if [ "$FALLBACK_USED" -eq 0 ] && [ -z "$CYCLE_ENGINE_OVERRIDE" ]; then
+        record_spend "$CYCLE_COST"
+    fi
 
     cycle_failed_reason=""
     cycle_soft_timeout=0

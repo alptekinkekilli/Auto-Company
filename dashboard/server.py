@@ -297,6 +297,7 @@ def read_cost_summary() -> dict[str, Any]:
         "windowBudget": os.environ.get("WINDOW_BUDGET_USD", "") or "",
         "fallbackHits": text.count("[FALLBACK]"),
         "budgetPauses": text.count("[BUDGET]"),
+        "budgetOffloads": text.count("[BUDGET-CODEX]"),
     }
 
 

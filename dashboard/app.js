@@ -31,6 +31,7 @@ const els = {
   costCycles: document.getElementById("costCycles"),
   costLimits: document.getElementById("costLimits"),
   costFallbacks: document.getElementById("costFallbacks"),
+  costOffloads: document.getElementById("costOffloads"),
   costBudget: document.getElementById("costBudget"),
 
   directiveInput: document.getElementById("directiveInput"),
@@ -267,6 +268,7 @@ function renderCost(cost) {
   els.costCycles.textContent = cost.cycles ?? 0;
   els.costLimits.textContent = cost.limitHits ?? 0;
   els.costFallbacks.textContent = cost.fallbackHits ?? 0;
+  els.costOffloads.textContent = cost.budgetOffloads ?? 0;
   els.costBudget.textContent = cost.budgetPauses ?? 0;
 
   const reason = (cost.creditReason || "").trim();
