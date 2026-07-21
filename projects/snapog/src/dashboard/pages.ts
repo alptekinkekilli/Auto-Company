@@ -531,9 +531,9 @@ export function landingPage(host: string): string {
         </div>
 
         <div class="pricing-card featured">
-          <p class="pricing-tier pricing-tier-featured">⚡ Pro — most popular</p>
+          <p class="pricing-tier pricing-tier-featured">⚡ Pro — launching soon</p>
           <p class="pricing-price" style="color:var(--accent);">$19</p>
-          <p class="pricing-period">per month</p>
+          <p class="pricing-period">per month · checkout opens shortly</p>
           <p class="pricing-limit" style="color:var(--accent);">10,000 images / month</p>
           <ul class="pricing-features">
             <li>Everything in Free</li>
@@ -543,14 +543,15 @@ export function landingPage(host: string): string {
             <li>Priority support</li>
           </ul>
           <div class="pricing-cta">
-            <a href="/register?tier=pro" class="btn btn-primary" style="width:100%;">Start Pro →</a>
+            <a href="/register?tier=pro" class="btn btn-primary" style="width:100%;">Join Pro waitlist →</a>
+            <p style="font-size:12px;color:var(--text-3);margin-top:8px;text-align:center;">You get a free-tier key today. We'll email you the moment Pro checkout opens.</p>
           </div>
         </div>
 
         <div class="pricing-card">
-          <p class="pricing-tier">Business</p>
+          <p class="pricing-tier">Business — launching soon</p>
           <p class="pricing-price">$49</p>
-          <p class="pricing-period">per month</p>
+          <p class="pricing-period">per month · checkout opens shortly</p>
           <p class="pricing-limit">100,000 images / month</p>
           <ul class="pricing-features">
             <li>Everything in Pro</li>
@@ -560,7 +561,8 @@ export function landingPage(host: string): string {
             <li>SLA + priority queue</li>
           </ul>
           <div class="pricing-cta">
-            <a href="mailto:hello@snapog.dev" class="btn btn-ghost" style="width:100%;">Contact us →</a>
+            <a href="/register?tier=business" class="btn btn-ghost" style="width:100%;">Join Business waitlist →</a>
+            <p style="font-size:12px;color:var(--text-3);margin-top:8px;text-align:center;">You get a free-tier key today. We'll email you when Business goes live.</p>
           </div>
         </div>
 
@@ -625,11 +627,23 @@ export function registerPage(error?: string, tier?: string): string {
   return layout('Get API Key', body);
 }
 
-export function keyCreatedPage(rawKey: string, email: string, tier: string): string {
+export function keyCreatedPage(
+  rawKey: string,
+  email: string,
+  tier: string,
+  waitlistedFor?: string
+): string {
+  const waitlistNotice = waitlistedFor
+    ? `<div class="alert alert-error" style="margin-bottom:16px;">
+         Paid tiers (Pro, Business) are launching soon. You're on the ${waitlistedFor.toUpperCase()} waitlist and we'll email ${email} the moment checkout opens.
+         Your key below is on the free tier (100 images/month) so you can start immediately.
+       </div>`
+    : '';
   const body = `
   ${nav()}
   <section class="section">
     <div class="container" style="max-width:600px;">
+      ${waitlistNotice}
       <div class="alert alert-success">
         ✓ API key created for ${email}
       </div>
@@ -720,8 +734,8 @@ export function dashboardPage(key: ApiKey, recentCount: number): string {
           ${
             key.tier === 'free'
               ? `<div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);">
-                   <p style="font-size:13px;color:var(--text-2);">Need more?</p>
-                   <a href="/register?tier=pro" class="btn btn-primary" style="margin-top:10px;">Upgrade to Pro — $19/mo →</a>
+                   <p style="font-size:13px;color:var(--text-2);">Need more? Pro launches soon — $19/mo for 10,000 images.</p>
+                   <a href="/register?tier=pro" class="btn btn-primary" style="margin-top:10px;">Join Pro waitlist →</a>
                  </div>`
               : ''
           }

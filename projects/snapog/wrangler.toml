@@ -6,7 +6,9 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "snapog-db"
-database_id = "placeholder-set-after-wrangler-d1-create"
+# Deploy step: `wrangler d1 create snapog-db` and paste the returned UUID here.
+# Local dev works with any string (Miniflare uses a SQLite file).
+database_id = "REPLACE_WITH_WRANGLER_D1_CREATE_OUTPUT"
 
 [[r2_buckets]]
 binding = "OG_CACHE"

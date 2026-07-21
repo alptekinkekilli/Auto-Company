@@ -218,7 +218,20 @@ app.post('/register', async c => {
   }
 
   const validTiers: Tier[] = ['free', 'pro', 'business'];
-  const safeTier: Tier = validTiers.includes(tier as Tier) ? (tier as Tier) : 'free';
+  const requestedTier: Tier = validTiers.includes(tier as Tier) ? (tier as Tier) : 'free';
+  // Stripe checkout is not wired yet — every issued key is free tier.
+  // If the user asked for a paid tier, record demand and show a waitlist notice.
+  const safeTier: Tier = 'free';
+  const waitlistedFor: Tier | null = requestedTier === 'free' ? null : requestedTier;
+
+  if (waitlistedFor) {
+    await c.env.DB
+      .prepare(
+        'INSERT INTO waitlist (id, email, requested_tier) VALUES (?, ?, ?)'
+      )
+      .bind(crypto.randomUUID(), email, waitlistedFor)
+      .run();
+  }
 
   // Upsert user
   const userId = crypto.randomUUID();
@@ -254,7 +267,7 @@ app.post('/register', async c => {
     .bind(keyId, user.id, keyname, keyPrefix, keyHash, safeTier, monthlyLimit, resetAt)
     .run();
 
-  return htmlResponse(keyCreatedPage(rawKey, email, safeTier));
+  return htmlResponse(keyCreatedPage(rawKey, email, safeTier, waitlistedFor ?? undefined));
 });
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
