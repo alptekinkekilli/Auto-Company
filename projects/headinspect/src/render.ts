@@ -65,18 +65,62 @@ function renderReport(report: InspectReport): string {
   </div>`;
 }
 
-export function renderPage(opts: { url?: string; report?: InspectReport; error?: string }): string {
+function hostOf(u: string): string {
+  try { return new URL(u).hostname; } catch { return u; }
+}
+
+function socialMeta(opts: { origin: string; url?: string; report?: InspectReport; error?: string }): string {
+  const site = "HeadInspect";
+  const defaultDesc = "Paste a URL. Get its response headers, grouped and graded.";
+  const canonical = opts.origin + (opts.url ? `/?url=${encodeURIComponent(opts.url)}` : "/");
+
+  let title = `${site} — response-header inspector`;
+  let desc = defaultDesc;
+
+  if (opts.report) {
+    const host = hostOf(opts.report.url);
+    title = `${host} scored ${opts.report.grade.letter} (${opts.report.grade.score}/100) — ${site}`;
+    const top = opts.report.grade.reasons.slice(0, 2)
+      .map((r) => r.replace(/[.。]+$/, ""))
+      .join(". ");
+    desc = top
+      ? `${host}: ${opts.report.grade.letter} ${opts.report.grade.score}/100. ${top}.`
+      : `${host}: ${opts.report.grade.letter} ${opts.report.grade.score}/100. ${defaultDesc}`;
+  } else if (opts.error) {
+    desc = `Error: ${opts.error}`;
+  }
+
+  return [
+    `<link rel="canonical" href="${escapeHtml(canonical)}">`,
+    `<meta name="description" content="${escapeHtml(desc)}">`,
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:site_name" content="${site}">`,
+    `<meta property="og:title" content="${escapeHtml(title)}">`,
+    `<meta property="og:description" content="${escapeHtml(desc)}">`,
+    `<meta property="og:url" content="${escapeHtml(canonical)}">`,
+    `<meta name="twitter:card" content="summary">`,
+    `<meta name="twitter:title" content="${escapeHtml(title)}">`,
+    `<meta name="twitter:description" content="${escapeHtml(desc)}">`,
+  ].join("\n");
+}
+
+export function renderPage(opts: { origin: string; url?: string; report?: InspectReport; error?: string }): string {
   const body = opts.report
     ? renderReport(opts.report)
     : opts.error
       ? `<p class="error">${escapeHtml(opts.error)}</p>`
       : `<p class="hint">Paste a URL. Get its response headers, grouped and graded.</p>`;
 
+  const titleTag = opts.report
+    ? `${hostOf(opts.report.url)} scored ${opts.report.grade.letter} (${opts.report.grade.score}/100) — HeadInspect`
+    : "HeadInspect — response-header inspector";
+
   return `<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8">
-<title>HeadInspect${opts.report ? ` — ${escapeHtml(opts.report.url)}` : ""}</title>
+<title>${escapeHtml(titleTag)}</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
+${socialMeta(opts)}
 <style>
 :root { color-scheme: light dark; --bg:#fafafa; --fg:#111; --mut:#666; --line:#ddd; --ok:#1a7f37; --warn:#b35c00; --err:#a01313; }
 @media (prefers-color-scheme: dark){:root{--bg:#0e0e10;--fg:#e6e6e6;--mut:#999;--line:#2a2a2e;--ok:#3fb950;--warn:#d29922;--err:#f85149;}}

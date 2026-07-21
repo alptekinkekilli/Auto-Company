@@ -47,26 +47,26 @@ export default {
       if (!qUrl) {
         return wantsJson
           ? json({ error: "missing ?url=" }, 400)
-          : html(renderPage({}));
+          : html(renderPage({ origin: url.origin }));
       }
 
       const parsed = validateUrl(qUrl);
       if (!parsed.ok) {
         return wantsJson
           ? json({ error: parsed.error }, 400)
-          : html(renderPage({ url: qUrl, error: parsed.error }), 400);
+          : html(renderPage({ origin: url.origin, url: qUrl, error: parsed.error }), 400);
       }
 
       const result = await inspect(parsed.url);
       if (!result.ok) {
         return wantsJson
           ? json({ error: result.error }, result.status ?? 502)
-          : html(renderPage({ url: qUrl, error: result.error }), result.status ?? 502);
+          : html(renderPage({ origin: url.origin, url: qUrl, error: result.error }), result.status ?? 502);
       }
 
       return wantsJson
         ? json(result.report)
-        : html(renderPage({ url: qUrl, report: result.report }));
+        : html(renderPage({ origin: url.origin, url: qUrl, report: result.report }));
     }
 
     return new Response("not found", { status: 404 });
