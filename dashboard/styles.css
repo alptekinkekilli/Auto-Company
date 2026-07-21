@@ -578,3 +578,9 @@ select {
 .cost-stat .muted {
   font-size: 0.78rem;
 }
+
+.cost-foot {
+  margin-top: 14px;
+  font-size: 0.82rem;
+}
+.cost-foot b { color: var(--text); font-weight: 700; }

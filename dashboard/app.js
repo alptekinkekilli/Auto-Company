@@ -24,10 +24,14 @@ const els = {
   rawText: document.getElementById("rawText"),
 
   creditBadge: document.getElementById("creditBadge"),
+  costWindow: document.getElementById("costWindow"),
+  costWindowLabel: document.getElementById("costWindowLabel"),
   costTotal: document.getElementById("costTotal"),
   costLast: document.getElementById("costLast"),
   costCycles: document.getElementById("costCycles"),
   costLimits: document.getElementById("costLimits"),
+  costFallbacks: document.getElementById("costFallbacks"),
+  costBudget: document.getElementById("costBudget"),
 
   directiveInput: document.getElementById("directiveInput"),
   directiveBadge: document.getElementById("directiveBadge"),
@@ -254,10 +258,16 @@ async function fetchStatus() {
 
 function renderCost(cost) {
   const usd = (n) => `$${(Number(n) || 0).toFixed(2)}`;
+  els.costWindow.textContent = usd(cost.windowUsd);
+  els.costWindowLabel.textContent = cost.windowBudget
+    ? `5h window / $${cost.windowBudget} cap`
+    : "5h window";
   els.costTotal.textContent = usd(cost.totalUsd);
   els.costLast.textContent = usd(cost.lastUsd);
   els.costCycles.textContent = cost.cycles ?? 0;
   els.costLimits.textContent = cost.limitHits ?? 0;
+  els.costFallbacks.textContent = cost.fallbackHits ?? 0;
+  els.costBudget.textContent = cost.budgetPauses ?? 0;
 
   const reason = (cost.creditReason || "").trim();
   if (reason === "out_of_credits") {

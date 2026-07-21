@@ -104,11 +104,14 @@
         <span id="creditBadge" class="badge badge-none">—</span>
       </div>
       <div class="cost-grid">
+        <div class="cost-stat"><span class="cost-num" id="costWindow">$0</span><span class="muted" id="costWindowLabel">5h window</span></div>
         <div class="cost-stat"><span class="cost-num" id="costTotal">$0</span><span class="muted">Total (this log)</span></div>
         <div class="cost-stat"><span class="cost-num" id="costLast">$0</span><span class="muted">Last cycle</span></div>
         <div class="cost-stat"><span class="cost-num" id="costCycles">0</span><span class="muted">Costed cycles</span></div>
-        <div class="cost-stat"><span class="cost-num" id="costLimits">0</span><span class="muted">Limit hits</span></div>
       </div>
+      <p class="muted cost-foot">
+        Limit hits <b id="costLimits">0</b> · Codex fallbacks <b id="costFallbacks">0</b> · Budget pauses <b id="costBudget">0</b>
+      </p>
     </section>
 
     <section class="grid-details reveal-5">

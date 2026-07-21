@@ -270,12 +270,33 @@ def read_cost_summary() -> dict[str, Any]:
     except Exception:  # pragma: no cover - defensive
         credit_reason = ""
 
+    window_usd = 0.0
+    try:
+        ledger = LOG_FILE.parent / "spend-window.log"
+        if ledger.exists():
+            cutoff = time.time() - int(os.environ.get("WINDOW_SECONDS", "18000"))
+            for line in ledger.read_text(encoding="utf-8").splitlines():
+                parts = line.split()
+                if len(parts) == 2:
+                    try:
+                        ts, c = float(parts[0]), float(parts[1])
+                        if ts >= cutoff:
+                            window_usd += c
+                    except ValueError:
+                        pass
+    except Exception:  # pragma: no cover - defensive
+        window_usd = 0.0
+
     return {
         "totalUsd": round(sum(costs), 4),
         "lastUsd": round(costs[-1], 4) if costs else 0.0,
         "cycles": len(costs),
         "creditReason": credit_reason,
         "limitHits": text.count("[LIMIT]"),
+        "windowUsd": round(window_usd, 4),
+        "windowBudget": os.environ.get("WINDOW_BUDGET_USD", "") or "",
+        "fallbackHits": text.count("[FALLBACK]"),
+        "budgetPauses": text.count("[BUDGET]"),
     }
 
 

@@ -58,6 +58,12 @@ FALLBACK_ENGINE="$(echo "${FALLBACK_ENGINE:-}" | tr '[:upper:]' '[:lower:]')"
 CODEX_MODEL="${CODEX_MODEL:-}"
 RESOLVED_CODEX_BIN=""
 FALLBACK_USED=0
+# Rolling-window spend cap: pause the loop when spend in the last WINDOW_SECONDS
+# reaches WINDOW_BUDGET_USD (empty = disabled). Reserves quota for the operator.
+WINDOW_BUDGET_USD="${WINDOW_BUDGET_USD:-}"
+WINDOW_SECONDS="${WINDOW_SECONDS:-18000}"
+BUDGET_PAUSE_SECONDS="${BUDGET_PAUSE_SECONDS:-1800}"
+SPEND_LEDGER="$LOG_DIR/spend-window.log"
 LOOP_INTERVAL="${LOOP_INTERVAL:-30}"
 CYCLE_TIMEOUT_SECONDS="${CYCLE_TIMEOUT_SECONDS:-1800}"
 MAX_CONSECUTIVE_ERRORS="${MAX_CONSECUTIVE_ERRORS:-5}"
@@ -105,6 +111,24 @@ check_usage_limit() {
         return 0
     fi
     return 1
+}
+
+# Append a cycle's cost to the rolling-window ledger (skips 0 / N/A).
+record_spend() {
+    local cost="$1"
+    case "$cost" in ''|N/A|0|0.0) return 0 ;; esac
+    printf '%s %s\n' "$(date +%s)" "$cost" >> "$SPEND_LEDGER" 2>/dev/null || true
+}
+
+# Sum spend within the last WINDOW_SECONDS, pruning older entries. Echoes USD.
+window_spend() {
+    [ -f "$SPEND_LEDGER" ] || { echo "0"; return; }
+    local now cutoff
+    now=$(date +%s)
+    cutoff=$((now - WINDOW_SECONDS))
+    awk -v c="$cutoff" '$1 >= c' "$SPEND_LEDGER" > "$SPEND_LEDGER.tmp" 2>/dev/null \
+        && mv "$SPEND_LEDGER.tmp" "$SPEND_LEDGER" 2>/dev/null || true
+    awk '{s += $2} END {printf "%.4f", s + 0}' "$SPEND_LEDGER" 2>/dev/null || echo "0"
 }
 
 check_stop_requested() {
@@ -653,6 +677,12 @@ if [ -n "$engine_version" ]; then
     fi
 fi
 log "Interval: ${LOOP_INTERVAL}s | Timeout: ${CYCLE_TIMEOUT_SECONDS}s | Breaker: ${MAX_CONSECUTIVE_ERRORS} errors"
+if [ -n "$FALLBACK_ENGINE" ]; then
+    log "Fallback engine: $FALLBACK_ENGINE (on Claude usage limit)"
+fi
+if [ -n "$WINDOW_BUDGET_USD" ]; then
+    log "Window budget: \$$WINDOW_BUDGET_USD per ${WINDOW_SECONDS}s (pause ${BUDGET_PAUSE_SECONDS}s when reached)"
+fi
 
 # === Main Loop ===
 
@@ -661,6 +691,17 @@ while true; do
     if check_stop_requested; then
         log "Stop requested. Shutting down gracefully."
         cleanup
+    fi
+
+    # Budget gate: reserve headroom in the rolling window for the operator.
+    if [ -n "$WINDOW_BUDGET_USD" ]; then
+        window_now="$(window_spend)"
+        if awk -v s="$window_now" -v b="$WINDOW_BUDGET_USD" 'BEGIN { exit !(s + 0 >= b + 0) }'; then
+            log "[BUDGET] Window spend \$$window_now >= cap \$$WINDOW_BUDGET_USD — pausing ${BUDGET_PAUSE_SECONDS}s"
+            save_state "budget_paused"
+            sleep "$BUDGET_PAUSE_SECONDS"
+            continue
+        fi
     fi
 
     loop_count=$((loop_count + 1))
@@ -713,6 +754,9 @@ This is Cycle #$loop_count. Act decisively."
 
     # Extract result fields for status classification
     extract_cycle_metadata
+
+    # Record spend into the rolling-window ledger (for the budget gate + dashboard)
+    record_spend "$CYCLE_COST"
 
     cycle_failed_reason=""
     cycle_soft_timeout=0
