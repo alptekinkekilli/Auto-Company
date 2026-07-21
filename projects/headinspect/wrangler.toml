@@ -1,0 +1,16 @@
+name = "headinspect"
+main = "src/index.ts"
+compatibility_date = "2025-06-01"
+
+[vars]
+ENVIRONMENT = "production"
+
+# D1 binding intentionally omitted. A hit-counter table
+# (headinspect_hits) is prepared as a migration but wiring it up would
+# add configuration cost the prototype does not need. Enable later by
+# uncommenting and applying migrations/0001_hits.sql against snapog-db.
+#
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "snapog-db"
+# database_id = "efd6d504-3a34-49a7-9ff7-0d0d4d57c801"
