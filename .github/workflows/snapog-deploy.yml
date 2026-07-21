@@ -1,0 +1,155 @@
+name: snapog-deploy
+
+# Manual, gated deploy for SnapOG. Not wired to push-on-main because the
+# founder must first run the one-time bootstrap:
+#   1. `wrangler login`
+#   2. `wrangler d1 create snapog-db` and paste the UUID into
+#      projects/snapog/wrangler.toml (currently `REPLACE_WITH_...`).
+#   3. `wrangler r2 bucket create snapog-og-cache`.
+# Then this workflow can run repeatedly with no manual steps.
+#
+# Required repo secrets:
+#   CLOUDFLARE_API_TOKEN   — API token with Workers Scripts:Edit, D1:Edit,
+#                            R2:Edit, Account Settings:Read scopes.
+#   CLOUDFLARE_ACCOUNT_ID  — 32-char hex account id (Cloudflare dashboard).
+#
+# The smoke test uses only the public /health endpoint (no API key).
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deploy target"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - staging
+          - production
+      skip_migrations:
+        description: "Skip D1 migrations (only if you know they are already applied)"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: snapog-deploy-${{ github.event.inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Cloudflare Workers
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: snapog-${{ github.event.inputs.environment }}
+    defaults:
+      run:
+        working-directory: projects/snapog
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: projects/snapog/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Preflight — wrangler.toml has a real D1 database_id
+        run: |
+          set -euo pipefail
+          if grep -q 'REPLACE_WITH_WRANGLER_D1_CREATE_OUTPUT' wrangler.toml; then
+            echo "::error::wrangler.toml still has REPLACE_WITH_WRANGLER_D1_CREATE_OUTPUT."
+            echo "::error::Run 'wrangler d1 create snapog-db' locally, paste the UUID, and commit."
+            exit 1
+          fi
+
+      - name: Preflight — required secrets are set
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          missing=()
+          [ -z "${CF_API_TOKEN}" ] && missing+=("CLOUDFLARE_API_TOKEN")
+          [ -z "${CF_ACCOUNT_ID}" ] && missing+=("CLOUDFLARE_ACCOUNT_ID")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing repo secrets: ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Apply D1 migrations (remote)
+        if: ${{ github.event.inputs.skip_migrations != 'true' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event.inputs.environment }}" = "staging" ]; then
+            npx wrangler d1 migrations apply snapog-db --env staging --remote
+          else
+            npx wrangler d1 migrations apply snapog-db --remote
+          fi
+
+      - name: Deploy
+        id: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event.inputs.environment }}" = "staging" ]; then
+            deploy_out=$(npx wrangler deploy --env staging 2>&1)
+          else
+            deploy_out=$(npx wrangler deploy 2>&1)
+          fi
+          echo "$deploy_out"
+          worker_url=$(echo "$deploy_out" | grep -Eo 'https://[a-zA-Z0-9.-]+\.workers\.dev' | head -1)
+          if [ -z "$worker_url" ]; then
+            echo "::warning::Could not parse worker URL from deploy output; smoke test will be skipped."
+          fi
+          echo "worker_url=${worker_url}" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke test — GET /health
+        if: steps.deploy.outputs.worker_url != ''
+        run: |
+          set -euo pipefail
+          url="${{ steps.deploy.outputs.worker_url }}/health"
+          echo "Probing $url"
+          # Retry up to 5 times (Workers cold start) with 3s backoff.
+          for i in 1 2 3 4 5; do
+            body=$(curl -sf --max-time 10 "$url" || true)
+            if [ -n "$body" ] && echo "$body" | grep -q '"ok"[[:space:]]*:[[:space:]]*true'; then
+              echo "✓ /health responded ok on attempt $i"
+              echo "$body"
+              exit 0
+            fi
+            echo "attempt $i: not ready yet"
+            sleep 3
+          done
+          echo "::error::/health did not return ok after 5 attempts"
+          exit 1
+
+      - name: Deploy summary
+        if: always()
+        run: |
+          {
+            echo "## SnapOG deploy — ${{ github.event.inputs.environment }}"
+            echo ""
+            echo "- Worker URL: ${{ steps.deploy.outputs.worker_url || 'unknown' }}"
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Migrations skipped: ${{ github.event.inputs.skip_migrations }}"
+          } >> "$GITHUB_STEP_SUMMARY"

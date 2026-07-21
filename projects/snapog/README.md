@@ -99,18 +99,49 @@ npm run typecheck
 
 ## Deployment
 
-```bash
-# 1. Create remote D1 database
-wrangler d1 create snapog-db
-# Update wrangler.toml with the database_id
+### One-time bootstrap (local, founder-run)
 
-# 2. Apply migrations to remote
-npm run db:remote
+```bash
+# 1. Authenticate wrangler with Cloudflare
+wrangler login
+
+# 2. Create remote D1 database, paste UUID into wrangler.toml [d1_databases]
+wrangler d1 create snapog-db
 
 # 3. Create R2 bucket
 wrangler r2 bucket create snapog-og-cache
 
-# 4. Deploy
+# 4. Commit the updated wrangler.toml
+git add wrangler.toml && git commit -m "chore(snapog): wire live D1 database_id"
+```
+
+### CI/CD (recurring)
+
+After bootstrap, deploys are handled by GitHub Actions —
+`.github/workflows/snapog-deploy.yml`. Trigger via the **Actions** tab
+(`workflow_dispatch` → pick `staging` or `production`). The job:
+
+1. Verifies `wrangler.toml` no longer has the `REPLACE_WITH_...` placeholder.
+2. Verifies required repo secrets are set.
+3. Type-checks.
+4. Applies D1 migrations (`--remote`).
+5. Runs `wrangler deploy`.
+6. Smoke-tests `GET /health` on the returned worker URL (5 retries, 3s backoff).
+
+**Required repo secrets** (Settings → Secrets and variables → Actions):
+
+| Secret | Where to get it |
+|--------|-----------------|
+| `CLOUDFLARE_API_TOKEN` | Cloudflare dashboard → My Profile → API Tokens → Create Token. Needs `Workers Scripts:Edit`, `D1:Edit`, `R2:Edit`, `Account Settings:Read` scopes. |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare dashboard → any Workers page, right sidebar (32-char hex). |
+
+Every PR touching `projects/snapog/**` also runs `snapog-ci` (typecheck +
+wrangler config sanity) — no secrets required.
+
+### Manual deploy (fallback)
+
+```bash
+npm run db:remote
 wrangler deploy
 ```
 
