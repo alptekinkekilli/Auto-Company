@@ -4,6 +4,20 @@
 set -euo pipefail
 cd /app
 
+# --- privilege drop ---------------------------------------------------------
+# tini launches us as root (PID 1). claude refuses --dangerously-skip-permissions
+# as root, so we fix the mounted-volume ownership here (needs root) then re-exec
+# this same script as the non-root `app` user.
+if [ "$(id -u)" = "0" ]; then
+    mkdir -p memories projects logs
+    chown -R app:app memories projects logs 2>/dev/null || true
+    exec gosu app "$0" "$@"
+fi
+
+# --- from here on we run as `app` (non-root) ---
+export HOME=/home/app
+cd /app
+
 # --- required auth (from `claude setup-token`, injected as a Coolify secret) ---
 if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
     echo "FATAL: CLAUDE_CODE_OAUTH_TOKEN is not set." >&2

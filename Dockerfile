@@ -11,7 +11,7 @@ FROM node:22-bookworm-slim
 #  - procps: pgrep/kill used by the loop and status scripts
 #  - tini: proper PID 1 / signal reaping
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        python3 git jq curl ca-certificates procps tini gnupg \
+        python3 git jq curl ca-certificates procps tini gnupg gosu \
     && mkdir -p -m 755 /etc/apt/keyrings \
     && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
          -o /etc/apt/keyrings/githubcli-archive-keyring.gpg \
@@ -29,6 +29,13 @@ COPY . .
 
 RUN chmod +x scripts/core/*.sh scripts/linux/*.sh docker-entrypoint.sh 2>/dev/null || true \
     && mkdir -p memories projects logs
+
+# Non-root user: claude refuses --dangerously-skip-permissions as root.
+# The entrypoint starts as root (to fix volume perms) then drops to `app`.
+# Pre-accept the workspace trust dialog so headless runs aren't blocked.
+RUN useradd -m -u 10001 -s /bin/bash app \
+    && printf '{"projects":{"/app":{"hasTrustDialogAccepted":true}}}\n' > /home/app/.claude.json \
+    && chown -R app:app /app /home/app
 
 # Persisted across redeploys (map these in Coolify → Persistent Storage)
 VOLUME ["/app/memories", "/app/projects", "/app/logs"]
