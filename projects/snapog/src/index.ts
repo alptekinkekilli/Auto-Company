@@ -11,7 +11,7 @@ import {
   errorPage,
 } from './dashboard/pages';
 import type { ApiKey, Env, OGParams, Tier } from './types';
-import { TIER_LIMITS } from './types';
+import { TIER_LIMITS, MONTHLY_CACHE_KEY_CAP } from './types';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -54,6 +54,14 @@ async function resolveApiKey(
   return row ?? null;
 }
 
+// ISO timestamp of the first day of the current calendar month.
+// Shared by usage reset and by the R2 cache-key cap tracker so they roll
+// over on the same boundary.
+function billingMonthISO(): string {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+}
+
 // Reset monthly usage if billing month rolled over
 async function maybeResetUsage(db: D1Database, key: ApiKey): Promise<ApiKey> {
   const resetAt = new Date(key.usage_reset_at);
@@ -71,6 +79,33 @@ async function maybeResetUsage(db: D1Database, key: ApiKey): Promise<ApiKey> {
     return { ...key, usage_count: 0, usage_reset_at: newResetAt };
   }
   return key;
+}
+
+// Track a distinct cache_key for (api_key, this billing month) and report
+// whether the key is under the cap. If distinct-key count for this month
+// exceeds MONTHLY_CACHE_KEY_CAP, callers must skip OG_CACHE.put() and
+// return X-Cache: BYPASSED. Prevents one abusive free user from writing
+// hundreds of never-hit R2 objects.
+async function trackCacheKeyAndCheckCap(
+  db: D1Database,
+  apiKeyId: string,
+  cacheKey: string
+): Promise<{ bypass: boolean; distinctCount: number }> {
+  const billingMonth = billingMonthISO();
+  await db
+    .prepare(
+      'INSERT OR IGNORE INTO api_key_cache_keys (api_key_id, cache_key, billing_month) VALUES (?, ?, ?)'
+    )
+    .bind(apiKeyId, cacheKey, billingMonth)
+    .run();
+  const row = await db
+    .prepare(
+      'SELECT COUNT(*) as cnt FROM api_key_cache_keys WHERE api_key_id = ? AND billing_month = ?'
+    )
+    .bind(apiKeyId, billingMonth)
+    .first<{ cnt: number }>();
+  const distinctCount = row?.cnt ?? 0;
+  return { bypass: distinctCount > MONTHLY_CACHE_KEY_CAP, distinctCount };
 }
 
 // Increment usage counter and record event
@@ -169,17 +204,28 @@ app.get('/og', async c => {
     });
   }
 
+  // ── Enforce per-key distinct-cache-key cap before writing to R2 ──
+  const { bypass: bypassR2 } = await trackCacheKeyAndCheckCap(
+    c.env.DB,
+    apiKey.id,
+    cacheKey
+  );
+
   // ── Generate image ──
   const imageResponse = await generateOGImage(params, watermark);
   const imageBuffer = await imageResponse.arrayBuffer();
 
-  // Store in R2 (fire-and-forget, don't block response)
-  c.executionCtx.waitUntil(
-    c.env.OG_CACHE.put(r2Key, imageBuffer.slice(0), {
-      httpMetadata: { contentType: 'image/png' },
-      customMetadata: { tier: apiKey.tier, template: params.template ?? 'default' },
-    })
-  );
+  // Store in R2 unless the key has exceeded its monthly distinct-key cap.
+  // Bypassed requests still render and count toward usage — we just refuse
+  // to persist novel cache objects for that key.
+  if (!bypassR2) {
+    c.executionCtx.waitUntil(
+      c.env.OG_CACHE.put(r2Key, imageBuffer.slice(0), {
+        httpMetadata: { contentType: 'image/png' },
+        customMetadata: { tier: apiKey.tier, template: params.template ?? 'default' },
+      })
+    );
+  }
 
   // Record usage (also fire-and-forget after we have the image)
   c.executionCtx.waitUntil(
@@ -190,7 +236,7 @@ app.get('/og', async c => {
     headers: {
       'Content-Type': 'image/png',
       'Cache-Control': 'public, max-age=86400, s-maxage=604800',
-      'X-Cache': 'MISS',
+      'X-Cache': bypassR2 ? 'BYPASSED' : 'MISS',
       'X-SnapOG-Tier': apiKey.tier,
     },
   });

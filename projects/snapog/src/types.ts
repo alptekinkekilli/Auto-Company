@@ -8,6 +8,11 @@ export const TIER_LIMITS: Record<Tier, number> = {
   business: 100_000,
 };
 
+// Max distinct cacheKey values a single api_key may write to R2 per billing
+// month. Beyond this, /og still renders but skips OG_CACHE.put() and returns
+// X-Cache: BYPASSED. Bounds R2 storage against unique-URL abuse (audit G8).
+export const MONTHLY_CACHE_KEY_CAP = 30;
+
 export interface ApiKey {
   id: string;
   user_id: string;
