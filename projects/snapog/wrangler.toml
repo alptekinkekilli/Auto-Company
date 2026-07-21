@@ -18,6 +18,17 @@ bucket_name = "snapog-og-cache"
 ENVIRONMENT = "development"
 # Set AUTH_SECRET via `wrangler secret put AUTH_SECRET` for dashboard cookie signing
 
+# Cost-alerting cron. Runs every 6 hours (00, 06, 12, 18 UTC). Checks D1
+# writes/day, cache hit rate, signups, active users, and R2 storage bytes;
+# posts to ALERT_WEBHOOK_URL if any threshold trips.
+#
+# Optional secrets consumed by the scheduled handler (all no-op if unset):
+#   wrangler secret put ALERT_WEBHOOK_URL              # Slack/Discord/generic
+#   wrangler secret put CLOUDFLARE_ACCOUNT_ID          # for R2 GraphQL query
+#   wrangler secret put CLOUDFLARE_ANALYTICS_API_TOKEN # Analytics:Read scope
+[triggers]
+crons = ["0 */6 * * *"]
+
 [env.staging]
 name = "snapog-staging"
 [env.staging.vars]

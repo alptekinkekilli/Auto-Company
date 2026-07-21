@@ -41,4 +41,9 @@ export interface Env {
   OG_CACHE: R2Bucket;
   ENVIRONMENT: string;
   AUTH_SECRET?: string;
+  // Cost-alerting cron config. All optional — missing values degrade to
+  // no-op so the Worker deploys cleanly before any of these are wired.
+  ALERT_WEBHOOK_URL?: string;
+  CLOUDFLARE_ACCOUNT_ID?: string;
+  CLOUDFLARE_ANALYTICS_API_TOKEN?: string;
 }

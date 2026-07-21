@@ -12,6 +12,7 @@ import {
 } from './dashboard/pages';
 import type { ApiKey, Env, OGParams, Tier } from './types';
 import { TIER_LIMITS, MONTHLY_CACHE_KEY_CAP } from './types';
+import { runCostAlertCheck } from './alerts';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -352,4 +353,19 @@ app.onError((err, _c) => {
   return htmlResponse(errorPage(500, 'Internal server error'), 500);
 });
 
-export default app;
+// Export both fetch (Hono routes) and scheduled (cron cost-alert check).
+// The scheduled handler is wired via wrangler.toml [triggers] crons.
+export default {
+  fetch: app.fetch,
+  async scheduled(
+    _event: ScheduledEvent,
+    env: Env,
+    ctx: ExecutionContext
+  ): Promise<void> {
+    ctx.waitUntil(
+      runCostAlertCheck(env).then(({ alertCount }) => {
+        console.log(`[cron] cost-alert check fired ${alertCount} alert(s)`);
+      })
+    );
+  },
+};
