@@ -6,9 +6,9 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "snapog-db"
-# Deploy step: `wrangler d1 create snapog-db` and paste the returned UUID here.
-# Local dev works with any string (Miniflare uses a SQLite file).
-database_id = "REPLACE_WITH_WRANGLER_D1_CREATE_OUTPUT"
+# Created via Cloudflare MCP (Cycle 11, 2026-07-21). Location hint: WEUR.
+# Migrations 0001-0003 already applied to this instance via MCP.
+database_id = "efd6d504-3a34-49a7-9ff7-0d0d4d57c801"
 
 [[r2_buckets]]
 binding = "OG_CACHE"
