@@ -23,6 +23,12 @@ const els = {
   logText: document.getElementById("logText"),
   rawText: document.getElementById("rawText"),
 
+  creditBadge: document.getElementById("creditBadge"),
+  costTotal: document.getElementById("costTotal"),
+  costLast: document.getElementById("costLast"),
+  costCycles: document.getElementById("costCycles"),
+  costLimits: document.getElementById("costLimits"),
+
   directiveInput: document.getElementById("directiveInput"),
   directiveBadge: document.getElementById("directiveBadge"),
   directiveStatus: document.getElementById("directiveStatus"),
@@ -240,9 +246,30 @@ async function fetchStatus() {
   els.pulseDot.style.background = healthy ? "var(--good)" : "var(--warn)";
 
   renderDirective(data.directive || {});
+  renderCost(data.cost || {});
 
   els.lastUpdate.textContent = `Last update: ${formatTime(data.timestamp)}`;
   els.latency.textContent = `Roundtrip: ${elapsed}ms`;
+}
+
+function renderCost(cost) {
+  const usd = (n) => `$${(Number(n) || 0).toFixed(2)}`;
+  els.costTotal.textContent = usd(cost.totalUsd);
+  els.costLast.textContent = usd(cost.lastUsd);
+  els.costCycles.textContent = cost.cycles ?? 0;
+  els.costLimits.textContent = cost.limitHits ?? 0;
+
+  const reason = (cost.creditReason || "").trim();
+  if (reason === "out_of_credits") {
+    els.creditBadge.textContent = "OUT OF CREDITS";
+    els.creditBadge.className = "badge badge-pending";
+  } else if (reason) {
+    els.creditBadge.textContent = reason.toUpperCase();
+    els.creditBadge.className = "badge badge-pending";
+  } else {
+    els.creditBadge.textContent = "OK";
+    els.creditBadge.className = "badge badge-done";
+  }
 }
 
 function renderDirective(directive) {

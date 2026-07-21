@@ -537,3 +537,44 @@ select {
   border-color: rgba(41, 211, 163, 0.6);
   background: rgba(41, 211, 163, 0.12);
 }
+
+/* === Cost & Credits panel === */
+.cost .panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cost-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 14px;
+}
+
+@media (max-width: 640px) {
+  .cost-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.cost-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(6, 15, 20, 0.5);
+  border: 1px solid rgba(151, 215, 239, 0.14);
+}
+
+.cost-num {
+  font-family: "Rajdhani", system-ui, sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+
+.cost-stat .muted {
+  font-size: 0.78rem;
+}

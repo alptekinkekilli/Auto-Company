@@ -248,6 +248,37 @@ def write_directive(text: str) -> dict[str, Any]:
     return read_directive()
 
 
+def read_cost_summary() -> dict[str, Any]:
+    """Aggregate cycle cost from auto-loop.log + credit status from ~/.claude.json.
+
+    Cost lines look like: `... [OK] Completed (cost: 2.2577963, subtype: success)`.
+    """
+    text = read_text_file(LOG_FILE, "")
+    costs: list[float] = []
+    for m in re.finditer(r"cost:\s*([0-9]+(?:\.[0-9]+)?)\b", text):
+        try:
+            costs.append(float(m.group(1)))
+        except ValueError:
+            pass
+
+    credit_reason = ""
+    try:
+        cj = Path.home() / ".claude.json"
+        if cj.exists():
+            data = json.loads(cj.read_text(encoding="utf-8"))
+            credit_reason = str(data.get("cachedExtraUsageDisabledReason", "") or "")
+    except Exception:  # pragma: no cover - defensive
+        credit_reason = ""
+
+    return {
+        "totalUsd": round(sum(costs), 4),
+        "lastUsd": round(costs[-1], 4) if costs else 0.0,
+        "cycles": len(costs),
+        "creditReason": credit_reason,
+        "limitHits": text.count("[LIMIT]"),
+    }
+
+
 def read_tail(path: Path, lines: int = 120) -> str:
     if lines <= 0:
         return ""
@@ -503,6 +534,7 @@ def gather_status_payload(system_name: str | None = None) -> dict[str, Any]:
         "consensusHead": read_text_file(CONSENSUS_FILE, "(no consensus file)")[:3000],
         "logTail": read_tail(LOG_FILE, lines=180),
         "directive": read_directive(),
+        "cost": read_cost_summary(),
     }
 
 

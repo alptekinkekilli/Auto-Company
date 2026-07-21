@@ -50,6 +50,7 @@ ENGINE="$(echo "$ENGINE" | tr '[:upper:]' '[:lower:]')"
 MODEL="${MODEL:-}"
 MODEL_LABEL="${MODEL:-config-default}"
 CLAUDE_BIN="${CLAUDE_BIN:-}"
+CLAUDE_EFFORT="${CLAUDE_EFFORT:-}"
 CLAUDE_PERMISSION_MODE="${CLAUDE_PERMISSION_MODE:-bypassPermissions}"
 CODEX_BIN="${CODEX_BIN:-}"
 CODEX_SANDBOX_MODE="${CODEX_SANDBOX_MODE:-danger-full-access}"
@@ -447,6 +448,9 @@ run_claude_cycle() {
         local claude_cmd=("$RESOLVED_ENGINE_BIN" "-p" "$prompt" "--output-format" "json")
         if [ -n "$MODEL" ]; then
             claude_cmd+=("--model" "$MODEL")
+        fi
+        if [ -n "$CLAUDE_EFFORT" ]; then
+            claude_cmd+=("--effort" "$CLAUDE_EFFORT")
         fi
         if [ -n "$CLAUDE_PERMISSION_MODE" ]; then
             claude_cmd+=("--permission-mode" "$CLAUDE_PERMISSION_MODE")
