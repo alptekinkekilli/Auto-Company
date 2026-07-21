@@ -72,6 +72,13 @@ SPEND_LEDGER="$LOG_DIR/spend-window.log"
 # alternation/headroom; nothing reads it yet, so engine selection is unchanged.
 CODEX_SPEND_LEDGER="$LOG_DIR/codex-window.log"
 CODEX_WINDOW_LIMIT="${CODEX_WINDOW_LIMIT:-}"   # max Codex cycles per window (empty = unmetered)
+# Quota-aware router (APP-189 Phase 2). ROUTER_ALTERNATE=1 spreads load across both
+# quotas: when Claude AND Codex both have window headroom, cycles alternate between
+# them (~2x daily throughput, neither exhausts early). Default 0 = prior behavior
+# (Claude primary; Codex only on budget-cap or usage-limit). The last engine chosen
+# is persisted so fresh per-cycle processes actually alternate.
+ROUTER_ALTERNATE="${ROUTER_ALTERNATE:-0}"
+ROUTER_STATE_FILE="$LOG_DIR/router-state"
 LOOP_INTERVAL="${LOOP_INTERVAL:-30}"
 CYCLE_TIMEOUT_SECONDS="${CYCLE_TIMEOUT_SECONDS:-1800}"
 MAX_CONSECUTIVE_ERRORS="${MAX_CONSECUTIVE_ERRORS:-5}"
@@ -155,6 +162,78 @@ codex_window_count() {
     awk -v c="$cutoff" '$1 >= c' "$CODEX_SPEND_LEDGER" > "$CODEX_SPEND_LEDGER.tmp" 2>/dev/null \
         && mv "$CODEX_SPEND_LEDGER.tmp" "$CODEX_SPEND_LEDGER" 2>/dev/null || true
     awk '{s += $2} END {printf "%d", s + 0}' "$CODEX_SPEND_LEDGER" 2>/dev/null || echo "0"
+}
+
+# Persist the engine chosen this cycle so the next (fresh) cycle process can alternate.
+_router_persist() {
+    printf '%s\n' "$1" > "$ROUTER_STATE_FILE" 2>/dev/null || true
+}
+
+# APP-189 Phase 2 — decide which engine runs THIS cycle from remaining quota headroom
+# in both ledgers, with optional per-cycle alternation. Sets globals:
+#   CYCLE_ENGINE_OVERRIDE : "" (use primary ENGINE / Claude) or "codex"
+#   CYCLE_ROUTER_ACTION   : "run" | "pause"
+#   CYCLE_ROUTER_MSG      : human-readable reason for the caller to log
+# With ROUTER_ALTERNATE=0 this reproduces the prior budget gate exactly: under
+# budget -> primary; over budget -> Codex if available, else pause.
+select_cycle_engine() {
+    CYCLE_ENGINE_OVERRIDE=""
+    CYCLE_ROUTER_ACTION="run"
+    CYCLE_ROUTER_MSG=""
+
+    # Is Codex usable as an alternate this cycle?
+    local codex_avail=0
+    if [ "$FALLBACK_ENGINE" = "codex" ]; then
+        [ -z "$RESOLVED_CODEX_BIN" ] && RESOLVED_CODEX_BIN="$(resolve_codex_bin 2>/dev/null || true)"
+        [ -n "$RESOLVED_CODEX_BIN" ] && codex_avail=1
+    fi
+
+    # Claude window headroom (USD ledger vs budget cap)
+    local claude_full=0 window_now="0"
+    if [ -n "$WINDOW_BUDGET_USD" ]; then
+        window_now="$(window_spend)"
+        if awk -v s="$window_now" -v b="$WINDOW_BUDGET_USD" 'BEGIN { exit !(s + 0 >= b + 0) }'; then
+            claude_full=1
+        fi
+    fi
+
+    # Codex window headroom (count ledger vs cycle limit)
+    local codex_full=0 codex_now
+    codex_now="$(codex_window_count)"
+    if [ -n "$CODEX_WINDOW_LIMIT" ] && [ "$codex_now" -ge "$CODEX_WINDOW_LIMIT" ] 2>/dev/null; then
+        codex_full=1
+    fi
+
+    # Over the Claude budget: offload to Codex if it has headroom, else pause.
+    if [ "$claude_full" -eq 1 ]; then
+        if [ "$codex_avail" -eq 1 ] && [ "$codex_full" -eq 0 ]; then
+            CYCLE_ENGINE_OVERRIDE="codex"
+            CYCLE_ROUTER_MSG="[ROUTER] Claude window \$$window_now >= cap \$$WINDOW_BUDGET_USD — offloading to Codex (codex $codex_now/${CODEX_WINDOW_LIMIT:-∞})"
+        else
+            CYCLE_ROUTER_ACTION="pause"
+            CYCLE_ROUTER_MSG="[ROUTER] Claude window \$$window_now >= cap \$$WINDOW_BUDGET_USD; Codex unavailable/full — pausing ${BUDGET_PAUSE_SECONDS}s"
+        fi
+        _router_persist "${CYCLE_ENGINE_OVERRIDE:-claude}"
+        return 0
+    fi
+
+    # Claude has headroom. Optional alternation to spread load across both quotas.
+    if [ "$ROUTER_ALTERNATE" = "1" ] && [ "$codex_avail" -eq 1 ] && [ "$codex_full" -eq 0 ]; then
+        local last
+        last="$(cat "$ROUTER_STATE_FILE" 2>/dev/null || echo claude)"
+        if [ "$last" = "claude" ]; then
+            CYCLE_ENGINE_OVERRIDE="codex"
+            CYCLE_ROUTER_MSG="[ROUTER] Alternate → Codex (both have headroom; claude \$$window_now/${WINDOW_BUDGET_USD:-∞}, codex $codex_now/${CODEX_WINDOW_LIMIT:-∞})"
+        else
+            CYCLE_ROUTER_MSG="[ROUTER] Alternate → Claude (both have headroom; claude \$$window_now/${WINDOW_BUDGET_USD:-∞}, codex $codex_now/${CODEX_WINDOW_LIMIT:-∞})"
+        fi
+        _router_persist "${CYCLE_ENGINE_OVERRIDE:-claude}"
+        return 0
+    fi
+
+    # Default: primary Claude.
+    _router_persist "claude"
+    return 0
 }
 
 check_stop_requested() {
@@ -721,6 +800,11 @@ fi
 if [ -n "$WINDOW_BUDGET_USD" ]; then
     log "Window budget: \$$WINDOW_BUDGET_USD per ${WINDOW_SECONDS}s (pause ${BUDGET_PAUSE_SECONDS}s when reached)"
 fi
+if [ "$ROUTER_ALTERNATE" = "1" ]; then
+    log "Router: quota-aware alternation ON (Claude↔Codex when both have headroom; Codex limit ${CODEX_WINDOW_LIMIT:-∞}/window)"
+else
+    log "Router: single-engine (alternation OFF; Codex only on budget-cap/usage-limit)"
+fi
 
 # === Main Loop ===
 
@@ -731,26 +815,16 @@ while true; do
         cleanup
     fi
 
-    # Budget gate: reserve Claude-window headroom for the operator.
-    CYCLE_ENGINE_OVERRIDE=""
-    if [ -n "$WINDOW_BUDGET_USD" ]; then
-        window_now="$(window_spend)"
-        if awk -v s="$window_now" -v b="$WINDOW_BUDGET_USD" 'BEGIN { exit !(s + 0 >= b + 0) }'; then
-            # Over the Claude budget: prefer offloading this cycle to Codex (a
-            # separate quota) so the company keeps working instead of pausing.
-            if [ "$FALLBACK_ENGINE" = "codex" ] && [ -z "$RESOLVED_CODEX_BIN" ]; then
-                RESOLVED_CODEX_BIN="$(resolve_codex_bin 2>/dev/null || true)"
-            fi
-            if [ "$FALLBACK_ENGINE" = "codex" ] && [ -n "$RESOLVED_CODEX_BIN" ]; then
-                CYCLE_ENGINE_OVERRIDE="codex"
-                log "[BUDGET-CODEX] Claude window \$$window_now >= cap \$$WINDOW_BUDGET_USD — offloading to Codex (preserving Claude quota)"
-            else
-                log "[BUDGET] Window spend \$$window_now >= cap \$$WINDOW_BUDGET_USD — pausing ${BUDGET_PAUSE_SECONDS}s"
-                save_state "budget_paused"
-                sleep "$BUDGET_PAUSE_SECONDS"
-                continue
-            fi
-        fi
+    # Quota-aware router: pick this cycle's engine from headroom in both ledgers
+    # (Claude USD window + Codex count window), with optional alternation. Reserves
+    # Claude-window headroom for the operator and keeps working on Codex when Claude
+    # is capped, instead of pausing.
+    select_cycle_engine
+    [ -n "$CYCLE_ROUTER_MSG" ] && log "$CYCLE_ROUTER_MSG"
+    if [ "$CYCLE_ROUTER_ACTION" = "pause" ]; then
+        save_state "budget_paused"
+        sleep "$BUDGET_PAUSE_SECONDS"
+        continue
     fi
 
     loop_count=$((loop_count + 1))
