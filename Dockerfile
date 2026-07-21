@@ -27,6 +27,10 @@ RUN npm install -g @anthropic-ai/claude-code && npm cache clean --force
 # Codex CLI (fallback engine when Claude is usage-limited) — 0.144.x supports gpt-5.6-sol
 RUN npm install -g @openai/codex@0.144.6 && npm cache clean --force
 
+# Wrangler — the company deploys its products to Cloudflare (Pages/Workers).
+# Authenticates via CLOUDFLARE_API_TOKEN (deploy-scoped Coolify secret).
+RUN npm install -g wrangler && npm cache clean --force
+
 WORKDIR /app
 COPY . .
 

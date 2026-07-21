@@ -150,6 +150,18 @@ version-accurate documentation for external libraries and frameworks.
 - This complements the local skill pool (`.claude/skills/` = how-to workflows);
   Context7 = current API surface of the thing you're building on.
 
+### Deploy targets (policy — do not improvise)
+
+- **Company PRODUCTS** (landing pages, MVPs, web apps) deploy to **Cloudflare**:
+  Pages for static/landing, Workers for dynamic — via `wrangler`. Free, isolated,
+  scalable. **Do NOT use Vercel. Do NOT deploy products onto this company's own
+  runtime host** (that host runs the company itself and is resource-constrained).
+- Cheap validation experiments (fake-door landing pages) → **Cloudflare Pages**
+  (`*.pages.dev` is free and instant — ideal for willingness-to-pay tests).
+- `wrangler` authenticates via the `CLOUDFLARE_API_TOKEN` env var (a deploy-scoped
+  secret). If it is missing, deployment is not yet provisioned — do not fall back
+  to another provider; surface it in consensus and continue other work.
+
 ## Skills Arsenal
 
 All skills are under `.claude/skills/`. Any agent can use any skill when relevant.
