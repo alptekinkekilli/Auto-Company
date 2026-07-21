@@ -185,6 +185,7 @@ docs/*/*
 !docs/windows-setup.md
 !docs/operations/north-star-metric-query.sql
 !docs/operations/waitlist-launch-email.md
+!docs/research/snapog-unblock-analysis.md
 # Ignore all memories (keep folder marker only)
 memories/*
 !memories/.gitkeep
