@@ -24,6 +24,7 @@ avoid concurrent builds.
 | Var | Type | Value / note |
 |---|---|---|
 | `CLAUDE_CODE_OAUTH_TOKEN` | **secret** | Output of `claude setup-token`. Headless auth for the loop. |
+| `GH_TOKEN` | **secret** | The company's GitHub PAT (`repo` + `workflow`). Used by `gh` + git push. |
 | `COMPANY_GIT_NAME` | plain | The company's own git author name (not your personal identity). |
 | `COMPANY_GIT_EMAIL` | plain | The company's own git email. |
 | `DASHBOARD_PORT` | plain | `8787` (matches Coolify port). |

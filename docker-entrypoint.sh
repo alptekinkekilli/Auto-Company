@@ -19,6 +19,14 @@ mkdir -p memories projects logs
 [ -n "${COMPANY_GIT_EMAIL:-}" ] && git config --global user.email "$COMPANY_GIT_EMAIL"
 git config --global --add safe.directory /app || true
 
+# --- GitHub auth for the company's own pushes / repo creation ---
+# gh CLI reads GH_TOKEN automatically; wire git push (HTTPS) to the same token.
+if [ -n "${GH_TOKEN:-}" ]; then
+    printf 'https://x-access-token:%s@github.com\n' "$GH_TOKEN" > "$HOME/.git-credentials"
+    chmod 600 "$HOME/.git-credentials"
+    git config --global credential.helper store
+fi
+
 DASHBOARD_PORT="${DASHBOARD_PORT:-8787}"
 
 DASH_PID=""
