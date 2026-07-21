@@ -134,6 +134,19 @@ Key authenticated tools:
 
 Need other tools? Install directly with `npm install -g`, `uv tool install`, or `brew install`.
 
+### Context7 — up-to-date library docs (MCP)
+
+The `context7` MCP server (configured in `.mcp.json`) gives every agent live,
+version-accurate documentation for external libraries and frameworks.
+
+- **When to use:** before writing code against any external library/framework/API
+  (Next.js, Cloudflare Workers, Stripe, a new npm/pip package, etc.) — pull the
+  current docs instead of relying on possibly-stale training knowledge.
+- **How:** `resolve-library-id` to find the library, then `get-library-docs`
+  for the relevant topic.
+- This complements the local skill pool (`.claude/skills/` = how-to workflows);
+  Context7 = current API surface of the thing you're building on.
+
 ## Skills Arsenal
 
 All skills are under `.claude/skills/`. Any agent can use any skill when relevant.
