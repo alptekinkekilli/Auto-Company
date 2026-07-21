@@ -54,6 +54,10 @@ CLAUDE_EFFORT="${CLAUDE_EFFORT:-}"
 CLAUDE_PERMISSION_MODE="${CLAUDE_PERMISSION_MODE:-bypassPermissions}"
 CODEX_BIN="${CODEX_BIN:-}"
 CODEX_SANDBOX_MODE="${CODEX_SANDBOX_MODE:-danger-full-access}"
+FALLBACK_ENGINE="$(echo "${FALLBACK_ENGINE:-}" | tr '[:upper:]' '[:lower:]')"
+CODEX_MODEL="${CODEX_MODEL:-}"
+RESOLVED_CODEX_BIN=""
+FALLBACK_USED=0
 LOOP_INTERVAL="${LOOP_INTERVAL:-30}"
 CYCLE_TIMEOUT_SECONDS="${CYCLE_TIMEOUT_SECONDS:-1800}"
 MAX_CONSECUTIVE_ERRORS="${MAX_CONSECUTIVE_ERRORS:-5}"
@@ -495,6 +499,27 @@ run_engine_cycle() {
     case "$ENGINE" in
         claude)
             run_claude_cycle "$prompt"
+            # Codex fallback: if Claude is usage-limited and a codex fallback is
+            # configured, re-run the SAME cycle on Codex so the company keeps
+            # working. run_codex_cycle overwrites OUTPUT/EXIT_CODE/etc., so the
+            # rest of the loop evaluates the Codex result transparently.
+            if [ "$FALLBACK_ENGINE" = "codex" ] && check_usage_limit "$OUTPUT"; then
+                if [ -z "$RESOLVED_CODEX_BIN" ]; then
+                    RESOLVED_CODEX_BIN="$(resolve_codex_bin 2>/dev/null || true)"
+                fi
+                if [ -n "$RESOLVED_CODEX_BIN" ]; then
+                    log "Cycle #$loop_count [FALLBACK] Claude usage-limited — retrying on Codex"
+                    local _saved_bin="$RESOLVED_ENGINE_BIN" _saved_model="$MODEL"
+                    RESOLVED_ENGINE_BIN="$RESOLVED_CODEX_BIN"
+                    MODEL="$CODEX_MODEL"   # empty -> codex config.toml default (gpt-5.6-sol)
+                    run_codex_cycle "$prompt"
+                    RESOLVED_ENGINE_BIN="$_saved_bin"
+                    MODEL="$_saved_model"
+                    FALLBACK_USED=1
+                else
+                    log "Cycle #$loop_count [FALLBACK] requested but codex binary not found"
+                fi
+            fi
             ;;
         codex)
             run_codex_cycle "$prompt"

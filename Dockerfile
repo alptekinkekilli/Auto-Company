@@ -24,6 +24,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Claude Code CLI (the loop's engine)
 RUN npm install -g @anthropic-ai/claude-code && npm cache clean --force
 
+# Codex CLI (fallback engine when Claude is usage-limited) — 0.144.x supports gpt-5.6-sol
+RUN npm install -g @openai/codex@0.144.6 && npm cache clean --force
+
 WORKDIR /app
 COPY . .
 
@@ -35,6 +38,8 @@ RUN chmod +x scripts/core/*.sh scripts/linux/*.sh docker-entrypoint.sh 2>/dev/nu
 # Pre-accept the workspace trust dialog so headless runs aren't blocked.
 RUN useradd -m -u 10001 -s /bin/bash app \
     && printf '{"projects":{"/app":{"hasTrustDialogAccepted":true}}}\n' > /home/app/.claude.json \
+    && mkdir -p /home/app/.codex \
+    && printf 'model = "gpt-5.6-sol"\nmodel_reasoning_effort = "low"\napproval_policy = "never"\n' > /home/app/.codex/config.toml \
     && chown -R app:app /app /home/app
 
 # Persisted across redeploys (map these in Coolify → Persistent Storage)

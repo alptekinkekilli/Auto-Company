@@ -41,6 +41,21 @@ if [ -n "${GH_TOKEN:-}" ]; then
     git config --global credential.helper store
 fi
 
+# --- Codex fallback auth (optional) ---
+# Provide the operator's ~/.codex/auth.json as base64 in CODEX_AUTH_B64 to enable
+# the Codex fallback engine. When present, the loop switches to Codex on a Claude
+# usage limit (FALLBACK_ENGINE=codex).
+if [ -n "${CODEX_AUTH_B64:-}" ]; then
+    mkdir -p "$HOME/.codex"
+    if echo "$CODEX_AUTH_B64" | base64 -d > "$HOME/.codex/auth.json" 2>/dev/null; then
+        chmod 600 "$HOME/.codex/auth.json"
+        export FALLBACK_ENGINE="${FALLBACK_ENGINE:-codex}"
+        echo "[entrypoint] Codex fallback enabled (auth injected)"
+    else
+        echo "[entrypoint] warning: CODEX_AUTH_B64 failed to decode; Codex fallback disabled" >&2
+    fi
+fi
+
 DASHBOARD_PORT="${DASHBOARD_PORT:-8787}"
 
 DASH_PID=""
