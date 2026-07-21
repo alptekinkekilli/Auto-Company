@@ -32,6 +32,7 @@ MACOS_STOP_SCRIPT = REPO_ROOT / "scripts" / "core" / "stop-loop.sh"
 LOG_FILE = REPO_ROOT / "logs" / "auto-loop.log"
 STATE_FILE = REPO_ROOT / ".auto-loop-state"
 CONSENSUS_FILE = REPO_ROOT / "memories" / "consensus.md"
+DIRECTIVE_FILE = REPO_ROOT / "memories" / "human-directive.md"
 
 WINDOWS_HOST = "windows"
 MACOS_HOST = "macos"
@@ -172,6 +173,62 @@ def read_text_file(path: Path, fallback: str = "") -> str:
             continue
 
     return raw.decode("utf-8", errors="replace")
+
+
+DIRECTIVE_MAX_CHARS = 4000
+
+
+def read_directive() -> dict[str, Any]:
+    """Parse memories/human-directive.md into a structured payload.
+
+    Returns {present, status, updated, directive}. status is one of
+    PENDING / DONE / NONE. The autonomous loop flips PENDING -> DONE after it
+    executes the directive, so the dashboard can show whether it was picked up.
+    """
+    raw = read_text_file(DIRECTIVE_FILE, "")
+    if not raw.strip():
+        return {"present": False, "status": "NONE", "updated": "", "directive": ""}
+
+    def _section(name: str) -> str:
+        match = re.search(
+            rf"^##\s+{name}\s*$\n(.*?)(?=^##\s+|\Z)",
+            raw,
+            re.MULTILINE | re.DOTALL,
+        )
+        return match.group(1).strip() if match else ""
+
+    status = (_section("Status") or "PENDING").splitlines()[0].strip().upper()
+    if status not in {"PENDING", "DONE"}:
+        status = "PENDING"
+    return {
+        "present": True,
+        "status": status,
+        "updated": _section("Updated"),
+        "directive": _section("Directive"),
+    }
+
+
+def write_directive(text: str) -> dict[str, Any]:
+    """Write a new PENDING human directive. Overwrites any previous one."""
+    clean = text.strip()
+    if not clean:
+        raise ValueError("directive text is empty")
+    if len(clean) > DIRECTIVE_MAX_CHARS:
+        raise ValueError(f"directive too long (max {DIRECTIVE_MAX_CHARS} chars)")
+
+    updated = datetime.now(timezone.utc).isoformat()
+    body = (
+        "# Human Directive\n\n"
+        "<!-- Set by the dashboard Director panel. The autonomous loop must\n"
+        "     treat a PENDING directive as the top priority for this cycle,\n"
+        "     then set Status to DONE once it has been acted on. -->\n\n"
+        "## Status\nPENDING\n\n"
+        f"## Updated\n{updated}\n\n"
+        f"## Directive\n{clean}\n"
+    )
+    DIRECTIVE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    DIRECTIVE_FILE.write_text(body, encoding="utf-8")
+    return read_directive()
 
 
 def read_tail(path: Path, lines: int = 120) -> str:
@@ -428,6 +485,7 @@ def gather_status_payload(system_name: str | None = None) -> dict[str, Any]:
         "stateFile": read_state_file_pairs(),
         "consensusHead": read_text_file(CONSENSUS_FILE, "(no consensus file)")[:3000],
         "logTail": read_tail(LOG_FILE, lines=180),
+        "directive": read_directive(),
     }
 
 
@@ -494,9 +552,23 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
         self._text("Not found", code=404)
 
+    def _read_body(self, limit: int = 64 * 1024) -> bytes:
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = 0
+        if length <= 0:
+            return b""
+        return self.rfile.read(min(length, limit))
+
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         path = parsed.path
+
+        if path == "/api/directive":
+            self._handle_directive()
+            return
+
         if path not in {"/api/action/start", "/api/action/stop", "/api/action/refresh"}:
             self._text("Not found", code=404)
             return
@@ -512,6 +584,37 @@ class DashboardHandler(BaseHTTPRequestHandler):
             "output": result["output"],
         }
         self._json(payload, code=HTTPStatus.OK if result["ok"] else HTTPStatus.BAD_REQUEST)
+
+    def _handle_directive(self) -> None:
+        body = self._read_body()
+        text = ""
+        try:
+            data = json.loads(body.decode("utf-8")) if body else {}
+            if isinstance(data, dict):
+                text = str(data.get("directive", ""))
+        except (ValueError, UnicodeDecodeError):
+            text = ""
+
+        try:
+            directive = write_directive(text)
+        except ValueError as exc:
+            self._json(
+                {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "ok": False,
+                    "error": str(exc),
+                },
+                code=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        self._json(
+            {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "ok": True,
+                "directive": directive,
+            }
+        )
 
     def log_message(self, fmt: str, *args: Any) -> None:  # noqa: A003
         _ = (fmt, args)

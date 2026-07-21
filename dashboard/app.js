@@ -23,6 +23,13 @@ const els = {
   logText: document.getElementById("logText"),
   rawText: document.getElementById("rawText"),
 
+  directiveInput: document.getElementById("directiveInput"),
+  directiveBadge: document.getElementById("directiveBadge"),
+  directiveStatus: document.getElementById("directiveStatus"),
+  directiveCurrent: document.getElementById("directiveCurrent"),
+  directiveUpdated: document.getElementById("directiveUpdated"),
+  btnDirective: document.getElementById("btnDirective"),
+
   btnRefresh: document.getElementById("btnRefresh"),
   btnStart: document.getElementById("btnStart"),
   btnStop: document.getElementById("btnStop"),
@@ -232,8 +239,58 @@ async function fetchStatus() {
   els.pulseText.textContent = healthy ? "Live Link: STABLE" : "Live Link: ATTENTION";
   els.pulseDot.style.background = healthy ? "var(--good)" : "var(--warn)";
 
+  renderDirective(data.directive || {});
+
   els.lastUpdate.textContent = `Last update: ${formatTime(data.timestamp)}`;
   els.latency.textContent = `Roundtrip: ${elapsed}ms`;
+}
+
+function renderDirective(directive) {
+  const status = (directive.status || "NONE").toUpperCase();
+  els.directiveBadge.textContent = status;
+  els.directiveBadge.className = `badge badge-${status.toLowerCase()}`;
+
+  if (directive.present && directive.directive) {
+    els.directiveCurrent.textContent = directive.directive;
+    els.directiveUpdated.textContent = directive.updated
+      ? `updated ${formatTime(directive.updated)}`
+      : "";
+  } else {
+    els.directiveCurrent.textContent = "(none)";
+    els.directiveUpdated.textContent = "";
+  }
+}
+
+async function submitDirective() {
+  const text = els.directiveInput.value.trim();
+  if (!text) {
+    els.directiveStatus.textContent = "Type a directive first.";
+    return;
+  }
+  const label = els.btnDirective.textContent;
+  els.btnDirective.disabled = true;
+  els.btnDirective.textContent = "Sending...";
+  els.directiveStatus.textContent = "";
+  try {
+    const res = await fetch("/api/directive", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ directive: text }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      throw new Error(data.error || "Failed to send directive");
+    }
+    els.directiveInput.value = "";
+    els.directiveStatus.textContent = "Directive sent — the next cycle will pick it up.";
+    renderDirective(data.directive || {});
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    els.directiveStatus.textContent = msg;
+  } finally {
+    els.btnDirective.disabled = false;
+    els.btnDirective.textContent = label;
+  }
 }
 
 async function runAction(action) {
@@ -277,6 +334,7 @@ els.btnRaw.addEventListener("click", () => {
   rawVisible = !rawVisible;
   els.rawText.classList.toggle("hidden", !rawVisible);
 });
+els.btnDirective.addEventListener("click", () => submitDirective());
 els.autoToggle.addEventListener("change", resetAutoTimer);
 els.refreshInterval.addEventListener("change", resetAutoTimer);
 

@@ -76,7 +76,29 @@
       </article>
     </section>
 
-    <section class="grid-details reveal-4">
+    <section class="panel director reveal-4">
+      <div class="panel-head">
+        <h3>Director — Human Directive</h3>
+        <span id="directiveBadge" class="badge badge-none">NONE</span>
+      </div>
+      <p class="muted director-hint">
+        Steer the autonomous company without breaking its autonomy. Your directive becomes the
+        top priority for the next cycle's <strong>Next Action</strong>, then is marked DONE.
+      </p>
+      <textarea id="directiveInput" class="director-input" rows="3" maxlength="4000"
+        placeholder="e.g. Focus the next cycle on shipping a landing page for the chosen product and set up a waitlist."></textarea>
+      <div class="director-actions">
+        <button id="btnDirective" class="btn btn-start">Send Directive</button>
+        <span id="directiveStatus" class="muted mono"></span>
+      </div>
+      <div class="director-current">
+        <span class="muted">Current directive</span>
+        <span id="directiveUpdated" class="muted mono"></span>
+        <p id="directiveCurrent" class="director-current-text mono">(none)</p>
+      </div>
+    </section>
+
+    <section class="grid-details reveal-5">
       <article class="panel detail">
         <h3>Runtime State</h3>
         <dl id="stateList" class="state-list"></dl>
