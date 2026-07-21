@@ -1,0 +1,25 @@
+# Keep the image lean and free of local runtime state / secrets.
+# NOTE: do NOT exclude *.md — PROMPT.md and CLAUDE.md are read by the loop every cycle.
+.git
+.github
+node_modules
+
+# Local runtime state (recreated in the container / provided by volumes)
+memories/
+logs/
+projects/
+.auto-loop.pid
+.auto-loop-state
+.auto-loop-paused
+
+# Local operator / session junk
+dashboard.out
+scratchpad-loop.out
+.claude/scheduled_tasks.lock
+.DS_Store
+
+# Never ship anything secret-shaped
+*.env
+.env*
+*.pem
+*.key

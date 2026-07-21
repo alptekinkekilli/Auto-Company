@@ -1,0 +1,37 @@
+# Auto-Company — single container running the Control Deck dashboard + the
+# autonomous loop (Claude engine). Target platform: linux/amd64 (Hetzner CX23).
+#
+# Build:  docker build -t auto-company .
+# Run:    see deploy/README.md (Coolify) — requires CLAUDE_CODE_OAUTH_TOKEN.
+FROM node:22-bookworm-slim
+
+# System deps:
+#  - python3: stdlib-only dashboard server (no pip deps)
+#  - git/jq/curl/ca-certificates: the loop + the company's real dev work
+#  - procps: pgrep/kill used by the loop and status scripts
+#  - tini: proper PID 1 / signal reaping
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3 git jq curl ca-certificates procps tini \
+    && rm -rf /var/lib/apt/lists/*
+
+# Claude Code CLI (the loop's engine)
+RUN npm install -g @anthropic-ai/claude-code && npm cache clean --force
+
+WORKDIR /app
+COPY . .
+
+RUN chmod +x scripts/core/*.sh scripts/linux/*.sh docker-entrypoint.sh 2>/dev/null || true \
+    && mkdir -p memories projects logs
+
+# Persisted across redeploys (map these in Coolify → Persistent Storage)
+VOLUME ["/app/memories", "/app/projects", "/app/logs"]
+
+ENV ENGINE=claude \
+    CLAUDE_PERMISSION_MODE=bypassPermissions \
+    CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 \
+    DASHBOARD_PORT=8787 \
+    LOOP_INTERVAL=30
+
+EXPOSE 8787
+
+ENTRYPOINT ["/usr/bin/tini", "--", "/app/docker-entrypoint.sh"]

@@ -25,6 +25,9 @@ WINDOWS_STATUS_SCRIPT = REPO_ROOT / "scripts" / "windows" / "status-win.ps1"
 WINDOWS_START_SCRIPT = REPO_ROOT / "scripts" / "windows" / "start-win.ps1"
 WINDOWS_STOP_SCRIPT = REPO_ROOT / "scripts" / "windows" / "stop-win.ps1"
 
+LINUX_STATUS_SCRIPT = REPO_ROOT / "scripts" / "linux" / "status-linux.sh"
+LINUX_NOOP_SCRIPT = REPO_ROOT / "scripts" / "linux" / "noop-action.sh"
+
 MACOS_STATUS_SCRIPT = REPO_ROOT / "scripts" / "macos" / "status-mac.sh"
 MACOS_START_SCRIPT = REPO_ROOT / "scripts" / "macos" / "install-daemon.sh"
 MACOS_STOP_SCRIPT = REPO_ROOT / "scripts" / "core" / "stop-loop.sh"
@@ -36,6 +39,7 @@ DIRECTIVE_FILE = REPO_ROOT / "memories" / "human-directive.md"
 
 WINDOWS_HOST = "windows"
 MACOS_HOST = "macos"
+LINUX_HOST = "linux"
 
 
 def ps_quote(value: str) -> str:
@@ -48,8 +52,10 @@ def detect_host_kind(system_name: str | None = None) -> str:
         return WINDOWS_HOST
     if name == "Darwin":
         return MACOS_HOST
+    if name == "Linux":
+        return LINUX_HOST
     raise RuntimeError(
-        "Dashboard only supports Windows hosts (with WSL backend) and macOS hosts."
+        "Dashboard only supports Windows (WSL), macOS, and Linux/container hosts."
     )
 
 
@@ -144,6 +150,17 @@ def get_host_profile(system_name: str | None = None) -> dict[str, Any]:
             "start_script": WINDOWS_START_SCRIPT,
             "start_args": None,
             "stop_script": WINDOWS_STOP_SCRIPT,
+            "stop_args": None,
+        }
+    if host == LINUX_HOST:
+        return {
+            "host": host,
+            "runner": run_shell_script,
+            "parser": parse_macos_status_output,
+            "status_script": LINUX_STATUS_SCRIPT,
+            "start_script": LINUX_NOOP_SCRIPT,
+            "start_args": None,
+            "stop_script": LINUX_NOOP_SCRIPT,
             "stop_args": None,
         }
     return {
