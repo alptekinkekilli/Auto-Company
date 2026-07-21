@@ -65,6 +65,13 @@ WINDOW_BUDGET_USD="${WINDOW_BUDGET_USD:-}"
 WINDOW_SECONDS="${WINDOW_SECONDS:-18000}"
 BUDGET_PAUSE_SECONDS="${BUDGET_PAUSE_SECONDS:-1800}"
 SPEND_LEDGER="$LOG_DIR/spend-window.log"
+# Codex quota ledger (APP-189 Phase 1). Codex `exec` returns no USD cost, and the
+# ChatGPT/Codex quota is message/window-based rather than dollar-based — so Codex
+# consumption is metered as CYCLE COUNT within the same rolling WINDOW_SECONDS.
+# This is only a meter: the quota-aware router (Phase 2) will consult it to decide
+# alternation/headroom; nothing reads it yet, so engine selection is unchanged.
+CODEX_SPEND_LEDGER="$LOG_DIR/codex-window.log"
+CODEX_WINDOW_LIMIT="${CODEX_WINDOW_LIMIT:-}"   # max Codex cycles per window (empty = unmetered)
 LOOP_INTERVAL="${LOOP_INTERVAL:-30}"
 CYCLE_TIMEOUT_SECONDS="${CYCLE_TIMEOUT_SECONDS:-1800}"
 MAX_CONSECUTIVE_ERRORS="${MAX_CONSECUTIVE_ERRORS:-5}"
@@ -130,6 +137,24 @@ window_spend() {
     awk -v c="$cutoff" '$1 >= c' "$SPEND_LEDGER" > "$SPEND_LEDGER.tmp" 2>/dev/null \
         && mv "$SPEND_LEDGER.tmp" "$SPEND_LEDGER" 2>/dev/null || true
     awk '{s += $2} END {printf "%.4f", s + 0}' "$SPEND_LEDGER" 2>/dev/null || echo "0"
+}
+
+# Record one completed Codex cycle into the count-based Codex quota ledger (APP-189
+# Phase 1). Codex gives no USD cost, so each cycle counts as 1 unit of quota use.
+record_codex_cycle() {
+    printf '%s 1\n' "$(date +%s)" >> "$CODEX_SPEND_LEDGER" 2>/dev/null || true
+}
+
+# Count Codex cycles within the last WINDOW_SECONDS, pruning older entries. Echoes
+# an integer. Mirror of window_spend() but count-based rather than USD-based.
+codex_window_count() {
+    [ -f "$CODEX_SPEND_LEDGER" ] || { echo "0"; return; }
+    local now cutoff
+    now=$(date +%s)
+    cutoff=$((now - WINDOW_SECONDS))
+    awk -v c="$cutoff" '$1 >= c' "$CODEX_SPEND_LEDGER" > "$CODEX_SPEND_LEDGER.tmp" 2>/dev/null \
+        && mv "$CODEX_SPEND_LEDGER.tmp" "$CODEX_SPEND_LEDGER" 2>/dev/null || true
+    awk '{s += $2} END {printf "%d", s + 0}' "$CODEX_SPEND_LEDGER" 2>/dev/null || echo "0"
 }
 
 check_stop_requested() {
@@ -783,7 +808,12 @@ This is Cycle #$loop_count. Act decisively."
     # guards the operator's Claude quota; Codex (fallback or budget-offload) runs
     # on a separate quota, so as Claude entries age out the window frees and the
     # loop returns to Claude automatically.
-    if [ "$FALLBACK_USED" -eq 0 ] && [ -z "$CYCLE_ENGINE_OVERRIDE" ]; then
+    if [ "$FALLBACK_USED" -eq 1 ] || [ "$CYCLE_ENGINE_OVERRIDE" = "codex" ] || [ "$ENGINE" = "codex" ]; then
+        # This cycle actually ran on Codex (fallback, budget-offload, or primary
+        # engine) — meter it on the count-based Codex quota ledger. Codex runs on a
+        # separate quota, so it is intentionally NOT written to the Claude USD ledger.
+        record_codex_cycle
+    else
         record_spend "$CYCLE_COST"
     fi
 

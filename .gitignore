@@ -146,8 +146,6 @@ memories/consensus.md.bak
 projects/*
 !projects/.gitkeep
 !projects/snapog/
-!projects/snapog-landing/
-!projects/headinspect/
 
 # Local/private outputs (do not publish)
 AGENTS.md
@@ -185,10 +183,9 @@ docs/*
 docs/*/*
 !docs/*/.gitkeep
 !docs/windows-setup.md
-!docs/operations/north-star-metric-query.sql
-!docs/operations/waitlist-launch-email.md
-!docs/research/snapog-unblock-analysis.md
-!docs/product/headinspect-persona.md
 # Ignore all memories (keep folder marker only)
 memories/*
 !memories/.gitkeep
+
+dashboard.out
+scratchpad-loop.out
