@@ -184,6 +184,7 @@ docs/*/*
 !docs/*/.gitkeep
 !docs/windows-setup.md
 !docs/operations/north-star-metric-query.sql
+!docs/operations/waitlist-launch-email.md
 # Ignore all memories (keep folder marker only)
 memories/*
 !memories/.gitkeep
