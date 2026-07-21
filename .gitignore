@@ -146,7 +146,6 @@ memories/consensus.md.bak
 projects/*
 !projects/.gitkeep
 !projects/snapog/
-!projects/snapog-landing/
 
 # Local/private outputs (do not publish)
 AGENTS.md
@@ -184,6 +183,7 @@ docs/*
 docs/*/*
 !docs/*/.gitkeep
 !docs/windows-setup.md
+!docs/operations/north-star-metric-query.sql
 # Ignore all memories (keep folder marker only)
 memories/*
 !memories/.gitkeep
