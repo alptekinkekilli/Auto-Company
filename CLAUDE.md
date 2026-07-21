@@ -161,6 +161,12 @@ version-accurate documentation for external libraries and frameworks.
 - `wrangler` authenticates via the `CLOUDFLARE_API_TOKEN` env var (a deploy-scoped
   secret). If it is missing, deployment is not yet provisioned — do not fall back
   to another provider; surface it in consensus and continue other work.
+- **Verify before claiming live.** After any deploy, actually fetch the public URL
+  and confirm it returns HTTP 200 with the expected content BEFORE reporting it as
+  live/production-ready. A created project or a deployment record is NOT proof the
+  URL works — new `*.pages.dev` TLS certs take a few minutes, and builds can be
+  empty. Report the true status (e.g. "deployed, cert still provisioning") — never
+  overstate. Use the production `<project>.pages.dev` URL, not a preview hash URL.
 
 ## Skills Arsenal
 
