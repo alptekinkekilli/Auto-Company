@@ -1,7 +1,7 @@
 // Single-template HTML renderer. No client-side framework, inline CSS.
 // Total budget: under ~150 lines including CSS.
 
-import type { InspectReport, HeaderEntry, Category } from "./inspect";
+import type { InspectReport, HeaderEntry, Category, Grade } from "./inspect";
 
 const CATEGORY_LABEL: Record<Category, string> = {
   security: "Security",
@@ -20,6 +20,77 @@ function escapeHtml(s: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+// ---------- badge ------------------------------------------------------------
+
+function badgeColor(letter: Grade["letter"] | "error"): string {
+  switch (letter) {
+    case "A": return "#4c1";
+    case "B": return "#97ca00";
+    case "C": return "#dfb317";
+    case "D": return "#fe7d37";
+    case "F": return "#e05d44";
+    default:  return "#9f9f9f";
+  }
+}
+
+// Rough 11px Verdana metrics — good enough for our fixed slugs.
+function textWidth(s: string): number {
+  return s.length * 6.5;
+}
+
+// shields.io-flavoured flat SVG. Uses textLength to stretch text to the
+// pre-computed slug width so the render is stable across clients that
+// substitute the font.
+export function renderBadge(opts: { letter: Grade["letter"] | "error"; score?: number; label?: string; message?: string }): string {
+  const label = opts.label ?? "headinspect";
+  const message = opts.message ?? (opts.letter === "error" ? "error" : `${opts.letter} ${opts.score ?? 0}/100`);
+  const color = badgeColor(opts.letter);
+
+  const padL = 12; // 6px each side
+  const padR = 12;
+  const labelW = Math.round(textWidth(label) + padL);
+  const messageW = Math.round(textWidth(message) + padR);
+  const total = labelW + messageW;
+
+  // Center-x for each label, scaled 10x for textLength.
+  const labelCX10 = labelW * 5;
+  const messageCX10 = (labelW * 2 + messageW) * 5;
+  const labelTL10 = (labelW - padL) * 10;
+  const messageTL10 = (messageW - padR) * 10;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${total}" height="20" role="img" aria-label="${escapeHtml(label)}: ${escapeHtml(message)}">
+<title>${escapeHtml(label)}: ${escapeHtml(message)}</title>
+<linearGradient id="s" x2="0" y2="100%"><stop offset="0" stop-color="#bbb" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient>
+<clipPath id="r"><rect width="${total}" height="20" rx="3" fill="#fff"/></clipPath>
+<g clip-path="url(#r)">
+<rect width="${labelW}" height="20" fill="#555"/>
+<rect x="${labelW}" width="${messageW}" height="20" fill="${color}"/>
+<rect width="${total}" height="20" fill="url(#s)"/>
+</g>
+<g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110">
+<text aria-hidden="true" x="${labelCX10}" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="${labelTL10}">${escapeHtml(label)}</text>
+<text x="${labelCX10}" y="140" transform="scale(.1)" textLength="${labelTL10}">${escapeHtml(label)}</text>
+<text aria-hidden="true" x="${messageCX10}" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="${messageTL10}">${escapeHtml(message)}</text>
+<text x="${messageCX10}" y="140" transform="scale(.1)" textLength="${messageTL10}">${escapeHtml(message)}</text>
+</g>
+</svg>`;
+}
+
+function renderEmbedBlock(origin: string, requestedUrl: string): string {
+  const badgeUrl = `${origin}/badge.svg?url=${encodeURIComponent(requestedUrl)}`;
+  const reportUrl = `${origin}/?url=${encodeURIComponent(requestedUrl)}`;
+  const md = `[![HeadInspect](${badgeUrl})](${reportUrl})`;
+  const htmlSnippet = `<a href="${reportUrl}"><img src="${badgeUrl}" alt="HeadInspect grade"></a>`;
+  return `<section class="embed"><h3>Embed a live badge</h3>
+<img src="${escapeHtml(badgeUrl)}" alt="live grade badge" class="live-badge" width="140" height="20">
+<label>Markdown</label>
+<textarea readonly onclick="this.select()" rows="1">${escapeHtml(md)}</textarea>
+<label>HTML</label>
+<textarea readonly onclick="this.select()" rows="1">${escapeHtml(htmlSnippet)}</textarea>
+<p class="hint small">Regrades on each render (edge-cached 5min). Drop it in a README to show your headers score.</p>
+</section>`;
 }
 
 function renderReport(report: InspectReport): string {
@@ -105,8 +176,9 @@ function socialMeta(opts: { origin: string; url?: string; report?: InspectReport
 }
 
 export function renderPage(opts: { origin: string; url?: string; report?: InspectReport; error?: string }): string {
+  const embed = opts.report ? renderEmbedBlock(opts.origin, opts.report.requestedUrl) : "";
   const body = opts.report
-    ? renderReport(opts.report)
+    ? renderReport(opts.report) + embed
     : opts.error
       ? `<p class="error">${escapeHtml(opts.error)}</p>`
       : `<p class="hint">Paste a URL. Get its response headers, grouped and graded.</p>`;
@@ -149,6 +221,11 @@ td{padding:6px 8px;vertical-align:top;border-bottom:1px solid var(--line);}
 footer{margin-top:48px;color:var(--mut);font-size:12px;}
 footer a{color:inherit;}
 ol li{font:12px ui-monospace,monospace;}
+.embed{margin-top:24px;}
+.embed .live-badge{display:block;margin:8px 0 12px;}
+.embed label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--mut);margin:8px 0 2px;}
+.embed textarea{width:100%;padding:6px 8px;font:12px ui-monospace,SFMono-Regular,Consolas,monospace;background:transparent;color:var(--fg);border:1px solid var(--line);border-radius:4px;resize:none;box-sizing:border-box;}
+.small{font-size:11px;margin-top:6px;}
 </style></head><body><main>
 <h1>HeadInspect <small>— response-header inspector</small></h1>
 <form method="get" action="/">
@@ -157,7 +234,8 @@ ol li{font:12px ui-monospace,monospace;}
 </form>
 ${body}
 <footer>
-  Also usable as JSON: <code>POST /api/inspect {"url":"..."}</code> or <code>GET /?url=...</code> with <code>Accept: application/json</code>.
+  Also usable as JSON: <code>POST /api/inspect {"url":"..."}</code> or <code>GET /?url=...</code> with <code>Accept: application/json</code>.<br>
+  README badge: <code>GET /badge.svg?url=...</code> (SVG, edge-cached 5min).<br>
   10s timeout, 5 redirects, 1MB cap. HTTPS only. No logging of URLs.
 </footer>
 </main></body></html>`;

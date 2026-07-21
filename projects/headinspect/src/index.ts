@@ -7,7 +7,7 @@
 // CORS: Access-Control-Allow-Origin: * on /api/*.
 
 import { categorizeHeaders, grade, type InspectReport, type RedirectHop } from "./inspect";
-import { renderPage } from "./render";
+import { renderPage, renderBadge } from "./render";
 
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_REDIRECTS = 5;
@@ -38,6 +38,16 @@ export default {
       const result = await inspect(target.url);
       if (!result.ok) return json({ error: result.error }, result.status ?? 502);
       return json(result.report);
+    }
+
+    if (url.pathname === "/badge.svg") {
+      const qUrl = url.searchParams.get("url");
+      if (!qUrl) return svg(renderBadge({ letter: "error", message: "missing url" }));
+      const parsed = validateUrl(qUrl);
+      if (!parsed.ok) return svg(renderBadge({ letter: "error", message: "invalid url" }));
+      const result = await inspect(parsed.url);
+      if (!result.ok) return svg(renderBadge({ letter: "error", message: "fetch failed" }));
+      return svg(renderBadge({ letter: result.report.grade.letter, score: result.report.grade.score }));
     }
 
     if (url.pathname === "/") {
@@ -256,6 +266,19 @@ function html(body: string, status = 200): Response {
       "cache-control": "no-store",
       "x-content-type-options": "nosniff",
       "referrer-policy": "strict-origin-when-cross-origin",
+    },
+  });
+}
+
+// Always 200 so README embeds never render a broken image. Edge-cached 5min
+// (GitHub camo will layer its own cache on top).
+function svg(body: string): Response {
+  return new Response(body, {
+    status: 200,
+    headers: {
+      "content-type": "image/svg+xml; charset=utf-8",
+      "cache-control": "public, max-age=300, s-maxage=300",
+      ...CORS_HEADERS,
     },
   });
 }
