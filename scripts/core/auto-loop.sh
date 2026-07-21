@@ -72,6 +72,10 @@ SPEND_LEDGER="$LOG_DIR/spend-window.log"
 # alternation/headroom; nothing reads it yet, so engine selection is unchanged.
 CODEX_SPEND_LEDGER="$LOG_DIR/codex-window.log"
 CODEX_WINDOW_LIMIT="${CODEX_WINDOW_LIMIT:-}"   # max Codex cycles per window (empty = unmetered)
+# Weights for the unpriced Codex load index (no published gpt-5.6-sol $/credit rate
+# to convert tokens to money). Relative only: output tokens ~4x input, cached ~0.1x.
+CODEX_CACHE_WEIGHT="${CODEX_CACHE_WEIGHT:-0.1}"
+CODEX_OUTPUT_WEIGHT="${CODEX_OUTPUT_WEIGHT:-4}"
 # Quota-aware router (APP-189 Phase 2). ROUTER_ALTERNATE=1 spreads load across both
 # quotas: when Claude AND Codex both have window headroom, cycles alternate between
 # them (~2x daily throughput, neither exhausts early). Default 0 = prior behavior
@@ -146,21 +150,57 @@ window_spend() {
     awk '{s += $2} END {printf "%.4f", s + 0}' "$SPEND_LEDGER" 2>/dev/null || echo "0"
 }
 
-# Record one completed Codex cycle into the count-based Codex quota ledger (APP-189
-# Phase 1). Codex gives no USD cost, so each cycle counts as 1 unit of quota use.
-record_codex_cycle() {
-    printf '%s 1\n' "$(date +%s)" >> "$CODEX_SPEND_LEDGER" 2>/dev/null || true
+# Record one completed Codex cycle's real token usage (APP-189). `codex exec --json`
+# emits a `turn.completed.usage` event; ChatGPT-auth runs carry no USD cost, so we
+# meter TOKENS. Row: `epoch load input cached output reasoning exit`, where `load`
+# is an unpriced relative index:
+#   load = non_cached_input + cached*CODEX_CACHE_WEIGHT + (output+reasoning)*CODEX_OUTPUT_WEIGHT
+# Falls back to a count row (load=1) when usage can't be parsed, so windowing and
+# cycle-count stay correct on older CLIs or truncated output. $1 = codex JSONL stdout.
+record_codex_usage() {
+    local jsonl="$1" epoch usage in cached out reasoning load
+    epoch="$(date +%s)"
+    usage=""
+    if command -v jq >/dev/null 2>&1; then
+        usage="$(printf '%s' "$jsonl" | jq -sc '
+            [.[] | select(.type == "turn.completed" and .usage != null)] | last | .usage // empty
+        ' 2>/dev/null || true)"
+    fi
+    if [ -z "$usage" ] || [ "$usage" = "null" ]; then
+        printf '%s 1 0 0 0 0 %s\n' "$epoch" "${EXIT_CODE:-0}" >> "$CODEX_SPEND_LEDGER" 2>/dev/null || true
+        return
+    fi
+    in="$(printf '%s' "$usage"        | jq -r '.input_tokens // 0'            2>/dev/null || echo 0)"
+    cached="$(printf '%s' "$usage"    | jq -r '.cached_input_tokens // 0'     2>/dev/null || echo 0)"
+    out="$(printf '%s' "$usage"       | jq -r '.output_tokens // 0'          2>/dev/null || echo 0)"
+    reasoning="$(printf '%s' "$usage" | jq -r '.reasoning_output_tokens // 0' 2>/dev/null || echo 0)"
+    load="$(awk -v i="$in" -v c="$cached" -v o="$out" -v r="$reasoning" \
+        -v cw="$CODEX_CACHE_WEIGHT" -v ow="$CODEX_OUTPUT_WEIGHT" \
+        'BEGIN { nc = i - c; if (nc < 0) nc = 0; printf "%.0f", nc + c*cw + (o + r)*ow }')"
+    printf '%s %s %s %s %s %s %s\n' "$epoch" "$load" "$in" "$cached" "$out" "$reasoning" "${EXIT_CODE:-0}" \
+        >> "$CODEX_SPEND_LEDGER" 2>/dev/null || true
 }
 
-# Count Codex cycles within the last WINDOW_SECONDS, pruning older entries. Echoes
-# an integer. Mirror of window_spend() but count-based rather than USD-based.
-codex_window_count() {
-    [ -f "$CODEX_SPEND_LEDGER" ] || { echo "0"; return; }
+# Prune the Codex ledger to the last WINDOW_SECONDS (idempotent helper).
+_codex_prune() {
+    [ -f "$CODEX_SPEND_LEDGER" ] || return 0
     local now cutoff
-    now=$(date +%s)
-    cutoff=$((now - WINDOW_SECONDS))
+    now=$(date +%s); cutoff=$((now - WINDOW_SECONDS))
     awk -v c="$cutoff" '$1 >= c' "$CODEX_SPEND_LEDGER" > "$CODEX_SPEND_LEDGER.tmp" 2>/dev/null \
         && mv "$CODEX_SPEND_LEDGER.tmp" "$CODEX_SPEND_LEDGER" 2>/dev/null || true
+}
+
+# Count Codex cycles within the window (row count). Used against CODEX_WINDOW_LIMIT.
+codex_window_count() {
+    [ -f "$CODEX_SPEND_LEDGER" ] || { echo "0"; return; }
+    _codex_prune
+    awk 'END {print NR + 0}' "$CODEX_SPEND_LEDGER" 2>/dev/null || echo "0"
+}
+
+# Sum the weighted token load across the window (telemetry / future token budgeting).
+codex_window_load() {
+    [ -f "$CODEX_SPEND_LEDGER" ] || { echo "0"; return; }
+    _codex_prune
     awk '{s += $2} END {printf "%d", s + 0}' "$CODEX_SPEND_LEDGER" 2>/dev/null || echo "0"
 }
 
@@ -528,7 +568,10 @@ run_codex_cycle() {
     set +e
     (
         cd "$PROJECT_DIR" || exit 1
-        local codex_cmd=("$RESOLVED_ENGINE_BIN" "exec" "-c" "sandbox_mode=\"${CODEX_SANDBOX_MODE}\"" "-o" "$message_file")
+        # --json makes stdout a JSONL event stream carrying `turn.completed.usage`
+        # (per-run token counts) — metered into the Codex ledger. `-o` still writes
+        # the clean final message to $message_file, so the cycle SUMMARY is unaffected.
+        local codex_cmd=("$RESOLVED_ENGINE_BIN" "exec" "--json" "-c" "sandbox_mode=\"${CODEX_SANDBOX_MODE}\"" "-o" "$message_file")
         if [ -n "$MODEL" ]; then
             codex_cmd+=("-m" "$MODEL")
         fi
@@ -884,9 +927,9 @@ This is Cycle #$loop_count. Act decisively."
     # loop returns to Claude automatically.
     if [ "$FALLBACK_USED" -eq 1 ] || [ "$CYCLE_ENGINE_OVERRIDE" = "codex" ] || [ "$ENGINE" = "codex" ]; then
         # This cycle actually ran on Codex (fallback, budget-offload, or primary
-        # engine) — meter it on the count-based Codex quota ledger. Codex runs on a
+        # engine) — meter its real token usage from the JSONL stream. Codex runs on a
         # separate quota, so it is intentionally NOT written to the Claude USD ledger.
-        record_codex_cycle
+        record_codex_usage "$OUTPUT"
     else
         record_spend "$CYCLE_COST"
     fi
