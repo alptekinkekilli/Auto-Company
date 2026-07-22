@@ -568,10 +568,14 @@ run_codex_cycle() {
     set +e
     (
         cd "$PROJECT_DIR" || exit 1
+        # --skip-git-repo-check: the container workspace /app is not a git repo, and
+        # codex exec otherwise refuses to run ("Not inside a trusted directory").
+        # Without this, every Claude→Codex fallback fails with exit 1 (observed in
+        # container cycles #3/#4/#9).
         # --json makes stdout a JSONL event stream carrying `turn.completed.usage`
         # (per-run token counts) — metered into the Codex ledger. `-o` still writes
         # the clean final message to $message_file, so the cycle SUMMARY is unaffected.
-        local codex_cmd=("$RESOLVED_ENGINE_BIN" "exec" "--json" "-c" "sandbox_mode=\"${CODEX_SANDBOX_MODE}\"" "-o" "$message_file")
+        local codex_cmd=("$RESOLVED_ENGINE_BIN" "exec" "--skip-git-repo-check" "--json" "-c" "sandbox_mode=\"${CODEX_SANDBOX_MODE}\"" "-o" "$message_file")
         if [ -n "$MODEL" ]; then
             codex_cmd+=("-m" "$MODEL")
         fi
