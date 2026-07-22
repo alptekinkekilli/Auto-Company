@@ -38,6 +38,28 @@ Both when CHOOSING which idea to pursue AND when validating the chosen one, appl
   test. Interest, traffic, signups, free usage, email opens, and "I'd be
   interested" never count as payment validation.
 
+### HARD STOP — no build before willingness-to-pay evidence
+
+This is a BLOCKING gate, not advice. Before you write product code, scaffold an MVP,
+or "activate a launch" for the chosen idea:
+
+1. There MUST be a recorded willingness-to-pay (WTP) signal — a real payment, a
+   pre-order, a paid pilot commitment, or a priced fake-door with actual checkout
+   ATTEMPTS. Interest, signups, traffic, email opens, "I'd use this", or the mere
+   existence of a regulation/deadline do NOT count.
+2. If that signal does NOT yet exist, the ONLY build permitted this cycle is the
+   cheapest test that could produce it (e.g. a priced landing page with a real
+   checkout button). Do NOT build the product itself.
+3. A deadline, regulation, or trend may NEVER be cited as a reason to build, to skip
+   this gate, or to choose a forbidden platform. "Protecting the launch date" is not
+   a valid justification — a date you cannot validate WTP against is not demand.
+4. Maintain a `## WTP Evidence` field in `memories/consensus.md`: the signal, its
+   evidence tier, and the date. If it is empty/absent, you are in PRE-VALIDATION —
+   do not claim the product is being "built" or "launched"; run the WTP test instead.
+
+Building ahead of WTP evidence, or racing a deadline, is a PROCESS FAILURE to be
+corrected the next cycle — not progress. Munger may veto any build that violates it.
+
 ## SKILLS — USE YOUR ARSENAL (MANDATORY)
 
 You — and every subagent you spawn — have a `Skill` tool and ~35 packaged skills under
@@ -116,6 +138,9 @@ told to use. Record which skills you invoked in the cycle summary.
 ## Active Projects
 - [项目]: [状态] — [下一步]
 
+## WTP Evidence
+- [paid signal + evidence tier + date, or "NONE — pre-validation (no build allowed yet)"]
+
 ## Next Action
 [下一轮最重要的一件事]
 
@@ -133,7 +158,8 @@ told to use. Record which skills you invoked in the cycle summary.
 
 1. **Cycle 1**：Brainstorm，每个 agent 提一个想法，结束时排出 top 3
 2. **Cycle 2**：选 #1，critic-munger 做 Pre-Mortem，research-thompson 验证市场，cfo-campbell 算账。给出 GO / NO-GO
-3. **Cycle 3+**：GO → 建 repo 开始写代码，禁止继续讨论。NO-GO → 试 #2，全不行就强选一个做
-4. **Cycle 2 之后每轮必须产出实物**（文件、repo、部署），纯讨论禁止
+3. **Cycle 3+**：GO → 建 repo 开始写代码，禁止继续讨论。NO-GO → 试 #2，全不行就强选一个做。
+   **但 GO 到"写产品代码"必须先过上面的 HARD STOP（WTP 证据）门槛**；没有付费信号时，本轮唯一允许的"产出"是能产生该信号的最便宜测试（带真实结账的定价落地页），不是产品本身。
+4. **Cycle 2 之后每轮必须产出实物**（文件、repo、部署），纯讨论禁止。产出可以是 WTP 测试本身 —— 截止日期/法规绝不是跳过 WTP 门槛去直接建产品的理由。
 5. **同一个 Next Action 连续出现 2 轮** → 卡住了，换方向或缩范围直接 ship
 6. **凡是前端交付**（页面、界面、组件、dashboard、marketing site）→ 必须先使用 `frontend-design.md`，确保视觉与交互质量，不允许用通用默认风格直接输出

@@ -71,6 +71,26 @@ if [ ! -L /app/docs ]; then
     echo "[entrypoint] docs/ -> $DOCS_STORE (persistent)"
 fi
 
+# --- persist .claude/skills/ so company-authored skills survive redeploys --------
+# The company can author new skills via skill-creator, but .claude/skills/ ships in
+# the image (not a volume) so they'd be wiped on redeploy. Back it with the memories
+# volume: seed the image's base skills into the store without clobbering persisted
+# ones, then symlink. The symlink must exist BEFORE the loop starts so Claude Code
+# discovers the full set. (APP-204)
+SKILLS_STORE="${SKILLS_STORE:-/app/memories/_skills}"
+mkdir -p "$SKILLS_STORE"
+if [ ! -L /app/.claude/skills ]; then
+    if [ -d /app/.claude/skills ]; then
+        # clobber (no -n): base skills stay repo-authoritative (image updates win),
+        # while company-authored skills (unique names, not in the image) are left
+        # untouched in the store and thus persist.
+        cp -a /app/.claude/skills/. "$SKILLS_STORE/" 2>/dev/null || true
+        rm -rf /app/.claude/skills
+    fi
+    ln -s "$SKILLS_STORE" /app/.claude/skills
+    echo "[entrypoint] .claude/skills/ -> $SKILLS_STORE (persistent)"
+fi
+
 # --- the company's own git identity for its commits/deploys (optional) ---
 [ -n "${COMPANY_GIT_NAME:-}" ]  && git config --global user.name  "$COMPANY_GIT_NAME"
 [ -n "${COMPANY_GIT_EMAIL:-}" ] && git config --global user.email "$COMPANY_GIT_EMAIL"
