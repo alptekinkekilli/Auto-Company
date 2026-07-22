@@ -26,10 +26,22 @@ cd /app
 # LOOP_INTERVAL. Secrets may go here too but are better left as Coolify secrets.
 RUNTIME_ENV_FILE="${RUNTIME_ENV_FILE:-/app/logs/runtime.env}"
 if [ -f "$RUNTIME_ENV_FILE" ]; then
-    echo "[entrypoint] sourcing runtime overrides from $RUNTIME_ENV_FILE"
-    set +u; set -a
-    . "$RUNTIME_ENV_FILE" || echo "[entrypoint] warning: failed to source $RUNTIME_ENV_FILE" >&2
-    set +a; set -u
+    echo "[entrypoint] applying runtime overrides from $RUNTIME_ENV_FILE"
+    # Parse KEY=value literally (NOT `. file`) so values with shell-special chars
+    # — e.g. a Coolify token like `1|abcdef` whose `|` would otherwise be read as a
+    # pipe — are exported verbatim. Handles `=` in the value and optional quotes.
+    while IFS= read -r _line || [ -n "$_line" ]; do
+        case "$_line" in ''|\#*) continue ;; esac
+        _k=${_line%%=*}
+        _v=${_line#*=}
+        _k=$(printf '%s' "$_k" | tr -d '[:space:]')
+        case "$_v" in
+            \"*\") _v=${_v#\"}; _v=${_v%\"} ;;
+            \'*\') _v=${_v#\'}; _v=${_v%\'} ;;
+        esac
+        [ -n "$_k" ] && export "$_k=$_v"
+    done < "$RUNTIME_ENV_FILE"
+    unset _line _k _v
 fi
 
 # --- required auth (from `claude setup-token`, injected as a Coolify secret) ---
