@@ -728,7 +728,13 @@ run_engine_cycle() {
             fi
             ;;
         codex)
+            # Primary Codex engine: MODEL holds the CLAUDE model (e.g. haiku) for
+            # Claude cycles; it must NOT be passed to codex. Swap to CODEX_MODEL
+            # (empty -> codex config.toml default gpt-5.6-sol) for this run.
+            local _mo="$MODEL"
+            MODEL="$CODEX_MODEL"
             run_codex_cycle "$prompt"
+            MODEL="$_mo"
             ;;
         *)
             echo "Error: Unsupported ENGINE '$ENGINE'" >&2
