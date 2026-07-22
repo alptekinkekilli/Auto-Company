@@ -56,18 +56,39 @@ if [ -n "${GH_TOKEN:-}" ]; then
 fi
 
 # --- Codex fallback auth (optional) ---
-# Provide the operator's ~/.codex/auth.json as base64 in CODEX_AUTH_B64 to enable
-# the Codex fallback engine. When present, the loop switches to Codex on a Claude
-# usage limit (FALLBACK_ENGINE=codex).
-if [ -n "${CODEX_AUTH_B64:-}" ]; then
-    mkdir -p "$HOME/.codex"
-    if echo "$CODEX_AUTH_B64" | base64 -d > "$HOME/.codex/auth.json" 2>/dev/null; then
-        chmod 600 "$HOME/.codex/auth.json"
+# Codex (0.144.x) owns the ChatGPT OAuth session: during `codex exec` it refreshes
+# and ROTATES the tokens, writing the new refresh/access tokens back to auth.json.
+# So CODEX_HOME must live on a PERSISTENT volume and CODEX_AUTH_B64 must only SEED
+# it on first boot — re-writing the original secret every restart resurrects an
+# already-used refresh token and 401s ("refresh token was already used"). We put
+# CODEX_HOME inside the persistent logs volume (no extra Coolify mount needed) and
+# force the file credential store (no keyring in a container).
+export CODEX_HOME="${CODEX_HOME:-/app/logs/.codex}"
+mkdir -p "$CODEX_HOME" && chmod 700 "$CODEX_HOME"
+if [ ! -f "$CODEX_HOME/config.toml" ]; then
+    cat > "$CODEX_HOME/config.toml" <<'EOF'
+model = "gpt-5.6-sol"
+model_reasoning_effort = "low"
+approval_policy = "never"
+cli_auth_credentials_store = "file"
+EOF
+fi
+if [ -s "$CODEX_HOME/auth.json" ]; then
+    # Persisted (possibly rotated) auth already present — never overwrite it.
+    chmod 600 "$CODEX_HOME/auth.json" 2>/dev/null || true
+    export FALLBACK_ENGINE="${FALLBACK_ENGINE:-codex}"
+    echo "[entrypoint] Codex auth: using persisted $CODEX_HOME/auth.json"
+elif [ -n "${CODEX_AUTH_B64:-}" ]; then
+    # First boot only: seed auth.json from the bootstrap secret.
+    if echo "$CODEX_AUTH_B64" | base64 -d > "$CODEX_HOME/auth.json" 2>/dev/null; then
+        chmod 600 "$CODEX_HOME/auth.json"
         export FALLBACK_ENGINE="${FALLBACK_ENGINE:-codex}"
-        echo "[entrypoint] Codex fallback enabled (auth injected)"
+        echo "[entrypoint] Codex auth: seeded from CODEX_AUTH_B64 (first boot)"
     else
-        echo "[entrypoint] warning: CODEX_AUTH_B64 failed to decode; Codex fallback disabled" >&2
+        echo "[entrypoint] warning: CODEX_AUTH_B64 failed to decode; Codex disabled" >&2
     fi
+else
+    echo "[entrypoint] Codex auth: none present; Codex fallback disabled"
 fi
 
 DASHBOARD_PORT="${DASHBOARD_PORT:-8787}"

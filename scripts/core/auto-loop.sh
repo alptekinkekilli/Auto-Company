@@ -59,6 +59,10 @@ CODEX_MODEL="${CODEX_MODEL:-}"
 RESOLVED_CODEX_BIN=""
 FALLBACK_USED=0
 CYCLE_ENGINE_OVERRIDE=""
+# Set to 1 when a Codex run reports a PERMANENT auth failure (rotated/consumed
+# refresh token). Codex is then treated as unavailable for the rest of this
+# process so alternation/fallback don't burn every other cycle on a dead engine.
+CODEX_DISABLED=0
 # Rolling-window spend cap: pause the loop when spend in the last WINDOW_SECONDS
 # reaches WINDOW_BUDGET_USD (empty = disabled). Reserves quota for the operator.
 WINDOW_BUDGET_USD="${WINDOW_BUDGET_USD:-}"
@@ -130,6 +134,14 @@ check_usage_limit() {
         return 0
     fi
     return 1
+}
+
+# PERMANENT Codex auth failure (rotated/consumed/revoked refresh token, or a
+# missing bearer). Distinct from a transient usage limit — retrying will not fix
+# it; the operator must re-login and reseed. Used to disable Codex for the run.
+codex_auth_failed() {
+    local output="$1"
+    echo "$output" | grep -qiE "refresh token was already used|token_invalidated|invalid_grant|missing bearer|401 unauthorized|not logged in"
 }
 
 # Append a cycle's cost to the rolling-window ledger (skips 0 / N/A).
@@ -223,7 +235,7 @@ select_cycle_engine() {
 
     # Is Codex usable as an alternate this cycle?
     local codex_avail=0
-    if [ "$FALLBACK_ENGINE" = "codex" ]; then
+    if [ "$FALLBACK_ENGINE" = "codex" ] && [ "$CODEX_DISABLED" != "1" ]; then
         [ -z "$RESOLVED_CODEX_BIN" ] && RESOLVED_CODEX_BIN="$(resolve_codex_bin 2>/dev/null || true)"
         [ -n "$RESOLVED_CODEX_BIN" ] && codex_avail=1
     fi
@@ -914,6 +926,15 @@ This is Cycle #$loop_count. Act decisively."
 
     # Run selected engine in headless mode with per-cycle timeout
     run_engine_cycle "$FULL_PROMPT"
+
+    # If this cycle ran on Codex and it hit a PERMANENT auth failure, disable Codex
+    # for the rest of the process — otherwise alternation/fallback keep sending every
+    # other cycle to a dead engine. Recovery needs a re-login + reseed (see APP-200).
+    if { [ "$FALLBACK_USED" -eq 1 ] || [ "$CYCLE_ENGINE_OVERRIDE" = "codex" ] || [ "$ENGINE" = "codex" ]; } \
+        && [ "$CODEX_DISABLED" != "1" ] && codex_auth_failed "$OUTPUT"; then
+        CODEX_DISABLED=1
+        log "[CODEX-AUTH-FAIL] Codex auth permanently rejected (rotated/consumed token) — disabling Codex for this run; re-login + reseed required"
+    fi
 
     # Save full output to cycle log
     echo "$OUTPUT" > "$cycle_log"
