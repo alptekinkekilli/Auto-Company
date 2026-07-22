@@ -32,6 +32,11 @@ Humans guide direction only by editing `memories/consensus.md` under "Next Actio
 
 **Workspace rule:** all new projects must be created under `projects/`.
 
+**Operator-project rule (appricode-panel):** When operating the operator's existing
+project, work ONLY in the company's copy repo `alptekinkekilli/appricode-panel-autoco`
+(cloned under `projects/`). NEVER push, PR, or in any way write to the original
+`alptekinkekilli/appricode-panel` — a human developer works there. No exceptions.
+
 ## Team Architecture
 
 14 AI agents, each modeled on top-tier expert thinking. Full definitions are in `.claude/agents/`.

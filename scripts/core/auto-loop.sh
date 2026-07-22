@@ -56,6 +56,9 @@ CODEX_BIN="${CODEX_BIN:-}"
 CODEX_SANDBOX_MODE="${CODEX_SANDBOX_MODE:-danger-full-access}"
 FALLBACK_ENGINE="$(echo "${FALLBACK_ENGINE:-}" | tr '[:upper:]' '[:lower:]')"
 CODEX_MODEL="${CODEX_MODEL:-}"
+# Codex reasoning effort (low/medium/high). Empty = use the codex config.toml default.
+# "medium" is the standard tier — heavier, more thorough (used for audits).
+CODEX_EFFORT="${CODEX_EFFORT:-}"
 RESOLVED_CODEX_BIN=""
 FALLBACK_USED=0
 CYCLE_ENGINE_OVERRIDE=""
@@ -590,6 +593,9 @@ run_codex_cycle() {
         local codex_cmd=("$RESOLVED_ENGINE_BIN" "exec" "--skip-git-repo-check" "--json" "-c" "sandbox_mode=\"${CODEX_SANDBOX_MODE}\"" "-o" "$message_file")
         if [ -n "$MODEL" ]; then
             codex_cmd+=("-m" "$MODEL")
+        fi
+        if [ -n "$CODEX_EFFORT" ]; then
+            codex_cmd+=("-c" "model_reasoning_effort=\"${CODEX_EFFORT}\"")
         fi
         codex_cmd+=("$prompt")
         "${codex_cmd[@]}"
