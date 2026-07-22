@@ -92,9 +92,14 @@
         <span id="directiveStatus" class="muted mono"></span>
       </div>
       <div class="director-current">
-        <span class="muted">Current directive</span>
-        <span id="directiveUpdated" class="muted mono"></span>
-        <p id="directiveCurrent" class="director-current-text mono">(none)</p>
+        <div class="collapse-head">
+          <button class="collapse-toggle" data-target="directiveCurrentBody" aria-expanded="false" aria-label="Toggle current directive">▸</button>
+          <span class="muted">Current directive</span>
+          <span id="directiveUpdated" class="muted mono"></span>
+        </div>
+        <div id="directiveCurrentBody" class="collapsible collapsed">
+          <p id="directiveCurrent" class="director-current-text mono">(none)</p>
+        </div>
       </div>
     </section>
 
@@ -117,18 +122,23 @@
     <section class="panel settings reveal-4">
       <div class="panel-head">
         <h3>Settings — Runtime Config</h3>
-        <span id="settingsBadge" class="badge badge-none">runtime.env</span>
+        <div class="panel-head-right">
+          <span id="settingsBadge" class="badge badge-none">runtime.env</span>
+          <button class="collapse-toggle" data-target="settingsBody" aria-expanded="false" aria-label="Toggle settings">▸</button>
+        </div>
       </div>
-      <p class="muted director-hint">
-        Non-secret knobs written to <code>logs/runtime.env</code> (a persistent volume) and
-        sourced on container start. Changes take effect after a <strong>redeploy/restart</strong>.
-        Secrets stay in Coolify — never entered here.
-      </p>
-      <div id="settingsForm" class="settings-form"><p class="muted">(loading...)</p></div>
-      <div class="director-actions">
-        <button id="btnSaveSettings" class="btn btn-start">Save</button>
-        <button id="btnRedeploy" class="btn btn-ghost">Save &amp; Redeploy</button>
-        <span id="settingsStatus" class="muted mono"></span>
+      <div id="settingsBody" class="collapsible collapsed">
+        <p class="muted director-hint">
+          Non-secret knobs written to <code>logs/runtime.env</code> (a persistent volume) and
+          sourced on container start. Changes take effect after a <strong>redeploy/restart</strong>.
+          Secrets stay in Coolify — never entered here.
+        </p>
+        <div id="settingsForm" class="settings-form"><p class="muted">(loading...)</p></div>
+        <div class="director-actions">
+          <button id="btnSaveSettings" class="btn btn-start">Save</button>
+          <button id="btnRedeploy" class="btn btn-ghost">Save &amp; Redeploy</button>
+          <span id="settingsStatus" class="muted mono"></span>
+        </div>
       </div>
     </section>
 

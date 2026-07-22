@@ -474,6 +474,16 @@ els.btnRaw.addEventListener("click", () => {
 els.btnDirective.addEventListener("click", () => submitDirective());
 els.btnSaveSettings.addEventListener("click", () => saveSettings(false));
 els.btnRedeploy.addEventListener("click", () => saveSettings(true));
+
+// Collapsible panels (Settings, Current directive) — default collapsed via markup.
+document.querySelectorAll(".collapse-toggle").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const target = document.getElementById(btn.getAttribute("data-target"));
+    if (!target) return;
+    const collapsed = target.classList.toggle("collapsed");
+    btn.setAttribute("aria-expanded", String(!collapsed));
+  });
+});
 els.autoToggle.addEventListener("change", resetAutoTimer);
 els.refreshInterval.addEventListener("change", resetAutoTimer);
 
