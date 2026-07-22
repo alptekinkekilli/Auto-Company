@@ -257,6 +257,7 @@ async function fetchStatus() {
 
   renderDirective(data.directive || {});
   renderCost(data.cost || {});
+  applyHostControls(data.hostKind);
 
   els.lastUpdate.textContent = `Last update: ${formatTime(data.timestamp)}`;
   els.latency.textContent = `Roundtrip: ${elapsed}ms`;
@@ -278,15 +279,35 @@ function renderCost(cost) {
 
   const reason = (cost.creditReason || "").trim();
   if (reason === "out_of_credits") {
-    els.creditBadge.textContent = "OUT OF CREDITS";
-    els.creditBadge.className = "badge badge-pending";
+    // Pay-as-you-go OVERFLOW credits are off — expected under the cost cap. The
+    // company runs on the Max subscription window, so this is informational, not
+    // a failure. Health is whether cycles keep completing (see Loop/Cost above).
+    els.creditBadge.textContent = "SUBSCRIPTION ONLY";
+    els.creditBadge.className = "badge badge-none";
+    els.creditBadge.title =
+      "No pay-as-you-go extra credits (overflow off — intended). Cycles run on the Max plan window.";
   } else if (reason) {
     els.creditBadge.textContent = reason.toUpperCase();
     els.creditBadge.className = "badge badge-pending";
+    els.creditBadge.title = "";
   } else {
     els.creditBadge.textContent = "OK";
     els.creditBadge.className = "badge badge-done";
+    els.creditBadge.title = "";
   }
+}
+
+let hostControlsApplied = false;
+function applyHostControls(hostKind) {
+  if (hostControlsApplied || hostKind !== "linux") return;
+  // In the container the loop is a child of the entrypoint, managed by Coolify —
+  // Start/Stop map to a no-op here. Disable them and point at Settings → Redeploy.
+  for (const b of [els.btnStart, els.btnStop]) {
+    b.disabled = true;
+    b.title = "Managed by Coolify in the container. Use Settings → Save & Redeploy.";
+    b.classList.add("btn-disabled");
+  }
+  hostControlsApplied = true;
 }
 
 function renderDirective(directive) {

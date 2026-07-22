@@ -312,12 +312,22 @@ def write_settings(incoming: dict[str, Any]) -> dict[str, Any]:
     if bad:
         raise ValueError(f"unknown setting(s): {', '.join(sorted(bad))}")
 
+    # Preserve any non-whitelisted keys already in the file (e.g. an operator-set
+    # COOLIFY_DEPLOY_TOKEN used by the Redeploy button) — the panel only manages the
+    # whitelist, it must not wipe other overrides.
+    existing_all = _parse_env_file(read_text_file(RUNTIME_ENV_FILE, ""))
+    preserved = {k: v for k, v in existing_all.items() if k not in SETTINGS_KEYS}
+
     lines = [
         "# Auto-Company runtime overrides — sourced by docker-entrypoint.sh on start.",
         "# Managed by the cockpit Settings panel. Non-secret config only.",
         f"# Updated {datetime.now(timezone.utc).isoformat()}",
         "",
     ]
+    for k, v in preserved.items():
+        lines.append(f"{k}={v}")
+    if preserved:
+        lines.append("")
     for spec in SETTINGS_SPEC:
         key = spec["key"]
         if key not in incoming:
@@ -676,6 +686,7 @@ def gather_status_payload(system_name: str | None = None) -> dict[str, Any]:
         "ok": result["ok"],
         "exitCode": result["exitCode"],
         "elapsedMs": result["elapsedMs"],
+        "hostKind": detect_host_kind(system_name),
         "raw": result["output"],
         "parsed": parsed,
         "stateFile": read_state_file_pairs(),
