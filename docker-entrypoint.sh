@@ -42,6 +42,23 @@ fi
 # --- runtime dirs (also mounted as persistent volumes) ---
 mkdir -p memories projects logs
 
+# --- persist docs/ across redeploys ---------------------------------------------
+# Agents write deliverables to docs/<role>/ (per CLAUDE.md), but docs/ is NOT a
+# mounted volume, so cycle docs (decision rationale, research, build logs) are
+# wiped on every redeploy. Back docs/ with the persistent memories volume via a
+# symlink. The image ships an (essentially empty, docs/* is gitignored) docs/ dir;
+# migrate it into the store without clobbering persisted files, then symlink.
+DOCS_STORE="${DOCS_STORE:-/app/memories/_docs}"
+mkdir -p "$DOCS_STORE"
+if [ ! -L /app/docs ]; then
+    if [ -d /app/docs ]; then
+        cp -a -n /app/docs/. "$DOCS_STORE/" 2>/dev/null || true
+        rm -rf /app/docs
+    fi
+    ln -s "$DOCS_STORE" /app/docs
+    echo "[entrypoint] docs/ -> $DOCS_STORE (persistent)"
+fi
+
 # --- the company's own git identity for its commits/deploys (optional) ---
 [ -n "${COMPANY_GIT_NAME:-}" ]  && git config --global user.name  "$COMPANY_GIT_NAME"
 [ -n "${COMPANY_GIT_EMAIL:-}" ] && git config --global user.email "$COMPANY_GIT_EMAIL"
