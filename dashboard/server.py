@@ -36,6 +36,28 @@ LOG_FILE = REPO_ROOT / "logs" / "auto-loop.log"
 STATE_FILE = REPO_ROOT / ".auto-loop-state"
 CONSENSUS_FILE = REPO_ROOT / "memories" / "consensus.md"
 DIRECTIVE_FILE = REPO_ROOT / "memories" / "human-directive.md"
+# Operator-editable runtime overrides, sourced by docker-entrypoint.sh on start.
+RUNTIME_ENV_FILE = REPO_ROOT / "logs" / "runtime.env"
+
+# Whitelist of NON-SECRET knobs editable from the cockpit Settings panel. Anything
+# not listed here is rejected, so the panel can never write secrets to runtime.env.
+SETTINGS_SPEC: list[dict[str, str]] = [
+    {"key": "ROUTER_ALTERNATE", "type": "bool",
+     "label": "Router alternation (Claude↔Codex when both have headroom)"},
+    {"key": "WINDOW_BUDGET_USD", "type": "number",
+     "label": "Claude 5h window budget (USD, blank = no cap)"},
+    {"key": "CODEX_WINDOW_LIMIT", "type": "number",
+     "label": "Codex cycles per window (blank = unmetered)"},
+    {"key": "MODEL", "type": "text",
+     "label": "Claude model (blank = engine default, e.g. claude-haiku-4-5-20251001)"},
+    {"key": "CLAUDE_EFFORT", "type": "text",
+     "label": "Claude reasoning effort (low / medium / high, blank = default)"},
+    {"key": "LOOP_INTERVAL", "type": "number",
+     "label": "Loop interval between cycles (seconds)"},
+    {"key": "BUDGET_PAUSE_SECONDS", "type": "number",
+     "label": "Pause when budget hit and Codex unavailable (seconds)"},
+]
+SETTINGS_KEYS = {s["key"] for s in SETTINGS_SPEC}
 
 WINDOWS_HOST = "windows"
 MACOS_HOST = "macos"
@@ -246,6 +268,110 @@ def write_directive(text: str) -> dict[str, Any]:
     DIRECTIVE_FILE.parent.mkdir(parents=True, exist_ok=True)
     DIRECTIVE_FILE.write_text(body, encoding="utf-8")
     return read_directive()
+
+
+def _parse_env_file(raw: str) -> dict[str, str]:
+    """Parse simple KEY=value lines (ignores blanks/comments)."""
+    out: dict[str, str] = {}
+    for line in raw.splitlines():
+        s = line.strip()
+        if not s or s.startswith("#") or "=" not in s:
+            continue
+        k, _, v = s.partition("=")
+        k = k.strip()
+        v = v.strip().strip('"').strip("'")
+        if k:
+            out[k] = v
+    return out
+
+
+def read_settings() -> dict[str, Any]:
+    """Return the Settings-panel spec + current values from logs/runtime.env.
+
+    Only whitelisted keys are surfaced. A missing/blank value means the knob is
+    unset (the container falls back to its Coolify env / Dockerfile default).
+    """
+    current = _parse_env_file(read_text_file(RUNTIME_ENV_FILE, ""))
+    values = {s["key"]: current.get(s["key"], "") for s in SETTINGS_SPEC}
+    return {
+        "present": RUNTIME_ENV_FILE.exists(),
+        "path": str(RUNTIME_ENV_FILE),
+        "spec": SETTINGS_SPEC,
+        "values": values,
+        "needsRestart": True,
+    }
+
+
+def write_settings(incoming: dict[str, Any]) -> dict[str, Any]:
+    """Write whitelisted KEY=value knobs to logs/runtime.env.
+
+    Rejects any non-whitelisted key (so secrets can never be written here). Keys
+    with a blank value are omitted from the file (revert to the default).
+    """
+    bad = [k for k in incoming if k not in SETTINGS_KEYS]
+    if bad:
+        raise ValueError(f"unknown setting(s): {', '.join(sorted(bad))}")
+
+    lines = [
+        "# Auto-Company runtime overrides — sourced by docker-entrypoint.sh on start.",
+        "# Managed by the cockpit Settings panel. Non-secret config only.",
+        f"# Updated {datetime.now(timezone.utc).isoformat()}",
+        "",
+    ]
+    for spec in SETTINGS_SPEC:
+        key = spec["key"]
+        if key not in incoming:
+            # preserve an existing value not included in this write
+            existing = _parse_env_file(read_text_file(RUNTIME_ENV_FILE, "")).get(key, "")
+            val = existing
+        else:
+            val = str(incoming[key]).strip()
+        if spec["type"] == "bool":
+            val = "1" if val in {"1", "true", "True", "on", "yes"} else ("0" if val != "" else "")
+        if val == "":
+            continue  # unset -> omit -> falls back to container default
+        if spec["type"] == "number":
+            # keep only a sane numeric-ish token; reject junk
+            if not re.fullmatch(r"[0-9]+(?:\.[0-9]+)?", val):
+                raise ValueError(f"{key} must be a number, got '{val}'")
+        lines.append(f"{key}={val}")
+
+    RUNTIME_ENV_FILE.parent.mkdir(parents=True, exist_ok=True)
+    RUNTIME_ENV_FILE.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return read_settings()
+
+
+def trigger_redeploy() -> dict[str, Any]:
+    """Trigger a Coolify redeploy so runtime.env changes take effect.
+
+    Needs COOLIFY_APP_UUID (+ COOLIFY_DEPLOY_TOKEN, COOLIFY_URL) in the container
+    env. Degrades gracefully with a clear message when not configured, so editing
+    settings works even before the deploy webhook is wired.
+    """
+    uuid = os.environ.get("COOLIFY_APP_UUID", "").strip()
+    token = os.environ.get("COOLIFY_DEPLOY_TOKEN", "").strip()
+    base = os.environ.get("COOLIFY_URL", "https://app.coolify.io").strip().rstrip("/")
+    if not uuid or not token:
+        return {
+            "ok": False,
+            "configured": False,
+            "error": "Redeploy not configured. Set COOLIFY_APP_UUID + "
+                     "COOLIFY_DEPLOY_TOKEN (deploy-scoped) in the container env.",
+        }
+    import urllib.error
+    import urllib.request
+
+    url = f"{base}/api/v1/deploy?uuid={uuid}&force=false"
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:  # noqa: S310
+            body = resp.read().decode("utf-8", "replace")[:500]
+            return {"ok": True, "configured": True, "status": resp.status, "response": body}
+    except urllib.error.HTTPError as exc:
+        return {"ok": False, "configured": True, "status": exc.code,
+                "error": exc.read().decode("utf-8", "replace")[:300]}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "configured": True, "error": str(exc)}
 
 
 def read_cost_summary() -> dict[str, Any]:
@@ -620,6 +746,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 }
             )
             return
+        if path == "/api/settings":
+            self._json(read_settings())
+            return
 
         self._text("Not found", code=404)
 
@@ -638,6 +767,16 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
         if path == "/api/directive":
             self._handle_directive()
+            return
+
+        if path == "/api/settings":
+            self._handle_settings()
+            return
+
+        if path == "/api/redeploy":
+            result = trigger_redeploy()
+            result["timestamp"] = datetime.now(timezone.utc).isoformat()
+            self._json(result, code=HTTPStatus.OK if result.get("ok") else HTTPStatus.BAD_REQUEST)
             return
 
         if path not in {"/api/action/start", "/api/action/stop", "/api/action/refresh"}:
@@ -684,6 +823,37 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "ok": True,
                 "directive": directive,
+            }
+        )
+
+    def _handle_settings(self) -> None:
+        body = self._read_body()
+        incoming: dict[str, Any] = {}
+        try:
+            data = json.loads(body.decode("utf-8")) if body else {}
+            if isinstance(data, dict):
+                incoming = data.get("values", data) if isinstance(data.get("values", data), dict) else {}
+        except (ValueError, UnicodeDecodeError):
+            incoming = {}
+
+        try:
+            settings = write_settings(incoming)
+        except ValueError as exc:
+            self._json(
+                {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "ok": False,
+                    "error": str(exc),
+                },
+                code=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        self._json(
+            {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "ok": True,
+                "settings": settings,
             }
         )
 

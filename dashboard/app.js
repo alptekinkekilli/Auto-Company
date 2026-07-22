@@ -40,6 +40,11 @@ const els = {
   directiveCurrent: document.getElementById("directiveCurrent"),
   directiveUpdated: document.getElementById("directiveUpdated"),
   btnDirective: document.getElementById("btnDirective"),
+  settingsForm: document.getElementById("settingsForm"),
+  settingsBadge: document.getElementById("settingsBadge"),
+  settingsStatus: document.getElementById("settingsStatus"),
+  btnSaveSettings: document.getElementById("btnSaveSettings"),
+  btnRedeploy: document.getElementById("btnRedeploy"),
 
   btnRefresh: document.getElementById("btnRefresh"),
   btnStart: document.getElementById("btnStart"),
@@ -332,6 +337,78 @@ async function submitDirective() {
   }
 }
 
+function renderSettings(settings) {
+  const spec = settings.spec || [];
+  const values = settings.values || {};
+  els.settingsForm.innerHTML = "";
+  for (const s of spec) {
+    const row = document.createElement("label");
+    row.className = "settings-row";
+    const cur = values[s.key] ?? "";
+    const labelHtml = `<span class="settings-label">${s.label}<code>${s.key}</code></span>`;
+    if (s.type === "bool") {
+      row.innerHTML = `${labelHtml}<input type="checkbox" data-key="${s.key}" ${
+        cur === "1" ? "checked" : ""
+      } />`;
+    } else {
+      row.innerHTML = `${labelHtml}<input type="${
+        s.type === "number" ? "text" : "text"
+      }" data-key="${s.key}" value="${String(cur).replace(/"/g, "&quot;")}" placeholder="(default)" />`;
+    }
+    els.settingsForm.appendChild(row);
+  }
+}
+
+function gatherSettings() {
+  const out = {};
+  els.settingsForm.querySelectorAll("[data-key]").forEach((el) => {
+    const key = el.getAttribute("data-key");
+    out[key] = el.type === "checkbox" ? (el.checked ? "1" : "0") : el.value.trim();
+  });
+  return out;
+}
+
+async function loadSettings() {
+  try {
+    const res = await fetch("/api/settings");
+    const data = await res.json();
+    renderSettings(data);
+  } catch (err) {
+    els.settingsForm.innerHTML = `<p class="muted">Failed to load settings.</p>`;
+  }
+}
+
+async function saveSettings(withRedeploy) {
+  els.btnSaveSettings.disabled = true;
+  els.btnRedeploy.disabled = true;
+  els.settingsStatus.textContent = "Saving...";
+  try {
+    const res = await fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ values: gatherSettings() }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || "Save failed");
+    renderSettings(data.settings || {});
+    els.settingsStatus.textContent = "Saved. Applies after redeploy/restart.";
+    if (withRedeploy) {
+      els.settingsStatus.textContent = "Saved. Triggering redeploy...";
+      const rd = await fetch("/api/redeploy", { method: "POST" });
+      const rdData = await rd.json();
+      els.settingsStatus.textContent =
+        rd.ok && rdData.ok
+          ? "Redeploy triggered — new config applies once it lands."
+          : `Saved, but redeploy: ${rdData.error || "failed"}`;
+    }
+  } catch (err) {
+    els.settingsStatus.textContent = err instanceof Error ? err.message : String(err);
+  } finally {
+    els.btnSaveSettings.disabled = false;
+    els.btnRedeploy.disabled = false;
+  }
+}
+
 async function runAction(action) {
   const btn = action === "start" ? els.btnStart : els.btnStop;
   const label = btn.textContent;
@@ -374,6 +451,8 @@ els.btnRaw.addEventListener("click", () => {
   els.rawText.classList.toggle("hidden", !rawVisible);
 });
 els.btnDirective.addEventListener("click", () => submitDirective());
+els.btnSaveSettings.addEventListener("click", () => saveSettings(false));
+els.btnRedeploy.addEventListener("click", () => saveSettings(true));
 els.autoToggle.addEventListener("change", resetAutoTimer);
 els.refreshInterval.addEventListener("change", resetAutoTimer);
 
@@ -381,4 +460,5 @@ fetchStatus().catch((err) => {
   const msg = err instanceof Error ? err.message : String(err);
   els.rawText.textContent = msg;
 });
+loadSettings().catch(() => {});
 resetAutoTimer();

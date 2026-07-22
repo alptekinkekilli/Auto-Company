@@ -488,6 +488,55 @@ select {
   font-size: 0.82rem;
 }
 
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.settings-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85rem;
+}
+
+.settings-label code {
+  font-size: 0.72rem;
+  opacity: 0.6;
+}
+
+.settings-row input[type="text"] {
+  flex: 0 0 auto;
+  width: 240px;
+  max-width: 45%;
+  padding: 6px 9px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.25);
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.settings-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent, #4ade80);
+}
+
 .director-current {
   margin-top: 16px;
   padding-top: 14px;

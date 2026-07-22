@@ -114,6 +114,24 @@
       </p>
     </section>
 
+    <section class="panel settings reveal-4">
+      <div class="panel-head">
+        <h3>Settings — Runtime Config</h3>
+        <span id="settingsBadge" class="badge badge-none">runtime.env</span>
+      </div>
+      <p class="muted director-hint">
+        Non-secret knobs written to <code>logs/runtime.env</code> (a persistent volume) and
+        sourced on container start. Changes take effect after a <strong>redeploy/restart</strong>.
+        Secrets stay in Coolify — never entered here.
+      </p>
+      <div id="settingsForm" class="settings-form"><p class="muted">(loading...)</p></div>
+      <div class="director-actions">
+        <button id="btnSaveSettings" class="btn btn-start">Save</button>
+        <button id="btnRedeploy" class="btn btn-ghost">Save &amp; Redeploy</button>
+        <span id="settingsStatus" class="muted mono"></span>
+      </div>
+    </section>
+
     <section class="grid-details reveal-5">
       <article class="panel detail">
         <h3>Runtime State</h3>
