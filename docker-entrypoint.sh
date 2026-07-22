@@ -18,6 +18,20 @@ fi
 export HOME=/home/app
 cd /app
 
+# --- operator runtime overrides (SSH-editable; no Coolify env UI needed) --------
+# A KEY=value file on a persistent volume lets non-secret config be tuned by
+# editing it over SSH + redeploying — instead of the Coolify env UI. Values here
+# OVERRIDE the container env (last write wins). Intended for knobs like
+# ROUTER_ALTERNATE, WINDOW_BUDGET_USD, CODEX_WINDOW_LIMIT, MODEL, CLAUDE_EFFORT,
+# LOOP_INTERVAL. Secrets may go here too but are better left as Coolify secrets.
+RUNTIME_ENV_FILE="${RUNTIME_ENV_FILE:-/app/logs/runtime.env}"
+if [ -f "$RUNTIME_ENV_FILE" ]; then
+    echo "[entrypoint] sourcing runtime overrides from $RUNTIME_ENV_FILE"
+    set +u; set -a
+    . "$RUNTIME_ENV_FILE" || echo "[entrypoint] warning: failed to source $RUNTIME_ENV_FILE" >&2
+    set +a; set -u
+fi
+
 # --- required auth (from `claude setup-token`, injected as a Coolify secret) ---
 if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
     echo "FATAL: CLAUDE_CODE_OAUTH_TOKEN is not set." >&2
