@@ -59,6 +59,15 @@ CODEX_MODEL="${CODEX_MODEL:-}"
 # Codex reasoning effort (low/medium/high). Empty = use the codex config.toml default.
 # "medium" is the standard tier — heavier, more thorough (used for audits).
 CODEX_EFFORT="${CODEX_EFFORT:-}"
+# Tier ladder (APP-193): round-robin the model/effort within a MIN..MAX range each
+# cycle to spread token burn across cheap/expensive tiers. Opt-in. Ladders are
+# comma-separated, cheapest first. When ROUTER_TIER_LADDER=1, per cycle the Claude
+# MODEL and the Codex effort each advance round-robin through their ladder.
+ROUTER_TIER_LADDER="${ROUTER_TIER_LADDER:-0}"
+CLAUDE_TIER_LADDER="${CLAUDE_TIER_LADDER:-claude-haiku-4-5-20251001,claude-sonnet-5}"
+CODEX_TIER_LADDER="${CODEX_TIER_LADDER:-low,medium}"
+BASE_MODEL="$MODEL"
+BASE_CODEX_EFFORT="$CODEX_EFFORT"
 RESOLVED_CODEX_BIN=""
 FALLBACK_USED=0
 CYCLE_ENGINE_OVERRIDE=""
@@ -90,6 +99,7 @@ CODEX_OUTPUT_WEIGHT="${CODEX_OUTPUT_WEIGHT:-4}"
 # is persisted so fresh per-cycle processes actually alternate.
 ROUTER_ALTERNATE="${ROUTER_ALTERNATE:-0}"
 ROUTER_STATE_FILE="$LOG_DIR/router-state"
+TIER_STATE_FILE="$LOG_DIR/tier-state"
 LOOP_INTERVAL="${LOOP_INTERVAL:-30}"
 CYCLE_TIMEOUT_SECONDS="${CYCLE_TIMEOUT_SECONDS:-1800}"
 MAX_CONSECUTIVE_ERRORS="${MAX_CONSECUTIVE_ERRORS:-5}"
@@ -222,6 +232,36 @@ codex_window_load() {
 # Persist the engine chosen this cycle so the next (fresh) cycle process can alternate.
 _router_persist() {
     printf '%s\n' "$1" > "$ROUTER_STATE_FILE" 2>/dev/null || true
+}
+
+# Tier ladder (APP-193): round-robin the Claude MODEL + Codex effort within their
+# MIN..MAX ladders each cycle, to spread token burn across cheap/expensive tiers.
+# Advances a persisted counter. When off, restores the base config. Called each
+# cycle before the engine runs; the chosen engine reads MODEL (Claude) / CODEX_EFFORT.
+apply_tier_ladder() {
+    if [ "$ROUTER_TIER_LADDER" != "1" ]; then
+        MODEL="$BASE_MODEL"
+        CODEX_EFFORT="$BASE_CODEX_EFFORT"
+        MODEL_LABEL="${MODEL:-config-default}"
+        return 0
+    fi
+    local idx=0
+    [ -f "$TIER_STATE_FILE" ] && idx="$(cat "$TIER_STATE_FILE" 2>/dev/null || echo 0)"
+    case "$idx" in ''|*[!0-9]*) idx=0 ;; esac
+
+    local _CL _CO n_cl n_co
+    IFS=',' read -ra _CL <<< "$CLAUDE_TIER_LADDER"
+    IFS=',' read -ra _CO <<< "$CODEX_TIER_LADDER"
+    n_cl=${#_CL[@]}; n_co=${#_CO[@]}
+    if [ "$n_cl" -gt 0 ]; then
+        MODEL="$(printf '%s' "${_CL[$((idx % n_cl))]}" | tr -d '[:space:]')"
+        MODEL_LABEL="${MODEL:-config-default}"
+    fi
+    if [ "$n_co" -gt 0 ]; then
+        CODEX_EFFORT="$(printf '%s' "${_CO[$((idx % n_co))]}" | tr -d '[:space:]')"
+    fi
+    printf '%s\n' "$(( (idx + 1) % 1000000 ))" > "$TIER_STATE_FILE" 2>/dev/null || true
+    log "[TIER] round-robin idx=$idx → Claude=$MODEL, Codex effort=$CODEX_EFFORT"
 }
 
 # APP-189 Phase 2 — decide which engine runs THIS cycle from remaining quota headroom
@@ -876,6 +916,11 @@ if [ "$ROUTER_ALTERNATE" = "1" ]; then
 else
     log "Router: single-engine (alternation OFF; Codex only on budget-cap/usage-limit)"
 fi
+if [ "$ROUTER_TIER_LADDER" = "1" ]; then
+    log "Tier ladder: ON (round-robin) | Claude [$CLAUDE_TIER_LADDER] | Codex effort [$CODEX_TIER_LADDER]"
+else
+    log "Tier ladder: OFF (fixed Model: ${BASE_MODEL:-config-default}, Codex effort: ${BASE_CODEX_EFFORT:-default})"
+fi
 
 # === Main Loop ===
 
@@ -897,6 +942,9 @@ while true; do
         sleep "$BUDGET_PAUSE_SECONDS"
         continue
     fi
+
+    # Tier ladder: pick this cycle's model/effort within the configured MIN..MAX range.
+    apply_tier_ladder
 
     loop_count=$((loop_count + 1))
     cycle_log="$LOG_DIR/cycle-$(printf '%04d' "$loop_count")-$(date '+%Y%m%d-%H%M%S').log"
