@@ -341,6 +341,10 @@ select {
   line-height: 1.4;
 }
 
+.ideas-view {
+  max-height: 65vh;
+}
+
 .markdown-view h1,
 .markdown-view h2,
 .markdown-view h3,

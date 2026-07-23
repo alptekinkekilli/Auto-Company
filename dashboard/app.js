@@ -20,6 +20,8 @@ const els = {
 
   stateList: document.getElementById("stateList"),
   consensusText: document.getElementById("consensusText"),
+  ideasText: document.getElementById("ideasText"),
+  ideasBadge: document.getElementById("ideasBadge"),
   logText: document.getElementById("logText"),
   rawText: document.getElementById("rawText"),
 
@@ -389,6 +391,23 @@ function gatherSettings() {
   return out;
 }
 
+let ideasLoaded = false;
+async function loadIdeas() {
+  try {
+    const res = await fetch("/api/ideas", { cache: "no-store" });
+    const data = await res.json();
+    if (data && data.present) {
+      els.ideasText.innerHTML = renderMarkdown(data.markdown || "");
+      els.ideasBadge.textContent = "LOADED";
+      els.ideasBadge.classList.remove("badge-none");
+    } else {
+      els.ideasText.textContent = "(no opportunity-scan.md yet)";
+    }
+  } catch (err) {
+    els.ideasText.textContent = "Failed to load ideas.";
+  }
+}
+
 async function loadSettings() {
   try {
     const res = await fetch("/api/settings");
@@ -482,6 +501,10 @@ document.querySelectorAll(".collapse-toggle").forEach((btn) => {
     if (!target) return;
     const collapsed = target.classList.toggle("collapsed");
     btn.setAttribute("aria-expanded", String(!collapsed));
+    if (btn.getAttribute("data-target") === "ideasBody" && !collapsed && !ideasLoaded) {
+      ideasLoaded = true;
+      loadIdeas().catch(() => {});
+    }
   });
 });
 els.autoToggle.addEventListener("change", resetAutoTimer);

@@ -36,6 +36,7 @@ LOG_FILE = REPO_ROOT / "logs" / "auto-loop.log"
 STATE_FILE = REPO_ROOT / ".auto-loop-state"
 CONSENSUS_FILE = REPO_ROOT / "memories" / "consensus.md"
 DIRECTIVE_FILE = REPO_ROOT / "memories" / "human-directive.md"
+OPPORTUNITY_SCAN_FILE = REPO_ROOT / "docs" / "research" / "opportunity-scan.md"
 # Operator-editable runtime overrides, sourced by docker-entrypoint.sh on start.
 RUNTIME_ENV_FILE = REPO_ROOT / "logs" / "runtime.env"
 
@@ -293,6 +294,22 @@ def _parse_env_file(raw: str) -> dict[str, str]:
         if k:
             out[k] = v
     return out
+
+
+def read_ideas() -> dict[str, Any]:
+    """Read the live opportunity scan (docs/research/opportunity-scan.md) for the Ideas panel."""
+    raw = read_text_file(OPPORTUNITY_SCAN_FILE, "")
+    updated = ""
+    try:
+        if OPPORTUNITY_SCAN_FILE.exists():
+            import datetime
+
+            updated = datetime.datetime.fromtimestamp(
+                OPPORTUNITY_SCAN_FILE.stat().st_mtime, tz=datetime.timezone.utc
+            ).isoformat()
+    except OSError:
+        pass
+    return {"present": bool(raw.strip()), "updated": updated, "markdown": raw}
 
 
 def read_settings() -> dict[str, Any]:
@@ -766,6 +783,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     "logTail": read_tail(LOG_FILE, lines=lines),
                 }
             )
+            return
+        if path == "/api/ideas":
+            self._json(read_ideas())
             return
         if path == "/api/settings":
             self._json(read_settings())
