@@ -159,6 +159,25 @@
       </div>
     </section>
 
+    <section class="panel analyst reveal-5">
+      <div class="panel-head">
+        <h3>Opportunity Analyst — Codex 2nd brain</h3>
+        <div class="panel-head-right">
+          <span id="analystBadge" class="badge badge-none">memories</span>
+          <button id="analystCopy" class="ghost-btn" type="button" title="Copy the full analysis + directive">Copy</button>
+          <button class="collapse-toggle" data-target="analystBody" aria-expanded="false" aria-label="Toggle analyst">▸</button>
+        </div>
+      </div>
+      <div id="analystBody" class="collapsible collapsed">
+        <p class="muted director-hint">
+          Independent Codex (<code>gpt-5.6-sol</code>, effort very high) reading the full scan, scoring
+          every candidate, challenging the company's pick, and drafting a paste-ready directive.
+          Copy the <code>## Directive</code> block into the Director panel. Read-only.
+        </p>
+        <div id="analystText" class="markdown-view ideas-view">(open to load…)</div>
+      </div>
+    </section>
+
     <section class="grid-details reveal-5">
       <article class="panel detail">
         <h3>Runtime State</h3>

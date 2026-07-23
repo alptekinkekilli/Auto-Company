@@ -22,6 +22,9 @@ const els = {
   consensusText: document.getElementById("consensusText"),
   ideasText: document.getElementById("ideasText"),
   ideasBadge: document.getElementById("ideasBadge"),
+  analystText: document.getElementById("analystText"),
+  analystBadge: document.getElementById("analystBadge"),
+  analystCopy: document.getElementById("analystCopy"),
   logText: document.getElementById("logText"),
   rawText: document.getElementById("rawText"),
 
@@ -408,6 +411,37 @@ async function loadIdeas() {
   }
 }
 
+let analystLoaded = false;
+let analystRaw = "";
+async function loadAnalysis() {
+  try {
+    const res = await fetch("/api/analysis", { cache: "no-store" });
+    const data = await res.json();
+    if (data && data.present) {
+      analystRaw = data.markdown || "";
+      els.analystText.innerHTML = renderMarkdown(analystRaw);
+      els.analystBadge.textContent = "LOADED";
+      els.analystBadge.classList.remove("badge-none");
+    } else {
+      els.analystText.textContent = "(no analysis yet — the Codex analyst cron has not run)";
+    }
+  } catch (err) {
+    els.analystText.textContent = "Failed to load analysis.";
+  }
+}
+
+if (els.analystCopy) {
+  els.analystCopy.addEventListener("click", async () => {
+    if (!analystRaw) return;
+    try {
+      await navigator.clipboard.writeText(analystRaw);
+      const prev = els.analystCopy.textContent;
+      els.analystCopy.textContent = "Copied";
+      setTimeout(() => { els.analystCopy.textContent = prev; }, 1500);
+    } catch (e) {}
+  });
+}
+
 async function loadSettings() {
   try {
     const res = await fetch("/api/settings");
@@ -504,6 +538,10 @@ document.querySelectorAll(".collapse-toggle").forEach((btn) => {
     if (btn.getAttribute("data-target") === "ideasBody" && !collapsed && !ideasLoaded) {
       ideasLoaded = true;
       loadIdeas().catch(() => {});
+    }
+    if (btn.getAttribute("data-target") === "analystBody" && !collapsed && !analystLoaded) {
+      analystLoaded = true;
+      loadAnalysis().catch(() => {});
     }
   });
 });

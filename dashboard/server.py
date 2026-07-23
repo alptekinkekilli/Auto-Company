@@ -37,6 +37,7 @@ STATE_FILE = REPO_ROOT / ".auto-loop-state"
 CONSENSUS_FILE = REPO_ROOT / "memories" / "consensus.md"
 DIRECTIVE_FILE = REPO_ROOT / "memories" / "human-directive.md"
 OPPORTUNITY_SCAN_FILE = REPO_ROOT / "docs" / "research" / "opportunity-scan.md"
+ANALYSIS_FILE = REPO_ROOT / "memories" / "analysis-directive.md"
 # Operator-editable runtime overrides, sourced by docker-entrypoint.sh on start.
 RUNTIME_ENV_FILE = REPO_ROOT / "logs" / "runtime.env"
 
@@ -306,6 +307,22 @@ def read_ideas() -> dict[str, Any]:
 
             updated = datetime.datetime.fromtimestamp(
                 OPPORTUNITY_SCAN_FILE.stat().st_mtime, tz=datetime.timezone.utc
+            ).isoformat()
+    except OSError:
+        pass
+    return {"present": bool(raw.strip()), "updated": updated, "markdown": raw}
+
+
+def read_analysis() -> dict[str, Any]:
+    """Read the Opportunity Analyst output (memories/analysis-directive.md) for the Analyst panel."""
+    raw = read_text_file(ANALYSIS_FILE, "")
+    updated = ""
+    try:
+        if ANALYSIS_FILE.exists():
+            import datetime
+
+            updated = datetime.datetime.fromtimestamp(
+                ANALYSIS_FILE.stat().st_mtime, tz=datetime.timezone.utc
             ).isoformat()
     except OSError:
         pass
@@ -786,6 +803,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
             return
         if path == "/api/ideas":
             self._json(read_ideas())
+            return
+        if path == "/api/analysis":
+            self._json(read_analysis())
             return
         if path == "/api/settings":
             self._json(read_settings())

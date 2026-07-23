@@ -1,0 +1,4 @@
+interface:
+  display_name: "Auto Company Opportunity Director"
+  short_description: "Select opportunities and write gated directives"
+  default_prompt: "Use $autocompany-opportunity-director to read this full opportunity scan, independently select the strongest candidates, and write an evidence-gated Auto Company directive."
