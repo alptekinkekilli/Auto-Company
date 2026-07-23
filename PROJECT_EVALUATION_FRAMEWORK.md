@@ -33,6 +33,29 @@ Mevcut olanlar paylaşılır; eksik bilgiler araştırılır veya varsayım olar
 - Varsa regülasyon veya son tarih iddiası
 - Ekibin vermeye çalıştığı karar
 
+## Fırsat kaydı ve tarama dedup (ZORUNLU — önce bunu oku)
+
+Herhangi bir fırsat taraması (opportunity scan) veya beyin fırtınasından **önce**
+`memories/candidate-registry.md` yüklenir. Bu kayıt üç liste tutar:
+
+- **Selected Candidates** — operatörün seçtiği, üzerinde çalışılan projeler.
+- **Archived Candidates** — öldürülen / NO-GO / durdurulan fikirler.
+- **Pending Queue** — önerilmiş ama operatör kararı bekleyen adaylar.
+
+Dedup anahtarı **isim değil, eksen (axis) = (alıcı × teslim biçimi × fiyat noktası)**'dır —
+yeniden paketlenmiş ama aynı eksendeki bir fikir de tekrardır. Yeni bir fırsat önerirken:
+
+- **Selected** ile aynı eksen → zaten yürütülüyor, yeni diye önerme.
+- **Archived** ile aynı eksen → KAPSAM DIŞI, diriltme; hangi kayıt ve neden öldürüldüğünü belirt.
+- **Pending Queue** ile aynı eksen → zaten önerilmiş, yeniden üretme.
+- Yalnızca **temsil edilmemiş** bir eksende fırsat sun. Neyi elediğini ve nedenini **logla** —
+  sessizce atlama yok.
+
+Kayıt her döngü güncellenir: operatör bir adayı seçince Selected'e (Linear issue ile);
+bir aday öldürülünce Archived'e (karar + tek satır gerekçe) taşınır. **Arşiv kaydı asla
+sessizce silinmez** — re-proposal döngüsünün sebebi tam olarak budur. Bu kapı yalnızca neyin
+önerileceğini yönetir; hiçbir zaman bir build yetkisi vermez (WTP HARD STOP hâlâ geçerlidir).
+
 ## Standart değerlendirme süreci
 
 ### 1. Ürünü sade biçimde tanımla
