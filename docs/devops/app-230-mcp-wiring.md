@@ -12,7 +12,7 @@ claude.ai OAuth connectors (which vanished in Cycle 82; see APP-230).
 |--------|-----------|---------------|--------------|
 | `context7` | http | `https://mcp.context7.com/mcp` | `CONTEXT7_API_KEY` (already set) |
 | `airtable` | stdio (`npx -y airtable-mcp-server`) | `airtable-mcp-server` | `AIRTABLE_API_KEY` |
-| `linear` | stdio (`npx -y @tacticlaunch/linear-mcp`) | `@tacticlaunch/linear-mcp` | `LINEAR_API_KEY` |
+| `linear` | stdio (`npx -y @tacticlaunch/mcp-linear`) | `@tacticlaunch/mcp-linear` | `LINEAR_API_KEY` |
 
 `.claude/settings.json` has `enableAllProjectMcpServers: true`, so the two new servers are
 auto-enabled — no allow-list edit needed. Env values use the `${VAR}` placeholder pattern
@@ -34,9 +34,9 @@ Create two credentials and store them as **container env vars** via the secrets/
 
 - Airtable's `airtable-mcp-server` is well-established and API-key native — low risk.
 - Linear has **no official API-key stdio MCP** (the official Linear MCP is OAuth-remote — the
-  exact fragility we're removing). `@tacticlaunch/linear-mcp` is a **community** package keyed
+  exact fragility we're removing). `@tacticlaunch/mcp-linear` is a **community** package keyed
   by `LINEAR_API_KEY`. Before/at first deploy, confirm the package name + that it reads
-  `LINEAR_API_KEY`, and consider pinning a version (`@tacticlaunch/linear-mcp@<x.y.z>`) instead
+  `LINEAR_API_KEY`, and consider pinning a version (`@tacticlaunch/mcp-linear@<x.y.z>`) instead
   of floating `-y`. If it proves unreliable, fall back to a thin Linear GraphQL REST helper
   (option B) for the Linear half only — Airtable stays as wired here.
 
