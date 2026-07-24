@@ -33,7 +33,11 @@ RUN npm install -g wrangler && npm cache clean --force
 
 # ccusage — cross-agent token-cost ESTIMATE (Claude + Codex) for the cockpit Cost panel.
 # Reads local transcripts only; the dashboard shells out to it (cached, background).
-RUN npm install -g ccusage && npm cache clean --force
+# chown to the non-root app uid (10001): ccusage unconditionally chmods its own native
+# binary on first run, which the syscall only allows the OWNER to do — without this the
+# loop's `app` user hits EPERM and ccusage returns nothing.
+RUN npm install -g ccusage && npm cache clean --force \
+    && chown -R 10001:10001 /usr/local/lib/node_modules/ccusage
 
 WORKDIR /app
 COPY . .
