@@ -201,3 +201,133 @@ The **live business state does not**: the previous operator's Airtable base + re
 Linear workspace, Telegram bot, Cloudflare/iyzico accounts, and any active directive
 are theirs. Your instance authenticates with your own keys and builds its own state
 from Day 0.
+
+> One exception worth calling out: the **Opportunity Analyst host cron** (§11) is
+> *host-only* — like `docker-prune`, it lives on the previous operator's server, **not
+> in the repo**. Its in-container parts (script, skill, panel) DO transfer; the cron
+> that fires it does not. You add that yourself.
+
+---
+
+## 10. Troubleshooting
+
+### 10.1 Cockpit looks primitive / behind (only Guardian·Daemon·Loop·Runtime State)
+**Symptom:** the dashboard is missing the Director, Settings, Analyst, Cost, and Ideas
+panels, reads `Loop: STOPPED` or "read-only dashboard".
+**Two causes — fix both:**
+1. **Deploy is on old code.** Coolify → app → Configuration → Git Source → Branch =
+   `main` → Save → Redeploy. Build pack = **Dockerfile** (a real container, not a
+   static build). Restores the full modern cockpit.
+2. **Loop isn't running** (no real container / no secrets) → every panel is empty. Fix
+   with 10.2.
+
+### 10.2 Cockpit is live (200) but no cycles run
+**Symptom:** the modern cockpit renders and `GET /api/status` → 200, but no cycles. The
+entrypoint **hard-stops** when `CLAUDE_CODE_OAUTH_TOKEN` is absent — that is correct;
+never bypass it with a dummy value.
+**Cause:** the four boot secrets aren't in `runtime.env` yet (§3). Two are personal
+credentials — **each instance brings its own**; never reuse another operator's tokens.
+
+Write them **without echoing the values** — literal `KEY=value`, one per line, **no
+quotes** (`GH_TOKEN=ghp_xxx`, never `"ghp_xxx"`), no trailing space/CRLF. The entrypoint
+parses this file **literally — it never dot-sources it**:
+```bash
+umask 077
+F=/app/logs/runtime.env   # or your host's mapped path, e.g. /opt/<app>-data/logs/runtime.env
+cat >> "$F" <<'EOF'
+COMPANY_GIT_NAME=Auto Company
+COMPANY_GIT_EMAIL=bot@yourdomain
+EOF
+read -rs -p "CLAUDE_CODE_OAUTH_TOKEN: " T && printf 'CLAUDE_CODE_OAUTH_TOKEN=%s\n' "$T" >> "$F"; unset T; echo
+read -rs -p "GH_TOKEN: " T && printf 'GH_TOKEN=%s\n' "$T" >> "$F"; unset T; echo
+```
+Then restart / redeploy. Verify the loop is live:
+```bash
+docker logs -f <container> 2>&1 | grep -E "Cycle #|\[OK\]"
+```
+The first `Cycle #1 … [OK]` means the loop is running and the panels start filling.
+
+**🪟 Windows operators — where the Claude token lives.** The token is **not stored on
+Windows** — Windows is only where you *generate* it (`claude setup-token` in PowerShell /
+Windows Terminal; install with `npm i -g @anthropic-ai/claude-code`, or run from WSL /
+Git Bash). It lives in exactly one place: the server's `runtime.env`. **Paste it into the
+server shell, not a Windows file** — authoring `runtime.env` in Notepad adds `\r\n`
+endings, the parser reads `token\r`, and auth fails. No backup needed: it's regenerable
+(re-run `claude setup-token`); if you must keep a copy, use Windows Credential Manager.
+
+### 10.3 `curl -I` returns 501 — not a bug
+The Python server implements only `GET`, so `HEAD` (`curl -I`) returns `501`. Use
+`GET /api/status` for health checks. Binding to `172.17.0.1:8787` (not public `0.0.0.0`)
+is also correct — keep the cockpit behind your reverse proxy.
+
+---
+
+## 11. Optional add-ons
+
+### 11.1 Connect the Codex fallback engine
+Codex is **not required** — the loop runs on Claude alone; Codex is the engine the
+router fails over to when Claude hits its usage limit or the budget cap. It's a
+**one-time seed**, not a per-deploy step.
+1. On your own machine, produce an `auth.json`: `npm i -g @openai/codex@0.144.6` then
+   `codex login` (sign in with your ChatGPT Plus/Pro) → writes `~/.codex/auth.json`.
+   *(Rock-solid 24/7 alternative: put an `OPENAI_API_KEY` in `auth.json` — pay-per-use,
+   never expires. The ChatGPT-sub path is cheaper but can need an occasional re-login.)*
+2. base64 it and seed `CODEX_AUTH_B64` in `runtime.env`: `base64 -w0 ~/.codex/auth.json`
+   (macOS: `base64 … | tr -d '\n'`), paste via the same `read -rs` method. Restart → the
+   entrypoint decodes it to `CODEX_HOME=/app/logs/.codex` (on the persistent volume) and
+   auto-sets `FALLBACK_ENGINE=codex`.
+3. Verify in the log: `Codex auth: seeded from CODEX_AUTH_B64 (first boot)`, then
+   `using persisted …/auth.json` on later restarts.
+
+**The one trap — seed once, then leave it.** During a run Codex **rotates** its refresh
+token and writes the new one back to the persisted `auth.json`. Re-injecting the original
+`CODEX_AUTH_B64` on every deploy resurrects an already-used refresh token → `401 "refresh
+token was already used"`. The entrypoint guards this (it never overwrites a persisted
+auth), so after first boot you can even blank `CODEX_AUTH_B64`. Also seed a **freshly**
+logged-in `auth.json` — one more than a few days old is already stale and 401s.
+
+### 11.2 The Opportunity Analyst (Codex 2nd brain) cron
+An independent Codex (`gpt-5.6-sol`) that reads the full scan, scores every candidate,
+challenges the company's own pick, and drafts a paste-ready directive — shown in its own
+cockpit panel with a Copy button. It runs **inside** the container as user `app` but a
+**host cron** triggers it. A panel that reads `LOADED` with no content just means the
+code is present and nothing has run yet.
+
+**Prerequisite:** the Codex auth from 11.1 — the Analyst shares the loop's
+`CODEX_HOME=/app/logs/.codex/auth.json` and aborts without it.
+
+| Part | Transfers with the fork? |
+|---|---|
+| `scripts/analyst/opportunity-analyst.sh` (orchestrator) | ✅ in the image |
+| Codex skill `autocompany-opportunity-director` | ✅ in the image; the script **self-installs** it into `$CODEX_HOME/skills/` on first run |
+| `/api/analysis` + Analyst panel | ✅ in the image |
+| **Host cron** (`opportunity-analyst-cron.sh` + `/etc/cron.d/…`) | ❌ **NOT in the repo** — add it yourself |
+
+**Run it once, by hand** (after Codex auth is seeded and the loop is up):
+```bash
+C=$(docker ps --format '{{.Names}}' | grep 'auto-company' | head -1)
+docker exec -u app "$C" bash /app/scripts/analyst/opportunity-analyst.sh
+# ~7–10 min → the Analyst panel fills → Copy directive → paste into Director
+```
+
+**For automatic daily runs**, add a host cron. **Critical:** the Analyst and the loop's
+Codex fallback share one `CODEX_HOME` — two concurrent `codex exec` runs cause a `401`,
+so the cron must wait for a codex-idle window before firing:
+```bash
+# /usr/local/bin/opportunity-analyst-cron.sh
+#!/usr/bin/env bash
+set -uo pipefail
+C=$(docker ps --format '{{.Names}}' | grep 'auto-company' | head -1)
+[ -z "$C" ] && { echo "no container"; exit 0; }
+for i in $(seq 1 25); do   # wait up to 25 min for a codex-idle window
+  docker exec "$C" sh -lc "ps -eo args | grep -q '[c]odex exec'" || break
+  sleep 60
+done
+docker exec -u app "$C" bash /app/scripts/analyst/opportunity-analyst.sh >> /var/log/opportunity-analyst.log 2>&1
+
+# /etc/cron.d/opportunity-analyst
+30 4 * * * root /usr/local/bin/opportunity-analyst-cron.sh
+```
+**Draft-only by design:** the Analyst never applies its own directive (it
+snapshots/restores `human-directive.md`); you copy the `## Directive` block into the
+Director yourself. Registry writes are additive — Archived is never silently deleted.
