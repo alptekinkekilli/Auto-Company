@@ -61,9 +61,8 @@ All of these are **your own** — the previous operator's values do not carry ov
 ## 2. Get the code
 
 1. **Fork / clone** this repo into your GitHub account (e.g. `puratu1/Auto-Company`).
-2. **Branch:** the current live version is on **`feat/deploy-container`**. Either
-   deploy that branch, or (cleaner) merge it into `main` and deploy `main`. Whatever
-   you pick, point Coolify at the branch that has this `HANDOFF.md`.
+2. **Branch:** deploy **`main`** — it holds the full, current version (cockpit,
+   framework, agents, skills, and this guide). Point Coolify at `main`.
 3. The Docker build is defined by the repo's **`Dockerfile`** (node:22 + python3 +
    git/gh/jq/curl + Claude Code CLI + Codex CLI + wrangler). Coolify build pack =
    **Dockerfile**. No other build config needed.

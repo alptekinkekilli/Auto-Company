@@ -8,7 +8,7 @@ avoid concurrent builds.
 
 - Coolify: **Cloud** (app.coolify.io), server uuid `i4v4rns6j4cj8r4guu2rut3u`.
 - Create a **separate project** (don't mix with `powerupp/production`).
-- Add application → source `alptekinkekilli/Auto-Company`, branch `feat/deploy-container`.
+- Add application → source your fork of `Auto-Company`, branch `main`.
 - Build pack: **Dockerfile**.
 - Port: **8787** (Traefik routes the domain to this).
 - Domain: `deck.appricode.tr` (grey-cloud first for Let's Encrypt; orange once Cloudflare Access is on).
