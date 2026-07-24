@@ -800,23 +800,31 @@ extract_cycle_metadata() {
     CYCLE_TYPE="${ENGINE}_exec"
 
     if [ "$ENGINE" = "claude" ]; then
+        # `claude -p --output-format json` writes its result JSON as ONE line, but the
+        # CLI may prepend warnings on stdout/stderr (e.g. the untrusted-workspace
+        # "Ignoring N permissions.allow entries" notice). Feeding the whole blob to jq
+        # then fails, silently zeroing CYCLE_COST — which also stops record_spend, so
+        # the Claude budget window undercounts and the cap never binds. Parse the LAST
+        # JSON-looking line instead of the raw output.
+        RESULT_JSON=$(printf '%s\n' "$RESULT_MESSAGE" | grep -E '^[[:space:]]*\{' | tail -1)
+        [ -z "$RESULT_JSON" ] && RESULT_JSON="$RESULT_MESSAGE"
         if command -v jq >/dev/null 2>&1; then
-            RESULT_TEXT=$(echo "$RESULT_MESSAGE" | jq -r '.result // .message // .output_text // empty' 2>/dev/null | head -c 2000 || true)
+            RESULT_TEXT=$(echo "$RESULT_JSON" | jq -r '.result // .message // .output_text // empty' 2>/dev/null | head -c 2000 || true)
             if [ -z "$RESULT_TEXT" ]; then
-                RESULT_TEXT=$(echo "$RESULT_MESSAGE" | jq -r '.. | .text? // empty' 2>/dev/null | head -c 2000 || true)
+                RESULT_TEXT=$(echo "$RESULT_JSON" | jq -r '.. | .text? // empty' 2>/dev/null | head -c 2000 || true)
             fi
 
-            parsed_cost=$(echo "$RESULT_MESSAGE" | jq -r '.total_cost_usd // .cost_usd // empty' 2>/dev/null || true)
+            parsed_cost=$(echo "$RESULT_JSON" | jq -r '.total_cost_usd // .cost_usd // empty' 2>/dev/null || true)
             if [ -n "$parsed_cost" ]; then
                 CYCLE_COST="$parsed_cost"
             fi
 
-            parsed_subtype=$(echo "$RESULT_MESSAGE" | jq -r '.subtype // empty' 2>/dev/null || true)
+            parsed_subtype=$(echo "$RESULT_JSON" | jq -r '.subtype // empty' 2>/dev/null || true)
             if [ -n "$parsed_subtype" ]; then
                 CYCLE_SUBTYPE="$parsed_subtype"
             fi
 
-            parsed_type=$(echo "$RESULT_MESSAGE" | jq -r '.type // empty' 2>/dev/null || true)
+            parsed_type=$(echo "$RESULT_JSON" | jq -r '.type // empty' 2>/dev/null || true)
             if [ -n "$parsed_type" ]; then
                 CYCLE_TYPE="$parsed_type"
             fi
@@ -1031,7 +1039,7 @@ This is Cycle #$loop_count. Act decisively."
 
     # --- per-cycle telemetry ledger (opus experiment + reserve-% cap controller) ---
     # One line per completed cycle: epoch engine model effort cost claude_window_usd.
-    _tele_eng="claude"; _tele_model="${MODEL:-config-default}"; _tele_eff="-"
+    _tele_eng="claude"; _tele_model="${MODEL:-config-default}"; _tele_eff="${CLAUDE_EFFORT:--}"
     if [ "$FALLBACK_USED" -eq 1 ] || [ "$CYCLE_ENGINE_OVERRIDE" = "codex" ] || [ "$ENGINE" = "codex" ]; then
         _tele_eng="codex"; _tele_model="${CODEX_MODEL:-gpt-5.6-sol}"; _tele_eff="${CODEX_EFFORT:--}"
     fi

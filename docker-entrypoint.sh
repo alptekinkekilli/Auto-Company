@@ -114,6 +114,21 @@ export CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-/app/logs/.claude}"
 mkdir -p "$CLAUDE_CONFIG_DIR" && chmod 700 "$CLAUDE_CONFIG_DIR"
 echo "[entrypoint] CLAUDE_CONFIG_DIR=$CLAUDE_CONFIG_DIR (persistent)"
 
+# Relocating the config dir loses the workspace trust record, and untrusted /app makes
+# `claude -p` print an "Ignoring N permissions.allow entries" warning ABOVE its JSON
+# result — which broke cost parsing (and therefore the Claude budget ledger). Mark /app
+# trusted so stdout stays clean. Non-interactive runs cannot answer a trust dialog.
+_cc_json="$CLAUDE_CONFIG_DIR/.claude.json"
+[ -s "$_cc_json" ] || echo '{}' > "$_cc_json"
+if command -v jq >/dev/null 2>&1; then
+    if jq '.projects["/app"].hasTrustDialogAccepted = true' "$_cc_json" > "$_cc_json.tmp" 2>/dev/null; then
+        mv "$_cc_json.tmp" "$_cc_json"
+        echo "[entrypoint] marked /app as a trusted Claude workspace"
+    else
+        rm -f "$_cc_json.tmp"
+    fi
+fi
+
 # --- Codex fallback auth (optional) ---
 # Codex (0.144.x) owns the ChatGPT OAuth session: during `codex exec` it refreshes
 # and ROTATES the tokens, writing the new refresh/access tokens back to auth.json.
