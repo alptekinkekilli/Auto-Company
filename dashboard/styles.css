@@ -270,10 +270,23 @@ select {
   display: grid;
   grid-template-columns: minmax(280px, 1fr) minmax(300px, 2fr);
   gap: 12px;
+  align-items: stretch;
 }
 
 .detail {
   padding: 14px 16px;
+}
+
+/* Make both grid-details panels equal height (Runtime State drives it) and let the
+   Consensus markdown box fill its panel instead of capping at 320px. */
+.grid-details .detail {
+  display: flex;
+  flex-direction: column;
+}
+.grid-details .detail > .markdown-view {
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: none;
 }
 
 .state-list {

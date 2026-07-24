@@ -1029,6 +1029,16 @@ This is Cycle #$loop_count. Act decisively."
         record_spend "$CYCLE_COST"
     fi
 
+    # --- per-cycle telemetry ledger (opus experiment + reserve-% cap controller) ---
+    # One line per completed cycle: epoch engine model effort cost claude_window_usd.
+    _tele_eng="claude"; _tele_model="${MODEL:-config-default}"; _tele_eff="-"
+    if [ "$FALLBACK_USED" -eq 1 ] || [ "$CYCLE_ENGINE_OVERRIDE" = "codex" ] || [ "$ENGINE" = "codex" ]; then
+        _tele_eng="codex"; _tele_model="${CODEX_MODEL:-gpt-5.6-sol}"; _tele_eff="${CODEX_EFFORT:--}"
+    fi
+    _tele_fill="$(window_spend)"
+    printf '%s %s %s %s %s %s\n' "$(date +%s)" "$_tele_eng" "$_tele_model" "$_tele_eff" "${CYCLE_COST:-N/A}" "$_tele_fill" >> "$LOG_DIR/engine-telemetry.log" 2>/dev/null || true
+    log "[TELEMETRY] engine=$_tele_eng model=$_tele_model effort=$_tele_eff cost=${CYCLE_COST:-N/A} claude_window=\$$_tele_fill/${WINDOW_BUDGET_USD:-∞}"
+
     cycle_failed_reason=""
     cycle_soft_timeout=0
     if [ "$CYCLE_TIMED_OUT" -eq 1 ]; then
