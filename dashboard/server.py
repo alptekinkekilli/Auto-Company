@@ -38,7 +38,7 @@ LOG_FILE = REPO_ROOT / "logs" / "auto-loop.log"
 STATE_FILE = REPO_ROOT / ".auto-loop-state"
 CONSENSUS_FILE = REPO_ROOT / "memories" / "consensus.md"
 DIRECTIVE_FILE = REPO_ROOT / "memories" / "human-directive.md"
-OPPORTUNITY_SCAN_FILE = REPO_ROOT / "docs" / "research" / "opportunity-scan.md"
+CANDIDATE_REGISTRY_FILE = REPO_ROOT / "memories" / "candidate-registry.md"
 ANALYSIS_FILE = REPO_ROOT / "memories" / "analysis-directive.md"
 # Operator-editable runtime overrides, sourced by docker-entrypoint.sh on start.
 RUNTIME_ENV_FILE = REPO_ROOT / "logs" / "runtime.env"
@@ -305,15 +305,20 @@ def _parse_env_file(raw: str) -> dict[str, str]:
 
 
 def read_ideas() -> dict[str, Any]:
-    """Read the live opportunity scan (docs/research/opportunity-scan.md) for the Ideas panel."""
-    raw = read_text_file(OPPORTUNITY_SCAN_FILE, "")
+    """Read the live candidate registry (memories/candidate-registry.md) for the Ideas panel.
+
+    The loop stopped maintaining a single docs/research/opportunity-scan.md after the
+    discovery-directive rewrite (Cycle 106): per-cycle scans go to cycleNNN-*.md and the
+    cumulative, framework-ranked record now lives in the lean candidate-registry.md.
+    """
+    raw = read_text_file(CANDIDATE_REGISTRY_FILE, "")
     updated = ""
     try:
-        if OPPORTUNITY_SCAN_FILE.exists():
+        if CANDIDATE_REGISTRY_FILE.exists():
             import datetime
 
             updated = datetime.datetime.fromtimestamp(
-                OPPORTUNITY_SCAN_FILE.stat().st_mtime, tz=datetime.timezone.utc
+                CANDIDATE_REGISTRY_FILE.stat().st_mtime, tz=datetime.timezone.utc
             ).isoformat()
     except OSError:
         pass
