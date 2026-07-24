@@ -566,11 +566,12 @@ def read_engine_runtime() -> dict[str, Any]:
     engine = read_text_file(LOG_FILE.parent / "router-state", "").strip().lower()
     out: dict[str, Any] = {"routedEngine": engine}
 
+    # Tolerant to both the fill-weighted line and the legacy round-robin line.
     tiers = re.findall(
-        r"\[TIER\] round-robin idx=(\d+) . Claude=(\S+), Codex effort=(\w+)", text)
+        r"\[TIER\] (\S+).*?Claude=([^\s,\[]+).*?Codex effort=(\w+)", text)
     if tiers:
-        idx_s, cmodel, ceff = tiers[-1]
-        out["tierIdx"] = int(idx_s)
+        mode, cmodel, ceff = tiers[-1]
+        out["tierMode"] = mode
         out["claudePick"] = cmodel
         out["codexEffort"] = ceff
         if engine == "codex":
@@ -596,12 +597,6 @@ def read_engine_runtime() -> dict[str, Any]:
     if itv:
         out["interval"] = itv[-1]
 
-    if "tierIdx" in out and out.get("claudeLadder"):
-        nxt = out["tierIdx"] + 1
-        cl = out["claudeLadder"]
-        xl = out.get("codexLadder") or []
-        out["nextClaude"] = cl[nxt % len(cl)] if cl else ""
-        out["nextCodexEffort"] = xl[nxt % len(xl)] if xl else ""
     return out
 
 

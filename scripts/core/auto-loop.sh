@@ -234,10 +234,13 @@ _router_persist() {
     printf '%s\n' "$1" > "$ROUTER_STATE_FILE" 2>/dev/null || true
 }
 
-# Tier ladder (APP-193): round-robin the Claude MODEL + Codex effort within their
-# MIN..MAX ladders each cycle, to spread token burn across cheap/expensive tiers.
-# Advances a persisted counter. When off, restores the base config. Called each
-# cycle before the engine runs; the chosen engine reads MODEL (Claude) / CODEX_EFFORT.
+# Tier ladder (APP-193, FILL-WEIGHTED): pick the Claude MODEL + Codex effort from their
+# CHEAPEST-FIRST ladders by how full each rolling window is — the most-capable tier while
+# the window is fresh, downgrading toward the cheapest tier as it fills (this is the
+# quota-weighted design; it replaces the earlier plain round-robin). Claude fill = 5h USD
+# spend / WINDOW_BUDGET_USD; Codex fill = window count / CODEX_WINDOW_LIMIT. When a provider
+# has NO cap set, there is no fill signal → stay at the cheapest tier (conservative). When
+# the ladder is off, restore the base config. The chosen engine reads MODEL / CODEX_EFFORT.
 apply_tier_ladder() {
     if [ "$ROUTER_TIER_LADDER" != "1" ]; then
         MODEL="$BASE_MODEL"
@@ -245,23 +248,30 @@ apply_tier_ladder() {
         MODEL_LABEL="${MODEL:-config-default}"
         return 0
     fi
-    local idx=0
-    [ -f "$TIER_STATE_FILE" ] && idx="$(cat "$TIER_STATE_FILE" 2>/dev/null || echo 0)"
-    case "$idx" in ''|*[!0-9]*) idx=0 ;; esac
 
-    local _CL _CO n_cl n_co
-    IFS=',' read -ra _CL <<< "$CLAUDE_TIER_LADDER"
-    IFS=',' read -ra _CO <<< "$CODEX_TIER_LADDER"
-    n_cl=${#_CL[@]}; n_co=${#_CO[@]}
-    if [ "$n_cl" -gt 0 ]; then
-        MODEL="$(printf '%s' "${_CL[$((idx % n_cl))]}" | tr -d '[:space:]')"
-        MODEL_LABEL="${MODEL:-config-default}"
-    fi
-    if [ "$n_co" -gt 0 ]; then
-        CODEX_EFFORT="$(printf '%s' "${_CO[$((idx % n_co))]}" | tr -d '[:space:]')"
-    fi
-    printf '%s\n' "$(( (idx + 1) % 1000000 ))" > "$TIER_STATE_FILE" 2>/dev/null || true
-    log "[TIER] round-robin idx=$idx → Claude=$MODEL, Codex effort=$CODEX_EFFORT"
+    # _tier_pick <fill_num> <fill_den> <csv, cheapest-first> → echoes the chosen tier.
+    # index = (n-1) - floor(fill*n), clamped; fill = num/den. den<=0 → cheapest (index 0).
+    _tier_pick() {
+        local num="$1" den="$2" csv="$3" arr n idx
+        IFS=',' read -ra arr <<< "$csv"
+        n=${#arr[@]}
+        [ "$n" -eq 0 ] && { printf ''; return; }
+        idx="$(awk -v x="$num" -v d="$den" -v n="$n" 'BEGIN{
+            if (d+0 <= 0) { print 0; exit }
+            s = int((x / d) * n); if (s < 0) s = 0; if (s > n-1) s = n-1;
+            print (n-1) - s
+        }')"
+        printf '%s' "$(printf '%s' "${arr[$idx]}" | tr -d '[:space:]')"
+    }
+
+    local c_num c_den x_num x_den m e
+    c_num="$(window_spend)";       c_den="${WINDOW_BUDGET_USD:-0}"
+    x_num="$(codex_window_count)"; x_den="${CODEX_WINDOW_LIMIT:-0}"
+    m="$(_tier_pick "$c_num" "$c_den" "$CLAUDE_TIER_LADDER")"
+    e="$(_tier_pick "$x_num" "$x_den" "$CODEX_TIER_LADDER")"
+    [ -n "$m" ] && { MODEL="$m"; MODEL_LABEL="${MODEL:-config-default}"; }
+    [ -n "$e" ] && CODEX_EFFORT="$e"
+    log "[TIER] fill-weighted → Claude=$MODEL [claude \$$c_num/${WINDOW_BUDGET_USD:-∞}], Codex effort=$CODEX_EFFORT [codex $x_num/${CODEX_WINDOW_LIMIT:-∞}]"
 }
 
 # APP-189 Phase 2 — decide which engine runs THIS cycle from remaining quota headroom

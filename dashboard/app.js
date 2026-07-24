@@ -219,19 +219,14 @@ function renderStateList(parsed, stateFile, router) {
     ? router.routedModel + (router.routedEffort ? ` · effort ${router.routedEffort}` : "")
     : "-";
   const ladder = (arr) => (Array.isArray(arr) && arr.length ? arr.join(" → ") : "-");
-  const rr =
-    router.tierIdx != null
-      ? `idx ${router.tierIdx} → next: ${router.nextClaude || "-"}` +
-        (router.nextCodexEffort ? ` / codex ${router.nextCodexEffort}` : "")
-      : "-";
   const budgetInterval = `$${router.windowBudget || "-"} cap · ${router.interval || "-"}s`;
 
   const rows = [
     ["Active engine (routed)", routed || "-"],
     ["Active model", routedModel],
     ["Router decision", router.routerReason || "-"],
-    ["Round-robin", rr],
-    ["Claude ladder", ladder(router.claudeLadder)],
+    ["Tier selection", router.tierMode || "-"],
+    ["Claude ladder (cheap→capable)", ladder(router.claudeLadder)],
     ["Codex effort ladder", ladder(router.codexLadder)],
     ["Base engine / model", `${parsed.loop.engine || "-"} / ${parsed.loop.model || "-"}`],
     ["Budget / interval", budgetInterval],
