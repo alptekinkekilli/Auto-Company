@@ -743,3 +743,23 @@ select {
   font-size: 0.82rem;
 }
 .cost-foot b { color: var(--text); font-weight: 700; }
+
+.cost-ccusage {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(151, 215, 239, 0.18);
+}
+.cost-ccusage-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.cost-grid-3 { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 640px) {
+  .cost-grid-3 { grid-template-columns: repeat(3, 1fr); }
+}
+.cost-ccusage #ccModels { overflow-wrap: anywhere; }

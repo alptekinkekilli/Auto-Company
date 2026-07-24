@@ -39,6 +39,13 @@ const els = {
   costFallbacks: document.getElementById("costFallbacks"),
   costOffloads: document.getElementById("costOffloads"),
   costBudget: document.getElementById("costBudget"),
+  ccusageBlock: document.getElementById("ccusageBlock"),
+  ccusageRange: document.getElementById("ccusageRange"),
+  ccTotal: document.getElementById("ccTotal"),
+  ccTotalLabel: document.getElementById("ccTotalLabel"),
+  ccClaude: document.getElementById("ccClaude"),
+  ccCodex: document.getElementById("ccCodex"),
+  ccModels: document.getElementById("ccModels"),
 
   directiveInput: document.getElementById("directiveInput"),
   directiveBadge: document.getElementById("directiveBadge"),
@@ -283,6 +290,8 @@ function renderCost(cost) {
   els.costOffloads.textContent = cost.budgetOffloads ?? 0;
   els.costBudget.textContent = cost.budgetPauses ?? 0;
 
+  renderCcusage(cost.ccusage || {});
+
   const reason = (cost.creditReason || "").trim();
   if (reason === "out_of_credits") {
     // Pay-as-you-go OVERFLOW credits are off — expected under the cost cap. The
@@ -301,6 +310,28 @@ function renderCost(cost) {
     els.creditBadge.className = "badge badge-done";
     els.creditBadge.title = "";
   }
+}
+
+function renderCcusage(cc) {
+  if (!els.ccusageBlock) return;
+  const usd = (n) => `$${(Number(n) || 0).toFixed(2)}`;
+  if (!cc.available) {
+    // Fail open: hide the block when ccusage isn't installed / still computing.
+    els.ccusageBlock.hidden = true;
+    return;
+  }
+  els.ccusageBlock.hidden = false;
+  els.ccTotal.textContent = usd(cc.totalCost);
+  els.ccTotalLabel.textContent = cc.days ? `Total (${cc.days}d)` : "Total";
+  els.ccClaude.textContent = usd(cc.claudeCost);
+  els.ccCodex.textContent = usd(cc.codexCost);
+  els.ccusageRange.textContent = cc.today && cc.today.date
+    ? `${cc.today.date} · ${usd(cc.today.cost)}`
+    : "";
+  const models = Array.isArray(cc.models) ? cc.models : [];
+  els.ccModels.textContent = models.length
+    ? models.map((m) => `${m.name} ${usd(m.cost)}`).join(" · ")
+    : "—";
 }
 
 let hostControlsApplied = false;

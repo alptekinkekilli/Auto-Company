@@ -8,7 +8,9 @@ import json
 import os
 import platform
 import re
+import shlex
 import subprocess
+import threading
 import time
 from datetime import datetime, timezone
 from http import HTTPStatus
@@ -458,6 +460,100 @@ def trigger_redeploy() -> dict[str, Any]:
         return {"ok": False, "configured": True, "error": str(exc)}
 
 
+# --- ccusage integration (optional, prototype) -------------------------------
+# ccusage (https://github.com/ryoppippi/ccusage) reads the local agent transcripts
+# (~/.claude/projects + Codex sessions under $CODEX_HOME) and prices tokens against a
+# cached table. It fills the loop ledger's blind spot: a $ ESTIMATE for Codex (whose
+# ChatGPT-auth runs carry no USD) and a per-model Claude/Codex split. NOTE: this is an
+# API-EQUIVALENT estimate, not billed spend — the company runs on flat subscriptions.
+# Shelled out + cached (CCUSAGE_TTL_SECONDS), refreshed in a background thread so it
+# never blocks the /api/status poll. Fails open when ccusage is absent.
+_CCUSAGE_CACHE: dict[str, Any] = {"at": 0.0, "data": None}
+_CCUSAGE_REFRESHING = {"v": False}
+_CCUSAGE_TTL = int(os.environ.get("CCUSAGE_TTL_SECONDS", "600"))
+
+
+def _ccusage_compute() -> dict[str, Any]:
+    cmd_str = os.environ.get("CCUSAGE_CMD", "ccusage")
+    days = int(os.environ.get("CCUSAGE_WINDOW_DAYS", "30"))
+    since = datetime.fromtimestamp(time.time() - days * 86400, timezone.utc).strftime("%Y%m%d")
+    base = shlex.split(cmd_str) + ["daily", "--json", "--since", since]
+
+    def _run(extra: list[str]) -> str | None:
+        try:
+            proc = subprocess.run(
+                base + extra, cwd=str(REPO_ROOT), capture_output=True,
+                text=True, encoding="utf-8", errors="replace", timeout=45,
+            )
+        except Exception:
+            return None
+        return (proc.stdout or "").strip() or None
+
+    # Try online (fetches/caches pricing); fall back to --offline for air-gapped hosts.
+    raw = _run([]) or _run(["--offline"])
+    if not raw:
+        return {"available": False, "reason": "ccusage not installed / no output"}
+
+    try:
+        daily = (json.loads(raw).get("daily") or [])
+        model_cost: dict[str, float] = {}
+        for day in daily:
+            for mb in (day.get("modelBreakdowns") or []):
+                name = str(mb.get("modelName", "?"))
+                model_cost[name] = model_cost.get(name, 0.0) + float(mb.get("cost", 0) or 0)
+
+        def _is_codex(n: str) -> bool:
+            n = n.lower()
+            return n.startswith(("gpt", "o1", "o3", "o4")) or "codex" in n
+
+        claude_cost = sum(c for n, c in model_cost.items() if "claude" in n.lower())
+        codex_cost = sum(c for n, c in model_cost.items() if _is_codex(n))
+        models = sorted(
+            ({"name": n, "cost": round(c, 2)} for n, c in model_cost.items()),
+            key=lambda m: m["cost"], reverse=True,
+        )[:6]
+        today = None
+        if daily:
+            last = daily[-1]
+            today = {"date": str(last.get("period", "")),
+                     "cost": round(float(last.get("totalCost", 0) or 0), 2)}
+        return {
+            "available": True,
+            "totalCost": round(sum(model_cost.values()), 2),
+            "claudeCost": round(claude_cost, 2),
+            "codexCost": round(codex_cost, 2),
+            "days": len(daily),
+            "since": since,
+            "today": today,
+            "models": models,
+        }
+    except Exception as exc:  # pragma: no cover - defensive
+        return {"available": False, "reason": f"parse error: {exc}"[:120]}
+
+
+def read_ccusage() -> dict[str, Any]:
+    """Return the cached ccusage estimate; refresh in the background when stale.
+
+    Never blocks: the first call returns a pending marker and kicks off a thread;
+    later polls pick up the computed result once it lands.
+    """
+    now = time.time()
+    data = _CCUSAGE_CACHE.get("data")
+    fresh = data is not None and (now - float(_CCUSAGE_CACHE.get("at", 0))) < _CCUSAGE_TTL
+    if not fresh and not _CCUSAGE_REFRESHING["v"]:
+        _CCUSAGE_REFRESHING["v"] = True
+
+        def _bg() -> None:
+            try:
+                result = _ccusage_compute()
+                _CCUSAGE_CACHE.update(at=time.time(), data=result)
+            finally:
+                _CCUSAGE_REFRESHING["v"] = False
+
+        threading.Thread(target=_bg, daemon=True).start()
+    return data if data is not None else {"available": False, "reason": "computing"}
+
+
 def read_cost_summary() -> dict[str, Any]:
     """Aggregate cycle cost from auto-loop.log + credit status from ~/.claude.json.
 
@@ -508,6 +604,7 @@ def read_cost_summary() -> dict[str, Any]:
         "fallbackHits": text.count("[FALLBACK]"),
         "budgetPauses": text.count("[BUDGET]"),
         "budgetOffloads": text.count("[BUDGET-CODEX]"),
+        "ccusage": read_ccusage(),
     }
 
 

@@ -31,6 +31,10 @@ RUN npm install -g @openai/codex@0.144.6 && npm cache clean --force
 # Authenticates via CLOUDFLARE_API_TOKEN (deploy-scoped Coolify secret).
 RUN npm install -g wrangler && npm cache clean --force
 
+# ccusage — cross-agent token-cost ESTIMATE (Claude + Codex) for the cockpit Cost panel.
+# Reads local transcripts only; the dashboard shells out to it (cached, background).
+RUN npm install -g ccusage && npm cache clean --force
+
 WORKDIR /app
 COPY . .
 
