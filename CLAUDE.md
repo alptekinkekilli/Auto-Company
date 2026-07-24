@@ -100,6 +100,7 @@ rule is dormant — but the principle still holds the moment such a project is a
 6. **Boring technology first** - use proven tech unless new tech gives clear 10x upside.
 7. **Monolith first** - get it running first, split only when needed.
 8. **Framework-gated ideas** - both when selecting/filtering ideas and when validating the chosen one, apply `PROJECT_EVALUATION_FRAMEWORK.md`. A regulation, deadline, or trend is NOT demand; never pick or scale an idea without the cheapest possible willingness-to-pay test first.
+9. **Search where you can win** - for newly proposed axes only, apply `PROMPT.md → SEARCH REGIME`. It does not re-evaluate Selected/Pending candidates or modify WTP and authorization gates.
 
 ## Collaboration Workflows
 

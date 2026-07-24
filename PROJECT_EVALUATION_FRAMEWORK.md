@@ -16,6 +16,7 @@ Her proje için mümkün olduğunda güncel ve birincil kaynaklarla araştırma 
 8. Yaklaşan son tarih veya trend, zayıf talebi gizlemek için gerekçe olarak kullanılmamalıdır.
 9. Hukuki, finansal veya güvenlik iddiaları garanti gibi pazarlanmamalıdır.
 10. Her öneri ölçülebilir devam, pivot ve durdurma eşiklerine bağlanmalıdır.
+11. Yalnızca yeni önerilen eksenlerde `PROMPT.md → SEARCH REGIME` politikasını uygula. Bu politika Selected/Pending adayları geriye dönük değerlendirmez; madde 4 ve bölüm 5'teki ikame analizini, WTP HARD STOP'u veya mevcut yetki sınırlarını değiştirmez.
 
 ## İnceleme için gerekli girdiler
 

@@ -63,6 +63,58 @@ with the decision + a one-line reason. **Never silently delete an Archived entry
 is exactly what causes re-proposal loops. This gate governs only what gets proposed; it
 never authorizes a build (the HARD STOP below still applies).
 
+### SEARCH REGIME — where the company is allowed to win (discovery policy)
+
+Five measured cycles (107–111) showed candidates die overwhelmingly at NATIVE/PLATFORM
+SUBSTITUTE and TWO-SIDED / TRUST COLD-START, at the critic gate, before economics (0
+ECONOMIC PASS). Steer what you generate and kill the dead shapes earlier. This governs only
+NEWLY-PROPOSED axes at discovery time; it NEVER retro-kills a candidate already in Selected
+or Pending Queue.
+
+**Primary generation prior — not a gate.** Begin each scan with axes where the buyer ALREADY
+PAYS a human, agency, or an expensive dedicated tool for the exact task (the cleanest proof
+the free/native substitute is insufficient, real budget exists, and the task recurs). If none
+qualifies, other axes may be considered only if they clear the early substitute/cold-start
+screen and the falsifiable-wedge gate below.
+
+**Then bias toward axes with:**
+- an OBSERVABLE EXISTING BUDGET for the outcome (revealed money, not a trivial platform fee);
+- an ACCRETIVE ASSET the company's own WORK builds and keeps current (aggregation/freshness
+  labor arbitrage), NOT pre-existing proprietary data it cannot have on day one;
+- real PRICE TOLERANCE (the credible alternative is expensive, leaving room beneath it);
+- a CHANNEL that is an existing self-serve marketplace or organic-intent surface with a
+  built-in payment rail the company can list on for free. Channel-first orders discovery
+  SEQUENCING only — it does not re-rank the GO criteria (WTP still dominates channel). A
+  prospect list, hypothetical cold outreach, or a plan to build an audience does NOT count as
+  an existing channel. Any later outreach, listing, or payment action remains governed by the
+  current authorization and WTP rules; this discovery preference authorizes none;
+- NATURAL REPEAT purchase — a tie-breaker between otherwise-comparable axes, not a gate.
+
+**Early substitute / cold-start kill (BEFORE deep research).** Kill a proposed axis now —
+logging the driver — if a native/platform substitute ALREADY DELIVERS MOST OF THE OUTCOME at
+near-zero switching cost for the buyer, OR the offer needs a TWO-SIDED / network / trust
+cold-start the company cannot seed.
+
+**Wedge gate — kill-reason-specific and falsifiable.** For every early kill condition
+triggered, name a direct counter-observation and the observation that would falsify it. A
+channel or observed budget can clear ONLY channel/budget risk; it CANNOT override a dominant
+native substitute. To clear native-substitute dominance, show the material paid outcome the
+substitute fails to deliver and why the proposed accretive asset, freshness advantage,
+comprehensiveness, liability transfer, or switching cost closes that exact gap. Existing
+competitor payment for the same wedge is preferred evidence. No kill-reason-specific
+observation → kill.
+
+NO QUALIFYING CANDIDATE remains a valid, expected outcome of this screen — do NOT manufacture
+a wedge to keep the board non-empty. This refines discovery only; it changes NOTHING about
+the WTP HARD STOP, the dedup gate, or authorization.
+
+**Strategic search prior.** Prioritize productized services where each future paid fulfillment
+would deliver a bounded customer outcome while adding a named REUSABLE ASSET — a dataset,
+taxonomy, rule library, benchmark, or test corpus — that reduces future marginal cost or
+improves future output. State the asset, accumulation unit, reuse path, and falsifier. This
+prior governs only newly proposed axes and authorizes no build, fulfillment, outreach, or
+payment action.
+
 ### HARD STOP — no build before willingness-to-pay evidence
 
 This is a BLOCKING gate, not advice. Before you write product code, scaffold an MVP,
