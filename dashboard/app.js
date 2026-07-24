@@ -25,6 +25,7 @@ const els = {
   analystText: document.getElementById("analystText"),
   analystBadge: document.getElementById("analystBadge"),
   analystCopy: document.getElementById("analystCopy"),
+  analystCopyAll: document.getElementById("analystCopyAll"),
   logText: document.getElementById("logText"),
   rawText: document.getElementById("rawText"),
 
@@ -430,16 +431,39 @@ async function loadAnalysis() {
   }
 }
 
+// Extract just the paste-ready directive from the analyst report: the last fenced
+// ```md / ```markdown block that looks like a directive; strip a leading
+// "# Human Directive" line (the Director panel re-wraps it). Falls back to the
+// "Paste-ready" section, then the whole report.
+function extractDirective(md) {
+  if (!md) return "";
+  const fences = [...md.matchAll(/```(?:md|markdown)?\s*\n([\s\S]*?)```/g)];
+  for (let i = fences.length - 1; i >= 0; i--) {
+    const b = fences[i][1];
+    if (/human directive|##\s*decision|##\s*authorization|##\s*directive|status:/i.test(b)) {
+      return b.replace(/^\s*#\s*Human Directive\s*\n/i, "").trim();
+    }
+  }
+  const m = md.match(/##\s*10\.[\s\S]*/);
+  if (m) return m[0].trim();
+  return md.trim();
+}
+
+async function copyToBtn(btn, text) {
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    const prev = btn.textContent;
+    btn.textContent = "Copied";
+    setTimeout(() => { btn.textContent = prev; }, 1500);
+  } catch (e) {}
+}
+
 if (els.analystCopy) {
-  els.analystCopy.addEventListener("click", async () => {
-    if (!analystRaw) return;
-    try {
-      await navigator.clipboard.writeText(analystRaw);
-      const prev = els.analystCopy.textContent;
-      els.analystCopy.textContent = "Copied";
-      setTimeout(() => { els.analystCopy.textContent = prev; }, 1500);
-    } catch (e) {}
-  });
+  els.analystCopy.addEventListener("click", () => copyToBtn(els.analystCopy, extractDirective(analystRaw)));
+}
+if (els.analystCopyAll) {
+  els.analystCopyAll.addEventListener("click", () => copyToBtn(els.analystCopyAll, analystRaw));
 }
 
 async function loadSettings() {

@@ -85,7 +85,7 @@
         Steer the autonomous company without breaking its autonomy. Your directive becomes the
         top priority for the next cycle's <strong>Next Action</strong>, then is marked DONE.
       </p>
-      <textarea id="directiveInput" class="director-input" rows="3" maxlength="4000"
+      <textarea id="directiveInput" class="director-input" rows="6" maxlength="20000"
         placeholder="e.g. Focus the next cycle on shipping a landing page for the chosen product and set up a waitlist."></textarea>
       <div class="director-actions">
         <button id="btnDirective" class="btn btn-start">Send Directive</button>
@@ -164,7 +164,8 @@
         <h3>Opportunity Analyst — Codex 2nd brain</h3>
         <div class="panel-head-right">
           <span id="analystBadge" class="badge badge-none">memories</span>
-          <button id="analystCopy" class="ghost-btn" type="button" title="Copy the full analysis + directive">Copy</button>
+          <button id="analystCopy" class="ghost-btn" type="button" title="Copy just the paste-ready directive block">Copy directive</button>
+          <button id="analystCopyAll" class="ghost-btn" type="button" title="Copy the full analysis report">Copy all</button>
           <button class="collapse-toggle" data-target="analystBody" aria-expanded="false" aria-label="Toggle analyst">▸</button>
         </div>
       </div>

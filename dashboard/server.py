@@ -226,7 +226,7 @@ def read_text_file(path: Path, fallback: str = "") -> str:
     return raw.decode("utf-8", errors="replace")
 
 
-DIRECTIVE_MAX_CHARS = 4000
+DIRECTIVE_MAX_CHARS = 20000
 
 
 def read_directive() -> dict[str, Any]:
