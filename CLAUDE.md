@@ -32,10 +32,20 @@ Humans guide direction only by editing `memories/consensus.md` under "Next Actio
 
 **Workspace rule:** all new projects must be created under `projects/`.
 
-**Operator-project rule (appricode-panel):** When operating the operator's existing
-project, work ONLY in the company's copy repo `alptekinkekilli/appricode-panel-autoco`
-(cloned under `projects/`). NEVER push, PR, or in any way write to the original
-`alptekinkekilli/appricode-panel` — a human developer works there. No exceptions.
+**Operator-project rule (copy-only mirroring).** When the company assists on a
+project that a human developer also works on, it works ONLY in a **company-owned
+COPY** of that repo (cloned under `projects/`). It NEVER pushes, PRs, or writes in
+any way to the human's ORIGINAL repo — a human developer works there. No exceptions.
+
+Configured mirror(s) — **edit this table for your instance** (`COPY` = the only repo
+the company may write; `ORIGINAL` = never touch, ever):
+
+| COPY (work here) | ORIGINAL (never write) |
+|---|---|
+| `alptekinkekilli/appricode-panel-autoco` | `alptekinkekilli/appricode-panel` |
+
+If the table is empty, the company is not mirroring any operator project and this
+rule is dormant — but the principle still holds the moment such a project is added.
 
 ## Team Architecture
 
