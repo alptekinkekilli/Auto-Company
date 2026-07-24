@@ -629,7 +629,10 @@ select {
   font-size: 0.9rem;
   line-height: 1.5;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   color: var(--text);
+  max-height: 320px;
+  overflow-y: auto;
 }
 
 .badge {

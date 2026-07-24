@@ -240,9 +240,14 @@ def read_directive() -> dict[str, Any]:
     if not raw.strip():
         return {"present": False, "status": "NONE", "updated": "", "directive": ""}
 
-    def _section(name: str) -> str:
+    def _section(name: str, to_end: bool = False) -> str:
+        # Directive is always the final section, and its body is free-form
+        # markdown that may itself contain "## " headings — so for it we must
+        # capture to end-of-file (to_end) instead of stopping at the next "## ",
+        # which would silently truncate the displayed directive.
+        terminator = r"\Z" if to_end else r"(?=^##\s+|\Z)"
         match = re.search(
-            rf"^##\s+{name}\s*$\n(.*?)(?=^##\s+|\Z)",
+            rf"^##\s+{name}\s*$\n(.*?){terminator}",
             raw,
             re.MULTILINE | re.DOTALL,
         )
@@ -255,7 +260,7 @@ def read_directive() -> dict[str, Any]:
         "present": True,
         "status": status,
         "updated": _section("Updated"),
-        "directive": _section("Directive"),
+        "directive": _section("Directive", to_end=True),
     }
 
 
