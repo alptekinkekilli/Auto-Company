@@ -1071,6 +1071,13 @@ This is Cycle #$loop_count. Act decisively."
         fi
     fi
 
+    # Telegram: ping the operator with this cycle's summary (no-op if TELEGRAM_* unset; never fails the loop).
+    if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+        _tg_head="OK"; [ -n "${cycle_failed_reason:-}" ] && _tg_head="FAIL: ${cycle_failed_reason}"
+        bash "$SCRIPT_DIR/telegram-notify.sh" "🔄 Cycle #${loop_count} — ${_tg_head} (cost ${CYCLE_COST})
+$(printf '%s' "${RESULT_TEXT:-}" | head -c 600)" >/dev/null 2>&1 || true
+    fi
+
     save_state "idle"
     log_cycle "$loop_count" "WAIT" "Sleeping ${LOOP_INTERVAL}s before next cycle..."
     sleep "$LOOP_INTERVAL"
