@@ -25,10 +25,10 @@ Create two credentials and store them as **container env vars** via the secrets/
 1. **`AIRTABLE_API_KEY`** — an Airtable **Personal Access Token**.
    Minimum scopes: `data.records:read`, `schema.bases:read` (add `data.records:write` only if
    the loop should also write). Restrict its **base access** to
-   `Autocompany client communication tracker` (`appPLc31jSlgulX3D`) — do not grant all bases.
+   `<your Airtable base>` (`<YOUR_AIRTABLE_BASE_ID>`) — do not grant all bases.
 
 2. **`LINEAR_API_KEY`** — a Linear **Personal API key**
-   (Linear → Settings → Security & access → Personal API keys). Team: Appricode/APP.
+   (Linear → Settings → Security & access → Personal API keys). Team: `<your Linear team>`.
 
 ## One item to verify before trusting Linear (community package)
 
@@ -49,6 +49,5 @@ breaks because of this wiring.
 ## Acceptance (post-deploy)
 
 - Loop's next state-audit shows Airtable + Linear reachable **via env-credentialed servers**,
-  and correctly reports the 50 `Staging-QA Outreach` records + the `Staging-QA Call Script`
-  table added under APP-226.
+  and correctly reports your Airtable tables/records and Linear issues (not "connector unavailable").
 - A later cycle with the claude.ai connectors absent still has working Airtable/Linear access.
