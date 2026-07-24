@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auto-Company — Self-Host Handoff</title>
+<style>
+  :root {
+    --bg: #f4f7f8; --surface: #ffffff; --surface-2: #eef3f5;
+    --border: #d8e3e7; --text: #16242b; --muted: #56676f;
+    --accent: #0e7d97; --accent-soft: rgba(14,125,151,0.10);
+    --good: #1f8a5b; --good-soft: rgba(31,138,91,0.10);
+    --act: #a9701a; --act-soft: rgba(169,112,26,0.12);
+    --shadow: 0 1px 2px rgba(16,40,50,0.05), 0 8px 24px rgba(16,40,50,0.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0c1317; --surface: #121d23; --surface-2: #16232a;
+      --border: rgba(151,215,239,0.14); --text: #e7eff3; --muted: #93a7b0;
+      --accent: #3fbcda; --accent-soft: rgba(63,188,218,0.12);
+      --good: #46c78c; --good-soft: rgba(70,199,140,0.13);
+      --act: #e0ad55; --act-soft: rgba(224,173,85,0.13);
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 30px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f7f8; --surface: #ffffff; --surface-2: #eef3f5;
+    --border: #d8e3e7; --text: #16242b; --muted: #56676f;
+    --accent: #0e7d97; --accent-soft: rgba(14,125,151,0.10);
+    --good: #1f8a5b; --good-soft: rgba(31,138,91,0.10);
+    --act: #a9701a; --act-soft: rgba(169,112,26,0.12);
+    --shadow: 0 1px 2px rgba(16,40,50,0.05), 0 8px 24px rgba(16,40,50,0.06);
+  }
+  :root[data-theme="dark"] {
+    --bg: #0c1317; --surface: #121d23; --surface-2: #16232a;
+    --border: rgba(151,215,239,0.14); --text: #e7eff3; --muted: #93a7b0;
+    --accent: #3fbcda; --accent-soft: rgba(63,188,218,0.12);
+    --good: #46c78c; --good-soft: rgba(70,199,140,0.13);
+    --act: #e0ad55; --act-soft: rgba(224,173,85,0.13);
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 30px rgba(0,0,0,0.35);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.55; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 40px 22px 72px; }
+  code, .mono { font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace; }
+  code {
+    font-size: 0.86em; background: var(--surface-2); border: 1px solid var(--border);
+    padding: 1px 6px; border-radius: 6px; overflow-wrap: anywhere;
+  }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent-soft); }
+  a:hover { border-bottom-color: var(--accent); }
+
+  header.hero { margin-bottom: 34px; }
+  .eyebrow {
+    font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin-bottom: 12px;
+  }
+  h1 {
+    font-size: clamp(1.7rem, 4.5vw, 2.5rem); line-height: 1.08; margin: 0 0 12px;
+    letter-spacing: -0.02em; text-wrap: balance; font-weight: 800;
+  }
+  .lede { font-size: 1.06rem; color: var(--muted); margin: 0; max-width: 62ch; }
+
+  section { margin-top: 30px; }
+  h2 {
+    font-size: 0.78rem; letter-spacing: 0.13em; text-transform: uppercase;
+    color: var(--muted); font-weight: 700; margin: 0 0 14px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+  h2 .n { color: var(--accent); margin-right: 8px; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px 18px; box-shadow: var(--shadow);
+  }
+  .grid { display: grid; gap: 12px; }
+  @media (min-width: 620px) { .grid.two { grid-template-columns: 1fr 1fr; } }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem;
+    font-weight: 700; letter-spacing: 0.03em; padding: 3px 9px; border-radius: 999px;
+    border: 1px solid transparent;
+  }
+  .chip.req { color: var(--act); background: var(--act-soft); border-color: var(--act-soft); }
+  .chip.opt { color: var(--muted); background: var(--surface-2); border-color: var(--border); }
+
+  .prov h3, .card h3 { margin: 0 0 4px; font-size: 0.98rem; font-weight: 700; }
+  .prov p, .card p.d { margin: 0; color: var(--muted); font-size: 0.9rem; }
+  .prov li { list-style: none; }
+
+  ul.clean { margin: 0; padding: 0; }
+  ul.clean li { list-style: none; padding: 9px 0; border-top: 1px solid var(--border); }
+  ul.clean li:first-child { border-top: 0; }
+  ul.clean li b { font-weight: 700; }
+  .sub { color: var(--muted); font-size: 0.88rem; }
+
+  ol.steps { counter-reset: s; list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  ol.steps li {
+    position: relative; padding: 13px 16px 13px 52px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  }
+  ol.steps li::before {
+    counter-increment: s; content: counter(s);
+    position: absolute; left: 12px; top: 12px; width: 26px; height: 26px;
+    display: grid; place-items: center; border-radius: 8px;
+    background: var(--accent-soft); color: var(--accent); font-weight: 800; font-size: 0.85rem;
+  }
+  ol.steps li b { font-weight: 700; }
+  ol.steps li .sub { display: block; margin-top: 2px; }
+
+  .req-box {
+    background: var(--act-soft); border: 1px solid var(--act-soft);
+    border-radius: 12px; padding: 14px 16px;
+  }
+  .req-box b { color: var(--act); }
+  .req-box code { background: var(--surface); }
+
+  .cols { display: grid; gap: 12px; }
+  @media (min-width: 620px) { .cols { grid-template-columns: 1fr 1fr; } }
+  .stay { border-left: 3px solid var(--good); padding-left: 12px; }
+  .stay h3 { color: var(--good); }
+  .go { border-left: 3px solid var(--accent); padding-left: 12px; }
+  .go h3 { color: var(--accent); }
+
+  .diagram {
+    font-family: ui-monospace, Menlo, monospace; font-size: 0.78rem; line-height: 1.5;
+    color: var(--muted); background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px; overflow-x: auto; white-space: pre;
+  }
+  .diagram b { color: var(--text); }
+
+  footer { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.86rem; }
+  .kbd { font-size: 0.8rem; }
+
+  pre.cb {
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+    font-size: 0.8rem; line-height: 1.65; color: var(--text);
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 15px 16px; margin: 0; overflow-x: auto;
+  }
+  pre.cb .c { color: var(--muted); }
+  pre.cb .a { color: var(--accent); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="eyebrow">Auto-Company · Handoff to Yasin · <a href="https://github.com/puratu1" style="color:inherit;border:0">@puratu1</a></div>
+    <h1>Run your own autonomous AI company</h1>
+    <p class="lede">A fully autonomous, 24/7 AI company you stand up on <b>your own</b> Hetzner server with Coolify. One container: a cockpit dashboard + a self-driving loop of 14 expert-persona agents that find demand, build, deploy, and sell — steered only by short human directives.</p>
+  </header>
+
+  <section>
+    <h2><span class="n">01</span> What you're receiving</h2>
+    <div class="card">
+      <p class="d" style="margin-bottom:12px">One Docker container, built from the repo's <code>Dockerfile</code>, running two processes. State lives on three persistent volumes; you steer via a human directive.</p>
+      <div class="diagram">Coolify (your instance) → builds Dockerfile → runs 1 container
+  <b>tini</b> (pid1) → docker-entrypoint.sh
+        ├─ python3 dashboard/server.py   <b>cockpit :8787</b>
+        └─ scripts/core/auto-loop.sh     <b>the loop</b> (Claude · Codex fallback)
+  volumes: /app/memories  /app/projects  /app/logs
+  MCP: context7 + airtable + linear   (your API keys)</div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">02</span> What you provide</h2>
+    <div class="grid two prov">
+      <div class="card"><h3>🖥️ Infrastructure</h3><p>A Hetzner (or any Docker) host, a Coolify instance, and a GitHub account for your fork. Optional: a domain + access layer for the cockpit.</p></div>
+      <div class="card"><h3>🧠 LLM engine <span class="chip req">required</span></h3><p>An Anthropic/Claude subscription — run <code>claude setup-token</code> for the headless token. Optional Codex/OpenAI fallback.</p></div>
+      <div class="card"><h3>🔌 Integrations</h3><p>Your own keys, added as you enable each: Context7 (docs + skills), Airtable, Linear, Telegram, Twilio, Cloudflare (product deploys).</p></div>
+      <div class="card"><h3>💳 Selling</h3><p>Your own payment provider (iyzico / Stripe / …) — only when the company actually charges for something.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">03</span> Set it up (high level)</h2>
+    <ol class="steps">
+      <li><b>Fork the repo</b> — <code>main</code> → <code>puratu1/Auto-Company</code>.<span class="sub">Everything is on <code>main</code>: guide, templates, cockpit, framework, agents, skills.</span></li>
+      <li><b>Create the Coolify app</b> — source = your fork, build pack = <b>Dockerfile</b>, port <b>8787</b>.<span class="sub">Set a ~1.5 GB memory limit; gate the cockpit behind Cloudflare Access / Tailscale.</span></li>
+      <li><b>Map 3 persistent volumes</b> — <code>/app/memories</code> · <code>/app/projects</code> · <code>/app/logs</code>.<span class="sub">So consensus, projects, and logs survive redeploys.</span></li>
+      <li><b>Add your secrets/env</b> — the full checklist is <code>logs/runtime.env.example</code>.<span class="sub">MCP servers fail open: start with Claude + Context7, add Airtable/Linear/etc. later.</span></li>
+      <li><b>Deploy &amp; verify</b> — health check <code>GET /api/status</code> → 200; watch the loop log for <code>Cycle #1</code>.<span class="sub">First cycle's <code>## Execution Controls</code> in consensus should read your Airtable/Linear.</span></li>
+    </ol>
+
+    <div style="margin-top:16px">
+      <h2 style="border:0;padding:0;margin-bottom:10px"><span class="n">▚</span> Quick start</h2>
+      <pre class="cb"><span class="c"># 1 · Fork alptekinkekilli/Auto-Company → puratu1/Auto-Company, then clone</span>
+git clone https://github.com/puratu1/Auto-Company.git <span class="a">&&</span> cd Auto-Company
+
+<span class="c"># 2 · Get the one required secret — headless Claude auth</span>
+claude setup-token            <span class="c"># → paste into CLAUDE_CODE_OAUTH_TOKEN</span>
+
+<span class="c"># 3 · Read the full env / secret checklist</span>
+less logs/runtime.env.example
+
+<span class="c"># 4 · In Coolify: New app → source puratu1/Auto-Company → build pack "Dockerfile"</span>
+<span class="c">#     → port 8787 → volumes /app/memories /app/projects /app/logs</span>
+<span class="c">#     → env vars (3 required + optional) → Deploy</span>
+
+<span class="c"># 5 · Verify it's live (after deploy)</span>
+curl -s -o /dev/null -w '%{http_code}\n' https://&lt;your-cockpit&gt;/api/status   <span class="c"># → 200</span></pre>
+    </div>
+
+    <p class="sub" style="margin-top:12px">Full step-by-step: <code>HANDOFF.md</code> in the repo. Day-2 ops (redeploy, rollback, secrets): <code>docs/devops/phase-6-runbook.md</code>.</p>
+  </section>
+
+  <section>
+    <h2><span class="n">04</span> The required minimum to boot</h2>
+    <div class="req-box">
+      <p style="margin:0 0 6px"><b>Three env vars and it runs</b> — everything else is optional and can be added later:</p>
+      <ul class="clean" style="margin-top:6px">
+        <li><code>CLAUDE_CODE_OAUTH_TOKEN</code> <span class="sub">— from <code>claude setup-token</code> (headless Claude auth)</span></li>
+        <li><code>GH_TOKEN</code> <span class="sub">— a GitHub PAT for the company's own commits/deploys (a separate identity, ideally)</span></li>
+        <li><code>COMPANY_GIT_NAME</code> / <code>COMPANY_GIT_EMAIL</code> <span class="sub">— the company's git author</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">05</span> How you steer it</h2>
+    <div class="card">
+      <p class="d">You never micromanage — you write a <b>human directive</b>, and the loop treats it as top priority for the next cycle, then marks it done. Two ways:</p>
+      <ul class="clean" style="margin-top:10px">
+        <li><b>Cockpit</b> <span class="sub">— Director panel → click a template button (Hold+Discover · Discovery · Un-hold+Validate · Select+Validate) → paste → fill <code>&lt;FILL&gt;</code> → Send.</span></li>
+        <li><b>CLI</b> <span class="sub">— <code>apply-directive.sh</code> writes the directive into the live container and confirms it registered.</span></li>
+      </ul>
+      <p class="sub" style="margin-top:10px">Each template carries a <b>Blocked / Pending Work</b> register — so the company always knows what's parked (e.g. a payment link in KYC) and why, and keeps discovering opportunities meanwhile.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">06</span> What transfers — and what doesn't</h2>
+    <div class="cols">
+      <div class="card stay"><h3>✓ Transfers with the fork</h3><p class="d">Code, prompts, the evaluation framework, 14 agents, all skills, the cockpit, the Dockerfile, and the full setup docs. The whole machine.</p></div>
+      <div class="card go"><h3>→ You bring your own</h3><p class="d">Every account &amp; key (Claude, Airtable, Linear, Telegram, Cloudflare, payments) and all live business state. No secrets are in the repo; your instance starts fresh from Day 0.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">07</span> Troubleshooting — cockpit looks primitive / behind</h2>
+    <div class="card" style="border-left:3px solid var(--act)">
+      <p class="d" style="margin-bottom:10px"><b>Symptom:</b> the dashboard shows only Guardian / Daemon / Loop / Runtime State, reads <code>Loop: STOPPED</code> or "read-only dashboard", and is missing the Director, Settings, Opportunity Analyst, Cost, and Ideas panels.</p>
+      <p class="d" style="margin-bottom:12px"><b>Two causes — both must be fixed:</b> (1) the deploy is on <b>old code</b>, not the latest <code>main</code>; (2) the <b>loop isn't running</b> — no real container / no secrets, so every panel is empty.</p>
+      <ol class="steps">
+        <li><b>Deploy from the latest <code>main</code></b> — Coolify → app → Configuration → Git Source → Branch = <code>main</code> → Save → Redeploy. Build pack = <b>Dockerfile</b> (a real container, not a static / read-only build).<span class="sub">Restores the full modern cockpit: Director (+ template buttons), Settings, Analyst, Cost, Ideas.</span></li>
+        <li><b>Run the real container with secrets</b> — port 8787, the three volumes, and at minimum <code>CLAUDE_CODE_OAUTH_TOKEN</code> + <code>GH_TOKEN</code> + <code>COMPANY_GIT_NAME/EMAIL</code> (full list: <code>logs/runtime.env.example</code>).<span class="sub">Starts the loop so the panels fill with live data.</span></li>
+      </ol>
+      <p class="sub" style="margin-top:12px"><b>Verify:</b> the Director panel + template buttons appear, <code>Loop: RUNNING</code>, the cycle count climbs, Consensus Head updates, <code>GET /api/status</code> → 200. Integrations (Context7 / Airtable / Linear) can be added later — MCP servers fail open, so a missing key never crashes the loop.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">08</span> Troubleshooting — cockpit is live but the loop won't start</h2>
+    <div class="card" style="border-left:3px solid var(--act)">
+      <p class="d" style="margin-bottom:10px"><b>Symptom:</b> the modern cockpit renders (Director, Settings, Analyst, Cost, Ideas all present) and <code>GET /api/status</code> → 200, but <b>no cycles run</b>. The entrypoint hard-stops when <code>CLAUDE_CODE_OAUTH_TOKEN</code> is absent — that is correct; never bypass it with a dummy value.</p>
+      <p class="d" style="margin-bottom:12px"><b>Cause:</b> the four boot secrets aren't in <code>runtime.env</code> yet. Two are personal credentials — <b>each instance brings its own</b>; do not reuse another operator's tokens (billing + security).</p>
+      <table style="width:100%;border-collapse:collapse;margin:4px 0 12px;font-size:13px">
+        <tr><td style="padding:4px 8px 4px 0"><code>CLAUDE_CODE_OAUTH_TOKEN</code></td><td class="d">Run <code>claude setup-token</code> on your own machine (logged into your Claude Max/Pro). Runs the engine on <b>your</b> subscription. <span class="chip req">secret</span></td></tr>
+        <tr><td style="padding:4px 8px 4px 0"><code>GH_TOKEN</code></td><td class="d">GitHub → Developer settings → PAT (classic), <code>repo</code> scope, <b>your</b> account — the loop pushes to your fork. <span class="chip req">secret</span></td></tr>
+        <tr><td style="padding:4px 8px 4px 0"><code>COMPANY_GIT_NAME</code></td><td class="d">Commit author name, e.g. <code>Auto Company</code>.</td></tr>
+        <tr><td style="padding:4px 8px 4px 0"><code>COMPANY_GIT_EMAIL</code></td><td class="d">Commit author email, e.g. <code>bot@yourdomain</code>.</td></tr>
+      </table>
+      <ol class="steps">
+        <li><b>Write them without echoing the values</b> — literal <code>KEY=value</code>, one per line, <b>no quotes</b> (<code>GH_TOKEN=ghp_xxx</code>, never <code>"ghp_xxx"</code>), no trailing space/CRLF. The entrypoint parses this file literally — it never dot-sources it.
+          <span class="sub">umask 077 first; append the two non-secrets with a heredoc; pipe each secret in via <code>read -rs -p "…: " T &amp;&amp; printf 'KEY=%s\n' "$T" &gt;&gt; $F; unset T</code> so nothing lands in shell history.</span></li>
+        <li><b>Start the full loop</b> — run the prepared <code>start-full.sh</code>. It prints only the <i>names</i> of any still-missing keys and stops; once all four are present it launches the same image via <code>docker-entrypoint.sh</code> and the loop begins.<span class="sub">Verify: <code>docker logs -f &lt;container&gt; | grep -E "Cycle #|\[OK\]"</code> — the first <code>Cycle #1 … [OK]</code> means the loop is live and the panels start filling.</span></li>
+      </ol>
+      <p class="sub" style="margin-top:12px"><b>Not a bug:</b> <code>curl -I</code> (HEAD) returns <code>501</code> because the Python server implements only <code>GET</code>; use <code>GET /api/status</code> for health checks. Binding to <code>172.17.0.1:8787</code> (not public <code>0.0.0.0</code>) is correct — the cockpit stays behind your reverse proxy. Codex fallback is optional; the loop runs on Claude alone.</p>
+      <div class="card" style="margin-top:14px;background:transparent;border-left:3px solid var(--go, #888)">
+        <h3 style="margin:0 0 6px">🪟 Windows operators — where the Claude token lives</h3>
+        <p class="d" style="margin-bottom:8px">The token is <b>not stored on Windows</b> — Windows is only where you <i>generate</i> it. It lives in one place: the server's <code>runtime.env</code>. The loop runs in a Linux container; Windows just produces the string.</p>
+        <ol class="steps">
+          <li><b>Generate on Windows</b> — in PowerShell / Windows Terminal run <code>claude setup-token</code> (needs Claude Code CLI: <code>npm i -g @anthropic-ai/claude-code</code>, or run it from WSL / Git Bash). A browser opens → sign in with your Claude Max/Pro → the token prints to the console. Copy it.</li>
+          <li><b>Paste into the server, not a Windows file</b> — SSH into the host and run the <code>read -rs</code> line on the <b>Linux</b> side, then paste. This avoids the #1 Windows trap.<span class="sub">CRLF: never author <code>runtime.env</code> in Notepad / a Windows editor — <code>\r\n</code> endings make the parser read <code>token\r</code> and auth fails. Pasting into the server shell (or editing with <code>nano</code> on the host) keeps it clean. No quotes around the value.</span></li>
+        </ol>
+        <p class="sub" style="margin-top:8px"><b>No backup needed</b> — the token is regenerable: lose it, re-run <code>claude setup-token</code> and update the one line. If you must keep a copy, use Windows Credential Manager, not a plaintext file.</p>
+      </div>
+      <div class="card" style="margin-top:14px;background:transparent;border-left:3px solid var(--go, #888)">
+        <h3 style="margin:0 0 6px">🔁 Optional — connect the Codex fallback</h3>
+        <p class="d" style="margin-bottom:8px">Codex is <b>not required</b> — the loop runs on Claude alone. It's a second engine the router fails over to when Claude hits its usage limit or the budget cap. Wire it only if you want that resilience. It's a <b>one-time seed</b>, not a per-deploy step.</p>
+        <ol class="steps">
+          <li><b>Produce an <code>auth.json</code></b> on your own machine: <code>npm i -g @openai/codex@0.144.6</code> then <code>codex login</code> (sign in with your ChatGPT Plus/Pro) → writes <code>~/.codex/auth.json</code>. <span class="sub">Rock-solid 24/7 alternative: put an <code>OPENAI_API_KEY</code> in <code>auth.json</code> instead — pay-per-use, never expires. The ChatGPT-sub path is cheaper but can need an occasional re-login.</span></li>
+          <li><b>base64 it → seed <code>CODEX_AUTH_B64</code></b> in <code>runtime.env</code>: <code>base64 -w0 ~/.codex/auth.json</code> (macOS: <code>base64 … | tr -d '\n'</code>), paste via the same <code>read -rs</code> line. Restart → entrypoint decodes it to <code>CODEX_HOME=/app/logs/.codex</code> (on the persistent volume) and auto-sets <code>FALLBACK_ENGINE=codex</code>.<span class="sub">Verify in logs: <code>Codex auth: seeded from CODEX_AUTH_B64 (first boot)</code>, then <code>using persisted …/auth.json</code> on later restarts.</span></li>
+        </ol>
+        <p class="sub" style="margin-top:8px"><b>The one trap:</b> <b>seed once, then leave it.</b> During a run Codex rotates its refresh token and writes the new one back to the persisted <code>auth.json</code>. Re-injecting the original <code>CODEX_AUTH_B64</code> on every deploy resurrects an already-used refresh token → <code>401 "refresh token was already used"</code>. The entrypoint guards this (it never overwrites a persisted auth), so after first boot you can even blank <code>CODEX_AUTH_B64</code>. Also: seed a <b>freshly</b> logged-in <code>auth.json</code> — one more than a few days old is already stale and 401s.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">09</span> Optional — the Opportunity Analyst (Codex 2nd brain) cron</h2>
+    <div class="card" style="border-left:3px solid var(--act)">
+      <p class="d" style="margin-bottom:10px">The <b>Opportunity Analyst</b> is an independent Codex (<code>gpt-5.6-sol</code>) that reads the full scan, scores every candidate, challenges the company's own pick, and drafts a paste-ready directive — surfaced in its own cockpit panel with a Copy button. It runs <b>inside</b> the container as user <code>app</code>, but a <b>host cron</b> triggers it. The panel showing <code>LOADED</code> with no content just means the code is present but nothing has run yet.</p>
+      <p class="d" style="margin-bottom:8px"><b>Prerequisite:</b> the Codex auth from section 08 — the Analyst shares the loop's <code>CODEX_HOME=/app/logs/.codex/auth.json</code> and aborts without it. So the <code>CODEX_AUTH_B64</code> seed is required for the Analyst too.</p>
+      <table style="width:100%;border-collapse:collapse;margin:4px 0 12px;font-size:13px">
+        <tr><td style="padding:4px 8px 4px 0">Orchestrator <code>scripts/analyst/opportunity-analyst.sh</code></td><td class="d">✅ ships in the image (transfers with your fork)</td></tr>
+        <tr><td style="padding:4px 8px 4px 0">Vendored Codex skill <code>autocompany-opportunity-director</code></td><td class="d">✅ ships in the image; the script <b>self-installs</b> it into <code>$CODEX_HOME/skills/</code> on first run</td></tr>
+        <tr><td style="padding:4px 8px 4px 0"><code>/api/analysis</code> + Analyst panel</td><td class="d">✅ ships in the image (the panel you already see)</td></tr>
+        <tr><td style="padding:4px 8px 4px 0"><b>Host cron</b> <code>opportunity-analyst-cron.sh</code> + <code>/etc/cron.d/…</code></td><td class="d">❌ <b>NOT in the repo</b> (host-only, like docker-prune) — you add it yourself for automatic daily runs</td></tr>
+      </table>
+      <p class="sub" style="margin-bottom:6px"><b>Run it once, by hand</b> (after Codex auth is seeded and the loop is up):</p>
+      <pre style="margin:0 0 12px"><code>C=$(docker ps --format '{{.Names}}' | grep 'auto-company' | head -1)
+docker exec -u app "$C" bash /app/scripts/analyst/opportunity-analyst.sh
+# ~7–10 min → the Analyst panel fills → Copy directive → paste into Director</code></pre>
+      <p class="sub" style="margin-bottom:6px"><b>For automatic daily runs</b>, add a host cron. <b>Critical:</b> the Analyst and the loop's Codex fallback share one <code>CODEX_HOME</code> — two concurrent <code>codex exec</code> runs cause a <code>401</code>, so the cron must wait for a codex-idle window before firing.</p>
+      <pre style="margin:0"><code># /usr/local/bin/opportunity-analyst-cron.sh
+#!/usr/bin/env bash
+set -uo pipefail
+C=$(docker ps --format '{{.Names}}' | grep 'auto-company' | head -1)
+[ -z "$C" ] && { echo "no container"; exit 0; }
+# wait up to 25 min for a codex-idle window (avoid the loop's codex cycle → 401)
+for i in $(seq 1 25); do
+  docker exec "$C" sh -lc "ps -eo args | grep -q '[c]odex exec'" || break
+  sleep 60
+done
+docker exec -u app "$C" bash /app/scripts/analyst/opportunity-analyst.sh \
+  &gt;&gt; /var/log/opportunity-analyst.log 2&gt;&amp;1
+
+# /etc/cron.d/opportunity-analyst
+30 4 * * * root /usr/local/bin/opportunity-analyst-cron.sh</code></pre>
+      <p class="sub" style="margin-top:10px"><b>Draft-only by design:</b> the Analyst never applies its own directive — it snapshots/restores <code>human-directive.md</code> so it can't auto-apply. You read it in the panel and paste the <code>## Directive</code> block into the Director. Registry writes are additive (Archived is never silently deleted).</p>
+    </div>
+  </section>
+
+  <footer>
+    Start here → <code>HANDOFF.md</code> · Env checklist → <code>logs/runtime.env.example</code> · Charter &amp; guardrails → <code>CLAUDE.md</code>. &nbsp;No credentials live in the repo — they stay in your keychain / Coolify env.
+  </footer>
+</div>
+</body>
+</html>

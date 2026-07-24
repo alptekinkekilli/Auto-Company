@@ -4,6 +4,10 @@ Stand up your **own** independent instance of Auto-Company on **your own** Hetzn
 server + Coolify, matching the current version. Nothing here depends on the
 previous operator's accounts — you provide your own everywhere.
 
+> 📄 A single-page **visual** version of this guide is committed at
+> [`docs/handoff.html`](docs/handoff.html) — open it in a browser for the same
+> content (setup · steering · troubleshooting) laid out as a shareable page.
+
 > **What Auto-Company is:** one Docker container that runs (1) a **dashboard**
 > ("cockpit", port 8787) and (2) an **autonomous loop** (`scripts/core/auto-loop.sh`).
 > Each cycle the loop runs a headless AI coding agent (`claude -p`, or the Codex CLI
