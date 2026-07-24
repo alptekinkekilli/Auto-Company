@@ -131,7 +131,8 @@
         <p class="muted director-hint">
           Non-secret knobs written to <code>logs/runtime.env</code> (a persistent volume) and
           sourced on container start. Changes take effect after a <strong>redeploy/restart</strong>.
-          Secrets stay in Coolify — never entered here.
+          Secrets stay in Coolify — never entered here. Full knob + required-secret reference
+          for a fresh deploy: <code>logs/runtime.env.example</code>.
         </p>
         <div id="settingsForm" class="settings-form"><p class="muted">(loading...)</p></div>
         <div class="director-actions">

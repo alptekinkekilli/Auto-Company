@@ -128,7 +128,8 @@ secrets.json
 .claude_session_id
 progress.json
 status.json
-logs/
+logs/*
+!logs/runtime.env.example
 
 # Auto-loop state files
 .auto-loop.pid
