@@ -635,6 +635,40 @@ select {
   overflow-y: auto;
 }
 
+.director-templates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 10px;
+  font-size: 0.82rem;
+}
+
+.tpl-btn-row {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tpl-btn {
+  font-family: "Rajdhani", system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(151, 215, 239, 0.28);
+  background: rgba(151, 215, 239, 0.08);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.tpl-btn:hover {
+  background: rgba(151, 215, 239, 0.18);
+  border-color: rgba(151, 215, 239, 0.5);
+}
+
 .badge {
   font-family: "Rajdhani", system-ui, sans-serif;
   font-size: 0.72rem;

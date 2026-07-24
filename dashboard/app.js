@@ -466,6 +466,34 @@ if (els.analystCopyAll) {
   els.analystCopyAll.addEventListener("click", () => copyToBtn(els.analystCopyAll, analystRaw));
 }
 
+// Director panel: copy-to-clipboard directive templates (served from
+// dashboard/directive-templates/*.md). Copy → paste into the box above → Send.
+async function loadDirectiveTemplates() {
+  const holder = document.getElementById("directiveTemplates");
+  if (!holder) return;
+  try {
+    const res = await fetch("/api/directive-templates");
+    const data = await res.json();
+    const tpls = (data && data.templates) || [];
+    holder.innerHTML = "";
+    if (!tpls.length) {
+      holder.innerHTML = '<span class="muted mono">(no templates)</span>';
+      return;
+    }
+    tpls.forEach((t) => {
+      const b = document.createElement("button");
+      b.className = "tpl-btn";
+      b.textContent = t.label;
+      if (t.hint) b.title = t.hint;
+      b.addEventListener("click", () => copyToBtn(b, t.text));
+      holder.appendChild(b);
+    });
+  } catch (e) {
+    holder.innerHTML = '<span class="muted mono">(templates unavailable)</span>';
+  }
+}
+loadDirectiveTemplates();
+
 async function loadSettings() {
   try {
     const res = await fetch("/api/settings");

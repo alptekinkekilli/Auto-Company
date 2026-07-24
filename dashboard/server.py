@@ -334,6 +334,31 @@ def read_analysis() -> dict[str, Any]:
     return {"present": bool(raw.strip()), "updated": updated, "markdown": raw}
 
 
+DIRECTIVE_TEMPLATES_DIR = REPO_ROOT / "dashboard" / "directive-templates"
+# Copy-to-clipboard directive templates shown as buttons in the Director panel.
+# Order + labels here; body text lives in dashboard/directive-templates/*.md.
+DIRECTIVE_TEMPLATES = [
+    {"id": "hold-and-discover", "label": "Hold + Discover", "file": "01-hold-and-discover.md",
+     "hint": "Park a candidate on a named blocker (keep its machine intact) + make discovery the primary activity."},
+    {"id": "continuous-discovery", "label": "Discovery", "file": "02-continuous-discovery.md",
+     "hint": "No new hold; force continuous discovery + carry the standing blocked/pending register."},
+    {"id": "unhold-and-validate", "label": "Un-hold + Validate", "file": "03-unhold-and-validate.md",
+     "hint": "A blocker cleared → un-HOLD a candidate + start its human-run cheapest WTP validation."},
+    {"id": "select-and-validate", "label": "Select + Validate", "file": "04-select-and-validate.md",
+     "hint": "Adopt a candidate (e.g. the Opportunity Analyst pick) + run its cheapest WTP test."},
+]
+
+
+def read_directive_templates() -> dict[str, Any]:
+    """Return the Director-panel copy templates (label + hint + full body text)."""
+    out = []
+    for t in DIRECTIVE_TEMPLATES:
+        text = read_text_file(DIRECTIVE_TEMPLATES_DIR / t["file"], "")
+        if text.strip():
+            out.append({"id": t["id"], "label": t["label"], "hint": t["hint"], "text": text})
+    return {"templates": out}
+
+
 def read_settings() -> dict[str, Any]:
     """Return the Settings-panel spec + current values from logs/runtime.env.
 
@@ -814,6 +839,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
             return
         if path == "/api/settings":
             self._json(read_settings())
+            return
+        if path == "/api/directive-templates":
+            self._json(read_directive_templates())
             return
 
         self._text("Not found", code=404)
