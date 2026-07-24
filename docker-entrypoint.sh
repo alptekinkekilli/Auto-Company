@@ -104,6 +104,16 @@ if [ -n "${GH_TOKEN:-}" ]; then
     git config --global credential.helper store
 fi
 
+# --- persist Claude's config + session transcripts on a volume ---
+# Claude Code stores per-session transcripts under $CLAUDE_CONFIG_DIR (default ~/.claude,
+# which is EPHEMERAL here and reset on every redeploy). Relocate it onto the persistent
+# logs volume so usage history survives restarts and ccusage (Cost panel) can price the
+# Claude side. Both Claude Code and ccusage honor CLAUDE_CONFIG_DIR; auth still comes from
+# CLAUDE_CODE_OAUTH_TOKEN, so relocating the dir does not affect login.
+export CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-/app/logs/.claude}"
+mkdir -p "$CLAUDE_CONFIG_DIR" && chmod 700 "$CLAUDE_CONFIG_DIR"
+echo "[entrypoint] CLAUDE_CONFIG_DIR=$CLAUDE_CONFIG_DIR (persistent)"
+
 # --- Codex fallback auth (optional) ---
 # Codex (0.144.x) owns the ChatGPT OAuth session: during `codex exec` it refreshes
 # and ROTATES the tokens, writing the new refresh/access tokens back to auth.json.

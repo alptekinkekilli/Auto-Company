@@ -212,16 +212,33 @@ function formatTime(isoText) {
   }
 }
 
-function renderStateList(parsed, stateFile) {
+function renderStateList(parsed, stateFile, router) {
+  router = router || {};
+  const routed = (router.routedEngine || "").toUpperCase();
+  const routedModel = router.routedModel
+    ? router.routedModel + (router.routedEffort ? ` · effort ${router.routedEffort}` : "")
+    : "-";
+  const ladder = (arr) => (Array.isArray(arr) && arr.length ? arr.join(" → ") : "-");
+  const rr =
+    router.tierIdx != null
+      ? `idx ${router.tierIdx} → next: ${router.nextClaude || "-"}` +
+        (router.nextCodexEffort ? ` / codex ${router.nextCodexEffort}` : "")
+      : "-";
+  const budgetInterval = `$${router.windowBudget || "-"} cap · ${router.interval || "-"}s`;
+
   const rows = [
-    ["Engine", parsed.loop.engine || "-"],
-    ["Model", parsed.loop.model || "-"],
+    ["Active engine (routed)", routed || "-"],
+    ["Active model", routedModel],
+    ["Router decision", router.routerReason || "-"],
+    ["Round-robin", rr],
+    ["Claude ladder", ladder(router.claudeLadder)],
+    ["Codex effort ladder", ladder(router.codexLadder)],
+    ["Base engine / model", `${parsed.loop.engine || "-"} / ${parsed.loop.model || "-"}`],
+    ["Budget / interval", budgetInterval],
     ["Loop Count", parsed.loop.loopCount || stateFile.LOOP_COUNT || "-"],
     ["Error Count", parsed.loop.errorCount || stateFile.ERROR_COUNT || "-"],
     ["Last Run", parsed.loop.lastRun || stateFile.LAST_RUN || "-"],
-    ["Loop Daemon Summary", parsed.loop.daemonSummary || "-"],
     ["Daemon ActiveState", parsed.daemon.activeState || "-"],
-    ["Daemon SubState", parsed.daemon.subState || "-"],
   ];
 
   els.stateList.innerHTML = rows
@@ -259,7 +276,7 @@ async function fetchStatus() {
   els.autostartMeta.textContent = autostart.raw || "Autostart";
   applyCardState(els.cardAutostart, "autostart", autostart.state);
 
-  renderStateList(parsed, data.stateFile || {});
+  renderStateList(parsed, data.stateFile || {}, data.router || {});
 
   const consensusRaw = (data.consensusHead || parsed.consensusPreview || "(no consensus)").trim();
   els.consensusText.innerHTML = renderMarkdown(consensusRaw);

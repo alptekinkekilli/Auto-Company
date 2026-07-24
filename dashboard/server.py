@@ -554,6 +554,57 @@ def read_ccusage() -> dict[str, Any]:
     return data if data is not None else {"available": False, "reason": "computing"}
 
 
+def read_engine_runtime() -> dict[str, Any]:
+    """The ACTUAL per-cycle routed engine — Runtime State otherwise shows only the base config.
+
+    The loop boots with ENGINE=claude / MODEL=haiku, but the quota-aware router overrides the
+    engine every cycle and a round-robin tier ladder picks the model/effort. This parses the
+    log's latest [ROUTER]/[TIER] lines + logs/router-state to surface the real active engine,
+    model, effort, the tier ladders, the round-robin index, and the next pick.
+    """
+    text = read_text_file(LOG_FILE, "")
+    engine = read_text_file(LOG_FILE.parent / "router-state", "").strip().lower()
+    out: dict[str, Any] = {"routedEngine": engine}
+
+    tiers = re.findall(
+        r"\[TIER\] round-robin idx=(\d+) . Claude=(\S+), Codex effort=(\w+)", text)
+    if tiers:
+        idx_s, cmodel, ceff = tiers[-1]
+        out["tierIdx"] = int(idx_s)
+        out["claudePick"] = cmodel
+        out["codexEffort"] = ceff
+        if engine == "codex":
+            out["routedModel"] = os.environ.get("CODEX_MODEL", "gpt-5.6-sol")
+            out["routedEffort"] = ceff
+        else:
+            out["routedModel"] = cmodel
+            out["routedEffort"] = ""
+
+    routers = re.findall(r"\[ROUTER\] (.+)", text)
+    if routers:
+        out["routerReason"] = routers[-1].strip()[:180]
+
+    m = re.search(r"Tier ladder:.*?Claude \[([^\]]*)\].*?Codex effort \[([^\]]*)\]", text)
+    if m:
+        out["claudeLadder"] = [s.strip() for s in m.group(1).split(",") if s.strip()]
+        out["codexLadder"] = [s.strip() for s in m.group(2).split(",") if s.strip()]
+
+    mb = re.search(r"Window budget: \$([0-9.]+) per (\d+)s", text)
+    if mb:
+        out["windowBudget"] = mb.group(1)
+    itv = re.findall(r"Interval: (\d+)s", text)
+    if itv:
+        out["interval"] = itv[-1]
+
+    if "tierIdx" in out and out.get("claudeLadder"):
+        nxt = out["tierIdx"] + 1
+        cl = out["claudeLadder"]
+        xl = out.get("codexLadder") or []
+        out["nextClaude"] = cl[nxt % len(cl)] if cl else ""
+        out["nextCodexEffort"] = xl[nxt % len(xl)] if xl else ""
+    return out
+
+
 def read_cost_summary() -> dict[str, Any]:
     """Aggregate cycle cost from auto-loop.log + credit status from ~/.claude.json.
 
@@ -893,6 +944,7 @@ def gather_status_payload(system_name: str | None = None) -> dict[str, Any]:
         "logTail": read_tail(LOG_FILE, lines=180),
         "directive": read_directive(),
         "cost": read_cost_summary(),
+        "router": read_engine_runtime(),
     }
 
 
