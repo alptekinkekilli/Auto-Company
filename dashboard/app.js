@@ -39,6 +39,8 @@ const els = {
   costFallbacks: document.getElementById("costFallbacks"),
   costOffloads: document.getElementById("costOffloads"),
   costBudget: document.getElementById("costBudget"),
+  costEngine: document.getElementById("costEngine"),
+  codexWindow: document.getElementById("codexWindow"),
   ccusageBlock: document.getElementById("ccusageBlock"),
   ccusageRange: document.getElementById("ccusageRange"),
   ccTotal: document.getElementById("ccTotal"),
@@ -289,6 +291,8 @@ function renderCost(cost) {
   els.costFallbacks.textContent = cost.fallbackHits ?? 0;
   els.costOffloads.textContent = cost.budgetOffloads ?? 0;
   els.costBudget.textContent = cost.budgetPauses ?? 0;
+  els.costEngine.textContent = (cost.engine || "—").toUpperCase();
+  els.codexWindow.textContent = cost.codexWindow ?? 0;
 
   renderCcusage(cost.ccusage || {});
 

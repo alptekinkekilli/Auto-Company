@@ -593,6 +593,32 @@ def read_cost_summary() -> dict[str, Any]:
     except Exception:  # pragma: no cover - defensive
         window_usd = 0.0
 
+    # Current routed engine (the loop writes claude|codex to logs/router-state).
+    engine = read_text_file(LOG_FILE.parent / "router-state", "").strip().lower() or ""
+
+    # Codex cycles inside the rolling window (each line in codex-window.log is one
+    # completed Codex cycle: "<epoch> <count> ..."). Lets the operator SEE Codex is
+    # carrying load even though Codex cycles cost $0 (ChatGPT-auth) so windowUsd stays flat.
+    codex_window = 0
+    try:
+        cl = LOG_FILE.parent / "codex-window.log"
+        if cl.exists():
+            ccut = time.time() - int(os.environ.get("WINDOW_SECONDS", "18000"))
+            for line in cl.read_text(encoding="utf-8").splitlines():
+                parts = line.split()
+                if parts:
+                    try:
+                        if float(parts[0]) >= ccut:
+                            codex_window += 1
+                    except ValueError:
+                        pass
+    except Exception:  # pragma: no cover - defensive
+        codex_window = 0
+
+    # Budget offloads to Codex. The router logs "... offloading to Codex"; older builds
+    # tagged "[BUDGET-CODEX]". Count both so the counter reflects real offloads.
+    budget_offloads = text.count("offloading to Codex") + text.count("[BUDGET-CODEX]")
+
     return {
         "totalUsd": round(sum(costs), 4),
         "lastUsd": round(costs[-1], 4) if costs else 0.0,
@@ -603,7 +629,9 @@ def read_cost_summary() -> dict[str, Any]:
         "windowBudget": os.environ.get("WINDOW_BUDGET_USD", "") or "",
         "fallbackHits": text.count("[FALLBACK]"),
         "budgetPauses": text.count("[BUDGET]"),
-        "budgetOffloads": text.count("[BUDGET-CODEX]"),
+        "budgetOffloads": budget_offloads,
+        "engine": engine,
+        "codexWindow": codex_window,
         "ccusage": read_ccusage(),
     }
 
