@@ -278,15 +278,21 @@ select {
 }
 
 /* Make both grid-details panels equal height (Runtime State drives it) and let the
-   Consensus markdown box fill its panel instead of capping at 320px. */
-.grid-details .detail {
-  display: flex;
-  flex-direction: column;
-}
-.grid-details .detail > .markdown-view {
-  flex: 1 1 0;
-  min-height: 0;
-  max-height: none;
+   Consensus markdown box fill its panel instead of capping at 320px.
+   TWO-COLUMN ONLY: below 1080px .grid-details collapses to one column, so a panel
+   has no sibling to be stretched against and its height becomes auto. `flex: 1 1 0`
+   against an auto height resolves to zero, which rendered Consensus Head as an empty
+   box on mobile. Keep the default max-height behaviour there. */
+@media (min-width: 1081px) {
+  .grid-details .detail {
+    display: flex;
+    flex-direction: column;
+  }
+  .grid-details .detail > .markdown-view {
+    flex: 1 1 0;
+    min-height: 0;
+    max-height: none;
+  }
 }
 
 .state-list {
