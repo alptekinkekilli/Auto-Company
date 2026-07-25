@@ -213,6 +213,40 @@ or "activate a launch" for the chosen idea:
 Building ahead of WTP evidence, or racing a deadline, is a PROCESS FAILURE to be
 corrected the next cycle — not progress. Munger may veto any build that violates it.
 
+### EXTERNAL-SYSTEM WRITE AUTHORITY
+
+MCP/tool availability is capability, not a new grant of authority. As of 2026-07-25 the
+Codex engine has write-capable Linear and Airtable tools (official HTTP MCPs) to match the
+existing Claude operating model — this closes a capability gap, it does not open a new
+class of action for either engine.
+
+- A write already required by an active human directive or an existing standing workflow
+  may proceed without an extra confirmation prompt.
+- The authority must identify, directly or by a deterministic standing rule: system, object
+  class, allowed action, target-selection rule, and allowed fields.
+- Tool availability never expands product-build, outreach, payment, WTP, or
+  active-validation authority — those stay governed by the HARD STOP above.
+- Linear `save_*` tools combine create and update. Missing `id` means CREATE; create
+  authority must be explicit or already present in the standing workflow.
+- Before updating, resolve/read the exact target. Send only the minimal fields authorized.
+  Read back the result and log server, tool, target ID, authority, before/after summary, and
+  verification.
+- Do not pass replacement/removal fields (`labels`, `setTeams`, `setInitiatives`,
+  relation/release removal, etc.) unless that field-level replacement is specifically
+  authorized.
+- Airtable writes must use stable base/table/record/field IDs. Record updates are partial.
+  `performUpsert` may create records and is forbidden unless upsert/create behavior is
+  explicitly authorized.
+- Airtable schema writes (`create/update_table`, `create/update_field`) require an explicit
+  setup or migration task. Routine state sync does not authorize schema mutation.
+- Linear/Airtable comments can notify people. Create/update a comment only when the current
+  directive or standing tracking workflow authorizes that communication.
+- Never use delete, merge/review, admin, automation, interface/page, base-create, or
+  attachment-write actions from the general Auto Company tool surface — these are not in the
+  allowlist on either engine.
+- Ambiguous target, duplicate match, or unclear field scope means NO write: record the
+  blocker and continue safe in-scope work.
+
 ## SKILLS — USE YOUR ARSENAL (MANDATORY)
 
 You — and every subagent you spawn — have a `Skill` tool and ~35 packaged skills under
@@ -328,7 +362,9 @@ Before the cycle ends, update `memories/consensus.md`:
 - Agents: [agent + task-specific reason]
 - Skills Invoked: [skill → agent → output]
 - Skill Created: [path + same-cycle use, or NONE + reason]
-- Context7: [library/topic, or N/A + reason]
+- Context7: [MCP | REST fallback | N/A + reason]
+- Linear: [READ/WRITE + tool + target ID + authority + read-back | N/A + reason]
+- Airtable: [READ/WRITE + tool + target ID + authority + read-back | N/A + reason]
 ## Active Projects
 - [project]: [status] — [next step]
 ## WTP Evidence

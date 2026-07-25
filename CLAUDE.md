@@ -155,16 +155,32 @@ Need other tools? Install directly with `npm install -g`, `uv tool install`, or 
 
 ### Context7 — up-to-date library docs (MCP)
 
-The `context7` MCP server (configured in `.mcp.json`) gives every agent live,
+Both engines have their own Context7 MCP wiring, kept independently but pointed at the
+same official endpoint (`https://mcp.context7.com/mcp`, `CONTEXT7_API_KEY`): Claude via
+`.mcp.json` at the repo root, Codex via `/app/logs/.codex/config.toml` (also mirrored in
+`docker-entrypoint.sh`'s first-boot template). Gives every agent, on either engine, live,
 version-accurate documentation for external libraries and frameworks.
 
 - **When to use:** before writing code against any external library/framework/API
   (Next.js, Cloudflare Workers, Stripe, a new npm/pip package, etc.) — pull the
   current docs instead of relying on possibly-stale training knowledge.
-- **How:** `resolve-library-id` to find the library, then `get-library-docs`
-  for the relevant topic.
+- **How:** `resolve-library-id` to find the library, then `query-docs` for the relevant
+  topic (the tool was renamed from `get-library-docs`).
 - This complements the local skill pool (`.claude/skills/` = how-to workflows);
   Context7 = current API surface of the thing you're building on.
+- A separate `scripts/ops/` REST-fallback script exists for Context7 outside the MCP
+  path — report that usage as "REST fallback", never as "MCP", in consensus.
+
+### Linear / Airtable — write-capable on both engines (2026-07-25)
+
+Claude and Codex both hold write-capable Linear (`https://mcp.linear.app/mcp`, official
+full endpoint) and Airtable (`https://mcp.airtable.com/mcp`, official endpoint) MCP access,
+sharing the same `LINEAR_API_KEY` / `AIRTABLE_API_KEY` (from `/app/logs/runtime.env`) —
+this is capability parity between engines, not a new grant of authority. Every write on
+either engine is bound by `PROMPT.md`'s EXTERNAL-SYSTEM WRITE AUTHORITY rule: read the
+exact target first, write only explicitly-authorized fields, read back the result, and log
+server/tool/target/authority/before-after in consensus. Delete, merge/review, admin,
+automation, interface, and base-create tools are not in either engine's allowlist.
 
 ### Deploy targets (policy — do not improvise)
 

@@ -140,11 +140,68 @@ fi
 export CODEX_HOME="${CODEX_HOME:-/app/logs/.codex}"
 mkdir -p "$CODEX_HOME" && chmod 700 "$CODEX_HOME"
 if [ ! -f "$CODEX_HOME/config.toml" ]; then
+    # 2026-07-25: write-capable MCP parity with the Claude engine (Context7,
+    # Linear, Airtable via their official HTTP MCP endpoints, sharing the same
+    # LINEAR_API_KEY/AIRTABLE_API_KEY/CONTEXT7_API_KEY the loop already exports).
+    # CLAUDE.md is set as the project-doc fallback since Codex looks for
+    # AGENTS.md by default and this repo has none. Kept in sync with the live
+    # /app/logs/.codex/config.toml — if you edit one, edit both.
     cat > "$CODEX_HOME/config.toml" <<'EOF'
 model = "gpt-5.6-sol"
 model_reasoning_effort = "low"
 approval_policy = "never"
 cli_auth_credentials_store = "file"
+
+project_doc_fallback_filenames = ["CLAUDE.md"]
+project_doc_max_bytes = 32768
+project_root_markers = [".git", "CLAUDE.md"]
+
+[projects."/app"]
+trust_level = "trusted"
+
+[mcp_servers.openaiDeveloperDocs]
+url = "https://developers.openai.com/mcp"
+
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+env_http_headers = { "CONTEXT7_API_KEY" = "CONTEXT7_API_KEY" }
+enabled = true
+required = false
+startup_timeout_sec = 20
+tool_timeout_sec = 60
+enabled_tools = ["resolve-library-id", "query-docs"]
+
+[mcp_servers.linear]
+url = "https://mcp.linear.app/mcp"
+bearer_token_env_var = "LINEAR_API_KEY"
+enabled = true
+required = false
+startup_timeout_sec = 20
+tool_timeout_sec = 60
+enabled_tools = [
+  "get_issue", "list_issues", "save_issue",
+  "list_issue_statuses", "get_issue_status", "list_issue_labels",
+  "list_comments", "save_comment",
+  "list_projects", "get_project", "list_project_labels", "save_project",
+  "get_status_updates", "save_status_update",
+  "list_teams", "get_team",
+]
+
+[mcp_servers.airtable]
+url = "https://mcp.airtable.com/mcp"
+bearer_token_env_var = "AIRTABLE_API_KEY"
+enabled = true
+required = false
+startup_timeout_sec = 20
+tool_timeout_sec = 60
+enabled_tools = [
+  "ping", "list_bases", "search_bases", "list_tables_for_base",
+  "get_table_schema", "list_records_for_table", "search_records",
+  "list_record_comments",
+  "create_records_for_table", "update_records_for_table",
+  "create_record_comment",
+  "create_table", "create_field", "update_table", "update_field",
+]
 EOF
 fi
 if [ -s "$CODEX_HOME/auth.json" ]; then

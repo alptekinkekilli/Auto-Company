@@ -30,11 +30,36 @@ Create two credentials and store them as **container env vars** via the secrets/
 2. **`LINEAR_API_KEY`** — a Linear **Personal API key**
    (Linear → Settings → Security & access → Personal API keys). Team: `<your Linear team>`.
 
-## One item to verify before trusting Linear (community package)
+## Update (2026-07-25) — this doc's Linear claim above is now stale
+
+**Both Linear and Airtable now ship official remote HTTP MCP servers that accept the
+existing API-key credentials** (`https://mcp.linear.app/mcp`, `https://mcp.airtable.com/mcp`)
+— the "no official API-key stdio MCP" claim below was true when this doc was written and no
+longer is. This was independently verified live (real `initialize` + `tools/list` calls, no
+writes) on 2026-07-25: Linear's official endpoint advertises 52 tools, Airtable's 41,
+against the *same* shared `LINEAR_API_KEY` / `AIRTABLE_API_KEY` already in
+`/app/logs/runtime.env`.
+
+**What actually changed on 2026-07-25:** the Codex engine (previously stuck on
+`https://developers.openai.com/mcp` only, no Linear/Airtable/Context7 at all) was wired to
+Context7 + the two OFFICIAL Linear/Airtable HTTP endpoints, with a curated
+create/update/comment allowlist — delete, merge/review, admin, automation, interface, and
+base-create tools deliberately excluded. See
+`docs/research/codex-context7-linear-airtable-wiring-answer-2026-07-25.md` (gitignored) for
+the full audit trail, exact TOML, and verification gates.
+
+**Claude's `.mcp.json` (below) was deliberately NOT touched by that change** — it still runs
+the community `npx` servers described in this doc, which are working. Migrating Claude to
+the same official endpoints is a separate, not-yet-scheduled decision; don't assume it
+happened just because Codex moved.
+
+## One item to verify before trusting Linear (community package) — Claude engine only
 
 - Airtable's `airtable-mcp-server` is well-established and API-key native — low risk.
-- Linear has **no official API-key stdio MCP** (the official Linear MCP is OAuth-remote — the
-  exact fragility we're removing). `@tacticlaunch/mcp-linear` is a **community** package keyed
+- The official Linear MCP now DOES accept an API key over its remote HTTP endpoint (see the
+  update above) — this specific risk (Linear only had OAuth-remote) is resolved for any
+  engine that migrates to it. Claude has not migrated yet, so this section still describes
+  Claude's actual risk profile: `@tacticlaunch/mcp-linear` is a **community** package keyed
   by `LINEAR_API_KEY`. Before/at first deploy, confirm the package name + that it reads
   `LINEAR_API_KEY`, and consider pinning a version (`@tacticlaunch/mcp-linear@<x.y.z>`) instead
   of floating `-y`. If it proves unreliable, fall back to a thin Linear GraphQL REST helper
