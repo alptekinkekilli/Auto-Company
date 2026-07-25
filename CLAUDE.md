@@ -171,16 +171,20 @@ version-accurate documentation for external libraries and frameworks.
 - A separate `scripts/ops/` REST-fallback script exists for Context7 outside the MCP
   path — report that usage as "REST fallback", never as "MCP", in consensus.
 
-### Linear / Airtable — write-capable on both engines (2026-07-25)
+### Linear / Airtable — write-capable on both engines, different setups (2026-07-25)
 
-Claude and Codex both hold write-capable Linear (`https://mcp.linear.app/mcp`, official
-full endpoint) and Airtable (`https://mcp.airtable.com/mcp`, official endpoint) MCP access,
-sharing the same `LINEAR_API_KEY` / `AIRTABLE_API_KEY` (from `/app/logs/runtime.env`) —
-this is capability parity between engines, not a new grant of authority. Every write on
-either engine is bound by `PROMPT.md`'s EXTERNAL-SYSTEM WRITE AUTHORITY rule: read the
+Codex holds write-capable Linear (`https://mcp.linear.app/mcp`) and Airtable
+(`https://mcp.airtable.com/mcp`) access through official HTTP MCPs with curated
+enabled-tool allowlists. Claude retains its existing write-capable community `npx`
+servers in `.mcp.json` (`airtable-mcp-server`, `@tacticlaunch/mcp-linear`); it has
+functional write capability but not the same transport or a mechanical allowlist — the
+installed community packages technically register more (e.g. `delete_records`,
+`linear_deleteComment`, `linear_archiveIssue`), restricted only by policy, not removed.
+Both share the same `LINEAR_API_KEY` / `AIRTABLE_API_KEY` (from `/app/logs/runtime.env`).
+Both engines remain bound by `PROMPT.md`'s EXTERNAL-SYSTEM WRITE AUTHORITY rule: read the
 exact target first, write only explicitly-authorized fields, read back the result, and log
-server/tool/target/authority/before-after in consensus. Delete, merge/review, admin,
-automation, interface, and base-create tools are not in either engine's allowlist.
+server/tool/target/authority/before-after in consensus. Destructive/admin actions are
+excluded from Codex's allowlist mechanically and forbidden by policy on both engines.
 
 ### Deploy targets (policy — do not improvise)
 

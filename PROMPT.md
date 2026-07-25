@@ -242,8 +242,9 @@ class of action for either engine.
 - Linear/Airtable comments can notify people. Create/update a comment only when the current
   directive or standing tracking workflow authorizes that communication.
 - Never use delete, merge/review, admin, automation, interface/page, base-create, or
-  attachment-write actions from the general Auto Company tool surface — these are not in the
-  allowlist on either engine.
+  attachment-write actions from the general Auto Company tool surface. Codex excludes these
+  mechanically from its curated allowlist; Claude's community servers may technically expose
+  some of them, but they remain unauthorized on both engines by this rule.
 - Ambiguous target, duplicate match, or unclear field scope means NO write: record the
   blocker and continue safe in-scope work.
 
