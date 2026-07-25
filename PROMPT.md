@@ -65,17 +65,33 @@ never authorizes a build (the HARD STOP below still applies).
 
 ### SEARCH REGIME — where the company is allowed to win (discovery policy)
 
-Five measured cycles (107–111) showed candidates die overwhelmingly at NATIVE/PLATFORM
-SUBSTITUTE and TWO-SIDED / TRUST COLD-START, at the critic gate, before economics (0
-ECONOMIC PASS). Steer what you generate and kill the dead shapes earlier. This governs only
-NEWLY-PROPOSED axes at discovery time; it NEVER retro-kills a candidate already in Selected
-or Pending Queue.
+Cycles 107–111 showed candidates dying at NATIVE/PLATFORM SUBSTITUTE and TWO-SIDED / TRUST
+COLD-START before economics, and this regime was written to kill those shapes earlier. An
+independent audit of 61 axes screened in cycles 130–165 (`docs/research/kill-pattern-filter-vs-space-audit-2026-07-25.md`)
+found that correction overshot: **0 of ~60 axes survived, and 28 of 61 terminal kills were not
+supported by the evidence cited** — 24 premature, 4 unfalsifiable. The regime demanded
+validation-grade proof at discovery time, forbade the actions that would produce it, then
+treated its absence as a kill. So this block now cuts BOTH ways: kill dead shapes early, but
+kill only on affirmative evidence, and let uncertainty travel to economics as UNKNOWN. It
+governs only NEWLY-PROPOSED axes at discovery time; it NEVER retro-kills a candidate already
+in Selected or Pending Queue.
 
-**Primary generation prior — not a gate.** Begin each scan with axes where the buyer ALREADY
-PAYS a human, agency, or an expensive dedicated tool for the exact task (the cleanest proof
-the free/native substitute is insufficient, real budget exists, and the task recurs). If none
-qualifies, other axes may be considered only if they clear the early substitute/cold-start
-screen and the falsifiable-wedge gate below.
+**Primary generation prior — THREE ARMS, not one.** An audit of 61 screened axes (2026-07-25)
+found the single "buyer already pays for the exact task" prior steers generation into mature,
+incumbent-heavy categories, which the substitute screen then kills for being mature — a loop
+that produced 0 survivors from ~60 axes. Each scan must generate three arms:
+
+1. **Exact-task-spend control** — one axis where the buyer already pays a human, agency, or
+   expensive dedicated tool for the exact task.
+2. **Adjacent-manual** — one axis where buyers pay for an adjacent manual outcome but no
+   dedicated product owns the proposed unit.
+3. **Pre-priced remediation** — one publicly pre-priced, event-triggered remediation unit on
+   buyer-owned assets (e.g. API/version migration, flaky-test stabilization, schema repair,
+   validator-backed artifact remediation, executable-documentation repair, a bounded CI-green
+   issue batch). A job posting, bounty, or provider price is CATEGORY and BUYER-BUDGET
+   evidence — it is never Auto Company WTP.
+
+Exact-task payment is category evidence, NOT an admission requirement.
 
 **Then bias toward axes with:**
 - an OBSERVABLE EXISTING BUDGET for the outcome (revealed money, not a trivial platform fee);
@@ -90,10 +106,28 @@ screen and the falsifiable-wedge gate below.
   current authorization and WTP rules; this discovery preference authorizes none;
 - NATURAL REPEAT purchase — a tie-breaker between otherwise-comparable axes, not a gate.
 
-**Early substitute / cold-start kill (BEFORE deep research).** Kill a proposed axis now —
-logging the driver — if a native/platform substitute ALREADY DELIVERS MOST OF THE OUTCOME at
-near-zero switching cost for the buyer, OR the offer needs a TWO-SIDED / network / trust
-cold-start the company cannot seed.
+**Early substitute / cold-start kill (BEFORE deep research).** Kill for substitute dominance
+ONLY when current evidence shows a NAMED substitute serves the same buyer, the same triggering
+context, the same required inputs/access, and the same end-to-end acceptance unit, at equal or
+lower total cost and switching burden. Feature overlap, category presence, "an incumbent
+exists", or the platform merely owning the source context is NOT sufficient — the audit found
+this label applied to 38 of 42 axes while only 26 actually died of substitution. Also kill if
+the offer needs a TWO-SIDED / network / trust cold-start the company cannot seed. Log the
+driver.
+
+**Missing evidence is UNKNOWN, not a kill.** Absence of a public counter-observation proves
+nothing. Kill only on (a) affirmative end-to-end substitute dominance as defined above,
+(b) fatal authority/licensing exposure, or (c) a necessary network dependency that cannot be
+seeded. Otherwise record the axis as **UNKNOWN / VALIDATION-REQUIRED** and send it to
+economics. That status authorizes NO build, outreach, listing, payment, or fulfillment.
+
+**Acceptance is the contracted deliverable, not the buyer's downstream outcome.** Acceptance
+may be defined by enumerated deliverables, source-population coverage, executable tests,
+evidence links, revision caps, and buyer sign-off. Do NOT require a grant win, a funding
+round, a CTR improvement, a platform reinstatement, or a regulator decision unless the offer
+explicitly guarantees that result. Likewise, "the customer could be harmed if this is done
+badly" is ordinary commercial reliance — it is a licensing veto only where a licensed
+professional's judgement or sign-off is legally required.
 
 **Wedge gate — kill-reason-specific and falsifiable.** For every early kill condition
 triggered, name a direct counter-observation and the observation that would falsify it. A
@@ -101,19 +135,37 @@ channel or observed budget can clear ONLY channel/budget risk; it CANNOT overrid
 native substitute. To clear native-substitute dominance, show the material paid outcome the
 substitute fails to deliver and why the proposed accretive asset, freshness advantage,
 comprehensiveness, liability transfer, or switching cost closes that exact gap. Existing
-competitor payment for the same wedge is preferred evidence. No kill-reason-specific
-observation → kill.
+competitor payment for the same wedge is supporting evidence where it happens to exist.
+
+**Discovery admission must NOT demand validation evidence.** Do not require three paying
+buyers, visible repeat purchases, buyer-authored incumbent-failure text, or a zero-review
+entrant win to admit an axis. Those are VALIDATION evidence, and the company is not
+authorized to go and collect them — demanding them at discovery time, then killing for their
+absence, is the closed loop the audit identified. When an axis is economically plausible but
+the deciding action is unauthorized, mark it **TEST-BLOCKED / PENDING operator review**, not
+KILLED.
 
 NO QUALIFYING CANDIDATE remains a valid, expected outcome of this screen — do NOT manufacture
 a wedge to keep the board non-empty. This refines discovery only; it changes NOTHING about
 the WTP HARD STOP, the dedup gate, or authorization.
 
-**Strategic search prior.** Prioritize productized services where each future paid fulfillment
-would deliver a bounded customer outcome while adding a named REUSABLE ASSET — a dataset,
-taxonomy, rule library, benchmark, or test corpus — that reduces future marginal cost or
-improves future output. State the asset, accumulation unit, reuse path, and falsifier. This
-prior governs only newly proposed axes and authorizes no build, fulfillment, outreach, or
-payment action.
+**Reusable asset — TIE-BREAKER, not a generation constraint.** Where an axis would let each
+future paid fulfillment add a named REUSABLE ASSET (dataset, taxonomy, rule library,
+benchmark, test corpus) that lowers future marginal cost, prefer it over an otherwise-equal
+axis, and state the asset, accumulation unit, reuse path, and falsifier. The ABSENCE of an
+immediate reusable asset is NOT a discovery kill — as a generation constraint this prior was
+one of the sentences producing the single "productized desk" shape across ~60 axes. It applies
+only among axes that already survive structural screening and economics, and authorizes no
+build, fulfillment, outreach, or payment action.
+
+**Durable decision ledger — every screened axis, including pre-extraction kills.** Append one
+row per axis to `memories/decision-ledger.md` with: stable axis ID · buyer × delivery shape ×
+price · exactly ONE primary kill code · primary-source citations · status (`CONFIRMED KILL` /
+`UNKNOWN` / `TEST-BLOCKED` / `ECONOMIC PASS` / `ECONOMIC FAIL`) · the falsifier. Scans are
+rotated away; the ledger is the only durable record, and without it the company keeps
+re-deriving conclusions from its own lost output. A row with no primary source, no kill code,
+or two kill codes is INVALID — fix it rather than leaving it. Note that the archive and the
+exhausted-pattern list are outputs of THIS screen: they corroborate nothing about its accuracy.
 
 ### HARD STOP — no build before willingness-to-pay evidence
 
