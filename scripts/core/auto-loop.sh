@@ -67,6 +67,7 @@ ROUTER_TIER_LADDER="${ROUTER_TIER_LADDER:-0}"
 CLAUDE_TIER_LADDER="${CLAUDE_TIER_LADDER:-claude-haiku-4-5-20251001,claude-sonnet-5}"
 CODEX_TIER_LADDER="${CODEX_TIER_LADDER:-low,medium}"
 BASE_MODEL="$MODEL"
+BASE_CLAUDE_EFFORT="$CLAUDE_EFFORT"
 BASE_CODEX_EFFORT="$CODEX_EFFORT"
 RESOLVED_CODEX_BIN=""
 FALLBACK_USED=0
@@ -185,9 +186,28 @@ window_spend() {
     local now cutoff
     now=$(date +%s)
     cutoff=$((now - WINDOW_SECONDS))
+    # Prune on the rolling cutoff (this ledger's own retention)...
     awk -v c="$cutoff" '$1 >= c' "$SPEND_LEDGER" > "$SPEND_LEDGER.tmp" 2>/dev/null \
         && mv "$SPEND_LEDGER.tmp" "$SPEND_LEDGER" 2>/dev/null || true
-    awk '{s += $2} END {printf "%.4f", s + 0}' "$SPEND_LEDGER" 2>/dev/null || echo "0"
+
+    # ...but SUM from the operator's plan-window anchor when we know it. The plan's
+    # quota resets at a fixed instant while this ledger rolls, so right after a reset
+    # the rolling window still carries pre-reset spend: the loop would read itself as
+    # a third full against a plan that is actually empty, and downgrade the model for
+    # no reason. blockStart comes from `ccusage blocks --active` via the reporter.
+    local anchor
+    if [ -f "$OPERATOR_USAGE_FILE" ] \
+       && [ $(( now - $(stat -c %Y "$OPERATOR_USAGE_FILE" 2>/dev/null || echo 0) )) -le "$OPERATOR_USAGE_STALE_SECS" ]; then
+        anchor=$(jq -r '.blockStart // empty' "$OPERATOR_USAGE_FILE" 2>/dev/null || true)
+        if [ -n "$anchor" ]; then
+            anchor=$(date -u -d "$anchor" +%s 2>/dev/null || echo "")
+            if [ -n "$anchor" ] && [ "$anchor" -gt "$cutoff" ] 2>/dev/null; then
+                cutoff="$anchor"
+            fi
+        fi
+    fi
+
+    awk -v c="$cutoff" '$1 >= c {s += $2} END {printf "%.4f", s + 0}' "$SPEND_LEDGER" 2>/dev/null || echo "0"
 }
 
 # Record one completed Codex cycle's real token usage (APP-189). `codex exec --json`
@@ -259,6 +279,7 @@ _router_persist() {
 apply_tier_ladder() {
     if [ "$ROUTER_TIER_LADDER" != "1" ]; then
         MODEL="$BASE_MODEL"
+        CLAUDE_EFFORT="$BASE_CLAUDE_EFFORT"
         CODEX_EFFORT="$BASE_CODEX_EFFORT"
         MODEL_LABEL="${MODEL:-config-default}"
         return 0
@@ -282,11 +303,30 @@ apply_tier_ladder() {
     local c_num c_den x_num x_den m e
     c_num="$(window_spend)";       c_den="${WINDOW_BUDGET_USD:-0}"
     x_num="$(codex_window_count)"; x_den="${CODEX_WINDOW_LIMIT:-0}"
+    # A ladder rung may carry its own reasoning effort as `model:effort` (APP-241).
+    # Without it the ladder only ever moved the MODEL while CLAUDE_EFFORT stayed
+    # pinned to whatever the environment set — in practice `low`, so opus never
+    # actually thought. One combined quality ladder keeps model and effort coherent:
+    # a full window can't land on haiku-at-high, and an empty one runs opus properly.
     m="$(_tier_pick "$c_num" "$c_den" "$CLAUDE_TIER_LADDER")"
     e="$(_tier_pick "$x_num" "$x_den" "$CODEX_TIER_LADDER")"
-    [ -n "$m" ] && { MODEL="$m"; MODEL_LABEL="${MODEL:-config-default}"; }
+    if [ -n "$m" ]; then
+        case "$m" in
+            *:*)
+                CLAUDE_EFFORT="${m##*:}"
+                MODEL="${m%%:*}"
+                ;;
+            *)  MODEL="$m"
+                # No effort on this rung: restore the configured baseline rather than
+                # inheriting whatever a previous rung set, or the ladder would leak a
+                # high effort downward into a cheap model.
+                CLAUDE_EFFORT="$BASE_CLAUDE_EFFORT"
+                ;;
+        esac
+        MODEL_LABEL="${MODEL:-config-default}"
+    fi
     [ -n "$e" ] && CODEX_EFFORT="$e"
-    log "[TIER] fill-weighted → Claude=$MODEL [claude \$$c_num/${WINDOW_BUDGET_USD:-∞}], Codex effort=$CODEX_EFFORT [codex $x_num/${CODEX_WINDOW_LIMIT:-∞}]"
+    log "[TIER] fill-weighted → Claude=$MODEL effort=${CLAUDE_EFFORT:-default} [claude \$$c_num/${WINDOW_BUDGET_USD:-∞}], Codex effort=$CODEX_EFFORT [codex $x_num/${CODEX_WINDOW_LIMIT:-∞}]"
 }
 
 # APP-189 Phase 2 — decide which engine runs THIS cycle from remaining quota headroom
