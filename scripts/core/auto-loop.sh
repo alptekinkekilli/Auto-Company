@@ -878,13 +878,35 @@ mkdir -p "$LOG_DIR" "$PROJECT_DIR/memories"
 # Clean up stale stop file from previous run
 rm -f "$PROJECT_DIR/.auto-loop-stop"
 
-# Check for existing instance
+# Check for existing instance.
+# `kill -0 $pid` only proves SOME process holds that pid — not that it is this loop.
+# On a container restart the pid file survives in the image layer while pids are
+# handed out afresh, so the recorded pid is routinely reused by an unrelated process
+# (the dashboard). The guard then refuses to start, the entrypoint exits, Docker
+# restarts the container, and it loops forever — this caused two multi-hour outages
+# (APP-235). Verify the process is actually an auto-loop before believing the file.
 if [ -f "$PID_FILE" ]; then
-    existing_pid=$(cat "$PID_FILE")
-    if kill -0 "$existing_pid" 2>/dev/null; then
-        echo "Auto loop already running (PID $existing_pid). Stop it first with ./stop-loop.sh"
-        exit 1
+    existing_pid=$(cat "$PID_FILE" 2>/dev/null || true)
+    existing_cmd=""
+    if [ -n "$existing_pid" ] && kill -0 "$existing_pid" 2>/dev/null; then
+        if [ -r "/proc/$existing_pid/cmdline" ]; then
+            existing_cmd=$(tr '\0' ' ' < "/proc/$existing_pid/cmdline" 2>/dev/null || true)
+        else
+            existing_cmd=$(ps -p "$existing_pid" -o args= 2>/dev/null || true)
+        fi
     fi
+    case "$existing_cmd" in
+        *auto-loop.sh*)
+            echo "Auto loop already running (PID $existing_pid). Stop it first with ./stop-loop.sh"
+            exit 1
+            ;;
+        *)
+            if [ -n "$existing_pid" ]; then
+                echo "[startup] clearing stale PID file (pid $existing_pid is not an auto-loop)"
+            fi
+            rm -f "$PID_FILE"
+            ;;
+    esac
 fi
 
 # Check dependencies
