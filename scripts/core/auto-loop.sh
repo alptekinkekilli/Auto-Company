@@ -1090,7 +1090,12 @@ This is Cycle #$loop_count. Act decisively."
 
         # Check for usage limit
         if check_usage_limit "$OUTPUT"; then
-            log_cycle "$loop_count" "LIMIT" "API usage limit detected. Waiting ${LIMIT_WAIT_SECONDS}s..."
+            # Second usage-limit path (no Codex fallback available) — stamp the
+            # ceiling here too, otherwise limits hit on this branch are invisible
+            # to the reserve-% controller. See the fallback branch above.
+            log_cycle "$loop_count" "LIMIT" "API usage limit detected at window \$$(window_spend)/${WINDOW_BUDGET_USD:-∞}. Waiting ${LIMIT_WAIT_SECONDS}s..."
+            printf '%s limit %s %s\n' "$(date +%s)" "$(window_spend)" "${WINDOW_BUDGET_USD:-inf}" \
+                >> "$LOG_DIR/ceiling-events.log" 2>/dev/null || true
             save_state "waiting_limit"
             sleep "$LIMIT_WAIT_SECONDS"
             error_count=0
