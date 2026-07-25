@@ -143,7 +143,14 @@ log_cycle() {
 
 check_usage_limit() {
     local output="$1"
-    if echo "$output" | grep -qi "usage limit\|rate limit\|too many requests\|resource_exhausted\|overloaded\|quota\|429\|billing\|insufficient credits"; then
+    # Match ONLY provider error signatures. The previous pattern matched bare
+    # "billing", "quota", "429", "overloaded" and "rate limit" anywhere in the
+    # cycle output — including the model's OWN prose. This company researches SaaS
+    # pricing, so those words appear in normal successful cycles ("output quota",
+    # "rate limits, webhooks", "native metering/billing substitute"), and every
+    # such cycle was misread as usage-limited: needless Codex offloads and bogus
+    # ceiling events. Keep these anchored to how the CLIs/API actually report it.
+    if echo "$output" | grep -qiE 'usage limit reached|claude ai usage limit|rate_limit_error|resource_exhausted|429 too many requests|"status" *: *429|quota exceeded|exceeded your quota|insufficient credits|overloaded_error|upgrade to increase your usage limit'; then
         return 0
     fi
     return 1
