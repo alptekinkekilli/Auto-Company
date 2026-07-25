@@ -336,6 +336,107 @@ apply_tier_ladder() {
 #   CYCLE_ROUTER_MSG      : human-readable reason for the caller to log
 # With ROUTER_ALTERNATE=0 this reproduces the prior budget gate exactly: under
 # budget -> primary; over budget -> Codex if available, else pause.
+# --- stall detection (APP-242) -------------------------------------------------
+# On 2026-07-25 cycles 147-157 ran for two hours and left NOTHING behind: no research
+# artifact, no registry change. They re-verified a blocked candidate and stopped there,
+# burning ~$5. A new human directive at 08:53 restored output on the very next cycle.
+#
+# The reliable signal is not what a cycle SAYS but whether it left anything behind, so
+# the check is a fingerprint over the research artifacts + the candidate registry. It
+# only WARNS: writing directives stays with the operator (the Codex second-brain's own
+# scope says it never applies one). A stall episode notifies once, not every cycle.
+STALL_THRESHOLD_CYCLES="${STALL_THRESHOLD_CYCLES:-3}"
+STALL_STATE_FILE="$LOG_DIR/stall-state"
+RESEARCH_DIR="$PROJECT_DIR/docs/research"
+CANDIDATE_REGISTRY="$PROJECT_DIR/memories/candidate-registry.md"
+STALL_DRAFT_FILE="$PROJECT_DIR/memories/stall-directive-draft.md"
+
+# POSIX only, deliberately: an earlier version used `ls --time-style` and `stat -c`,
+# which silently produce nothing where those GNU flags are absent. The fingerprint
+# then never changes and EVERY cycle looks stalled — a detector that cries wolf is
+# worse than none. Echoes nothing when it cannot measure, and the caller skips.
+_work_fingerprint() {
+    [ -d "$RESEARCH_DIR" ] || return 0
+    local files newest registry
+    files=$(ls -1 "$RESEARCH_DIR" 2>/dev/null | wc -l | tr -d ' ')
+    newest=$(ls -1t "$RESEARCH_DIR" 2>/dev/null | head -1)
+    registry=$(wc -c < "$CANDIDATE_REGISTRY" 2>/dev/null | tr -d ' ')
+    printf '%s|%s|%s' "${files:-0}" "${newest:-none}" "${registry:-0}"
+}
+
+# A PENDING directive means the operator just gave the company something to do, so a
+# quiet cycle is expected rather than a stall.
+_directive_is_pending() {
+    grep -A2 '^## Status' "$PROJECT_DIR/memories/human-directive.md" 2>/dev/null \
+        | grep -qi 'PENDING'
+}
+
+check_stall() {
+    local fp prev count notified
+    fp="$(_work_fingerprint)"
+    # Cannot measure ⇒ say nothing. Never infer a stall from a failed measurement.
+    [ -n "$fp" ] || return 0
+    prev=""; count=0; notified=0
+    if [ -f "$STALL_STATE_FILE" ]; then
+        prev=$(sed -n '1p' "$STALL_STATE_FILE" 2>/dev/null)
+        count=$(sed -n '2p' "$STALL_STATE_FILE" 2>/dev/null)
+        notified=$(sed -n '3p' "$STALL_STATE_FILE" 2>/dev/null)
+    fi
+    case "$count" in ''|*[!0-9]*) count=0 ;; esac
+    case "$notified" in ''|*[!0-9]*) notified=0 ;; esac
+
+    if [ "$fp" != "$prev" ]; then
+        printf '%s\n0\n0\n' "$fp" > "$STALL_STATE_FILE" 2>/dev/null || true
+        return 0
+    fi
+
+    count=$((count + 1))
+    if [ "$count" -ge "$STALL_THRESHOLD_CYCLES" ] && [ "$notified" -eq 0 ] && ! _directive_is_pending; then
+        log "[STALL] $count consecutive cycles produced no research artifact and no registry change — notifying the operator"
+        _write_stall_draft "$count"
+        bash "$SCRIPT_DIR/telegram-notify.sh" "⚠️ Auto-Company stalled: $count cycles in a row produced no new research artifact and no candidate-registry change.
+
+The standing directive is marked DONE, so the company is re-verifying a blocked state instead of opening new ground. This is what burned ~\$5 over cycles 147-157 today.
+
+A ready-to-apply directive draft is waiting in memories/stall-directive-draft.md — review it and apply via the cockpit if you agree. Nothing was changed automatically." >/dev/null 2>&1 || true
+        notified=1
+    fi
+    printf '%s\n%s\n%s\n' "$fp" "$count" "$notified" > "$STALL_STATE_FILE" 2>/dev/null || true
+}
+
+# A draft for the OPERATOR to review — never applied automatically.
+_write_stall_draft() {
+    {
+        echo "# Stall — directive draft (NOT applied)"
+        echo
+        echo "Generated $(date -u +%Y-%m-%dT%H:%M:%SZ) after $1 consecutive cycles with no"
+        echo "research artifact and no candidate-registry change."
+        echo
+        echo "## What the company has been doing"
+        grep -h 'SUMMARY' "$LOG_DIR/auto-loop.log" 2>/dev/null | tail -3 | cut -c1-220
+        echo
+        echo "## Current blocker (from consensus)"
+        grep -A6 -i '^## Next Action' "$PROJECT_DIR/memories/consensus.md" 2>/dev/null | head -8
+        echo
+        echo "## Suggested directive — edit before applying"
+        echo '```'
+        echo "## Status"
+        echo "PENDING"
+        echo
+        echo "## Directive"
+        echo "The current hold is blocked on something only the operator can unblock, and"
+        echo "re-verifying it every cycle produces nothing. Keep the hold, but stop spending"
+        echo "cycles on it: check it at most once every 10 cycles."
+        echo
+        echo "Primary activity until the blocker clears: open genuinely NEW ground per"
+        echo "PROMPT.md -> SEARCH REGIME. Each cycle must leave an artifact under"
+        echo "docs/research/ or change memories/candidate-registry.md; a cycle that finds"
+        echo "nothing must still record WHAT was searched and WHY it was killed, so the"
+        echo "next cycle does not repeat it."
+        echo '```'
+    } > "$STALL_DRAFT_FILE" 2>/dev/null || true
+}
+
 # --- reserve-% dynamic budget (APP-237) ---------------------------------------
 # The loop and the operator draw on the SAME Claude plan, so a fixed
 # WINDOW_BUDGET_USD is wrong in both directions: too small when the operator is
@@ -1176,6 +1277,9 @@ This is Cycle #$loop_count. Act decisively."
     _tele_fill="$(window_spend)"
     printf '%s %s %s %s %s %s\n' "$(date +%s)" "$_tele_eng" "$_tele_model" "$_tele_eff" "${CYCLE_COST:-N/A}" "$_tele_fill" >> "$LOG_DIR/engine-telemetry.log" 2>/dev/null || true
     log "[TELEMETRY] engine=$_tele_eng model=$_tele_model effort=$_tele_eff cost=${CYCLE_COST:-N/A} claude_window=\$$_tele_fill/${WINDOW_BUDGET_USD:-∞}"
+
+    # Did this cycle actually leave anything behind? (APP-242)
+    check_stall
 
     cycle_failed_reason=""
     cycle_soft_timeout=0
