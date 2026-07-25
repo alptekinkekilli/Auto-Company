@@ -186,6 +186,10 @@ fixed tier, a diagnostic-plus-firm-quote, or buyer-approved overage — rather t
 killing the raw flat-fee offer. Do NOT kill the axis, ban flat fees as a category, price by a
 raw item count uncorrelated with effort, or infer build/outreach/payment authority from this
 gate — those remain governed by the HARD STOP below and the single active-validation slot.
+Each fresh axis gets AT MOST ONE bounded pricing-architecture adjudication without new primary
+evidence — if it stays `TEST-BLOCKED`, queue it and return to discovery; do not re-model the
+same axis again absent new evidence or an explicit operator directive, or "normal discovery"
+degrades into a repeating two-cycle pricing-adjudication loop.
 
 ### HARD STOP — no build before willingness-to-pay evidence
 
@@ -241,6 +245,25 @@ in `memories/consensus.md`. On the first cycle after such a change, before domai
 Mentioning/reading a skill does not count. Do not create a one-off skill when an
 existing skill substantially covers the task. The check passes only after agents
 invoke the selected skills and produce their required outputs.
+
+**Skill-invocation provenance (MANDATORY — every cycle, both engines).** An
+independent audit (2026-07-25, cycles 191/193) found artifacts logging
+`Skill invoked: <name>` on a Codex run that has no native `Skill` tool at all —
+a formal compliance failure, not a domain-work failure: the underlying research/
+critic/CFO work was real, but the record of HOW it was produced was false.
+Classify every cycle's skill usage as exactly one of:
+- `native` — a real `Skill`-tool call event exists in the session log for that
+  skill. Only this may be logged as `Skill invoked: <name>`.
+- `manual` — the engine has no native `Skill` tool this cycle (e.g. Codex). Read
+  the skill's `SKILL.md` and apply its checklist/required-output by hand. Log it
+  as `Skill APPLIED MANUALLY — native invocation unavailable: <name>`, never as
+  `invoked`.
+- `blocked` — a skill is required but neither native invocation nor a faithful
+  manual read is possible this cycle. Say so plainly in the summary; do not
+  paper over it with an `invoked`/`applied` claim.
+Never write `Skill invoked` for work that was actually `manual` or `blocked`.
+This is a provenance rule, not a quality gate — manually-applied skill work is
+legitimate and does not need redoing; it must simply be labeled for what it was.
 
 Map the work to a skill and invoke it:
 - Research / competitor / market → `deep-research`, `competitive-intelligence-analyst`,
