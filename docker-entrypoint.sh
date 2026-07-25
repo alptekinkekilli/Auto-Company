@@ -190,7 +190,18 @@ LOOP_PID=$!
 
 # --- if either process exits, tear the container down so the runtime restarts it ---
 wait -n "$DASH_PID" "$LOOP_PID"
-echo "[entrypoint] a managed process exited; stopping container"
+_rc=$?
+# Name the process that died. "a managed process exited" told us nothing, and the
+# container has restarted 64 times today without us being able to say which side
+# fell over (APP-240). Whichever pid is still alive is the survivor.
+if kill -0 "$LOOP_PID" 2>/dev/null; then
+    _dead="dashboard (python3 dashboard/server.py, pid $DASH_PID)"
+elif kill -0 "$DASH_PID" 2>/dev/null; then
+    _dead="auto-loop (scripts/core/auto-loop.sh, pid $LOOP_PID)"
+else
+    _dead="both processes"
+fi
+echo "[entrypoint] $_dead exited with rc=$_rc; stopping container"
 term
 wait || true
 exit 1
