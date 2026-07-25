@@ -22,8 +22,13 @@ printf '%s\n' "$out" >> "$LOG"
 # A run can exit 0 and still deliver nothing (e.g. the container restarted through
 # the exec window, as on 2026-07-25). Treat "no REPORT_OK" as a failure so the
 # silent case is visible instead of looking like a clean run.
-if printf '%s' "$out" | grep -q 'REPORT_OK'; then
+if printf '%s' "$out" | grep -q 'REPORT_OK' && ! printf '%s' "$out" | grep -q 'registry: skipped'; then
   echo "$(ts) done rc=$rc" >> "$LOG"
+elif printf '%s' "$out" | grep -q 'registry: skipped'; then
+  # Pass 1 wrote the directive but pass 2 returned nothing, so the registry was
+  # never updated. Half a run — surface it rather than log it as clean.
+  echo "$(ts) FAILED rc=$rc — pass-2 produced no output, registry NOT updated" >> "$LOG"
+  rc=$((rc == 0 ? 4 : rc))
 else
   echo "$(ts) FAILED rc=$rc — no REPORT_OK in output (analyst produced no report)" >> "$LOG"
   rc=$((rc == 0 ? 3 : rc))
