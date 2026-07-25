@@ -55,7 +55,7 @@ All of these are **your own** — the previous operator's values do not carry ov
 - **Context7** API key — live library docs + the company's skill-creation.
 - **Airtable** PAT + your own base — the company's CRMs/trackers.
 - **Linear** API key + your own team/workspace — issue tracking.
-- **Telegram** bot token + chat id — the per-cycle operator ping.
+- **Telegram** bot token + chat id — the per-cycle operator ping (setup steps: §11.1).
 - **Twilio** — only if you run email/SMS outreach.
 - **Cloudflare** API token — the company deploys its *products* to Cloudflare Pages/Workers.
 - A payment provider (iyzico/Stripe/…) — only when you actually sell something.
@@ -101,7 +101,7 @@ Both feed the loop's environment; `runtime.env` acts as a runtime override layer
 | `CONTEXT7_API_KEY` | Context7 docs MCP + skill authoring |
 | `AIRTABLE_API_KEY` | Airtable MCP (base-scoped PAT to **your** base) |
 | `LINEAR_API_KEY` | Linear MCP (your team) |
-| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | per-cycle operator ping |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | per-cycle operator ping (bot/chat-id setup: §11.1) |
 | `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_API_SID` / `TWILIO_API_SECRET` | comms/outreach |
 | `CLOUDFLARE_API_TOKEN` | deploying the company's products to Cloudflare |
 
@@ -206,7 +206,7 @@ Linear workspace, Telegram bot, Cloudflare/iyzico accounts, and any active direc
 are theirs. Your instance authenticates with your own keys and builds its own state
 from Day 0.
 
-> One exception worth calling out: the **Opportunity Analyst host cron** (§11) is
+> One exception worth calling out: the **Opportunity Analyst host cron** (§11.3) is
 > *host-only* — like `docker-prune`, it lives on the previous operator's server, **not
 > in the repo**. Its in-container parts (script, skill, panel) DO transfer; the cron
 > that fires it does not. You add that yourself.
@@ -268,7 +268,40 @@ is also correct — keep the cockpit behind your reverse proxy.
 
 ## 11. Optional add-ons
 
-### 11.1 Connect the Codex fallback engine
+### 11.1 Telegram notifications
+
+The company pings **you** on Telegram: an automatic one-line summary at the end of every
+cycle, plus ad-hoc pings for anything time-sensitive. It's **outbound only** — the bot never
+accepts commands back; you still steer entirely through the human directive (§5).
+
+**Setup**
+1. **Create a bot** — message `@BotFather` on Telegram, send `/newbot`, follow its prompts
+   (name, username). It replies with a token like `123456789:AAH…` — that's
+   `TELEGRAM_BOT_TOKEN`. Treat it like any other secret.
+2. **Get your chat ID** — message your new bot once (anything), then open
+   `https://api.telegram.org/bot<TOKEN>/getUpdates` in a browser and read `message.chat.id`
+   from the JSON. Simpler shortcut: message `@userinfobot` on Telegram — it replies with your
+   numeric ID directly. That number is `TELEGRAM_CHAT_ID`.
+3. **Add both as env vars** — `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID`, same as any other
+   secret (Coolify env vars, or `runtime.env`). Fails open by design: leave either blank and
+   the loop simply never sends — nothing errors, nothing blocks a cycle.
+
+**What actually triggers a message**
+| Trigger | When |
+|---|---|
+| Every cycle | Automatic — a one-line result + cost, no extra setup once the two env vars are set |
+| 🟢 WTP signal | A real payment, pre-order, or checkout attempt settled — wants your go-ahead to deliver |
+| 🛑 Blocker | Progress stopped and needs you — missing access, a directive conflict, a broken dependency |
+| 🧠 Analyst | The Opportunity Analyst (§11.3) produced a pick that differs from the company's own |
+| ⚠️ Guardrail | The company refused to cross a line (e.g. build-before-WTP) and wants you to resolve it |
+| ⚠️ Disk | Host-level disk-usage warning from the prune cron — host-only, not in the repo |
+
+Telegram caps messages at 4096 characters; the notifier truncates to stay under it. It never
+sends secrets, tokens, or raw customer data. Implementation: `scripts/core/telegram-notify.sh`
+(no-op if the two env vars are unset), wired into `scripts/core/auto-loop.sh` for the per-cycle
+summary and stall warning, and callable ad-hoc via the `telegram-notify` skill.
+
+### 11.2 Connect the Codex fallback engine
 Codex is **not required** — the loop runs on Claude alone; Codex is the engine the
 router fails over to when Claude hits its usage limit or the budget cap. It's a
 **one-time seed**, not a per-deploy step.
@@ -290,7 +323,7 @@ token was already used"`. The entrypoint guards this (it never overwrites a pers
 auth), so after first boot you can even blank `CODEX_AUTH_B64`. Also seed a **freshly**
 logged-in `auth.json` — one more than a few days old is already stale and 401s.
 
-### 11.2 The Opportunity Analyst (Codex 2nd brain) cron
+### 11.3 The Opportunity Analyst (Codex 2nd brain) cron
 An independent Codex (`gpt-5.6-sol`) that reads the full scan, scores every candidate,
 challenges the company's own pick, and drafts a paste-ready directive — shown in its own
 cockpit panel with a Copy button. It runs **inside** the container as user `app` but a

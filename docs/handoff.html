@@ -235,7 +235,32 @@ curl -s -o /dev/null -w '%{http_code}\n' https://&lt;your-cockpit&gt;/api/status
   </section>
 
   <section>
-    <h2><span class="n">06</span> What transfers — and what doesn't</h2>
+    <h2><span class="n">06</span> How you'll hear from it — Telegram</h2>
+    <div class="card">
+      <p class="d" style="margin-bottom:12px">The company pings <b>you</b> on Telegram: an automatic one-line summary at the end of every cycle, plus ad-hoc pings for anything time-sensitive. It's <b>outbound only</b> — the bot never accepts commands back. You still steer entirely through the human directive (section 05).</p>
+      <ol class="steps">
+        <li><b>Create a bot</b> — open a chat with <code>@BotFather</code> on Telegram and send <code>/newbot</code>, then follow its prompts (name, username).<span class="sub">BotFather replies with a token like <code>123456789:AAH…</code> — that's <code>TELEGRAM_BOT_TOKEN</code>. Treat it like any other secret.</span></li>
+        <li><b>Get your chat ID</b> — message your new bot once (anything, e.g. "hi"), then open <code>https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code> in a browser and read <code>message.chat.id</code> from the JSON reply.<span class="sub">Simpler shortcut: message <code>@userinfobot</code> on Telegram — it replies with your numeric ID directly, no bot round-trip needed. That number is <code>TELEGRAM_CHAT_ID</code>.</span></li>
+        <li><b>Add both as env vars</b> — <code>TELEGRAM_BOT_TOKEN</code> and <code>TELEGRAM_CHAT_ID</code>, same as any other secret (Coolify env vars, or <code>runtime.env</code>).<span class="sub">Fails open by design: leave either blank and the loop simply never sends — nothing errors, nothing blocks a cycle.</span></li>
+      </ol>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3 style="margin:0 0 10px">What actually triggers a message</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <tr><td style="padding:4px 8px 4px 0;white-space:nowrap"><b>Every cycle</b></td><td class="d">Automatic — a one-line result + cost, no extra setup once the two env vars are set.</td></tr>
+        <tr><td style="padding:4px 8px 4px 0;white-space:nowrap">🟢 WTP signal</td><td class="d">A real payment, pre-order, or checkout attempt settled — the company wants your go-ahead to deliver.</td></tr>
+        <tr><td style="padding:4px 8px 4px 0;white-space:nowrap">🛑 Blocker</td><td class="d">Progress stopped and needs you — missing access, a directive conflict, a broken dependency.</td></tr>
+        <tr><td style="padding:4px 8px 4px 0;white-space:nowrap">🧠 Analyst</td><td class="d">The Opportunity Analyst (section 10) produced a pick that differs from the company's own.</td></tr>
+        <tr><td style="padding:4px 8px 4px 0;white-space:nowrap">⚠️ Guardrail</td><td class="d">The company refused to cross a line (e.g. build-before-WTP) and wants you to resolve it.</td></tr>
+        <tr><td style="padding:4px 8px 4px 0;white-space:nowrap">⚠️ Disk</td><td class="d">Host-level disk-usage warning from the prune cron — host-only, not in the repo (like section 10's cron).</td></tr>
+      </table>
+      <p class="sub" style="margin-top:10px">Telegram caps messages at 4096 characters; the notifier truncates to stay under it. It never sends secrets, tokens, or raw customer data.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">07</span> What transfers — and what doesn't</h2>
     <div class="cols">
       <div class="card stay"><h3>✓ Transfers with the fork</h3><p class="d">Code, prompts, the evaluation framework, 14 agents, all skills, the cockpit, the Dockerfile, and the full setup docs. The whole machine.</p></div>
       <div class="card go"><h3>→ You bring your own</h3><p class="d">Every account &amp; key (Claude, Airtable, Linear, Telegram, Cloudflare, payments) and all live business state. No secrets are in the repo; your instance starts fresh from Day 0.</p></div>
@@ -243,7 +268,7 @@ curl -s -o /dev/null -w '%{http_code}\n' https://&lt;your-cockpit&gt;/api/status
   </section>
 
   <section>
-    <h2><span class="n">07</span> Troubleshooting — cockpit looks primitive / behind</h2>
+    <h2><span class="n">08</span> Troubleshooting — cockpit looks primitive / behind</h2>
     <div class="card" style="border-left:3px solid var(--act)">
       <p class="d" style="margin-bottom:10px"><b>Symptom:</b> the dashboard shows only Guardian / Daemon / Loop / Runtime State, reads <code>Loop: STOPPED</code> or "read-only dashboard", and is missing the Director, Settings, Opportunity Analyst, Cost, and Ideas panels.</p>
       <p class="d" style="margin-bottom:12px"><b>Two causes — both must be fixed:</b> (1) the deploy is on <b>old code</b>, not the latest <code>main</code>; (2) the <b>loop isn't running</b> — no real container / no secrets, so every panel is empty.</p>
@@ -256,7 +281,7 @@ curl -s -o /dev/null -w '%{http_code}\n' https://&lt;your-cockpit&gt;/api/status
   </section>
 
   <section>
-    <h2><span class="n">08</span> Troubleshooting — cockpit is live but the loop won't start</h2>
+    <h2><span class="n">09</span> Troubleshooting — cockpit is live but the loop won't start</h2>
     <div class="card" style="border-left:3px solid var(--act)">
       <p class="d" style="margin-bottom:10px"><b>Symptom:</b> the modern cockpit renders (Director, Settings, Analyst, Cost, Ideas all present) and <code>GET /api/status</code> → 200, but <b>no cycles run</b>. The entrypoint hard-stops when <code>CLAUDE_CODE_OAUTH_TOKEN</code> is absent — that is correct; never bypass it with a dummy value.</p>
       <p class="d" style="margin-bottom:12px"><b>Cause:</b> the four boot secrets aren't in <code>runtime.env</code> yet. Two are personal credentials — <b>each instance brings its own</b>; do not reuse another operator's tokens (billing + security).</p>
@@ -294,10 +319,10 @@ curl -s -o /dev/null -w '%{http_code}\n' https://&lt;your-cockpit&gt;/api/status
   </section>
 
   <section>
-    <h2><span class="n">09</span> Optional — the Opportunity Analyst (Codex 2nd brain) cron</h2>
+    <h2><span class="n">10</span> Optional — the Opportunity Analyst (Codex 2nd brain) cron</h2>
     <div class="card" style="border-left:3px solid var(--act)">
       <p class="d" style="margin-bottom:10px">The <b>Opportunity Analyst</b> is an independent Codex (<code>gpt-5.6-sol</code>) that reads the full scan, scores every candidate, challenges the company's own pick, and drafts a paste-ready directive — surfaced in its own cockpit panel with a Copy button. It runs <b>inside</b> the container as user <code>app</code>, but a <b>host cron</b> triggers it. The panel showing <code>LOADED</code> with no content just means the code is present but nothing has run yet.</p>
-      <p class="d" style="margin-bottom:8px"><b>Prerequisite:</b> the Codex auth from section 08 — the Analyst shares the loop's <code>CODEX_HOME=/app/logs/.codex/auth.json</code> and aborts without it. So the <code>CODEX_AUTH_B64</code> seed is required for the Analyst too.</p>
+      <p class="d" style="margin-bottom:8px"><b>Prerequisite:</b> the Codex auth from section 09 — the Analyst shares the loop's <code>CODEX_HOME=/app/logs/.codex/auth.json</code> and aborts without it. So the <code>CODEX_AUTH_B64</code> seed is required for the Analyst too.</p>
       <table style="width:100%;border-collapse:collapse;margin:4px 0 12px;font-size:13px">
         <tr><td style="padding:4px 8px 4px 0">Orchestrator <code>scripts/analyst/opportunity-analyst.sh</code></td><td class="d">✅ ships in the image (transfers with your fork)</td></tr>
         <tr><td style="padding:4px 8px 4px 0">Vendored Codex skill <code>autocompany-opportunity-director</code></td><td class="d">✅ ships in the image; the script <b>self-installs</b> it into <code>$CODEX_HOME/skills/</code> on first run</td></tr>
