@@ -764,6 +764,14 @@ run_engine_cycle() {
                     RESOLVED_CODEX_BIN="$(resolve_codex_bin 2>/dev/null || true)"
                 fi
                 if [ -n "$RESOLVED_CODEX_BIN" ]; then
+                    # Record WHERE the plan's real 5h ceiling sits. The configured
+                    # WINDOW_BUDGET_USD is a self-imposed cap; the plan's actual limit
+                    # may bind first (it did: $12.28 of a $25 cap on 2026-07-24). The
+                    # reserve-% controller needs this measured ceiling, so stamp the
+                    # window spend at the exact moment the limit hits.
+                    log "[LIMIT] Claude 5h plan limit hit at window \$$(window_spend)/${WINDOW_BUDGET_USD:-∞} (model=${MODEL:-?})"
+                    printf '%s limit %s %s\n' "$(date +%s)" "$(window_spend)" "${WINDOW_BUDGET_USD:-inf}" \
+                        >> "$LOG_DIR/ceiling-events.log" 2>/dev/null || true
                     log "Cycle #$loop_count [FALLBACK] Claude usage-limited — retrying on Codex"
                     local _saved_bin="$RESOLVED_ENGINE_BIN" _saved_model="$MODEL"
                     RESOLVED_ENGINE_BIN="$RESOLVED_CODEX_BIN"
