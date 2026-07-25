@@ -288,6 +288,11 @@ apply_tier_ladder() {
         CLAUDE_EFFORT="$BASE_CLAUDE_EFFORT"
         CODEX_EFFORT="$BASE_CODEX_EFFORT"
         MODEL_LABEL="${MODEL:-config-default}"
+        # This always computes the CLAUDE pick, even on a Codex cycle — see the
+        # matching note below. Cockpit MODEL must reflect what actually ran.
+        if [ "${CYCLE_ENGINE_OVERRIDE:-$ENGINE}" = "codex" ]; then
+            MODEL_LABEL="${CODEX_MODEL:-codex-default}:${CODEX_EFFORT}"
+        fi
         return 0
     fi
 
@@ -333,6 +338,14 @@ apply_tier_ladder() {
     fi
     [ -n "$e" ] && CODEX_EFFORT="$e"
     log "[TIER] fill-weighted → Claude=$MODEL effort=${CLAUDE_EFFORT:-default} [claude \$$c_num/${WINDOW_BUDGET_USD:-∞}], Codex effort=$CODEX_EFFORT [codex $x_num/${CODEX_WINDOW_LIMIT:-∞}]"
+    # The block above always computes the CLAUDE-ladder pick, even when this cycle
+    # will actually run on Codex — MODEL_LABEL otherwise shows e.g. "claude-opus-4-8"
+    # in the cockpit/state file for a cycle that never touched Claude at all
+    # (found 2026-07-25: operator read ENGINE=codex + MODEL=claude-opus-4-8 in
+    # /api/status and reasonably concluded the engine switch hadn't taken effect).
+    if [ "${CYCLE_ENGINE_OVERRIDE:-$ENGINE}" = "codex" ]; then
+        MODEL_LABEL="${CODEX_MODEL:-codex-default}:${CODEX_EFFORT}"
+    fi
 }
 
 # APP-189 Phase 2 — decide which engine runs THIS cycle from remaining quota headroom
