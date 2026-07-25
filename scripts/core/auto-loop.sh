@@ -78,6 +78,14 @@ CODEX_DISABLED=0
 # Rolling-window spend cap: pause the loop when spend in the last WINDOW_SECONDS
 # reaches WINDOW_BUDGET_USD (empty = disabled). Reserves quota for the operator.
 WINDOW_BUDGET_USD="${WINDOW_BUDGET_USD:-}"
+# Reserve-% dynamic budget (APP-237). Inert unless PLAN_CEILING_USD is set, in
+# which case WINDOW_BUDGET_USD is recomputed each cycle from the operator's own
+# measured spend — see refresh_dynamic_budget().
+PLAN_CEILING_USD="${PLAN_CEILING_USD:-}"
+OPERATOR_RESERVE_PCT="${OPERATOR_RESERVE_PCT:-40}"
+OPERATOR_USAGE_FILE="${OPERATOR_USAGE_FILE:-$LOG_DIR/operator-usage.json}"
+OPERATOR_USAGE_STALE_SECS="${OPERATOR_USAGE_STALE_SECS:-900}"
+WINDOW_BUDGET_FLOOR_USD="${WINDOW_BUDGET_FLOOR_USD:-5}"
 WINDOW_SECONDS="${WINDOW_SECONDS:-18000}"
 BUDGET_PAUSE_SECONDS="${BUDGET_PAUSE_SECONDS:-1800}"
 SPEND_LEDGER="$LOG_DIR/spend-window.log"
@@ -288,10 +296,55 @@ apply_tier_ladder() {
 #   CYCLE_ROUTER_MSG      : human-readable reason for the caller to log
 # With ROUTER_ALTERNATE=0 this reproduces the prior budget gate exactly: under
 # budget -> primary; over budget -> Codex if available, else pause.
+# --- reserve-% dynamic budget (APP-237) ---------------------------------------
+# The loop and the operator draw on the SAME Claude plan, so a fixed
+# WINDOW_BUDGET_USD is wrong in both directions: too small when the operator is
+# idle, too large when they are working (measured 2026-07-25: of a ~$101 5h
+# ceiling, an active operator session took $38 while the loop took $15).
+#
+#   cap = ceiling - max(operator_spend, reserve% x ceiling)
+#
+# so the operator always keeps their reserve, and anything they do not use goes
+# to the loop. operator_spend is pushed in by scripts/ops/operator-usage-report.sh
+# (ccusage on the operator's machine). Disabled unless PLAN_CEILING_USD is set;
+# stale or missing data is treated as "operator idle", which is the safe
+# direction — it yields exactly the reserve-only cap we ran before this existed.
+refresh_dynamic_budget() {
+    [ -n "$PLAN_CEILING_USD" ] || return 0
+
+    local spend=0 age=-1 src="no-data"
+    if [ -f "$OPERATOR_USAGE_FILE" ]; then
+        age=$(( $(date +%s) - $(stat -c %Y "$OPERATOR_USAGE_FILE" 2>/dev/null || echo 0) ))
+        if [ "$age" -le "$OPERATOR_USAGE_STALE_SECS" ]; then
+            spend=$(jq -r '.costUSD // 0' "$OPERATOR_USAGE_FILE" 2>/dev/null || echo 0)
+            src="fresh(${age}s)"
+        else
+            src="stale(${age}s)"
+        fi
+    fi
+
+    local newcap
+    newcap=$(awk -v ceil="$PLAN_CEILING_USD" -v pct="$OPERATOR_RESERVE_PCT" \
+                 -v spent="$spend" -v floor="$WINDOW_BUDGET_FLOOR_USD" 'BEGIN {
+        reserve = ceil * pct / 100
+        keep    = (spent > reserve ? spent : reserve)
+        cap     = ceil - keep
+        if (cap < floor) cap = floor
+        printf "%.2f", cap
+    }')
+
+    if [ "$newcap" != "$WINDOW_BUDGET_USD" ]; then
+        log "[BUDGET] cap \$$WINDOW_BUDGET_USD → \$$newcap (ceiling \$$PLAN_CEILING_USD, reserve ${OPERATOR_RESERVE_PCT}%, operator \$$spend [$src])"
+        WINDOW_BUDGET_USD="$newcap"
+    fi
+}
+
 select_cycle_engine() {
     CYCLE_ENGINE_OVERRIDE=""
     CYCLE_ROUTER_ACTION="run"
     CYCLE_ROUTER_MSG=""
+
+    refresh_dynamic_budget
 
     # Is Codex usable as an alternate this cycle?
     local codex_avail=0
