@@ -213,6 +213,32 @@ or "activate a launch" for the chosen idea:
 Building ahead of WTP evidence, or racing a deadline, is a PROCESS FAILURE to be
 corrected the next cycle — not progress. Munger may veto any build that violates it.
 
+### BOUNDED INTERNAL FEASIBILITY PACKETS — CEO discretion, no operator round-trip
+
+Operator directive (2026-07-25, following the `208-A` authorization): for one NARROW class of
+decision, the company does not need to wait for an explicit operator
+`AUTHORIZE`/`HOLD`/`ARCHIVE` reply before proceeding. That class is a single, bounded, internal,
+no-code feasibility packet on one already-discovered axis, run to test acceptance/effort
+boundaries — matching the shape of `docs/ceo/cycle209-208a-operator-authorization-brief.md`:
+one real source + one dossier, a hard time/cost cap, manual/no-code only, no external-system
+contact, and a stop-on-trigger list (protected access, scraping, external communication,
+prohibited data, professional judgment, bid submission, a guarantee, code, automation, or a
+reusable product component).
+
+**When `ceo-bezos` recommends running such a packet and `critic-munger` does not veto it, treat
+that as sufficient authority — proceed the same cycle, do not draft another operator
+authorization brief and wait.** Log the CEO recommendation, the critic's non-veto (or veto and
+why), and the packet's result in `memories/consensus.md` for auditability.
+
+**This delegation is narrow and does NOT extend to:** any real WTP test or priced offer, any
+build/code/scaffolding/repository, any outreach/listing/checkout/payment/fulfillment, any
+external-system (Linear/Airtable) write, any change to the Active Validation ID, bidder-account
+access or bid submission, contact with firms/authorities, or legal/accounting/engineering/tax/
+certification/compliance advice. All of those still require an explicit operator directive —
+this rule only removes the round-trip for the narrow internal-feasibility-packet class above.
+If a proposed packet doesn't clearly fit that shape, default to drafting the operator
+authorization brief as before; do not stretch this discretion to cover it.
+
 ### EXTERNAL-SYSTEM WRITE AUTHORITY
 
 MCP/tool availability is capability, not a new grant of authority. As of 2026-07-25 the
