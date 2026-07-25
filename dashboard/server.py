@@ -453,7 +453,13 @@ def trigger_redeploy() -> dict[str, Any]:
     import urllib.request
 
     url = f"{base}/api/v1/deploy?uuid={uuid}&force=false"
-    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+    # Cloudflare returns error 1010 (banned browser signature) to urllib's default
+    # User-Agent — a browser-like UA is required, not optional. See
+    # memories/redeploy-auto-company.md.
+    req = urllib.request.Request(
+        url,
+        headers={"Authorization": f"Bearer {token}", "User-Agent": "Mozilla/5.0"},
+    )
     try:
         with urllib.request.urlopen(req, timeout=20) as resp:  # noqa: S310
             body = resp.read().decode("utf-8", "replace")[:500]

@@ -79,6 +79,12 @@ CODEX_DISABLED=0
 # Rolling-window spend cap: pause the loop when spend in the last WINDOW_SECONDS
 # reaches WINDOW_BUDGET_USD (empty = disabled). Reserves quota for the operator.
 WINDOW_BUDGET_USD="${WINDOW_BUDGET_USD:-}"
+# Captured BEFORE refresh_dynamic_budget() starts overwriting WINDOW_BUDGET_USD
+# in place — this is the operator's own configured cap (cockpit Settings), and
+# it must survive as a ceiling on the dynamic formula below. Previously the
+# dynamic cap silently replaced a lower manual value every single cycle, so an
+# operator lowering the budget mid-window had no effect (2026-07-25).
+WINDOW_BUDGET_USD_MANUAL="$WINDOW_BUDGET_USD"
 # Reserve-% dynamic budget (APP-237). Inert unless PLAN_CEILING_USD is set, in
 # which case WINDOW_BUDGET_USD is recomputed each cycle from the operator's own
 # measured spend — see refresh_dynamic_budget().
@@ -466,16 +472,18 @@ refresh_dynamic_budget() {
 
     local newcap
     newcap=$(awk -v ceil="$PLAN_CEILING_USD" -v pct="$OPERATOR_RESERVE_PCT" \
-                 -v spent="$spend" -v floor="$WINDOW_BUDGET_FLOOR_USD" 'BEGIN {
+                 -v spent="$spend" -v floor="$WINDOW_BUDGET_FLOOR_USD" \
+                 -v manual="$WINDOW_BUDGET_USD_MANUAL" 'BEGIN {
         reserve = ceil * pct / 100
         keep    = (spent > reserve ? spent : reserve)
         cap     = ceil - keep
         if (cap < floor) cap = floor
+        if (manual != "" && manual + 0 < cap) cap = manual + 0
         printf "%.2f", cap
     }')
 
     if [ "$newcap" != "$WINDOW_BUDGET_USD" ]; then
-        log "[BUDGET] cap \$$WINDOW_BUDGET_USD → \$$newcap (ceiling \$$PLAN_CEILING_USD, reserve ${OPERATOR_RESERVE_PCT}%, operator \$$spend [$src])"
+        log "[BUDGET] cap \$$WINDOW_BUDGET_USD → \$$newcap (ceiling \$$PLAN_CEILING_USD, reserve ${OPERATOR_RESERVE_PCT}%, operator \$$spend [$src], manual cap \$${WINDOW_BUDGET_USD_MANUAL:-none})"
         WINDOW_BUDGET_USD="$newcap"
     fi
 }
