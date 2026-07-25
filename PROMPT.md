@@ -167,6 +167,26 @@ re-deriving conclusions from its own lost output. A row with no primary source, 
 or two kill codes is INVALID — fix it rather than leaving it. Note that the archive and the
 exhausted-pattern list are outputs of THIS screen: they corroborate nothing about its accuracy.
 
+**Pricing-structure gate — a routing rule, NOT a kill or a flat-fee ban.** The 2026-07-25
+10-cycle filter-vs-space experiment beat both CFO-gate targets (near-miss 5/9, remediation
+9/10) but logged 0/14 economic passes under inconsistent, non-comparable CFO inputs. An
+independent high-model review (`docs/research/filter-vs-space-pricing-decision-2026-07-25.md`)
+found this does NOT prove flat-fee pricing is structurally dead — it found the 14 verdicts used
+different hourly rates, reserve treatment, and CAC assumptions, and only ONE axis (176-R)
+survives as a genuine pricing-architecture question once normalized. For any FIXED-PRICE
+service whose acceptance depends on repairing a buyer-controlled artifact, an item-count cap
+ALONE does not bound cost. Before recording `ECONOMIC PASS`: identify the actual effort driver
+and show it is either observable before acceptance, or contractually capped without unpaid
+completion/refund exposure. Apply the standing CFO model unchanged — all person-time at
+$50/hour, nonzero evidenced AI/tool cost, processing, the 10% pre-observation reserve, the
+prescribed base/stress test, and evidenced or conservatively modeled CAC with
+Contribution:CAC ≥3:1; UNKNOWN CAC blocks PASS. If the effort driver is unknown, route to
+**`PRICING-STRUCTURE UNKNOWN / TEST-BLOCKED`** and compare structures — e.g. a prequalified
+fixed tier, a diagnostic-plus-firm-quote, or buyer-approved overage — rather than accepting or
+killing the raw flat-fee offer. Do NOT kill the axis, ban flat fees as a category, price by a
+raw item count uncorrelated with effort, or infer build/outreach/payment authority from this
+gate — those remain governed by the HARD STOP below and the single active-validation slot.
+
 ### HARD STOP — no build before willingness-to-pay evidence
 
 This is a BLOCKING gate, not advice. Before you write product code, scaffold an MVP,
