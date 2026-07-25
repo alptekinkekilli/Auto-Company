@@ -60,15 +60,31 @@ mkdir -p memories projects logs
 # wiped on every redeploy. Back docs/ with the persistent memories volume via a
 # symlink. The image ships an (essentially empty, docs/* is gitignored) docs/ dir;
 # migrate it into the store without clobbering persisted files, then symlink.
+#
+# The handful of TRACKED docs files (.gitignore's docs/* whitelist) are an
+# exception: they are code, not agent output, and must always reflect the
+# current deploy. Found 2026-07-25: the no-clobber copy below (correct for
+# agent-written content) was also freezing these few files at whatever the
+# FIRST deploy after this feature shipped happened to contain — a code change
+# to app-230-mcp-wiring.md landed in git and was deployed, but production kept
+# serving the Jul 22-24 version through several later redeploys. Always
+# overwrite the tracked set before the no-clobber bulk copy runs.
 DOCS_STORE="${DOCS_STORE:-/app/memories/_docs}"
 mkdir -p "$DOCS_STORE"
+TRACKED_DOCS_FILES="windows-setup.md devops/phase-6-runbook.md devops/app-230-mcp-wiring.md handoff.html"
 if [ ! -L /app/docs ]; then
     if [ -d /app/docs ]; then
+        for f in $TRACKED_DOCS_FILES; do
+            if [ -f "/app/docs/$f" ]; then
+                mkdir -p "$DOCS_STORE/$(dirname "$f")"
+                cp -a "/app/docs/$f" "$DOCS_STORE/$f"
+            fi
+        done
         cp -a -n /app/docs/. "$DOCS_STORE/" 2>/dev/null || true
         rm -rf /app/docs
     fi
     ln -s "$DOCS_STORE" /app/docs
-    echo "[entrypoint] docs/ -> $DOCS_STORE (persistent)"
+    echo "[entrypoint] docs/ -> $DOCS_STORE (persistent, tracked files refreshed)"
 fi
 
 # --- persist .claude/skills/ so company-authored skills survive redeploys --------
