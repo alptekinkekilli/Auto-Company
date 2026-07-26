@@ -34,17 +34,29 @@ notify() {
 U="$(use)"
 echo "$(date -Is) disk=${U}% thresh=${THRESH}% warn=${WARN}%" >> "$LOG"
 
-# Early warning: tell the operator BEFORE the automatic cleanup kicks in, so a
-# growth problem can be handled deliberately instead of by an emergency prune.
-# Once per day — this job runs every 2h and we do not want an alert every run.
+# Early, self-healing cleanup: once disk crosses WARN, run the NON-destructive
+# subset of the prune (build cache + unused images only, same commands as the
+# THRESH branch below) EVERY run — cheap/idempotent when there's nothing to
+# reclaim, and it's what usually resolves a redeploy-churn spike (a heavy
+# redeploy day accumulates dozens of 1.75GB app images) before it ever reaches
+# the THRESH emergency case. Container pruning stays exclusively in the THRESH
+# branch, since it is the one destructive step here (drops stopped containers,
+# i.e. crash evidence) — WARN never touches containers.
 if [ "${U:-0}" -ge "$WARN" ] && [ "${U:-0}" -lt "$THRESH" ]; then
+  echo "$(date -Is) WARN prune start (disk ${U}%, images/cache only)" >> "$LOG"
+  docker builder prune -af --keep-storage=5GB >> "$LOG" 2>&1 || true
+  docker image prune -af                      >> "$LOG" 2>&1 || true
+  A="$(use)"
+  echo "$(date -Is) WARN prune done (disk now ${A}%)" >> "$LOG"
+
+  # Notify once per day regardless of outcome, so the operator sees the trend
+  # even on a day the WARN-prune fully resolves it on its own.
   today="$(date -u +%F)"
   if [ "$(cat "$WARN_STATE" 2>/dev/null || true)" != "$today" ]; then
-    notify "⚠️ Disk ${U}% on $(hostname) — warning at ${WARN}%, automatic docker prune fires at ${THRESH}%.
-docker: $(du -sh /var/lib/docker 2>/dev/null | cut -f1) · images: $(docker images -q | wc -l | tr -d ' ')
-Acting now avoids an emergency cleanup (which also deletes stopped containers, i.e. crash evidence)."
+    notify "⚠️ Disk was ${U}% on $(hostname) (warn ${WARN}%, emergency prune at ${THRESH}%) — ran the safe image/cache prune (no containers touched). Disk now ${A}%.
+docker: $(du -sh /var/lib/docker 2>/dev/null | cut -f1) · images: $(docker images -q | wc -l | tr -d ' ')"
     echo "$today" > "$WARN_STATE"
-    echo "$(date -Is) WARN sent (disk ${U}%)" >> "$LOG"
+    echo "$(date -Is) WARN notify sent (disk ${U}% -> ${A}%)" >> "$LOG"
   fi
 fi
 
