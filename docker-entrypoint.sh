@@ -71,7 +71,7 @@ mkdir -p memories projects logs
 # overwrite the tracked set before the no-clobber bulk copy runs.
 DOCS_STORE="${DOCS_STORE:-/app/memories/_docs}"
 mkdir -p "$DOCS_STORE"
-TRACKED_DOCS_FILES="windows-setup.md devops/phase-6-runbook.md devops/app-230-mcp-wiring.md handoff.html"
+TRACKED_DOCS_FILES="windows-setup.md devops/phase-6-runbook.md devops/app-230-mcp-wiring.md devops/app-250-crash-alarm.md handoff.html"
 if [ ! -L /app/docs ]; then
     if [ -d /app/docs ]; then
         for f in $TRACKED_DOCS_FILES; do
