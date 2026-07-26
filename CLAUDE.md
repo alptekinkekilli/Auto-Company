@@ -204,6 +204,30 @@ excluded from Codex's allowlist mechanically and forbidden by policy on both eng
   empty. Report the true status (e.g. "deployed, cert still provisioning") — never
   overstate. Use the production `<project>.pages.dev` URL, not a preview hash URL.
 
+### Payment rails (infrastructure fact, not a WTP-standard change)
+
+- **Stripe direct LIVE accounts are not obtainable for Turkey-based merchants** —
+  confirmed 2026-07-26. Stripe **test-mode** keys remain available and are wired for
+  checkout-plumbing verification (`STRIPE_SECRET_TEST_KEY`/`STRIPE_PUBLISHABLE_TEST_KEY`
+  in `runtime.env`) — this proves the integration works, nothing more.
+- **Paddle** (Merchant-of-Record) is the real path being set up for an actual LIVE,
+  WTP-capable payment rail reachable from Turkey. Paddle's business-verification
+  (KYB) requires a live domain with visible Terms/Refund/Privacy policy pages before
+  it will process an application.
+- That prerequisite site now exists: **`https://auto.appricode.tr`** (Cloudflare
+  Pages, `projects/auto-company-site/`) — Auto-Company's corporate front, built for
+  this purpose. Its Terms/Privacy/Refund pages carry a placeholder "Company
+  Information" section until a registered legal entity is finalized (operator is
+  deciding between two renameable dormant shelf companies, UK and Romania, or a
+  fresh UK Ltd incorporation) — do not treat those pages as legally final until that
+  section is filled in.
+- **This does not change the WTP evidence bar.** Whichever processor ends up live
+  (Paddle, or a future LIVE Stripe key), the standing rule is unchanged: only a real
+  payment from a real, unrelated buyer counts as WTP evidence (see `PROMPT.md`'s WTP
+  HARD STOP). Test-mode transactions, however the rail is provisioned, are never
+  WTP evidence — this has been reaffirmed multiple times and is not up for
+  reinterpretation just because the surrounding infrastructure looks more "real."
+
 ## Skills Arsenal
 
 All skills are under `.claude/skills/`. Any agent can use any skill when relevant.
