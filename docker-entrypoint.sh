@@ -242,12 +242,20 @@ DASHBOARD_PORT="${DASHBOARD_PORT:-8787}"
 
 DASH_PID=""
 LOOP_PID=""
+HEARTBEAT_PID=""
 term() {
     echo "[entrypoint] shutting down..."
     [ -n "$LOOP_PID" ] && kill -TERM "$LOOP_PID" 2>/dev/null || true
     [ -n "$DASH_PID" ] && kill -TERM "$DASH_PID" 2>/dev/null || true
+    [ -n "$HEARTBEAT_PID" ] && kill -TERM "$HEARTBEAT_PID" 2>/dev/null || true
 }
 trap term TERM INT
+
+# --- Sentry Crons heartbeat (background, best-effort, APP-250) — NOT part of
+# the dashboard/loop supervision below: its own death must never tear down the
+# container, it only proves to an external watcher that the container is alive.
+./scripts/core/sentry-heartbeat.sh &
+HEARTBEAT_PID=$!
 
 # --- dashboard (background), bound to all interfaces for Traefik/Cloudflare ---
 echo "[entrypoint] starting dashboard on 0.0.0.0:${DASHBOARD_PORT}"
