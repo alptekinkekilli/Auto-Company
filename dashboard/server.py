@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+import sentry_client
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DASHBOARD_DIR = Path(__file__).resolve().parent
@@ -982,6 +983,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
         self._text(path.read_text(encoding="utf-8"), content_type=content_type)
 
     def do_GET(self) -> None:  # noqa: N802
+        try:
+            self._do_GET()
+        except Exception:
+            sentry_client.capture_exception(extra={"method": "GET", "path": self.path})
+            raise
+
+    def _do_GET(self) -> None:
         parsed = urlparse(self.path)
         path = parsed.path
 
@@ -1039,6 +1047,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
         return self.rfile.read(min(length, limit))
 
     def do_POST(self) -> None:  # noqa: N802
+        try:
+            self._do_POST()
+        except Exception:
+            sentry_client.capture_exception(extra={"method": "POST", "path": self.path})
+            raise
+
+    def _do_POST(self) -> None:
         parsed = urlparse(self.path)
         path = parsed.path
 
