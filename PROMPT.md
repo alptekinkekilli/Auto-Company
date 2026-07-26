@@ -363,6 +363,19 @@ Use the current consensus appended to the prompt; if absent, read
 
 Priority: **Ship > Plan > Discuss**, subject to the HARD STOP and other guardrails.
 
+**An active validation or an operator-decision-pending Pending item does NOT pause discovery.**
+Operator correction (2026-07-26): cycles 228–230 stopped ALL work — including fresh Opportunity
+Discovery — and recorded a "minimal-cost HOLD" solely because one Pending candidate (`176-R`)
+was awaiting an operator `AUTHORIZE`/`HOLD`/`ARCHIVE` decision and no new directive existed.
+That is over-broad. Waiting for a decision on ONE candidate, or running a WTP test on the
+current Active Validation, is never a reason to stop screening NEW axes. Unless a directive
+explicitly says to pause all company activity, keep running normal Opportunity Discovery
+(workflow 6) in parallel with whatever is active or pending — a company with an active
+validation and an empty Pending Queue is not "done," it has simply stopped looking. The
+"do not manufacture activity" principle (from the pricing-structure gate's treadmill guard)
+bars RE-ADJUDICATING THE SAME AXIS without new evidence — it does not bar generating and
+screening DIFFERENT axes. Only genuinely stop new-axis work when a directive says so.
+
 ### 3. Assemble and Execute
 
 Apply the workflow-mapped 3–5-agent `team` rule and the ACTIVE-VALIDATION SKILL
