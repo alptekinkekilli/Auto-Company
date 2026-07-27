@@ -523,7 +523,7 @@ new-axis discovery:
    `PROJECT_EVALUATION_FRAMEWORK.md`'s mandatory tender admission pre-check (deadline-still-
    future + boundable scope) as the first two output lines — this is now a standing rule, not
    something that has to be specially requested. Use the document-processing tools
-   (`python3-docx`/`python3-openpyxl`/`python3-pandas`/`soffice --headless`/`tesseract`) and the
+   (`python3-docx`/`python3-openpyxl`/`python3-pandas`/`soffice --headless`/`pdftotext`/`tesseract`) and the
    requirement-to-evidence matrix methodology documented in
    `PROJECT_EVALUATION_FRAMEWORK.md`'s "İhale belge işleme" section. Stay within the same
    bounded-internal-feasibility-packet authority as `cycle209`/`cycle272`/`cycle274` — no

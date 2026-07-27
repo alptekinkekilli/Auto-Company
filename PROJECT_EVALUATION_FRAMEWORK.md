@@ -96,7 +96,9 @@ cycle çıktısı olarak kaybolmasın diye burada kalıcı hale getirildi.
 gerektirmez):** `.docx`/`.xlsx` metin ve tablo çıkarımı için `python3-docx` /
 `python3-openpyxl` / `python3-pandas`; eski `.doc`/`.xls` formatlarını modern
 formata çevirmek için `soffice --headless --convert-to <format>`
-(LibreOffice); taranmış/gömülü görsel içerik için `tesseract` OCR.
+(LibreOffice); `.pdf` metin çıkarımı için `pdftotext` (poppler-utils —
+Cycle 276'da eksik olduğu görülüp eklendi, çoğu ihalenin idari/teknik
+şartnamesi PDF'tir); taranmış/gömülü görsel içerik için `tesseract` OCR.
 
 **Türk kamu ihalelerinde tipik olarak görülen belge sınıfları** (otorite
 sayfasında doğrudan bağlantılı, genelde ücretsiz — ayrı bir "tam paket" ücretli

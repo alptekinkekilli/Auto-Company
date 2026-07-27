@@ -30,9 +30,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #  - libreoffice-writer/-calc --no-install-recommends: headless `soffice
 #    --convert-to` to normalize legacy .doc/.xls into modern formats first.
 #  - tesseract-ocr: OCR for scanned pages or images embedded in a document.
+#  - poppler-utils (pdftotext/pdftoppm): text extraction from the PDF specs
+#    that make up the other controlling half of most tender packets — found
+#    missing live on Cycle 276 (PTT IKN 2026/1338697), where `soffice` cannot
+#    do PDF-to-text and the packet correctly stopped rather than guess.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-docx python3-openpyxl python3-pandas \
-        libreoffice-writer libreoffice-calc tesseract-ocr \
+        libreoffice-writer libreoffice-calc tesseract-ocr poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Claude Code CLI (the loop's engine)
