@@ -451,16 +451,13 @@ def process_resolutions(text, directive_text, audit_path):
     return text, changed
 
 
-def main(app_dir: str | Path | None = None, send_fn=None, sleep_fn=None) -> int:
-    app = Path(app_dir) if app_dir else APP
+def _main_impl(app: Path, send_fn, sleep_fn) -> int:
     memories = app / "memories"
     requests_path = memories / "operator-requests.md"
     state_path = memories / ".operator-requests-state.json"
     audit_path = memories / "operator-requests-audit.log"
     consensus_path = memories / "consensus.md"
     directive_path = memories / "human-directive.md"
-    send = send_fn or send_telegram
-    sleep = sleep_fn or time.sleep
 
     memories.mkdir(parents=True, exist_ok=True)
     if not audit_path.is_file():
@@ -475,8 +472,23 @@ def main(app_dir: str | Path | None = None, send_fn=None, sleep_fn=None) -> int:
     state = load_state(state_path, audit_path)
 
     text, state, notif_changed = process_notifications(
-        text, state, audit_path, send, sleep
+        text, state, audit_path, send_fn, sleep_fn
     )
+
+    # Persist notification/dedup state FIRST and independently of everything below.
+    # A Telegram send is an irreversible side effect the moment the API returns
+    # ok:true — if persisting the resulting `notified` flag were coupled to (and
+    # could be lost by) a later, unrelated write failure, the next run would see no
+    # record of the send and re-notify for the same content. This was caught live
+    # on 2026-07-27: an operator-requests.md file left root-owned by an out-of-band
+    # `docker exec` (not the app user the loop runs as) made the requests.md
+    # rewrite below raise PermissionError, which — before this fix — propagated
+    # uncaught and skipped the state write entirely, even though Telegram had
+    # already been sent successfully.
+    try:
+        write_state(state_path, state)
+    except Exception as exc:  # noqa: BLE001 - must never block on this
+        audit(audit_path, f"STATE-WRITE-FAILED: {exc}")
 
     directive_text = (
         directive_path.read_text(encoding="utf-8") if directive_path.is_file() else ""
@@ -484,40 +496,63 @@ def main(app_dir: str | Path | None = None, send_fn=None, sleep_fn=None) -> int:
     text, resolve_changed = process_resolutions(text, directive_text, audit_path)
 
     if notif_changed or resolve_changed:
-        if not write_text_verified(requests_path, text):
-            audit(
-                audit_path,
-                "WRITE-FAILED: operator-requests.md read-back mismatch — state "
-                "changes NOT persisted to disk, will retry next run",
-            )
-            return 0
-
-    try:
-        write_state(state_path, state)
-    except Exception as exc:  # noqa: BLE001
-        audit(audit_path, f"STATE-WRITE-FAILED: {exc}")
-
-    if consensus_path.is_file():
-        final_blocks = parse_blocks(text)
-        open_items = [
-            (rid, fields)
-            for rid, (fields, _span) in sorted(final_blocks.items())
-            if fields.get("Status", "").strip().upper() == "OPEN"
-            and fields.get("Type", "").strip().lower() in ALLOWED_TYPES
-        ]
-        consensus_text = consensus_path.read_text(encoding="utf-8")
-        new_consensus = splice_projection(
-            consensus_text, render_projection_body(open_items)
-        )
-        if new_consensus != consensus_text:
-            if not write_text_verified(consensus_path, new_consensus):
+        try:
+            if not write_text_verified(requests_path, text):
                 audit(
                     audit_path,
-                    "WRITE-FAILED: consensus.md read-back mismatch — projection NOT "
-                    "updated, will retry next run",
+                    "WRITE-FAILED: operator-requests.md read-back mismatch — "
+                    "fingerprint/resolution changes NOT persisted, will retry next run",
                 )
+        except Exception as exc:  # noqa: BLE001 - notification state is already safe
+            audit(
+                audit_path,
+                f"WRITE-FAILED: operator-requests.md: {type(exc).__name__}: {exc} — "
+                "fingerprint/resolution changes NOT persisted, will retry next run",
+            )
+
+    if consensus_path.is_file():
+        try:
+            final_blocks = parse_blocks(text)
+            open_items = [
+                (rid, fields)
+                for rid, (fields, _span) in sorted(final_blocks.items())
+                if fields.get("Status", "").strip().upper() == "OPEN"
+                and fields.get("Type", "").strip().lower() in ALLOWED_TYPES
+            ]
+            consensus_text = consensus_path.read_text(encoding="utf-8")
+            new_consensus = splice_projection(
+                consensus_text, render_projection_body(open_items)
+            )
+            if new_consensus != consensus_text:
+                if not write_text_verified(consensus_path, new_consensus):
+                    audit(
+                        audit_path,
+                        "WRITE-FAILED: consensus.md read-back mismatch — projection "
+                        "NOT updated, will retry next run",
+                    )
+        except Exception as exc:  # noqa: BLE001 - notification/resolution already safe
+            audit(
+                audit_path,
+                f"WRITE-FAILED: consensus.md: {type(exc).__name__}: {exc} — "
+                "projection NOT updated, will retry next run",
+            )
 
     return 0
+
+
+def main(app_dir: str | Path | None = None, send_fn=None, sleep_fn=None) -> int:
+    app = Path(app_dir) if app_dir else APP
+    send = send_fn or send_telegram
+    sleep = sleep_fn or time.sleep
+    try:
+        return _main_impl(app, send, sleep)
+    except Exception as exc:  # noqa: BLE001 - contract: never crash the calling loop
+        try:
+            audit_path = app / "memories" / "operator-requests-audit.log"
+            audit(audit_path, f"UNCAUGHT-ERROR: {type(exc).__name__}: {exc}")
+        except Exception:  # noqa: BLE001 - even the fallback log must not raise
+            pass
+        return 0
 
 
 if __name__ == "__main__":

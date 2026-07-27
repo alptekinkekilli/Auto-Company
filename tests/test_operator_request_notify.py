@@ -252,6 +252,33 @@ class OperatorRequestNotifyTests(unittest.TestCase):
         send2 = _must_not_be_called
         orn.main(app_dir=self.app, send_fn=send2, sleep_fn=self.noop_sleep)
 
+    # Regression (caught live 2026-07-27 via a self-inflicted root-owned file from
+    # manual seeding): a write failure persisting the cosmetic Content-fingerprint
+    # rewrite to operator-requests.md must never lose the already-successful
+    # Telegram notification's dedup state, and must never crash the script.
+    def test_requests_md_write_failure_does_not_lose_notified_state(self):
+        self.write_requests(block_text("OPREQ-208A-001"))
+        send = make_send_fn([(True, None)])
+        self.requests_path.chmod(0o444)
+        try:
+            rc = orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
+        finally:
+            self.requests_path.chmod(0o644)
+
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(send.calls), 1)
+        state = json.loads(self.state_path.read_text(encoding="utf-8"))
+        self.assertTrue(state["OPREQ-208A-001"]["notified"])
+
+        audit_text = (self.app / "memories" / "operator-requests-audit.log").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("WRITE-FAILED: operator-requests.md", audit_text)
+
+        # A second, now-writable run must NOT re-send — state survived the failure.
+        orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
+        self.assertEqual(len(send.calls), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
