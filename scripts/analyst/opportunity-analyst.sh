@@ -180,4 +180,19 @@ t=open(p,encoding="utf-8").read().replace("registry-write: PENDING",f"registry-w
 open(p,"w",encoding="utf-8").write(t)
 PY
 
-echo "Opportunity Analyst run complete ($STAMP) — registry: $reg_written."
+
+# --- PASS 3: deterministic directive-promotion gate (narrow v1, 2026-07-27) ---
+# Separate from PASS 1/2 above: decides whether the report's proposed
+# human-directive.md text may be auto-applied, per the operator's explicit
+# narrow scoping (docs/research/opportunity-analyst-pass2-and-directive-
+# promotion-diagnosis-2026-07-27.md § 5-7). Pure deterministic text matching,
+# NOT another model call — see scripts/analyst/promote_directive.py for the
+# exact rules. Best-effort: never let a promotion-gate failure break the run.
+PROMOTE_SCRIPT="$APP/scripts/analyst/promote_directive.py"
+promotion_result="skipped (promote_directive.py not found)"
+if [ -f "$PROMOTE_SCRIPT" ]; then
+    promotion_result="$(python3 "$PROMOTE_SCRIPT" "$OUT_DIRECTIVE" 2>&1 || echo "BLOCKED: promote_directive.py errored")"
+fi
+log "[$STAMP] PROMOTION (narrow v1): $promotion_result"
+
+echo "Opportunity Analyst run complete ($STAMP) — registry: $reg_written — promotion: $promotion_result."
