@@ -43,11 +43,43 @@ CHECKIN_URL="https://${HOST}/api/${PROJECT_ID}/cron/${MONITOR_SLUG}/${PUBLIC_KEY
 # flagged within ~4 minutes, not the ~2.5 hours it took last time.
 MONITOR_CONFIG='{"schedule":{"type":"interval","value":2,"unit":"minute"},"checkin_margin":2,"max_runtime":1,"failure_issue_threshold":1,"recovery_threshold":1,"timezone":"UTC"}'
 
+APP="${APP_DIR:-/app}"
+DASHBOARD_PORT="${DASHBOARD_PORT:-8787}"
+LOOP_PID_FILE="$APP/.auto-loop.pid"
+
+# APP-250 follow-up (2026-07-27): this script is started BEFORE, and lives
+# independently of, the dashboard/loop (see docker-entrypoint.sh's comment —
+# its own death must never tear the container down). That means an unconditional
+# "ok" every 90s only proves the CONTAINER PROCESS TREE exists, not that the
+# company is doing anything — a restart storm that completes each crash/restart
+# cycle in well under 4 minutes (the documented APP-240 stale-PID storm cycled
+# every 5-10 min, which this WOULD have caught, but a faster one wouldn't) could
+# keep producing "ok" check-ins forever while dashboard/loop never survive their
+# first few seconds. Check both are actually alive before reporting "ok"; report
+# "error" (Sentry treats this as an immediate failure, no need to wait out the
+# missed-checkin margin) otherwise.
+company_is_alive() {
+    curl -s -m 5 -o /dev/null "http://127.0.0.1:${DASHBOARD_PORT}/api/status" || return 1
+    [ -f "$LOOP_PID_FILE" ] || return 1
+    kill -0 "$(cat "$LOOP_PID_FILE" 2>/dev/null)" 2>/dev/null || return 1
+    return 0
+}
+
 echo "[heartbeat] starting — monitor=$MONITOR_SLUG interval=90s"
+# Grace window: dashboard/loop are started via `&` at nearly the same moment as
+# this script, but need a few seconds to bind their port / write their PID file.
+# Checking immediately would false-positive "error" on every ordinary boot.
+sleep 8
 while true; do
+    if company_is_alive; then
+        status="ok"
+    else
+        status="error"
+        echo "[heartbeat] dashboard/loop liveness check failed — reporting error"
+    fi
     curl -s -m 10 -X POST "$CHECKIN_URL" \
         -H "Content-Type: application/json" \
-        -d "{\"status\":\"ok\",\"monitor_config\":${MONITOR_CONFIG}}" \
+        -d "{\"status\":\"${status}\",\"monitor_config\":${MONITOR_CONFIG}}" \
         -o /dev/null || true
     sleep 90
 done
