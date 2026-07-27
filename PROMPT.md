@@ -239,6 +239,81 @@ this rule only removes the round-trip for the narrow internal-feasibility-packet
 If a proposed packet doesn't clearly fit that shape, default to drafting the operator
 authorization brief as before; do not stretch this discretion to cover it.
 
+### OPERATOR ESCALATION — deterministic request ledger (OPREQ)
+
+When the company reaches a genuine blocker whose ONLY resolution is operator-supplied
+input — a document, a credential, a legal or financial decision, spend/purchase
+approval, or an external action beyond current authority — record it in
+`memories/operator-requests.md`, not only in a `docs/<role>/` brief. A brief buried in
+`docs/ceo/` with no durable, queryable record and no push notification is not
+"delivered" to the operator; `cycle209`/`cycle214`'s `208-A` packet proved this: its
+exact recovery input sat unread for two days before the operator asked directly.
+
+**When to create a request — narrow, allowlisted types only:** `document-procurement`,
+`credential`, `legal-decision`, `financial-decision`, `expenditure-approval`,
+`external-action-authorization`. Do NOT create a request for a plain HOLD, an UNKNOWN,
+a research result, or any informational note — those stay in `consensus.md`/`docs/` as
+before. `scripts/core/operator_request_notify.py` enforces this allowlist
+deterministically: an unrecognized type is silently ignored (no Telegram, no
+projection entry), so tagging something outside this list wastes the record instead of
+escalating it.
+
+**Format — append a new block to `memories/operator-requests.md`:**
+
+```
+## OPREQ-<stable-id>
+
+- Status: OPEN
+- Type: <one of the six types above>
+- Blocked scope: <candidate/axis ID, or GLOBAL if this blocks the entire loop>
+- Required input: <exactly what the operator must supply or decide>
+- Acceptable response format: <how a reply should reach the company, e.g. "human-directive.md entry with Resolves: OPREQ-<id>">
+- Source brief: <path to the docs/<role>/... brief with full reasoning, if one exists>
+- Created: <UTC ISO-8601 timestamp>
+```
+
+Do not write a `Content fingerprint` field — the script computes and rewrites it. Pick a
+stable, descriptive ID (e.g. `OPREQ-208A-001`) and never reuse an ID.
+
+`Blocked scope: GLOBAL` means treat this exactly like a `PENDING` human directive: do
+not proceed with normal autonomous discretion elsewhere until it is resolved or
+cancelled. Any other scope value blocks only that candidate/axis — the rest of the
+company keeps working normally. Reserve `GLOBAL` for cases where continuing anywhere
+would compound the same unresolved risk (e.g. an unresolved legal exposure that taints
+every candidate); default to the narrow scope.
+
+**What happens automatically:** every loop cycle, a deterministic script (never the
+model) hashes each OPEN request's material fields, sends exactly one Telegram
+notification per (request ID, content hash) pair — never on an unchanged rerun, once
+more only if the required input or scope materially changes, never for a
+timestamp/formatting-only edit — and regenerates the `## Awaiting Operator` section of
+`consensus.md` as a read-only projection of currently-OPEN, allowlisted-type requests.
+Never hand-edit that consensus.md section or `memories/.operator-requests-state.json` —
+both are code-owned; edits there are overwritten and do not count as resolving
+anything.
+
+**Resolution protocol:** the operator answers via `memories/human-directive.md` as
+usual, with the directive text containing `Resolves: OPREQ-<id>`. Setting that
+directive's `Status` to `DONE` is NOT sufficient by itself to close the request — as
+part of acting on the directive, verify the supplied input/decision actually satisfies
+the original "Required input," then append a `Resolution evidence:` field (what was
+verified, how) to that request's block in `operator-requests.md`. Only when both — a
+`DONE` directive referencing the ID, and recorded evidence — are present does the
+script flip the request to `RESOLVED`. A directive that references an ID without
+genuine verification leaves the request OPEN and logs why in
+`memories/operator-requests-audit.log`; treat that as working as intended, not a bug to
+route around.
+
+If a request becomes moot for a reason other than "the operator answered it" (e.g. the
+blocked candidate itself gets ARCHIVEd), you may set `Status: CANCELLED` directly with a
+one-line rationale in the block — this does not go through the evidence-verification
+gate, since it is not a claim that the ask was fulfilled.
+
+**Never put secret values in a request.** `Required input` describes WHAT is needed
+(e.g. "EKAP bidder-account login for firm X"), never the credential itself. The
+notification script also redacts obvious secret-shaped tokens defensively, but do not
+rely on that — treat it as a last-resort filter, not a reason to be careless.
+
 ### EXTERNAL-SYSTEM WRITE AUTHORITY
 
 MCP/tool availability is capability, not a new grant of authority. As of 2026-07-25 the

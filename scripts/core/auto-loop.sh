@@ -1386,6 +1386,14 @@ This is Cycle #$loop_count. Act decisively."
         fi
     fi
 
+    # Operator-request ledger (OPREQ): process any new/changed escalation-worthy
+    # request the cycle just wrote to memories/operator-requests.md — dedup on
+    # content hash, notify Telegram only on genuine API success, check for
+    # resolutions, regenerate consensus.md's "Awaiting Operator" projection.
+    # Deterministic, never fails the loop (script always exits 0).
+    python3 "$SCRIPT_DIR/operator_request_notify.py" "$PROJECT_DIR" \
+        >> "$LOG_DIR/operator-requests.log" 2>&1 || true
+
     # Telegram: ping the operator with this cycle's summary (no-op if TELEGRAM_* unset; never fails the loop).
     if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
         _tg_head="OK"; [ -n "${cycle_failed_reason:-}" ] && _tg_head="FAIL: ${cycle_failed_reason}"
