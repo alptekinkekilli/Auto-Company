@@ -251,7 +251,9 @@ exact recovery input sat unread for two days before the operator asked directly.
 
 **When to create a request — narrow, allowlisted types only:** `document-procurement`,
 `credential`, `legal-decision`, `financial-decision`, `expenditure-approval`,
-`external-action-authorization`. Do NOT create a request for a plain HOLD, an UNKNOWN,
+`external-action-authorization`, `adjudication-pending` (see
+`### EXTERNAL ADJUDICATION` below for exactly when this last one applies — it is
+narrower than it sounds). Do NOT create a request for a plain HOLD, an UNKNOWN,
 a research result, or any informational note — those stay in `consensus.md`/`docs/` as
 before. `scripts/core/operator_request_notify.py` enforces this allowlist
 deterministically: an unrecognized type is silently ignored (no Telegram, no
@@ -264,7 +266,7 @@ escalating it.
 ## OPREQ-<stable-id>
 
 - Status: OPEN
-- Type: <one of the six types above>
+- Type: <one of the seven types above>
 - Blocked scope: <candidate/axis ID, or GLOBAL if this blocks the entire loop>
 - Required input: <exactly what the operator must supply or decide>
 - Acceptable response format: <how a reply should reach the company, e.g. "human-directive.md entry with Resolves: OPREQ-<id>">
@@ -364,6 +366,52 @@ since it is not a claim that the ask was fulfilled.
 (e.g. "EKAP bidder-account login for firm X"), never the credential itself. The
 notification script also redacts obvious secret-shaped tokens defensively, but do not
 rely on that — treat it as a last-resort filter, not a reason to be careless.
+
+### EXTERNAL ADJUDICATION — when the company must not rule on itself
+
+Standing rule (`memories/high-model-adjudication.md`, formalized 2026-07-27 after it
+caught two real errors the same day — a design flaw in a candidate evaluation, and a
+factual overstatement in an evidence pack believed accurate): for the two situations
+below, **your own conclusion is not final** — you must package the evidence and escalate
+to an independent high-capability model via the operator, not decide it yourself, no
+matter how well-supported your reasoning feels. This company (and the model running it)
+argues persuasively from thin evidence; a 0-for-61 kill record went unquestioned for 32
+cycles because every kill *read* well internally. This is the check on that.
+
+**Triggers — narrow on purpose, do not fire on routine work:**
+
+1. **A candidate reaches ECONOMIC PASS** under the standing base-and-stress margin gate
+   (i.e., you are about to recommend a real WTP test or Active Validation status for it).
+   This is rare by design (per the discovery-filter-audit history, most candidates never
+   reach this) — that rarity is exactly why it needs the outside check, not routine
+   internal sign-off.
+2. **A cycle concludes a major track/policy kill or pivot** — not a routine single-
+   candidate HOLD/NO-GO/ARCHIVE (those stay internal, CEO+critic is sufficient, as it is
+   every other cycle), but a conclusion that changes what an entire standing track does
+   going forward (e.g. "kill the Tender Track," "change 176-R's whole pricing model,"
+   "the search regime itself is wrong"). If you are not sure whether a conclusion counts
+   as "major," it does not — a single candidate's fate is routine; the shape of the
+   company's own standing work is not.
+
+**What to do when a trigger fires — do NOT skip straight to a recommendation:**
+
+1. Write an evidence pack to `docs/research/<topic>-evidence-pack-<date>.md`. Follow
+   `scripts/ops/candidate-adjudication-prompt-template.md`'s structure for a single-
+   candidate economic pass; adapt its same discipline (separate OBSERVED from INFERRED,
+   leave UNKNOWNs standing, name the known silent-failure modes so the adjudicator checks
+   for their analogues) for a broader multi-candidate or policy question — the 2026-07-27
+   Tender Track pack is a worked example of the adapted shape.
+2. Create an OPREQ with `Type: adjudication-pending`, `Required input` pointing at the
+   pack's path and stating plainly what ruling is being requested, and `Acceptable
+   response format` describing that the operator will take the pack to an external model
+   and return with `Resolves: OPREQ-<id>` plus a `Decision for OPREQ-<id>: <ruling> —
+   <rationale>` line, exactly like a `legal-decision`/`financial-decision` OPREQ (the
+   resolution verifier for `adjudication-pending` is literally the same one — see
+   `scripts/core/operator_request_notify.py`).
+3. Do not treat your own draft recommendation in the pack as a decision. State it, if you
+   have one, as one input for the adjudicator to weigh — not as the outcome.
+4. Continue other standing work in parallel while the OPREQ is open; a pending
+   adjudication on one candidate or track does not pause unrelated cycles.
 
 ### EXTERNAL-SYSTEM WRITE AUTHORITY
 

@@ -433,6 +433,51 @@ class OperatorRequestNotifyTests(unittest.TestCase):
         blocks = orn.parse_blocks(self.requests_path.read_text(encoding="utf-8"))
         self.assertEqual(blocks["OPREQ-LEGAL-001"][0]["Status"], "RESOLVED")
 
+    # 6g. adjudication-pending: reuses the legal/financial structured-decision
+    #     verifier — applying an external adjudicator's ruling requires the
+    #     same "Decision for OPREQ-<id>: ..." line the OPERATOR wrote, not a
+    #     model claim that the ruling arrived.
+    def test_adjudication_pending_resolution_requires_structured_decision_line(self):
+        self.write_requests(
+            block_text(
+                "OPREQ-ADJ-001",
+                type_="adjudication-pending",
+                required=(
+                    "Take the evidence pack to an independent high-capability "
+                    "model and apply its ruling."
+                ),
+                scope="GLOBAL",
+            )
+        )
+        send = make_send_fn([(True, None)])
+        orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
+        self.assertIn(
+            "OPREQ-ADJ-001", self.consensus_path.read_text(encoding="utf-8")
+        )
+
+        # References it and is DONE, but no structured Decision line yet.
+        self.directive_path.write_text(
+            "# Human Directive\n\n## Status\nDONE\n\n## Directive\n"
+            "Applied the ruling. Resolves: OPREQ-ADJ-001\n",
+            encoding="utf-8",
+        )
+        orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
+        blocks = orn.parse_blocks(self.requests_path.read_text(encoding="utf-8"))
+        self.assertEqual(blocks["OPREQ-ADJ-001"][0]["Status"], "OPEN")
+
+        self.directive_path.write_text(
+            "# Human Directive\n\n## Status\nDONE\n\n## Directive\n"
+            "Resolves: OPREQ-ADJ-001\n"
+            "Decision for OPREQ-ADJ-001: PIVOT — external ruling applied verbatim.\n",
+            encoding="utf-8",
+        )
+        orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
+        blocks = orn.parse_blocks(self.requests_path.read_text(encoding="utf-8"))
+        self.assertEqual(blocks["OPREQ-ADJ-001"][0]["Status"], "RESOLVED")
+        self.assertNotIn(
+            "OPREQ-ADJ-001", self.consensus_path.read_text(encoding="utf-8")
+        )
+
     # 6f. expenditure-approval / external-action-authorization: require a
     #     structured "Authorization for OPREQ-<id>:" block (System/Action/Target/
     #     Limit) the OPERATOR wrote into human-directive.md.

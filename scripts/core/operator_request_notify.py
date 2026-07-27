@@ -28,8 +28,9 @@ agents that do so are violating policy, not exercising a legitimate write path.
 
 Escalation-worthy types (the ONLY types that ever produce a Telegram notification or a
 consensus.md projection entry) are documents, credentials, legal/financial decisions,
-spend approval, or external action beyond current authority — never a plain HOLD,
-UNKNOWN, research result, or informational note. See ALLOWED_TYPES below.
+spend approval, external action beyond current authority, or a pending external
+adjudication ruling — never a plain HOLD, UNKNOWN, research result, or informational
+note. See ALLOWED_TYPES below.
 
 Exit code is always 0 (never breaks the calling loop). All decisions are logged to
 memories/operator-requests-audit.log.
@@ -57,6 +58,7 @@ ALLOWED_TYPES = {
     "financial-decision",
     "expenditure-approval",
     "external-action-authorization",
+    "adjudication-pending",
 }
 
 REQUIRED_FIELDS = [
@@ -602,7 +604,14 @@ def verify_resolution(req_id: str, fields: dict, directive_text: str, app: Path)
         return verify_document_procurement(fields, app)
     if req_type == "credential":
         return verify_credential(fields, app)
-    if req_type in ("legal-decision", "financial-decision"):
+    if req_type in ("legal-decision", "financial-decision", "adjudication-pending"):
+        # adjudication-pending reuses this verifier deliberately: applying an
+        # external adjudicator's ruling is structurally the same act as the
+        # operator recording a legal/financial decision -- a human transcribes
+        # a real decision made outside the model into human-directive.md. The
+        # model still cannot resolve its own escalation by asserting the
+        # ruling arrived; the structured line must exist in the operator's own
+        # directive text.
         return verify_legal_or_financial_decision(req_id, directive_text)
     if req_type in ("expenditure-approval", "external-action-authorization"):
         return verify_authorization(req_id, directive_text)
