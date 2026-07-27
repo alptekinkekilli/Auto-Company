@@ -21,6 +21,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get update && apt-get install -y --no-install-recommends gh \
     && rm -rf /var/lib/apt/lists/*
 
+# Document-processing tools for tender/procurement work (Word/Excel .docx/.xlsx
+# text+table extraction, headless conversion of legacy .doc/.xls, OCR for
+# scanned/embedded images). Deterministic parsing, no LLM API calls, no new
+# services — Debian packages only, matching "boring technology first".
+#  - python3-docx / python3-openpyxl / python3-pandas: read .docx/.xlsx text,
+#    tables, and structured data directly in Python (no pip/PEP-668 needed).
+#  - libreoffice-writer/-calc --no-install-recommends: headless `soffice
+#    --convert-to` to normalize legacy .doc/.xls into modern formats first.
+#  - tesseract-ocr: OCR for scanned pages or images embedded in a document.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3-docx python3-openpyxl python3-pandas \
+        libreoffice-writer libreoffice-calc tesseract-ocr \
+    && rm -rf /var/lib/apt/lists/*
+
 # Claude Code CLI (the loop's engine)
 RUN npm install -g @anthropic-ai/claude-code && npm cache clean --force
 
