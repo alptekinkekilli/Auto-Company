@@ -101,14 +101,26 @@ print("REPORT_OK")
 PY
 
 # --- PASS 2: registry diff (dedicated codex call — report + old registry → json) ---
+# Root cause (diagnosed 2026-07-27, docs/research/opportunity-analyst-pass2-and-
+# directive-promotion-diagnosis-2026-07-27.md): this used to interpolate the FULL
+# registry + FULL report text into the prompt STRING, then pass that whole string
+# as a single execve() argv element. Once the registry grew to ~280KB (report
+# ~30KB, combined ~310KB) that blew past Linux's per-argument MAX_ARG_STRLEN
+# (~128KiB) — codex never even started (no session log), the OS itself rejected
+# the exec with E2BIG, and `4f89d09`'s new debug log would have shown an empty
+# reg_out with rc>0 for exactly this reason. Fix: give codex a SHORT prompt that
+# names the two file PATHS and has it read them itself (same pattern pass-1
+# already uses via `rg` — file reads happen through normal syscalls inside the
+# sandboxed process, not through argv, so there is no size ceiling here).
 REG_EFFORT="${ANALYST_REGISTRY_EFFORT:-medium}"   # mechanical transform; stays within the operator's max=high cap
 REG_MSG="$WORK/reg.txt"; REG_PROMPT="$WORK/reg_prompt.txt"
-python3 - "$MSG" "$REGISTRY" > "$REG_PROMPT" <<'PY'
+python3 - "$OUT_DIRECTIVE" "$REGISTRY" > "$REG_PROMPT" <<'PY'
 import sys
-report=open(sys.argv[1],encoding="utf-8").read()
-reg=open(sys.argv[2],encoding="utf-8").read()
-print("You are updating Auto Company's candidate registry from an analyst decision report. Output ONLY a single ```json code block and nothing else.\n\n"
-      "CURRENT REGISTRY:\n"+reg+"\n\nANALYST DECISION REPORT (verdicts + Auto-Company-vs-analyst selection):\n"+report+"\n\n"
+report_path, reg_path = sys.argv[1:3]
+print("You are updating Auto Company's candidate registry from an analyst decision report. "
+      "Output ONLY a single ```json code block and nothing else.\n\n"
+      f"Read the COMPLETE current registry at: {reg_path}\n"
+      f"Read the COMPLETE analyst decision report (verdicts + Auto-Company-vs-analyst selection) at: {report_path}\n\n"
       "Produce: {\"registry_md\":\"<COMPLETE updated candidate-registry.md. Keep the file structure and the three headers '## Selected Candidates', '## Archived Candidates', '## Pending Queue' with markdown tables and the SAME columns as the current registry. Apply the report verdicts: ACTIVE / CONDITIONAL GO / QUEUED -> Selected or Pending; NO-GO or de-selected -> Archived; HOLD / research-only -> Pending. Dedup by axis (buyer x delivery x price). Retain EVERY candidate already in the current Archived section - never drop one.>\"}\n"
       "Valid JSON, newlines escaped as \\n.")
 PY
