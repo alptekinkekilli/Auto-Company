@@ -1,0 +1,184 @@
+#!/usr/bin/env python3
+"""Deterministic PASS-2 registry merge (2026-07-27).
+
+Built after the operator caught a real gap in the initial E2BIG fix: letting a
+model reproduce the ENTIRE ~280KB registry (including ~180KB of append-only
+historical cycle-scan logs the pass-2 prompt never even asked it to preserve)
+risked silent, catastrophic data loss even on a "successful" run (rc=0, valid
+JSON, plausible-looking output). This script never asks a model to reproduce
+content it might drop — it mechanically isolates the one span of the file that
+is genuinely "live decision state" (## Selected / ## Pending shortlist /
+## Deferred / HOLD index / ## Archived) from everything else, and only a
+model-proposed replacement for THAT span is ever considered.
+
+Everything before "## Selected" and everything from "## Exhausted patterns /
+lessons" onward is NEVER touched, no matter what the model returns — proven by
+exact string splitting, not model instruction-following.
+
+Exit code is always 0 (never breaks the caller). Stdout is exactly one of:
+  MERGED: <summary>
+  BLOCKED: <reason>
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+APP = Path(__file__).resolve().parents[2]
+AUDIT_LOG = APP / "memories" / "registry-merge-audit.log"
+
+LIVE_SPAN_START = "\n\n## Selected\n"
+LIVE_SPAN_END = "\n\n## Exhausted patterns / lessons\n"
+
+# Candidate-ID token shapes actually observed in this registry: "176-R",
+# "266-A", "192-REM", "216-C12-P", "215-TF-B", "Candidate #25". Deliberately
+# broad — a false-positive token just makes the preservation check slightly
+# stricter (safe direction), never looser.
+ID_TOKEN_RE = re.compile(r"\b\d{2,4}-[A-Z][A-Za-z0-9-]*\b|Candidate #\d+")
+
+
+def audit(msg: str) -> None:
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    with AUDIT_LOG.open("a", encoding="utf-8") as f:
+        f.write(f"[{stamp}] {msg}\n")
+
+
+def blocked(reason: str) -> None:
+    audit(f"BLOCKED: {reason}")
+    print(f"BLOCKED: {reason}")
+    sys.exit(0)
+
+
+def extract_ids(text: str) -> set[str]:
+    return set(ID_TOKEN_RE.findall(text))
+
+
+def extract_axes(text: str) -> list[str]:
+    """Longest '×'-containing cell in each pipe-table row — robust to the
+    three different table column layouts actually used across sections."""
+    axes = []
+    for line in text.splitlines():
+        s = line.strip()
+        if not s.startswith("|") or set(s) <= {"|", "-", " ", ":"}:
+            continue
+        cells = [c.strip() for c in s.strip("|").split("|")]
+        candidates = [c for c in cells if "×" in c]
+        if candidates:
+            axes.append(max(candidates, key=len))
+    return axes
+
+
+def normalize_axis(axis: str) -> str:
+    return re.sub(r"\s+", " ", axis).strip().lower()
+
+
+def split_registry(text: str) -> tuple[str, str, str]:
+    if LIVE_SPAN_START not in text:
+        raise ValueError(f"marker not found: {LIVE_SPAN_START!r}")
+    before, rest = text.split(LIVE_SPAN_START, 1)
+    live_and_after = LIVE_SPAN_START + rest
+    if LIVE_SPAN_END not in live_and_after:
+        raise ValueError(f"marker not found: {LIVE_SPAN_END!r}")
+    live, after = live_and_after.split(LIVE_SPAN_END, 1)
+    after = LIVE_SPAN_END + after
+    return before, live, after
+
+
+def main() -> None:
+    if len(sys.argv) != 4:
+        blocked(
+            "usage: merge_registry.py <registry.md path> "
+            "<model-json-output path> <target registry.md path to write>"
+        )
+    registry_path = Path(sys.argv[1])
+    model_output_path = Path(sys.argv[2])
+    target_path = Path(sys.argv[3])
+
+    if not registry_path.is_file():
+        blocked(f"registry missing: {registry_path}")
+    if not model_output_path.is_file() or model_output_path.stat().st_size == 0:
+        blocked("model produced no output")
+
+    original = registry_path.read_text(encoding="utf-8")
+    try:
+        before, old_live, after = split_registry(original)
+    except ValueError as exc:
+        blocked(f"could not isolate live span in current registry: {exc}")
+
+    raw = model_output_path.read_text(encoding="utf-8", errors="replace")
+    m = re.search(r"```json\s*(\{.*?\})\s*```", raw, re.S) or re.search(r"(\{.*\})", raw, re.S)
+    if not m:
+        blocked("no json block in model output")
+    try:
+        payload = json.loads(m.group(1))
+    except Exception as exc:
+        blocked(f"bad json: {exc}")
+
+    new_live = payload.get("registry_live_span", "")
+    if not new_live or len(new_live) < 100:
+        blocked("model's registry_live_span missing or too short")
+    if not new_live.startswith("\n## Selected") and "## Selected" not in new_live[:50]:
+        blocked("model's registry_live_span does not start with ## Selected — refusing to guess")
+
+    # --- invariant 1: no candidate silently disappears ---
+    old_ids = extract_ids(old_live)
+    new_ids = extract_ids(new_live)
+    missing = old_ids - new_ids
+    if missing:
+        blocked(
+            f"{len(missing)} candidate ID(s) present before but missing after: "
+            + ", ".join(sorted(missing)[:20])
+        )
+
+    # --- invariant 2: no duplicate axis in the new live span ---
+    new_axes = extract_axes(new_live)
+    seen: dict[str, int] = {}
+    dupes = []
+    for axis in new_axes:
+        key = normalize_axis(axis)
+        seen[key] = seen.get(key, 0) + 1
+        if seen[key] == 2:
+            dupes.append(axis[:80])
+    if dupes:
+        blocked(f"{len(dupes)} duplicate axis row(s) in proposed registry: " + " | ".join(dupes[:5]))
+
+    # --- assemble, write, read back, verify ---
+    if not new_live.startswith("\n"):
+        new_live = "\n" + new_live
+    if not new_live.endswith("\n"):
+        new_live += "\n"
+    new_full = before + new_live.rstrip("\n") + "\n" + after.lstrip("\n")
+    # before/after are byte-identical to the original by construction — only
+    # new_live differs. Confirm that explicitly before writing anything.
+    if before not in original or after not in original:
+        blocked("internal error: before/after span mismatch — aborting, not writing")
+
+    target_path.write_text(new_full, encoding="utf-8")
+    readback = target_path.read_text(encoding="utf-8")
+    if readback != new_full:
+        target_path.write_text(original, encoding="utf-8")
+        blocked("read-back verification failed — restored original, did not write")
+
+    added = new_ids - old_ids
+    old_lines, new_lines = len(old_live.splitlines()), len(new_live.splitlines())
+    final_hash = hashlib.sha256(target_path.read_bytes()).hexdigest()
+    audit(
+        "MERGED: "
+        f"old_live_lines={old_lines} new_live_lines={new_lines} "
+        f"old_id_count={len(old_ids)} new_id_count={len(new_ids)} "
+        f"ids_added={sorted(added)} ids_removed=[] "
+        f"final_sha256={final_hash}"
+    )
+    print(
+        f"MERGED: old_live_lines={old_lines} new_live_lines={new_lines} "
+        f"ids_preserved={len(old_ids)} ids_added={len(added)} "
+        f"final_sha256={final_hash[:12]}..."
+    )
+
+
+if __name__ == "__main__":
+    main()

@@ -101,76 +101,89 @@ print("REPORT_OK")
 PY
 
 # --- PASS 2: registry diff (dedicated codex call — report + old registry → json) ---
-# Root cause (diagnosed 2026-07-27, docs/research/opportunity-analyst-pass2-and-
-# directive-promotion-diagnosis-2026-07-27.md): this used to interpolate the FULL
-# registry + FULL report text into the prompt STRING, then pass that whole string
-# as a single execve() argv element. Once the registry grew to ~280KB (report
-# ~30KB, combined ~310KB) that blew past Linux's per-argument MAX_ARG_STRLEN
-# (~128KiB) — codex never even started (no session log), the OS itself rejected
-# the exec with E2BIG, and `4f89d09`'s new debug log would have shown an empty
-# reg_out with rc>0 for exactly this reason. Fix: give codex a SHORT prompt that
-# names the two file PATHS and has it read them itself (same pattern pass-1
-# already uses via `rg` — file reads happen through normal syscalls inside the
-# sandboxed process, not through argv, so there is no size ceiling here).
+# Root cause of the ORIGINAL E2BIG failure (2026-07-27, docs/research/
+# opportunity-analyst-pass2-and-directive-promotion-diagnosis-2026-07-27.md):
+# the full registry+report were interpolated into the prompt STRING and passed
+# as a single execve() argv element, blowing past Linux's ~128KiB per-argument
+# MAX_ARG_STRLEN. Fixed by giving codex file PATHS instead of inlined content.
+#
+# Root cause of a SECOND, more serious gap the operator caught in that fix
+# (same date): ~180KB of this registry is an append-only historical journal
+# (## PART A / Cycle N discovery-scan sections, after "## Exhausted patterns /
+# lessons") that the pass-2 prompt never told the model to preserve — and the
+# model is never trusted to reproduce ~280KB of content losslessly regardless.
+# Fix: never ask a model to reproduce the whole file. Mechanically isolate the
+# "## Selected" .. "## Archived" span (the only part that is genuinely live
+# decision state) via exact string splitting BEFORE calling codex, and splice
+# the model's proposed replacement for ONLY that span back in via
+# scripts/analyst/merge_registry.py — everything else is byte-identical by
+# construction, never by instruction-following. See that script for the
+# candidate-ID-preservation and duplicate-axis invariant checks it enforces
+# before writing anything.
 REG_EFFORT="${ANALYST_REGISTRY_EFFORT:-medium}"   # mechanical transform; stays within the operator's max=high cap
 REG_MSG="$WORK/reg.txt"; REG_PROMPT="$WORK/reg_prompt.txt"
-python3 - "$OUT_DIRECTIVE" "$REGISTRY" > "$REG_PROMPT" <<'PY'
+LIVE_SPAN_FILE="$WORK/registry-live-span.md"
+
+python3 - "$REGISTRY" > "$LIVE_SPAN_FILE" 2>"$WORK/extract_err" <<'PY'
 import sys
-report_path, reg_path = sys.argv[1:3]
-print("You are updating Auto Company's candidate registry from an analyst decision report. "
-      "Output ONLY a single ```json code block and nothing else.\n\n"
-      f"Read the COMPLETE current registry at: {reg_path}\n"
+t = open(sys.argv[1], encoding="utf-8").read()
+START = "\n\n## Selected\n"; END = "\n\n## Exhausted patterns / lessons\n"
+if START not in t or END not in t:
+    print(f"marker not found (START={START in t}, END={END in t})", file=sys.stderr)
+    sys.exit(1)
+before, rest = t.split(START, 1)
+live_and_after = START + rest
+live, _after = live_and_after.split(END, 1)
+sys.stdout.write(live)
+PY
+extract_rc=$?
+if [ "$extract_rc" -ne 0 ]; then
+    reg_written="skipped (could not isolate live span: $(cat "$WORK/extract_err" 2>/dev/null | tr '\n' ' '))"
+fi
+
+if [ -z "${reg_written:-}" ]; then
+    python3 - "$OUT_DIRECTIVE" "$LIVE_SPAN_FILE" > "$REG_PROMPT" <<'PY'
+import sys
+report_path, live_span_path = sys.argv[1:3]
+print("You are updating the LIVE portion of Auto Company's candidate registry from an "
+      "analyst decision report. Output ONLY a single ```json code block and nothing else.\n\n"
+      f"Read the COMPLETE current live registry span at: {live_span_path}\n"
+      "(this file starts with the line '## Selected' and contains, in order: '## Selected', "
+      "'## Pending shortlist', '## Deferred / HOLD index', and '## Archived' — it is NOT the "
+      "whole registry file, only its live-decision-state span. Do not invent other sections.)\n"
       f"Read the COMPLETE analyst decision report (verdicts + Auto-Company-vs-analyst selection) at: {report_path}\n\n"
-      "Produce: {\"registry_md\":\"<COMPLETE updated candidate-registry.md. Keep the file structure and the three headers '## Selected Candidates', '## Archived Candidates', '## Pending Queue' with markdown tables and the SAME columns as the current registry. Apply the report verdicts: ACTIVE / CONDITIONAL GO / QUEUED -> Selected or Pending; NO-GO or de-selected -> Archived; HOLD / research-only -> Pending. Dedup by axis (buyer x delivery x price). Retain EVERY candidate already in the current Archived section - never drop one.>\"}\n"
+      "Produce: {\"registry_live_span\":\"<the COMPLETE updated live span, starting with '## Selected' "
+      "and ending at the last line of the Archived section (do not include '## Exhausted patterns / "
+      "lessons' or anything after it). Keep the exact same four headers and table/bullet formats "
+      "as the input span. Apply the report's verdicts: ACTIVE/CONDITIONAL GO/QUEUED -> Selected or "
+      "Pending shortlist; HOLD/research-only -> Deferred / HOLD index; NO-GO or de-selected -> "
+      "Archived. Dedup by axis (buyer x delivery x price). Every candidate ID present in the input "
+      "span MUST still appear somewhere in the output span - moving between subsections is fine, "
+      "silently dropping one is not.>\"}\n"
       "Valid JSON, newlines escaped as \\n.")
 PY
 
-( cd "$APP" && timeout "$TIMEOUT" "$CODEX_BIN" exec --skip-git-repo-check \
-    -c sandbox_mode="$SANDBOX" -m "$MODEL" -c model_reasoning_effort="$REG_EFFORT" \
-    -o "$REG_MSG" "$(cat "$REG_PROMPT")" ) >"$WORK/reg_out" 2>&1
-REG_RC=$?
-# preserve diagnostics past the WORK dir's EXIT trap so a silent pass-2 failure is
-# diagnosable next time (bare "skipped (pass-2 no output)" gave no root cause)
-REG_DEBUG="$APP/logs/analyst-reg-debug.log"
-mkdir -p "$(dirname "$REG_DEBUG")" 2>/dev/null || true
-{
-  echo "[$STAMP] pass-2 rc=$REG_RC prompt_bytes=$(wc -c < "$REG_PROMPT" 2>/dev/null) msg_bytes=$(wc -c < "$REG_MSG" 2>/dev/null || echo 0)"
-  tail -c 4000 "$WORK/reg_out" 2>/dev/null
-  echo "---"
-} >> "$REG_DEBUG" 2>/dev/null || true
+    ( cd "$APP" && timeout "$TIMEOUT" "$CODEX_BIN" exec --skip-git-repo-check \
+        -c sandbox_mode="$SANDBOX" -m "$MODEL" -c model_reasoning_effort="$REG_EFFORT" \
+        -o "$REG_MSG" "$(cat "$REG_PROMPT")" ) >"$WORK/reg_out" 2>&1
+    REG_RC=$?
+    # preserve diagnostics past the WORK dir's EXIT trap so a silent pass-2 failure is
+    # diagnosable next time (bare "skipped (pass-2 no output)" gave no root cause)
+    REG_DEBUG="$APP/logs/analyst-reg-debug.log"
+    mkdir -p "$(dirname "$REG_DEBUG")" 2>/dev/null || true
+    {
+      echo "[$STAMP] pass-2 rc=$REG_RC prompt_bytes=$(wc -c < "$REG_PROMPT" 2>/dev/null) msg_bytes=$(wc -c < "$REG_MSG" 2>/dev/null || echo 0)"
+      tail -c 4000 "$WORK/reg_out" 2>/dev/null
+      echo "---"
+    } >> "$REG_DEBUG" 2>/dev/null || true
 
-reg_written=$(python3 - "$REG_MSG" "$REGISTRY" <<'PY'
-import sys, json, re, os
-msg_p, reg_p = sys.argv[1:3]
-if not os.path.exists(msg_p) or os.path.getsize(msg_p)==0: print("skipped (pass-2 no output)"); sys.exit(0)
-out=open(msg_p,encoding="utf-8").read()
-m=re.search(r"```json\s*(\{.*?\})\s*```", out, re.S) or re.search(r"(\{.*\})", out, re.S)
-if not m: print("skipped (no json)"); sys.exit(0)
-try: reg_new=json.loads(m.group(1)).get("registry_md","")
-except Exception: print("skipped (bad json)"); sys.exit(0)
-if not reg_new or not all(h in reg_new for h in ("## Selected Candidates","## Archived Candidates","## Pending Queue")):
-    print("skipped (missing sections)"); sys.exit(0)
-def arch_rows(txt):
-    seg=txt.split("## Archived Candidates",1); rows={}
-    if len(seg)>1:
-        for line in seg[1].split("## Pending Queue",1)[0].splitlines():
-            s=line.strip()
-            if s.startswith("|") and "---" not in s:
-                name=s.strip("|").split("|")[0].strip()
-                if name and name.lower()!="name": rows[name]=line.rstrip()
-    return rows
-# deterministic guarantee: re-insert any old Archived row the model dropped (never lose history)
-old_rows=arch_rows(open(reg_p,encoding="utf-8").read())
-missing=[old_rows[n] for n in old_rows if n not in reg_new]
-merged=0
-if missing:
-    idx=reg_new.find("## Pending Queue")
-    reg_new=reg_new[:idx].rstrip()+"\n"+"\n".join(missing)+"\n\n"+reg_new[idx:]
-    merged=len(missing)
-open(reg_p,"w",encoding="utf-8").write(reg_new.rstrip()+"\n")
-print(f"yes (merged {merged} retained-archived)" if merged else "yes")
-PY
-)
+    MERGE_SCRIPT="$APP/scripts/analyst/merge_registry.py"
+    if [ -f "$MERGE_SCRIPT" ]; then
+        reg_written="$(python3 "$MERGE_SCRIPT" "$REGISTRY" "$REG_MSG" "$REGISTRY" 2>&1)"
+    else
+        reg_written="skipped (merge_registry.py not found)"
+    fi
+fi
 log "[$STAMP] REGISTRY pass-2 (effort=$REG_EFFORT): $reg_written"
 # reflect final registry status in the report header
 python3 - "$OUT_DIRECTIVE" "$reg_written" <<'PY' 2>/dev/null || true
