@@ -558,7 +558,12 @@ select_cycle_engine() {
         return 0
     fi
 
-    # Default: primary Claude.
+    # Default: primary Claude. Must still set CYCLE_ROUTER_MSG (even though this is the
+    # most common path) — leaving it empty means the caller never logs a [ROUTER] line,
+    # so the cockpit's "Router decision" field falls back to the LAST [ROUTER] line
+    # anywhere in log history, which can be days stale and contradict the (correct)
+    # current Active engine/model fields next to it (found 2026-07-27, operator screenshot).
+    CYCLE_ROUTER_MSG="[ROUTER] Claude has headroom (\$$window_now/${WINDOW_BUDGET_USD:-∞}) — running primary Claude"
     _router_persist "claude"
     return 0
 }
