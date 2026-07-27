@@ -34,41 +34,63 @@ container is dead."
    account `6d289265fe41b9d64ca0d38fddfee6c5` (same account as the other company
    Workers).
 
-## What's NOT automatic — one manual step in the Sentry UI
+## The integration + alert rule — now done via API (2026-07-27), not the UI
 
-Sentry's alert-rule "send a webhook" action requires a **Custom (Internal)
-Integration**, which cannot be created via the Sentry MCP tools available to this
-session (no `create_integration`/`create_alert_rule` tool was exposed — only
-read/find tools for alert rules, and read/find/get for monitors). This has to be
-done once, by hand, in the Sentry web UI:
+Originally this required a manual Sentry UI step, because the Sentry MCP tools
+available in-session only exposed read/find operations for alert rules and
+integrations (no `create_integration`/`create_alert_rule` tool). That's still true
+for the MCP — but a **personal Sentry auth token** (scopes: `org:admin`,
+`org:write`, `org:read`, `project:write`, `project:read`, `alerts:write`; Keychain
+`autocompany-sentry-api-token`, exported as `SENTRY_AUTH_TOKEN` in `~/.zshrc`) plus
+the official `sentry` CLI (`cli.sentry.dev`, installed to `~/.local/bin/sentry`)
+made it possible to do the whole thing via API instead:
 
-1. **Settings → Developer Settings → Custom Integrations → Create New Integration
-   → Internal Integration.**
-   - Name: `autocompany-crash-alert-relay` (or similar).
-   - Webhook URL: `https://autocompany-crash-alert-relay.akekilli.workers.dev/sentry-webhook`
-   - Under **Alert Rule Action**, check the box that lets this integration be used
-     as an alert action (label varies by Sentry version — look for "Enable
-     Alert Rule Action" / "This integration can create alerts").
-   - Save. Sentry will show a **Client Secret** — copy it.
-2. **(Optional, hardening) Set the Worker's `SENTRY_WEBHOOK_SECRET`** to that
-   Client Secret so the Worker verifies the `sentry-hook-signature` header instead
-   of accepting any POST to that URL unauthenticated:
-   ```bash
-   cd ~/projects/autocompany-crash-alert-relay
-   printf '%s' '<client secret>' | wrangler secret put SENTRY_WEBHOOK_SECRET
-   ```
-   Without this the endpoint still works (signature check is skipped when the var
-   is unset) — it's a hardening step, not a blocker for the alarm to function.
-3. **Alerts → Create Alert → Crons monitor → Alert conditions**: select the
-   `auto-company-container-heartbeat` monitor, condition = monitor becomes
-   unhealthy / missed check-in (exact wording depends on Sentry version), action =
-   "Send a notification via `autocompany-crash-alert-relay`" (the internal
-   integration from step 1). Save.
+1. **Internal integration** created via `POST /sentry-apps/` (org-agnostic path,
+   organization passed in the body — the org-scoped
+   `/organizations/{org}/sentry-apps/` path only supports GET). This endpoint is
+   **not in Sentry's documented/public OpenAPI schema** (confirmed by checking both
+   the schema directly and `sentry schema sentry-apps`, which only lists
+   GET/PUT/DELETE) — it works, but treat it as unstable/undocumented if it ever
+   needs to be recreated. Body: `{name, organization, author, webhookUrl,
+   isAlertable: true, isInternal: true, verifyInstall: false, scopes: [],
+   events: []}`. Result: slug `autocompany-crash-alert-relay-fda74a`, uuid
+   `58e5b06d-3201-4288-b229-e472a06ec7a7`, auto-installed on the org
+   (`status: installed` confirmed via `/sentry-app-installations/`).
+2. **Alert rule** created via `POST /projects/appricode/node-cloudflare-workers/rules/`
+   (also not in the documented schema — same caveat). Rule ID `722786`, name
+   "Crash-loop heartbeat missed check-in", `actionMatch: any`, conditions =
+   `FirstSeenEventCondition` (a new issue is created) + `RegressionEventCondition`
+   (issue goes resolved → unresolved), action =
+   `sentry.rules.actions.notify_event_service.NotifyEventServiceAction` with
+   `service: autocompany-crash-alert-relay-fda74a`. **Scope note:** this fires on
+   ANY new/regressed issue in the project, not narrowly scoped to just the Crons
+   monitor's missed-checkin issue type — the project also receives the cockpit's
+   own Sentry error reports (`sentry-cockpit-monitoring.md`, same DSN/project), so
+   this alarm will also fire for ordinary app errors. Treated as acceptable (more
+   signal, not noise, for a company this size) rather than narrowed further.
+3. **Worker hardening applied**: the integration's `clientSecret` was fetched
+   (`GET /sentry-apps/{slug}/`) and set as the Worker's `SENTRY_WEBHOOK_SECRET`
+   (`wrangler secret put`) — previously unset, so the `sentry-hook-signature` HMAC
+   check in `src/index.js` was silently skipped. It's now enforced.
 
-Once this is done: container dies → ~4 min → Sentry marks the monitor missed →
-alert rule fires → Worker relays to Telegram. Verify by stopping the heartbeat
-process manually in a test container (`docker exec <c> pkill -f sentry-heartbeat`)
-and confirming a Telegram message arrives within ~5 minutes.
+**End-to-end verification (real, not assumed):** two synthetic events were sent via
+`sentry event send` (unique fingerprints, so each was a genuinely new issue). The
+first (`NODE-CLOUDFLARE-WORKERS-2`) updated the rule's `Last Triggered` timestamp
+but the webhook never reached the Worker (checked via live `wrangler tail` —
+nothing arrived; root cause not found, possibly a propagation delay right after
+creating a brand-new integration). The second, ~6 minutes later
+(`NODE-CLOUDFLARE-WORKERS-3`), worked cleanly end to end: issue created → rule
+fired (`Last Triggered` updated again) → `wrangler tail` showed `POST
+.../sentry-webhook - Ok` → Worker returned 200 (which only happens after a
+successful Telegram send; a Telegram failure returns 502). Both test issues were
+resolved afterward to keep the project clean.
+
+**Residual gap, not yet tested:** verification used synthetic *error* events, not
+an actual missed Crons check-in. A real missed check-in should create an issue the
+same way (Sentry unified Crons/Monitor failures into the regular issue platform),
+so this is expected to work identically, but the gold-standard test — stopping
+`sentry-heartbeat.sh` in a real container and confirming a Telegram message arrives
+within ~5 minutes — has not been run.
 
 ## What this still does NOT solve
 
