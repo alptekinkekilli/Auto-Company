@@ -506,6 +506,20 @@ select_cycle_engine() {
     CYCLE_ROUTER_ACTION="run"
     CYCLE_ROUTER_MSG=""
 
+    # This whole function only ever offloads Claude -> Codex on a Claude budget cap —
+    # every fallback path below hardcodes "claude" as the assumed primary. When the
+    # operator has configured $ENGINE=codex directly, that assumption is simply wrong:
+    # there is no Claude spend to check and nothing to "offload" (codex already IS
+    # primary; run_engine_cycle's `case "$ENGINE" in codex)` branch runs it correctly
+    # regardless of this function). Without this early return, router-state always got
+    # written as the literal "claude" and the cockpit showed Active engine=CLAUDE even
+    # on a real Codex cycle (found 2026-07-27, operator screenshot + boot-log report).
+    if [ "$ENGINE" != "claude" ]; then
+        CYCLE_ROUTER_MSG="[ROUTER] Engine=$ENGINE configured as primary — running directly (no Claude-budget routing)"
+        _router_persist "$ENGINE"
+        return 0
+    fi
+
     refresh_dynamic_budget
 
     # Is Codex usable as an alternate this cycle?
@@ -1157,7 +1171,10 @@ error_count=0
 log "=== Auto Company Loop Started (PID $$) ==="
 log "Project: $PROJECT_DIR"
 if [ "$ENGINE" = "codex" ]; then
-    log "Engine: codex | Model: $MODEL_LABEL | Sandbox: $CODEX_SANDBOX_MODE"
+    # $MODEL_LABEL at this point is still the raw Claude $MODEL default (apply_tier_ladder
+    # hasn't run for a cycle yet) — showing it here next to "Engine: codex" is misleading
+    # (found 2026-07-27: boot log read "Engine: codex | Model: claude-haiku-4-5-...").
+    log "Engine: codex | Model: ${CODEX_MODEL:-codex-default}:${CODEX_EFFORT:-config-default} | Sandbox: $CODEX_SANDBOX_MODE"
 else
     log "Engine: claude | Model: $MODEL_LABEL | PermissionMode: $CLAUDE_PERMISSION_MODE"
 fi
@@ -1180,13 +1197,18 @@ if [ -n "$engine_version" ]; then
     fi
 fi
 log "Interval: ${LOOP_INTERVAL}s | Timeout: ${CYCLE_TIMEOUT_SECONDS}s | Breaker: ${MAX_CONSECUTIVE_ERRORS} errors"
-if [ -n "$FALLBACK_ENGINE" ]; then
+# Fallback/alternation only mean anything when Claude is primary — when $ENGINE is
+# already codex there's no "Claude usage limit" to fall back from, so logging this
+# unconditionally (old behavior) was actively misleading on a codex-primary config.
+if [ "$ENGINE" = "claude" ] && [ -n "$FALLBACK_ENGINE" ]; then
     log "Fallback engine: $FALLBACK_ENGINE (on Claude usage limit)"
 fi
 if [ -n "$WINDOW_BUDGET_USD" ]; then
     log "Window budget: \$$WINDOW_BUDGET_USD per ${WINDOW_SECONDS}s (pause ${BUDGET_PAUSE_SECONDS}s when reached)"
 fi
-if [ "$ROUTER_ALTERNATE" = "1" ]; then
+if [ "$ENGINE" != "claude" ]; then
+    log "Router: n/a — \$ENGINE=$ENGINE is primary directly, no Claude-budget routing applies"
+elif [ "$ROUTER_ALTERNATE" = "1" ]; then
     log "Router: quota-aware alternation ON (Claude↔Codex when both have headroom; Codex limit ${CODEX_WINDOW_LIMIT:-∞}/window)"
 else
     log "Router: single-engine (alternation OFF; Codex only on budget-cap/usage-limit)"
