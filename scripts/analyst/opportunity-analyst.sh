@@ -115,7 +115,17 @@ PY
 
 ( cd "$APP" && timeout "$TIMEOUT" "$CODEX_BIN" exec --skip-git-repo-check \
     -c sandbox_mode="$SANDBOX" -m "$MODEL" -c model_reasoning_effort="$REG_EFFORT" \
-    -o "$REG_MSG" "$(cat "$REG_PROMPT")" ) >"$WORK/reg_out" 2>&1 || true
+    -o "$REG_MSG" "$(cat "$REG_PROMPT")" ) >"$WORK/reg_out" 2>&1
+REG_RC=$?
+# preserve diagnostics past the WORK dir's EXIT trap so a silent pass-2 failure is
+# diagnosable next time (bare "skipped (pass-2 no output)" gave no root cause)
+REG_DEBUG="$APP/logs/analyst-reg-debug.log"
+mkdir -p "$(dirname "$REG_DEBUG")" 2>/dev/null || true
+{
+  echo "[$STAMP] pass-2 rc=$REG_RC prompt_bytes=$(wc -c < "$REG_PROMPT" 2>/dev/null) msg_bytes=$(wc -c < "$REG_MSG" 2>/dev/null || echo 0)"
+  tail -c 4000 "$WORK/reg_out" 2>/dev/null
+  echo "---"
+} >> "$REG_DEBUG" 2>/dev/null || true
 
 reg_written=$(python3 - "$REG_MSG" "$REGISTRY" <<'PY'
 import sys, json, re, os
