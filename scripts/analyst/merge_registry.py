@@ -108,6 +108,12 @@ def main() -> None:
         before, old_live, after = split_registry(original)
     except ValueError as exc:
         blocked(f"could not isolate live span in current registry: {exc}")
+    # Logged on every outcome from here on (operator's monitoring ask,
+    # 2026-07-27): the untouched prefix/suffix are byte-identical by
+    # construction — these hashes make that trivially checkable per run
+    # without re-diffing, across BLOCKED and MERGED outcomes alike.
+    before_hash = hashlib.sha256(before.encode()).hexdigest()
+    after_hash = hashlib.sha256(after.encode()).hexdigest()
 
     raw = model_output_path.read_text(encoding="utf-8", errors="replace")
     m = re.search(r"```json\s*(\{.*?\})\s*```", raw, re.S) or re.search(r"(\{.*\})", raw, re.S)
@@ -132,6 +138,7 @@ def main() -> None:
         blocked(
             f"{len(missing)} candidate ID(s) present before but missing after: "
             + ", ".join(sorted(missing)[:20])
+            + f" | prefix_hash={before_hash[:12]} suffix_hash={after_hash[:12]} (registry untouched)"
         )
 
     # --- invariant 2: no duplicate axis in the new live span ---
@@ -144,7 +151,11 @@ def main() -> None:
         if seen[key] == 2:
             dupes.append(axis[:80])
     if dupes:
-        blocked(f"{len(dupes)} duplicate axis row(s) in proposed registry: " + " | ".join(dupes[:5]))
+        blocked(
+            f"{len(dupes)} duplicate axis row(s) in proposed registry: "
+            + " | ".join(dupes[:5])
+            + f" | prefix_hash={before_hash[:12]} suffix_hash={after_hash[:12]} (registry untouched)"
+        )
 
     # --- assemble, write, read back, verify ---
     if not new_live.startswith("\n"):
@@ -171,6 +182,7 @@ def main() -> None:
         f"old_live_lines={old_lines} new_live_lines={new_lines} "
         f"old_id_count={len(old_ids)} new_id_count={len(new_ids)} "
         f"ids_added={sorted(added)} ids_removed=[] "
+        f"prefix_hash={before_hash[:12]} suffix_hash={after_hash[:12]} "
         f"final_sha256={final_hash}"
     )
     print(

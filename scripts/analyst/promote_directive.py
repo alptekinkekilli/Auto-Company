@@ -131,20 +131,28 @@ def main() -> None:
         blocked("report too short to classify")
 
     live_text = DIRECTIVE_LIVE.read_text(encoding="utf-8", errors="replace")
+    # Logged on every BLOCKED outcome from here on (operator's monitoring ask,
+    # 2026-07-27): makes "human-directive.md hash unchanged on block" trivially
+    # checkable per run without re-hashing by hand.
+    unchanged_hash = sha256(DIRECTIVE_LIVE)
     status_match = re.search(r"^## Status\s*\n(\S+)", live_text, re.MULTILINE)
     current_status = status_match.group(1).strip() if status_match else None
     if current_status != "DONE":
         blocked(
             f"current human-directive.md Status is "
             f"'{current_status}', not DONE — never overwrite in-flight work"
+            f" | human_directive_hash={unchanged_hash[:12]} (unchanged)"
         )
 
     hit = RISK_RE.search(report_text)
     if hit:
-        blocked(f'risk-keyword hit: "{hit.group(0)}"')
+        blocked(f'risk-keyword hit: "{hit.group(0)}" | human_directive_hash={unchanged_hash[:12]} (unchanged)')
 
     if not VERDICT_RE.search(report_text):
-        blocked("no recognized narrowing-verdict keyword found — not confidently classifiable")
+        blocked(
+            "no recognized narrowing-verdict keyword found — not confidently classifiable"
+            f" | human_directive_hash={unchanged_hash[:12]} (unchanged)"
+        )
 
     consensus_text = CONSENSUS.read_text(encoding="utf-8", errors="replace")
     active_match = ACTIVE_ID_RE.search(consensus_text)
@@ -164,6 +172,7 @@ def main() -> None:
                     f'active candidate "{active_token}" referenced near '
                     f'escalation language "{esc.group(0)}" '
                     f"(context: line {i + 1})"
+                    f" | human_directive_hash={unchanged_hash[:12]} (unchanged)"
                 )
 
     # --- all gates passed: promote ---
