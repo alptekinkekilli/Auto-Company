@@ -489,18 +489,57 @@ Use the current consensus appended to the prompt; if absent, read
 
 Priority: **Ship > Plan > Discuss**, subject to the HARD STOP and other guardrails.
 
-**An active validation or an operator-decision-pending Pending item does NOT pause discovery.**
-Operator correction (2026-07-26): cycles 228–230 stopped ALL work — including fresh Opportunity
-Discovery — and recorded a "minimal-cost HOLD" solely because one Pending candidate (`176-R`)
-was awaiting an operator `AUTHORIZE`/`HOLD`/`ARCHIVE` decision and no new directive existed.
-That is over-broad. Waiting for a decision on ONE candidate, or running a WTP test on the
-current Active Validation, is never a reason to stop screening NEW axes. Unless a directive
-explicitly says to pause all company activity, keep running normal Opportunity Discovery
-(workflow 6) in parallel with whatever is active or pending — a company with an active
-validation and an empty Pending Queue is not "done," it has simply stopped looking. The
-"do not manufacture activity" principle (from the pricing-structure gate's treadmill guard)
-bars RE-ADJUDICATING THE SAME AXIS without new evidence — it does not bar generating and
-screening DIFFERENT axes. Only genuinely stop new-axis work when a directive says so.
+**An active validation or an operator-decision-pending Pending item does NOT pause discovery
+BY ITSELF.** Operator correction (2026-07-26): cycles 228–230 stopped ALL work — including
+fresh Opportunity Discovery — and recorded a "minimal-cost HOLD" solely because one Pending
+candidate (`176-R`) was awaiting an operator `AUTHORIZE`/`HOLD`/`ARCHIVE` decision and no new
+directive existed. That is over-broad. Waiting for a decision on ONE candidate, or running a
+WTP test on the current Active Validation, is never by itself a reason to stop screening NEW
+axes. The "do not manufacture activity" principle (from the pricing-structure gate's treadmill
+guard) bars RE-ADJUDICATING THE SAME AXIS without new evidence — it does not bar generating and
+screening DIFFERENT axes.
+
+**Whether new-axis Opportunity Discovery (workflow 6) actually runs this cycle is controlled by
+the injected Runtime Guardrails line 6** (`auto-loop.sh`, driven by the cockpit Settings
+`DISCOVERY_ENABLED` toggle) — read it, it is the authority on this, not the paragraph above.
+When it says discovery is DISABLED (the current standing default, operator decision
+2026-07-27), do not scan/rank/propose brand-new candidate axes — follow `### TENDER TRACK`
+below instead. When it says discovery is ENABLED, the paragraph above applies as written.
+Either way, an active validation's own WTP test, an in-flight tender feasibility packet, Human
+Directive handling, and OPREQ resolution-checking always continue regardless of this toggle.
+
+### TENDER TRACK — standing focus while Opportunity Discovery is disabled
+
+Operator direction (2026-07-27, following the `208-A` Konak infrastructure test): while
+`DISCOVERY_ENABLED` is off, an idle cycle's default work is one of these two tracks, not
+new-axis discovery:
+
+1. **Tender-chasing.** Search public, no-login-required tender listing sources (EKAP and
+   institutional sites — universities, municipalities, public bodies — exactly like the Konak
+   discovery work already did) for a candidate that is genuinely still open. Any lawful,
+   publicly accessible tender category is in scope — category is NOT an admission gate
+   (operator decision, 2026-07-27; this reverses the earlier cleaning-only restriction). Before
+   spending ANY analysis effort, run
+   `PROJECT_EVALUATION_FRAMEWORK.md`'s mandatory tender admission pre-check (deadline-still-
+   future + boundable scope) as the first two output lines — this is now a standing rule, not
+   something that has to be specially requested. Use the document-processing tools
+   (`python3-docx`/`python3-openpyxl`/`python3-pandas`/`soffice --headless`/`tesseract`) and the
+   requirement-to-evidence matrix methodology documented in
+   `PROJECT_EVALUATION_FRAMEWORK.md`'s "İhale belge işleme" section. Stay within the same
+   bounded-internal-feasibility-packet authority as `cycle209`/`cycle272`/`cycle274` — no
+   purchase, no bid submission, no external contact — unless a separate explicit directive
+   grants more.
+2. **`176-R` development.** Improve the existing live offering (bug fixes, pricing/positioning,
+   marketing, outreach, conversion work) within its existing bounded authority — this does not
+   need a new directive either, it is standing work on an already-Active Validation.
+
+**EKAP membership:** do not assume the company needs an EKAP account. Evaluate it like any
+other question — most tender research (reading notices, downloading public annexes, running
+feasibility packets) does not require membership; only actual bid submission does. If a cycle's
+own research concludes EKAP membership has become genuinely necessary, do not register or
+initiate it yourself — EKAP registration requires real operator/company identity and is an
+`external-action-authorization`-type OPREQ (see `### OPERATOR ESCALATION` above): create the
+request with your reasoning, then wait. Do not create this OPREQ speculatively "just in case."
 
 ### 3. Assemble and Execute
 

@@ -1259,6 +1259,15 @@ while true; do
     # Build prompt with consensus pre-injected
     PROMPT=$(cat "$PROMPT_FILE")
     CONSENSUS=$(cat "$CONSENSUS_FILE" 2>/dev/null || echo "No consensus file found. This is the very first cycle.")
+    # Opportunity Discovery on/off (cockpit Settings -> DISCOVERY_ENABLED, logs/runtime.env).
+    # Default OFF when unset (operator decision, 2026-07-27) -- unlike the other settings
+    # knobs, which default to their prior standing behavior when blank. See PROMPT.md's
+    # "TENDER TRACK" section for what the loop should do instead while this is off.
+    if [ "${DISCOVERY_ENABLED:-0}" = "1" ]; then
+        _discovery_line="6. Opportunity Discovery is ENABLED (cockpit setting) — normal new-axis discovery may run per PROMPT.md's own rules."
+    else
+        _discovery_line="6. Opportunity Discovery is DISABLED (cockpit setting, default) — do NOT scan/rank/propose brand-new candidate axes this cycle. Follow PROMPT.md's \`### TENDER TRACK\` section instead: pursue tender candidates and/or improve \`176-R\`. This does not pause an already-Active Validation, an in-flight tender feasibility packet, or Human Directive / OPREQ handling."
+    fi
     FULL_PROMPT="$PROMPT
 
 ---
@@ -1270,6 +1279,7 @@ while true; do
 3. Prefer shipping one completed milestone over broad parallel exploration.
 4. Never write files via shell heredoc (\`cat <<EOF\`). Use \`apply_patch\` for file creates/edits.
 5. Never execute shell lines that begin with \`>\` or \`>=\`; treat them as text and keep them inside markdown/files.
+$_discovery_line
 
 ---
 

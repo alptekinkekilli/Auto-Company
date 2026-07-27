@@ -57,6 +57,72 @@ bir aday öldürülünce Archived'e (karar + tek satır gerekçe) taşınır. **
 sessizce silinmez** — re-proposal döngüsünün sebebi tam olarak budur. Bu kapı yalnızca neyin
 önerileceğini yönetir; hiçbir zaman bir build yetkisi vermez (WTP HARD STOP hâlâ geçerlidir).
 
+## İhale (tender) adayları için zorunlu ön-kontrol (ZORUNLU — herhangi bir efor harcanmadan önce)
+
+**Neden var:** `208-A` Konak `2026/0003` adayında iki bağımsız iş modeli-öncesi
+hata bulundu — ihalenin teklif tarihi (`11.06.2026 11:00`) analiz tarihinde
+(`2026-07-25`) zaten 44 gün geçmişti, hiçbir cycle bunu kontrol etmedi/fark
+etmedi. Operatör bunu kendisi, otorite sayfasını okuyarak buldu. Bu bölüm bu
+kontrolü elle istenen bir şey olmaktan çıkarıp **standart, atlanamaz bir kabul
+adımı** hâline getirir.
+
+Herhangi bir ihale adayı için requirement-to-evidence matrisi, cost-driver
+register veya başka bir detaylı analiz **başlamadan önce**, çıktının ilk iki
+maddesi olarak açıkça doğrulanır ve yazılır:
+
+1. **Teklif/son tarih hâlâ gelecekte mi?** Bugünün tarihini ve ihalenin
+   beyan edilen teklif tarih/saatini yan yana yaz, karşılaştır. Geçmişse
+   `INPUT FAIL` ile hemen dur — daha ileri efor harcama, bu doğru davranıştır,
+   eksik tamamlama değil.
+2. **Kategori/kapsam mantıklı ve şirketin manuel/no-code bir iç fizibilite
+   paketiyle sınırlandırabileceği bir hizmet türü mü?** Kategori kendisi artık
+   otomatik bir eleme sebebi DEĞİL (operatör kararı, 2026-07-27) — şirket
+   herhangi bir yasal, kamuya açık ihale kategorisini değerlendirebilir. Ama
+   yine de aday, `PROMPT.md → BOUNDED INTERNAL FEASIBILITY PACKETS`'ın mevcut
+   yetki sınırları içinde kalmalı: manuel/no-code inceleme, satın alma yok,
+   dış iletişim yok, bid submission yok.
+
+Bu iki kontrol geçmeden hiçbir tam paket (requirement matrisi, cost-driver
+register, contribution senaryoları) üretilmez. Erken ve doğru bir dur, paketi
+tamamlayamamaktan daha iyi bir sonuçtur — bkz.
+`docs/ceo/cycle272-208a-konak-disqualification-result.md`.
+
+## İhale belge işleme — kurumsal know-how (Cycle 274)
+
+`208-A`'nın Konak paketi üzerinde çalışılırken öğrenilenler, tek seferlik bir
+cycle çıktısı olarak kaybolmasın diye burada kalıcı hale getirildi.
+
+**Kullanılabilir belirlenimci araçlar (container'da hazır, LLM çağrısı
+gerektirmez):** `.docx`/`.xlsx` metin ve tablo çıkarımı için `python3-docx` /
+`python3-openpyxl` / `python3-pandas`; eski `.doc`/`.xls` formatlarını modern
+formata çevirmek için `soffice --headless --convert-to <format>`
+(LibreOffice); taranmış/gömülü görsel içerik için `tesseract` OCR.
+
+**Türk kamu ihalelerinde tipik olarak görülen belge sınıfları** (otorite
+sayfasında doğrudan bağlantılı, genelde ücretsiz — ayrı bir "tam paket" ücretli
+satın alma yalnızca ek belgeler/zeyilname geçmişi için gerekebilir):
+
+- Teknik Şartname, İdari Şartname, Sözleşme Taslağı (ana üç belge)
+- Ekler: Geçici Teminat Mektubu, Kesin Teminat Mektubu, Banka Referans
+  Mektubu, Bilanço Bilgileri Tablosu, Yasaklı Olmadığına Dair Taahhütname,
+  Açık Maliyet Analizi, Birim Fiyat Teklif Cetveli, Birim Fiyat Teklif
+  Mektubu, Evrak Listesi, İş Deneyim Belgesi
+
+**En kritik metodolojik ders:** bu belgelerin çoğu **boş şablondur** —
+otorite tarafından yayınlanan, teklif sahibinin dolduracağı formlar. "Belge
+mekanik olarak okunabilir" ile "teklif sahibinin dosyası eksiksiz ve
+doldurulmuş" birbirinden kesinlikle ayrılmalıdır. Boş bir maliyet
+hücresi/formülü **asla sıfır maliyet olarak yorumlanmaz** — `UNKNOWN` olarak
+işaretlenir. Mali, hukuki, vergi, sigorta ve lisans/uygunluk yargıları asla
+tahmin edilmez; `SPECIALIST REFERRAL` olarak dışarı yönlendirilir.
+
+**Standart çıktı biçimi:** requirement-to-evidence matrisi
+(`MET` / `GAP` / `AMBIGUOUS` / `SPECIALIST REFERRAL`), her satırda kaynak
+dosya + paragraf/tablo/hücre referansı ile — bkz.
+`docs/ceo/cycle274-208a-konak-document-tools-infrastructure-test.md` referans
+uygulama olarak. Bu format artık herhangi bir gelecekteki ihale fizibilite
+paketi için standart şablondur, tekrar icat edilmesine gerek yok.
+
 ## Standart değerlendirme süreci
 
 ### 1. Ürünü sade biçimde tanımla

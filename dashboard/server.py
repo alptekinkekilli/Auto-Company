@@ -47,6 +47,8 @@ RUNTIME_ENV_FILE = REPO_ROOT / "logs" / "runtime.env"
 # Whitelist of NON-SECRET knobs editable from the cockpit Settings panel. Anything
 # not listed here is rejected, so the panel can never write secrets to runtime.env.
 SETTINGS_SPEC: list[dict[str, str]] = [
+    {"key": "DISCOVERY_ENABLED", "type": "bool",
+     "label": "Opportunity Discovery — scan brand-new candidate axes (off = tender-track + 176-R focus only; auto-loop.sh default is OFF when unset)"},
     {"key": "ROUTER_ALTERNATE", "type": "bool",
      "label": "Router alternation (Claude↔Codex when both have headroom)"},
     {"key": "WINDOW_BUDGET_USD", "type": "number",
