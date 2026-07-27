@@ -1,3 +1,4 @@
+import hashlib
 import importlib.util
 import json
 import tempfile
@@ -193,49 +194,287 @@ class OperatorRequestNotifyTests(unittest.TestCase):
         self.assertTrue(state2["OPREQ-208A-001"]["notified"])
 
     # 6. A resolved request disappears from the visible projection, and resolution
-    #    requires both a directive reference AND recorded evidence — Status: DONE
-    #    on the directive alone is not sufficient.
-    def test_resolution_requires_evidence_then_disappears_from_projection(self):
+    #    requires BOTH a directive reference AND a type-specific DETERMINISTIC
+    #    verification — the model's own prose can never close its own escalation.
+    # 6a. document-procurement: a checksum-matched file on disk under
+    #     memories/operator-evidence/<id>/.
+    def test_document_procurement_resolution_verifies_checksum_then_disappears(self):
         self.write_requests(block_text("OPREQ-208A-001"))
         send = make_send_fn([(True, None)])
         orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
         consensus_text = self.consensus_path.read_text(encoding="utf-8")
         self.assertIn("OPREQ-208A-001", consensus_text)
 
-        # Directive is DONE and references the request, but no Resolution evidence
-        # has been recorded yet — must stay OPEN.
+        # Directive is DONE and references the request, but no evidence file has
+        # been recorded yet — must stay OPEN.
         self.directive_path.write_text(
             "# Human Directive\n\n## Status\nDONE\n\n## Directive\n"
             "Operator supplied the document set. Resolves: OPREQ-208A-001\n",
             encoding="utf-8",
         )
         orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
-        requests_text = self.requests_path.read_text(encoding="utf-8")
-        blocks = orn.parse_blocks(requests_text)
+        blocks = orn.parse_blocks(self.requests_path.read_text(encoding="utf-8"))
         self.assertEqual(blocks["OPREQ-208A-001"][0]["Status"], "OPEN")
-        consensus_text = self.consensus_path.read_text(encoding="utf-8")
-        self.assertIn("OPREQ-208A-001", consensus_text)
+        self.assertIn("OPREQ-208A-001", self.consensus_path.read_text(encoding="utf-8"))
 
-        # Now the model records verified resolution evidence in the request block.
+        evidence_dir = self.app / "memories" / "operator-evidence" / "OPREQ-208A-001"
+        evidence_dir.mkdir(parents=True)
+        doc = evidence_dir / "tender-packet.pdf"
+        doc.write_bytes(b"fake tender packet bytes for a unit test")
+        digest = hashlib.sha256(doc.read_bytes()).hexdigest()
+
         self.write_requests(
             block_text(
                 "OPREQ-208A-001",
                 extra={
-                    "Resolution evidence": (
-                        "Operator supplied the full purchased Konak 2026/0003 "
-                        "packet; verified all annexes present and paginated."
+                    "Evidence files": (
+                        "memories/operator-evidence/OPREQ-208A-001/tender-packet.pdf "
+                        f"sha256:{digest}"
                     )
                 },
             )
         )
         orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
-        requests_text = self.requests_path.read_text(encoding="utf-8")
-        blocks = orn.parse_blocks(requests_text)
+        blocks = orn.parse_blocks(self.requests_path.read_text(encoding="utf-8"))
         self.assertEqual(blocks["OPREQ-208A-001"][0]["Status"], "RESOLVED")
 
         consensus_text = self.consensus_path.read_text(encoding="utf-8")
         self.assertNotIn("OPREQ-208A-001", consensus_text)
         self.assertIn("None currently.", consensus_text)
+
+    # 6b. document-procurement: a tampered/mismatched file must NOT resolve — the
+    #     model cannot just claim a checksum, the code recomputes and compares it.
+    def test_document_procurement_resolution_blocks_on_checksum_mismatch(self):
+        self.write_requests(block_text("OPREQ-208A-001"))
+        send = make_send_fn([(True, None)])
+        orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
+
+        evidence_dir = self.app / "memories" / "operator-evidence" / "OPREQ-208A-001"
+        evidence_dir.mkdir(parents=True)
+        (evidence_dir / "tender-packet.pdf").write_bytes(b"real content")
+
+        self.write_requests(
+            block_text(
+                "OPREQ-208A-001",
+                extra={
+                    "Evidence files": (
+                        "memories/operator-evidence/OPREQ-208A-001/tender-packet.pdf "
+                        "sha256:" + "0" * 64
+                    )
+                },
+            )
+        )
+        self.directive_path.write_text(
+            "# Human Directive\n\n## Status\nDONE\n\n## Directive\n"
+            "Resolves: OPREQ-208A-001\n",
+            encoding="utf-8",
+        )
+        orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
+        blocks = orn.parse_blocks(self.requests_path.read_text(encoding="utf-8"))
+        self.assertEqual(blocks["OPREQ-208A-001"][0]["Status"], "OPEN")
+        audit_text = (
+            self.app / "memories" / "operator-requests-audit.log"
+        ).read_text(encoding="utf-8")
+        self.assertIn("checksum mismatch", audit_text)
+
+    # 6c. document-procurement: a path outside memories/operator-evidence/ must be
+    #     refused, not silently checksummed wherever it happens to live.
+    def test_document_procurement_resolution_blocks_path_outside_evidence_dir(self):
+        self.write_requests(block_text("OPREQ-208A-001"))
+        send = make_send_fn([(True, None)])
+        orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
+
+        outside = self.app / "memories" / "consensus.md"
+        digest = hashlib.sha256(outside.read_bytes()).hexdigest()
+
+        self.write_requests(
+            block_text(
+                "OPREQ-208A-001",
+                extra={"Evidence files": f"memories/consensus.md sha256:{digest}"},
+            )
+        )
+        self.directive_path.write_text(
+            "# Human Directive\n\n## Status\nDONE\n\n## Directive\n"
+            "Resolves: OPREQ-208A-001\n",
+            encoding="utf-8",
+        )
+        orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
+        blocks = orn.parse_blocks(self.requests_path.read_text(encoding="utf-8"))
+        self.assertEqual(blocks["OPREQ-208A-001"][0]["Status"], "OPEN")
+        audit_text = (
+            self.app / "memories" / "operator-requests-audit.log"
+        ).read_text(encoding="utf-8")
+        self.assertIn("outside memories/operator-evidence/", audit_text)
+
+    # 6d. credential: requires a non-mutating PASS test log with no secret-shaped
+    #     content — the credential value itself is never written anywhere.
+    def test_credential_resolution_requires_pass_log_without_secrets(self):
+        self.write_requests(
+            block_text(
+                "OPREQ-CRED-001",
+                type_="credential",
+                required="EKAP bidder-account login for firm X.",
+                scope="external-firm-x",
+            )
+        )
+        send = make_send_fn([(True, None)])
+        orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
+
+        evidence_dir = self.app / "memories" / "operator-evidence" / "OPREQ-CRED-001"
+        evidence_dir.mkdir(parents=True)
+        (evidence_dir / "auth-test.log").write_text(
+            "Logged in, viewed profile page, performed no mutation.", encoding="utf-8"
+        )
+
+        self.write_requests(
+            block_text(
+                "OPREQ-CRED-001",
+                type_="credential",
+                required="EKAP bidder-account login for firm X.",
+                scope="external-firm-x",
+                extra={
+                    "Verification method": "EKAP login, read-only profile view",
+                    "Verification result": "PASS",
+                    "Verification timestamp": "2026-07-27T15:00:00Z",
+                    "Verification log": (
+                        "memories/operator-evidence/OPREQ-CRED-001/auth-test.log"
+                    ),
+                },
+            )
+        )
+        self.directive_path.write_text(
+            "# Human Directive\n\n## Status\nDONE\n\n## Directive\n"
+            "Resolves: OPREQ-CRED-001\n",
+            encoding="utf-8",
+        )
+        orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
+        blocks = orn.parse_blocks(self.requests_path.read_text(encoding="utf-8"))
+        self.assertEqual(blocks["OPREQ-CRED-001"][0]["Status"], "RESOLVED")
+
+    def test_credential_resolution_blocks_if_log_contains_secret_shaped_token(self):
+        self.write_requests(
+            block_text(
+                "OPREQ-CRED-001",
+                type_="credential",
+                required="EKAP bidder-account login for firm X.",
+                scope="external-firm-x",
+            )
+        )
+        send = make_send_fn([(True, None)])
+        orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
+
+        evidence_dir = self.app / "memories" / "operator-evidence" / "OPREQ-CRED-001"
+        evidence_dir.mkdir(parents=True)
+        (evidence_dir / "auth-test.log").write_text(
+            "Bearer abcdefghijklmnopqrstuvwxyz01234567", encoding="utf-8"
+        )
+
+        self.write_requests(
+            block_text(
+                "OPREQ-CRED-001",
+                type_="credential",
+                required="EKAP bidder-account login for firm X.",
+                scope="external-firm-x",
+                extra={
+                    "Verification method": "EKAP login, read-only profile view",
+                    "Verification result": "PASS",
+                    "Verification timestamp": "2026-07-27T15:00:00Z",
+                    "Verification log": (
+                        "memories/operator-evidence/OPREQ-CRED-001/auth-test.log"
+                    ),
+                },
+            )
+        )
+        self.directive_path.write_text(
+            "# Human Directive\n\n## Status\nDONE\n\n## Directive\n"
+            "Resolves: OPREQ-CRED-001\n",
+            encoding="utf-8",
+        )
+        orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
+        blocks = orn.parse_blocks(self.requests_path.read_text(encoding="utf-8"))
+        self.assertEqual(blocks["OPREQ-CRED-001"][0]["Status"], "OPEN")
+        audit_text = (
+            self.app / "memories" / "operator-requests-audit.log"
+        ).read_text(encoding="utf-8")
+        self.assertIn("secret-shaped", audit_text)
+
+    # 6e. legal-decision / financial-decision: require a structured
+    #     "Decision for OPREQ-<id>: <word> — <rationale>" line the OPERATOR wrote
+    #     into human-directive.md — the model's own evidence field is never enough.
+    def test_legal_decision_resolution_requires_structured_decision_line(self):
+        self.write_requests(
+            block_text(
+                "OPREQ-LEGAL-001",
+                type_="legal-decision",
+                required="Approve or deny the pivot.",
+                scope="GLOBAL",
+            )
+        )
+        send = make_send_fn([(True, None)])
+        orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
+
+        # References it and is DONE, but has no structured Decision line.
+        self.directive_path.write_text(
+            "# Human Directive\n\n## Status\nDONE\n\n## Directive\n"
+            "I approve this. Resolves: OPREQ-LEGAL-001\n",
+            encoding="utf-8",
+        )
+        orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
+        blocks = orn.parse_blocks(self.requests_path.read_text(encoding="utf-8"))
+        self.assertEqual(blocks["OPREQ-LEGAL-001"][0]["Status"], "OPEN")
+
+        self.directive_path.write_text(
+            "# Human Directive\n\n## Status\nDONE\n\n## Directive\n"
+            "Resolves: OPREQ-LEGAL-001\n"
+            "Decision for OPREQ-LEGAL-001: APPROVED — cleared by counsel review.\n",
+            encoding="utf-8",
+        )
+        orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
+        blocks = orn.parse_blocks(self.requests_path.read_text(encoding="utf-8"))
+        self.assertEqual(blocks["OPREQ-LEGAL-001"][0]["Status"], "RESOLVED")
+
+    # 6f. expenditure-approval / external-action-authorization: require a
+    #     structured "Authorization for OPREQ-<id>:" block (System/Action/Target/
+    #     Limit) the OPERATOR wrote into human-directive.md.
+    def test_expenditure_resolution_requires_structured_authorization_block(self):
+        self.write_requests(
+            block_text(
+                "OPREQ-SPEND-001",
+                type_="expenditure-approval",
+                required="Approve TRY 2,000 tender-document purchase.",
+                scope="208-A",
+            )
+        )
+        send = make_send_fn([(True, None)])
+        orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
+
+        # Incomplete block (missing Limit) must stay OPEN.
+        self.directive_path.write_text(
+            "# Human Directive\n\n## Status\nDONE\n\n## Directive\n"
+            "Resolves: OPREQ-SPEND-001\n"
+            "Authorization for OPREQ-SPEND-001:\n"
+            "System: Konak tender authority portal\n"
+            "Action: purchase document set\n"
+            "Target: Konak 2026/0003\n",
+            encoding="utf-8",
+        )
+        orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
+        blocks = orn.parse_blocks(self.requests_path.read_text(encoding="utf-8"))
+        self.assertEqual(blocks["OPREQ-SPEND-001"][0]["Status"], "OPEN")
+
+        self.directive_path.write_text(
+            "# Human Directive\n\n## Status\nDONE\n\n## Directive\n"
+            "Resolves: OPREQ-SPEND-001\n"
+            "Authorization for OPREQ-SPEND-001:\n"
+            "System: Konak tender authority portal\n"
+            "Action: purchase document set\n"
+            "Target: Konak 2026/0003\n"
+            "Limit: TRY 2,000\n",
+            encoding="utf-8",
+        )
+        orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
+        blocks = orn.parse_blocks(self.requests_path.read_text(encoding="utf-8"))
+        self.assertEqual(blocks["OPREQ-SPEND-001"][0]["Status"], "RESOLVED")
 
     # 7. Dedup state round-trips through disk exactly — the property a redeploy's
     #    persistent memories/ volume depends on: a fresh process reading the same

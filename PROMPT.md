@@ -272,6 +272,10 @@ escalating it.
 - Created: <UTC ISO-8601 timestamp>
 ```
 
+For `document-procurement` requests, optionally add `Expected document class: <free
+text mentioning a minimum count, e.g. "at least 5 files">` — the resolution verifier
+uses it to require that many evidence files, not just one.
+
 Do not write a `Content fingerprint` field — the script computes and rewrites it. Pick a
 stable, descriptive ID (e.g. `OPREQ-208A-001`) and never reuse an ID.
 
@@ -281,6 +285,19 @@ cancelled. Any other scope value blocks only that candidate/axis — the rest of
 company keeps working normally. Reserve `GLOBAL` for cases where continuing anywhere
 would compound the same unresolved risk (e.g. an unresolved legal exposure that taints
 every candidate); default to the narrow scope.
+
+There is deliberately NO shell-level enforcement of `GLOBAL` in `auto-loop.sh` — it is
+a prompt-level instruction only, exactly like the sentence above. A single model-written
+record must not be able to halt the whole company outright; that would be a new
+self-inflicted denial-of-service surface. If a real `GLOBAL` case is ever seen in
+practice and this proves insufficient, the operator has specified the target design for
+that future hardening (not built yet): a `BLOCKED_MODE` variable checked at the top of
+each cycle (not a raw `exit`, so resolution-checking, the notifier, health checks, and
+existing safe obligations keep running) with two levels — `GLOBAL_NEW_WORK` (blocks new
+discovery/validation/outreach/build only) and `GLOBAL_SAFETY` (stops all market-facing
+work; settable only by a human directive or a deterministic security/legal trigger, never
+by ordinary model discretion). Do not build this speculatively — only when a real GLOBAL
+case demonstrates the prompt-level instruction alone is not enough.
 
 **What happens automatically:** every loop cycle, a deterministic script (never the
 model) hashes each OPEN request's material fields, sends exactly one Telegram
@@ -292,22 +309,56 @@ Never hand-edit that consensus.md section or `memories/.operator-requests-state.
 both are code-owned; edits there are overwritten and do not count as resolving
 anything.
 
-**Resolution protocol:** the operator answers via `memories/human-directive.md` as
-usual, with the directive text containing `Resolves: OPREQ-<id>`. Setting that
-directive's `Status` to `DONE` is NOT sufficient by itself to close the request — as
-part of acting on the directive, verify the supplied input/decision actually satisfies
-the original "Required input," then append a `Resolution evidence:` field (what was
-verified, how) to that request's block in `operator-requests.md`. Only when both — a
-`DONE` directive referencing the ID, and recorded evidence — are present does the
-script flip the request to `RESOLVED`. A directive that references an ID without
-genuine verification leaves the request OPEN and logs why in
-`memories/operator-requests-audit.log`; treat that as working as intended, not a bug to
-route around.
+**Resolution protocol — type-specific DETERMINISTIC verification, never free text.**
+The operator answers via `memories/human-directive.md` as usual, with the directive
+text containing `Resolves: OPREQ-<id>`. Setting that directive's `Status` to `DONE`
+is NOT sufficient by itself, and — critically — a free-text `Resolution evidence:`
+sentence the model writes about itself is NEVER sufficient either: a request can only
+close via an objectively checkable artifact, one specific requirement per type,
+enforced by `verify_resolution()` in the script:
+
+- **`document-procurement`:** append an `Evidence files:` field listing one or more
+  `<path> sha256:<hex>` entries, semicolon-separated, where each path is under
+  `memories/operator-evidence/<OPREQ-id>/`. Save the actual supplied file there first.
+  The script recomputes each file's checksum from disk and refuses to resolve on a
+  missing file, an empty file, a checksum mismatch, or any path outside that directory
+  (path traversal is rejected, not sanitized-and-allowed). If the request set an
+  `Expected document class:` field mentioning a minimum count (e.g. "at least 5
+  files"), fewer listed files also blocks.
+- **`credential`:** append `Verification method:`, `Verification result: PASS`,
+  `Verification timestamp:`, and `Verification log:` (a path under
+  `memories/operator-evidence/<OPREQ-id>/`) after actually running a real,
+  non-mutating auth check (e.g. a read-only profile fetch) and saving its log there.
+  The credential value itself must never appear in that log or anywhere else — the
+  script scans the log for secret-shaped tokens and refuses to resolve if it finds
+  one, on top of the general redaction in outbound Telegram text.
+- **`legal-decision` / `financial-decision`:** the OPERATOR's own directive text (not
+  the model's evidence field) must contain a line of the exact shape
+  `Decision for OPREQ-<id>: <word> — <rationale (>= 10 chars)>`, e.g.
+  `Decision for OPREQ-208A-002: APPROVED — cleared by counsel review.` The model
+  cannot manufacture this — it must be present in what the operator actually wrote
+  into `human-directive.md`.
+- **`expenditure-approval` / `external-action-authorization`:** the operator's
+  directive text must contain a block naming all four of the permitted scope:
+  ```
+  Authorization for OPREQ-<id>:
+  System: <...>
+  Action: <...>
+  Target: <...>
+  Limit: <...>
+  ```
+  Any of the four missing or empty blocks resolution.
+
+A directive that references an ID without meeting its type's check leaves the request
+OPEN and logs exactly why in `memories/operator-requests-audit.log`; treat that as
+working as intended, not a bug to route around. On success the script also appends a
+`Resolution verified:` field recording what it checked, for audit — do not write that
+field yourself.
 
 If a request becomes moot for a reason other than "the operator answered it" (e.g. the
 blocked candidate itself gets ARCHIVEd), you may set `Status: CANCELLED` directly with a
-one-line rationale in the block — this does not go through the evidence-verification
-gate, since it is not a claim that the ask was fulfilled.
+one-line rationale in the block — this does not go through type-specific verification,
+since it is not a claim that the ask was fulfilled.
 
 **Never put secret values in a request.** `Required input` describes WHAT is needed
 (e.g. "EKAP bidder-account login for firm X"), never the credential itself. The

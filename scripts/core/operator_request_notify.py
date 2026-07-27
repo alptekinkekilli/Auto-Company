@@ -12,9 +12,11 @@ This script is the ONLY thing that may:
     Telegram ping (dedup on a content fingerprint, not on presence alone);
   - mark a Telegram send as delivered (only after the Telegram API itself confirms
     `ok: true` — a non-erroring curl/urlopen call is not proof of delivery);
-  - flip a request from OPEN to RESOLVED (requires BOTH a human-directive.md reference
-    AND model-recorded resolution evidence in the request block — Status: DONE alone is
-    not proof the underlying ask was actually satisfied);
+  - flip a request from OPEN to RESOLVED (requires a human-directive.md reference AND a
+    type-specific DETERMINISTIC verification — a checksum-matched file on disk, a
+    non-secret verification-log artifact, or a structured decision/authorization the
+    OPERATOR wrote into human-directive.md — never a free-text claim the model wrote
+    about itself; see verify_resolution() below);
   - regenerate the `## Awaiting Operator` section of consensus.md (a rendered projection,
     never a source of truth).
 
@@ -413,7 +415,201 @@ def process_notifications(text, state, audit_path, send_fn, sleep_fn):
     return text, state, changed
 
 
-def process_resolutions(text, directive_text, audit_path):
+EVIDENCE_DIR_NAME = "operator-evidence"
+
+EVIDENCE_ENTRY_RE = re.compile(r"^(.+?)\s+sha256:([0-9a-fA-F]{64})$")
+EXPECTED_COUNT_RE = re.compile(r"(\d+)\s*(?:file|dosya)", re.IGNORECASE)
+
+
+def _resolve_evidence_path(app: Path, rel_path: str) -> Path | None:
+    """Resolves rel_path against the app dir and confirms it stays inside
+    memories/operator-evidence/ — refuses path traversal (../, absolute paths
+    outside the sandbox) rather than silently reading whatever it lands on."""
+    evidence_dir = (app / "memories" / EVIDENCE_DIR_NAME).resolve()
+    candidate = (app / rel_path).resolve()
+    try:
+        candidate.relative_to(evidence_dir)
+    except ValueError:
+        return None
+    return candidate
+
+
+def verify_document_procurement(fields: dict, app: Path) -> tuple[bool, str]:
+    raw = fields.get("Evidence files", "").strip()
+    if not raw:
+        return False, "no 'Evidence files' field"
+    entries = [e.strip() for e in raw.split(";") if e.strip()]
+    if not entries:
+        return False, "'Evidence files' is empty"
+
+    min_count = 1
+    m = EXPECTED_COUNT_RE.search(fields.get("Expected document class", ""))
+    if m:
+        min_count = int(m.group(1))
+    if len(entries) < min_count:
+        return (
+            False,
+            f"only {len(entries)} evidence file(s) listed, 'Expected document "
+            f"class' requires at least {min_count}",
+        )
+
+    for entry in entries:
+        m2 = EVIDENCE_ENTRY_RE.match(entry)
+        if not m2:
+            return (
+                False,
+                f"malformed evidence entry {entry!r} — expected "
+                "'<path under memories/operator-evidence/> sha256:<hex>'",
+            )
+        rel_path, expected_hash = m2.group(1).strip(), m2.group(2).lower()
+        candidate = _resolve_evidence_path(app, rel_path)
+        if candidate is None:
+            return (
+                False,
+                f"evidence path {rel_path!r} is outside memories/{EVIDENCE_DIR_NAME}/ "
+                "— refusing",
+            )
+        if not candidate.is_file():
+            return False, f"evidence file missing: {rel_path}"
+        if candidate.stat().st_size == 0:
+            return False, f"evidence file is empty: {rel_path}"
+        actual_hash = hashlib.sha256(candidate.read_bytes()).hexdigest()
+        if actual_hash != expected_hash:
+            return (
+                False,
+                f"checksum mismatch for {rel_path}: recorded {expected_hash[:12]}, "
+                f"actual on-disk {actual_hash[:12]}",
+            )
+    return (
+        True,
+        f"{len(entries)} evidence file(s) verified on disk (exist, non-empty, "
+        "checksum matches recorded value)",
+    )
+
+
+def verify_credential(fields: dict, app: Path) -> tuple[bool, str]:
+    method = fields.get("Verification method", "").strip()
+    result = fields.get("Verification result", "").strip()
+    ts = fields.get("Verification timestamp", "").strip()
+    log_rel = fields.get("Verification log", "").strip()
+    missing = [
+        name
+        for name, val in [
+            ("Verification method", method),
+            ("Verification result", result),
+            ("Verification timestamp", ts),
+            ("Verification log", log_rel),
+        ]
+        if not val
+    ]
+    if missing:
+        return False, f"missing field(s): {', '.join(missing)}"
+    if result != "PASS":
+        return False, f"'Verification result' is {result!r}, not PASS"
+
+    candidate = _resolve_evidence_path(app, log_rel)
+    if candidate is None:
+        return (
+            False,
+            f"'Verification log' path {log_rel!r} is outside "
+            f"memories/{EVIDENCE_DIR_NAME}/ — refusing",
+        )
+    if not candidate.is_file() or candidate.stat().st_size == 0:
+        return False, f"verification log missing or empty: {log_rel}"
+    log_text = candidate.read_text(encoding="utf-8", errors="replace")
+    for pat in SECRET_PATTERNS:
+        if pat.search(log_text):
+            return (
+                False,
+                f"verification log at {log_rel} appears to contain a secret-shaped "
+                "token — refusing to resolve; scrub it and re-record",
+            )
+    return (
+        True,
+        f"non-mutating auth test verification log present at {log_rel} "
+        f"(method={method!r}), result=PASS, no secret-shaped content detected",
+    )
+
+
+def _directive_window_after(directive_text: str, anchor_label: str, req_id: str):
+    pat = re.compile(rf"{anchor_label} for {re.escape(req_id)}:")
+    m = pat.search(directive_text)
+    if not m:
+        return None
+    rest = directive_text[m.end() :]
+    cutoff = rest.find("OPREQ-")
+    window = rest[:cutoff] if cutoff != -1 else rest
+    return window[:1000]
+
+
+DECISION_RE = re.compile(r"\s*([A-Za-z][A-Za-z -]{2,30}?)\s*[—-]\s*(.{10,})")
+
+
+def verify_legal_or_financial_decision(
+    req_id: str, directive_text: str
+) -> tuple[bool, str]:
+    window = _directive_window_after(directive_text, "Decision", req_id)
+    if window is None:
+        return (
+            False,
+            f"human-directive.md has no 'Decision for {req_id}: <word> — "
+            "<rationale>' line",
+        )
+    m = DECISION_RE.match(window)
+    if not m:
+        return (
+            False,
+            f"'Decision for {req_id}:' found but not followed by "
+            "'<word> — <rationale (>=10 chars)>'",
+        )
+    decision_word, rationale = m.group(1).strip(), m.group(2).strip()
+    return (
+        True,
+        f"decision recorded in human-directive.md: {decision_word} — "
+        f"{rationale[:80]}",
+    )
+
+
+def verify_authorization(req_id: str, directive_text: str) -> tuple[bool, str]:
+    window = _directive_window_after(directive_text, "Authorization", req_id)
+    if window is None:
+        return False, f"human-directive.md has no 'Authorization for {req_id}:' block"
+    values = {}
+    for label in ("System", "Action", "Target", "Limit"):
+        m = re.search(rf"{label}:\s*(.+)", window)
+        if m and m.group(1).strip():
+            values[label] = m.group(1).strip()
+    missing = [l for l in ("System", "Action", "Target", "Limit") if l not in values]
+    if missing:
+        return (
+            False,
+            f"'Authorization for {req_id}:' block missing: {', '.join(missing)}",
+        )
+    return (
+        True,
+        "authorization recorded: system={System!r} action={Action!r} "
+        "target={Target!r} limit={Limit!r}".format(**values),
+    )
+
+
+def verify_resolution(req_id: str, fields: dict, directive_text: str, app: Path):
+    """Type-specific deterministic resolution check. The model's own prose can
+    never close its own escalation — each type requires an objectively checkable
+    artifact (a file's actual checksum, a structured decision the OPERATOR wrote
+    into human-directive.md) rather than trusting a free-text claim."""
+    req_type = fields.get("Type", "").strip().lower()
+    if req_type == "document-procurement":
+        return verify_document_procurement(fields, app)
+    if req_type == "credential":
+        return verify_credential(fields, app)
+    if req_type in ("legal-decision", "financial-decision"):
+        return verify_legal_or_financial_decision(req_id, directive_text)
+    if req_type in ("expenditure-approval", "external-action-authorization"):
+        return verify_authorization(req_id, directive_text)
+    return False, f"unrecognized type {req_type!r} — no verifier, refusing to resolve"
+
+
+def process_resolutions(text, directive_text, audit_path, app: Path):
     changed = False
     directive_done = bool(DIRECTIVE_STATUS_DONE_RE.search(directive_text))
     resolves_ids = set(RESOLVES_RE.findall(directive_text))
@@ -433,21 +629,20 @@ def process_resolutions(text, directive_text, audit_path):
                 "Status is not yet DONE",
             )
             continue
-        evidence = fields.get("Resolution evidence", "").strip()
-        if len(evidence) < 20:
+
+        ok, detail = verify_resolution(req_id, fields, directive_text, app)
+        if not ok:
             audit(
                 audit_path,
-                f"RESOLVE-BLOCKED {req_id}: directive is DONE and references it, but "
-                "'Resolution evidence' is missing or too short — leaving OPEN",
+                f"RESOLVE-BLOCKED {req_id}: directive is DONE and references it, "
+                f"but deterministic verification failed — {detail} — leaving OPEN",
             )
             continue
+
         text = set_field_in_text(text, req_id, "Status", "RESOLVED")
+        text = set_field_in_text(text, req_id, "Resolution verified", f"{detail} (at {now_iso()})")
         changed = True
-        audit(
-            audit_path,
-            f"RESOLVED {req_id} via human-directive.md Resolves reference, "
-            f"evidence_len={len(evidence)}",
-        )
+        audit(audit_path, f"RESOLVED {req_id} via human-directive.md — {detail}")
     return text, changed
 
 
@@ -493,7 +688,7 @@ def _main_impl(app: Path, send_fn, sleep_fn) -> int:
     directive_text = (
         directive_path.read_text(encoding="utf-8") if directive_path.is_file() else ""
     )
-    text, resolve_changed = process_resolutions(text, directive_text, audit_path)
+    text, resolve_changed = process_resolutions(text, directive_text, audit_path, app)
 
     if notif_changed or resolve_changed:
         try:
