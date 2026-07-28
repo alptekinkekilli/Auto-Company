@@ -432,12 +432,19 @@ def read_settings() -> dict[str, Any]:
     values = {s["key"]: current.get(s["key"], "") for s in SETTINGS_SPEC}
 
     # A blank `values` entry used to be reported as "unset", which conflated two
-    # very different states: nothing is configuring this knob, versus Coolify is
-    # configuring it and the panel cannot see it. MODEL and CLAUDE_EFFORT are the
-    # live example — absent from runtime.env, set in Coolify, and shown as empty.
+    # very different states: nothing is configuring this knob, versus something
+    # outside this file is and the panel cannot see it. MODEL and CLAUDE_EFFORT
+    # are the live example — absent from runtime.env, set in Coolify, shown empty.
     # `effective` is what the loop actually inherits (the entrypoint exports
     # runtime.env over the container env, so this process's environ already
     # reflects the winner); `source` says which layer supplied it.
+    #
+    # "container" is deliberately not called "coolify": from inside the container
+    # the Coolify env and the image's own `ENV` block are indistinguishable, and
+    # both are real sources. LOOP_INTERVAL proved it — deleted from Coolify on
+    # 2026-07-28, still shadowed on the next boot, because the Dockerfile carries
+    # LOOP_INTERVAL=30. Naming the layer we cannot actually identify would just be
+    # a more confident version of the same mistake.
     effective: dict[str, str] = {}
     source: dict[str, str] = {}
     for spec in SETTINGS_SPEC:
@@ -445,7 +452,7 @@ def read_settings() -> dict[str, Any]:
         if current.get(key, ""):
             effective[key], source[key] = current[key], "runtime.env"
         elif os.environ.get(key, ""):
-            effective[key], source[key] = os.environ[key], "coolify"
+            effective[key], source[key] = os.environ[key], "container"
         else:
             effective[key], source[key] = "", "default"
 

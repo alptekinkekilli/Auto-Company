@@ -302,10 +302,10 @@ class EngineRuntimeParsingTests(unittest.TestCase):
         self.assertEqual(out["effective"]["LOOP_INTERVAL"], "900")
         self.assertEqual(out["source"]["LOOP_INTERVAL"], "runtime.env")
 
-    def test_settings_source_coolify_when_absent_from_file(self) -> None:
+    def test_settings_source_container_when_absent_from_file(self) -> None:
         out = self._settings("", {"MODEL": "claude-haiku-4-5-20251001"})
         self.assertEqual(out["effective"]["MODEL"], "claude-haiku-4-5-20251001")
-        self.assertEqual(out["source"]["MODEL"], "coolify")
+        self.assertEqual(out["source"]["MODEL"], "container")
         # The raw runtime.env view stays empty — that is what the editor writes to.
         self.assertEqual(out["values"]["MODEL"], "")
 

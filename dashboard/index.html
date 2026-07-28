@@ -148,10 +148,11 @@
         <p class="muted director-hint">
           Knobs written to <code>logs/runtime.env</code> (a persistent volume) and sourced on
           container start. Changes take effect after a <strong>redeploy/restart</strong>.
-          <code>runtime.env</code> <strong>overrides</strong> the Coolify env, so a key set in
-          both places takes the value here and the Coolify UI keeps showing one that does
-          nothing — the entrypoint names any such key in the deploy log. This panel can only
-          write the knobs below, never a credential. Ownership rules and the current split:
+          <code>runtime.env</code> <strong>overrides</strong> the container env, which comes
+          from both the Coolify UI and the image's own <code>ENV</code> defaults — so a key
+          set in more than one place takes the value here and the other layer goes on showing
+          one that does nothing. The entrypoint names any such key in the deploy log. This
+          panel can only write the knobs below, never a credential. Ownership rules:
           <code>docs/devops/env-ownership.md</code>.
         </p>
         <div id="settingsForm" class="settings-form"><p class="muted">(loading...)</p></div>

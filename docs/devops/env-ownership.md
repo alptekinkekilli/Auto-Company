@@ -1,19 +1,32 @@
 # Environment ownership — which store owns which key
 
-There are **two** config stores, not three. The cockpit Settings panel is not a store: it
-writes `logs/runtime.env` (`dashboard/server.py`, `write_settings`). What looks like a third
-layer is a second editor for the second store.
+There are **three** config layers. The cockpit Settings panel is not one of them: it writes
+`logs/runtime.env` (`dashboard/server.py`, `write_settings`), so it is an editor for the
+third layer, not a store of its own.
 
-| Store | Lives in | Written by | Reaches the loop |
+| Layer | Lives in | Written by | Reaches the loop |
 |---|---|---|---|
-| Coolify env UI | the container environment, fixed at boot | operator via Coolify, or the Coolify API with an admin-scoped token | directly, as PID 1's env |
-| `logs/runtime.env` | a persistent volume, survives redeploys | cockpit Settings panel, or an SSH append | `docker-entrypoint.sh` exports each key at boot |
+| `Dockerfile` `ENV` | baked into the image at build | a commit to `Dockerfile` | as the container's starting env |
+| Coolify env UI | the container environment, set at boot | operator via Coolify, or the Coolify API with an admin-scoped token | overrides the image env |
+| `logs/runtime.env` | a persistent volume, survives redeploys | cockpit Settings panel, or an SSH append | `docker-entrypoint.sh` exports each key at boot — wins |
 
-**Precedence: `runtime.env` wins.** The entrypoint parses it after the container env exists
-and re-exports every key, so a key set in both places takes the `runtime.env` value and the
-Coolify UI goes on displaying a value that does nothing. Since 2026-07-28 the entrypoint
-prints one line at boot naming every shadowed key (names only — never values), so this is
-visible in the deploy log instead of being inferred from behaviour.
+**Precedence: image `ENV` → Coolify → `runtime.env`.** The entrypoint parses `runtime.env`
+after the container env exists and re-exports every key, so a key set in more than one place
+takes the `runtime.env` value while the other layers go on showing values that do nothing.
+Since 2026-07-28 the entrypoint prints one line at boot naming every shadowed key (names
+only — never values), so this is visible in the deploy log rather than inferred from
+behaviour.
+
+From inside the container the first two layers are **indistinguishable** — both are just
+environment. That is why the cockpit reports a knob's source as `container` rather than
+naming Coolify: claiming the layer we cannot identify would be a confident wrong answer.
+This was not theoretical. `LOOP_INTERVAL` was deleted from Coolify on 2026-07-28 and the very
+next boot still reported it as shadowed, because `Dockerfile` carries `LOOP_INTERVAL=30`.
+The image layer had been missed entirely in the first pass of this audit.
+
+Image `ENV` currently sets: `ENGINE=claude`, `CLAUDE_PERMISSION_MODE`,
+`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`, `DASHBOARD_PORT=8787`, `LOOP_INTERVAL=30`. Treat
+these as last-resort defaults for a fresh deploy, not as configuration to tune.
 
 ## The rule
 
