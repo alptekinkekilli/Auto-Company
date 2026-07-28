@@ -430,11 +430,32 @@ def read_settings() -> dict[str, Any]:
     """
     current = _parse_env_file(read_text_file(RUNTIME_ENV_FILE, ""))
     values = {s["key"]: current.get(s["key"], "") for s in SETTINGS_SPEC}
+
+    # A blank `values` entry used to be reported as "unset", which conflated two
+    # very different states: nothing is configuring this knob, versus Coolify is
+    # configuring it and the panel cannot see it. MODEL and CLAUDE_EFFORT are the
+    # live example — absent from runtime.env, set in Coolify, and shown as empty.
+    # `effective` is what the loop actually inherits (the entrypoint exports
+    # runtime.env over the container env, so this process's environ already
+    # reflects the winner); `source` says which layer supplied it.
+    effective: dict[str, str] = {}
+    source: dict[str, str] = {}
+    for spec in SETTINGS_SPEC:
+        key = spec["key"]
+        if current.get(key, ""):
+            effective[key], source[key] = current[key], "runtime.env"
+        elif os.environ.get(key, ""):
+            effective[key], source[key] = os.environ[key], "coolify"
+        else:
+            effective[key], source[key] = "", "default"
+
     return {
         "present": RUNTIME_ENV_FILE.exists(),
         "path": str(RUNTIME_ENV_FILE),
         "spec": SETTINGS_SPEC,
         "values": values,
+        "effective": effective,
+        "source": source,
         "needsRestart": True,
     }
 

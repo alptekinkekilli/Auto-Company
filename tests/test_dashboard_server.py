@@ -278,6 +278,37 @@ class EngineRuntimeParsingTests(unittest.TestCase):
         self.assertEqual(out["routedEffort"], "")
         self.assertEqual(out["codexEffort"], "medium")
 
+    # --- read_settings: distinguish "nothing set it" from "Coolify set it" ------
+    #
+    # A blank runtime.env entry is not the same as an unconfigured knob. MODEL and
+    # CLAUDE_EFFORT live in Coolify and not in runtime.env, so the panel rendered
+    # them as empty and an operator would reasonably read that as "unset".
+
+    def _settings(self, file_text: str, environ: dict):
+        with mock.patch.object(
+            dashboard_server, "read_text_file", lambda *a, **k: file_text
+        ), mock.patch.dict(dashboard_server.os.environ, environ, clear=True):
+            return dashboard_server.read_settings()
+
+    def test_settings_source_runtime_env_wins(self) -> None:
+        out = self._settings(
+            "LOOP_INTERVAL=900\n", {"LOOP_INTERVAL": "3600"}
+        )
+        self.assertEqual(out["effective"]["LOOP_INTERVAL"], "900")
+        self.assertEqual(out["source"]["LOOP_INTERVAL"], "runtime.env")
+
+    def test_settings_source_coolify_when_absent_from_file(self) -> None:
+        out = self._settings("", {"MODEL": "claude-haiku-4-5-20251001"})
+        self.assertEqual(out["effective"]["MODEL"], "claude-haiku-4-5-20251001")
+        self.assertEqual(out["source"]["MODEL"], "coolify")
+        # The raw runtime.env view stays empty — that is what the editor writes to.
+        self.assertEqual(out["values"]["MODEL"], "")
+
+    def test_settings_source_default_when_nowhere(self) -> None:
+        out = self._settings("", {})
+        self.assertEqual(out["source"]["MODEL"], "default")
+        self.assertEqual(out["effective"]["MODEL"], "")
+
 
 if __name__ == "__main__":
     unittest.main()
