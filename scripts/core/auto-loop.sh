@@ -835,8 +835,15 @@ snapshot_gitignore() {
 restore_gitignore_if_changed() {
     local snapshot_file="$1"
     if [ "$AUTO_LOOP_PROTECT_GITIGNORE" = "0" ]; then
-        [ -n "$snapshot_file" ] && rm -f "$snapshot_file"
-        return
+        # NOT `[ -n "$x" ] && rm ...` followed by a bare `return`: when the test is
+        # false the list returns 1, the bare `return` inherits it, and `set -e` kills
+        # the CALLER. And with protection off snapshot_gitignore() always returns "",
+        # so this path was guaranteed to fire — setting AUTO_LOOP_PROTECT_GITIGNORE=0
+        # (a documented flag) would have bricked every cycle. Same family as APP-240.
+        if [ -n "$snapshot_file" ]; then
+            rm -f "$snapshot_file"
+        fi
+        return 0
     fi
 
     local gitignore_file="$PROJECT_DIR/.gitignore"
@@ -864,7 +871,14 @@ restore_gitignore_if_changed() {
         fi
     fi
 
-    [ -n "$snapshot_file" ] && rm -f "$snapshot_file"
+    # Explicit `if` + `return 0`: as a function's LAST command, a false test would
+    # make the function return 1 and `set -e` would kill the caller. That is exactly
+    # how the container was dying for three days (APP-240) — different function, same
+    # shape. This one fires whenever .gitignore is absent at cycle start.
+    if [ -n "$snapshot_file" ]; then
+        rm -f "$snapshot_file"
+    fi
+    return 0
 }
 
 get_file_size_bytes() {

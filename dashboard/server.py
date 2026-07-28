@@ -245,6 +245,45 @@ def read_text_file(path: Path, fallback: str = "") -> str:
     return raw.decode("utf-8", errors="replace")
 
 
+def read_text_file_tail(path: Path, max_bytes: int, fallback: str = "") -> str:
+    """Last `max_bytes` of a file, decoded like read_text_file.
+
+    auto-loop.log is PERSISTENT across redeploys and only grows (391 KB / 4700+
+    lines by 2026-07-28), and read_engine_runtime() re-parsed all of it on every
+    status poll. Everything it extracts uses the LAST match, so the tail is
+    sufficient — the caller falls back to the full file only if the once-per-boot
+    banner it needs is not inside the window.
+    """
+    try:
+        size = path.stat().st_size
+        with path.open("rb") as fh:
+            if size > max_bytes:
+                fh.seek(size - max_bytes)
+            raw = fh.read()
+    except FileNotFoundError:
+        return fallback
+    except Exception as exc:  # pragma: no cover - defensive
+        return f"(read error: {exc})"
+
+    # A mid-character seek can split a multi-byte sequence; drop the partial
+    # first line rather than emitting replacement junk into the parsed output.
+    if size > max_bytes:
+        nl = raw.find(b"\n")
+        if nl != -1:
+            raw = raw[nl + 1 :]
+
+    for enc in ("utf-8", "utf-8-sig", "gb18030", "cp936"):
+        try:
+            return raw.decode(enc)
+        except UnicodeDecodeError:
+            continue
+    return raw.decode("utf-8", errors="replace")
+
+
+# Tail window for read_engine_runtime(). Comfortably covers many boots' worth of
+# banner + [ROUTER]/[TIER] lines while bounding work per status poll.
+ENGINE_RUNTIME_TAIL_BYTES = 262144
+
 DIRECTIVE_MAX_CHARS = 20000
 
 
@@ -590,7 +629,14 @@ def read_engine_runtime() -> dict[str, Any]:
     log's latest [ROUTER]/[TIER] lines + logs/router-state to surface the real active engine,
     model, effort, the tier ladders, the round-robin index, and the next pick.
     """
-    text = read_text_file(LOG_FILE, "")
+    # Read a bounded tail instead of the whole (ever-growing, redeploy-persistent)
+    # log on every poll. Every field below takes the LAST match, so the tail is
+    # enough — except the once-per-boot banner lines, which can fall outside the
+    # window on a long-running container. Detect that by its marker and re-read in
+    # full only then, so the common case stays cheap and the rare case stays correct.
+    text = read_text_file_tail(LOG_FILE, ENGINE_RUNTIME_TAIL_BYTES, "")
+    if "Tier ladder:" not in text or "Window budget:" not in text:
+        text = read_text_file(LOG_FILE, "")
     engine = read_text_file(LOG_FILE.parent / "router-state", "").strip().lower()
     out: dict[str, Any] = {"routedEngine": engine}
 

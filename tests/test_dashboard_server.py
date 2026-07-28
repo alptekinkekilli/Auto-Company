@@ -274,3 +274,64 @@ class EngineRuntimeParsingTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReadTextFileTailTests(unittest.TestCase):
+    """auto-loop.log is persistent and ever-growing; the status poll must not
+    re-parse all of it. Correctness rule: everything read from it takes the LAST
+    match, so a tail is fine — but the once-per-boot banner must still be found."""
+
+    def _tmp(self, content: bytes):
+        import tempfile
+        d = tempfile.mkdtemp()
+        p = Path(d) / "auto-loop.log"
+        p.write_bytes(content)
+        return p
+
+    def test_returns_whole_file_when_smaller_than_window(self) -> None:
+        p = self._tmp(b"line one\nline two\n")
+        self.assertEqual(
+            dashboard_server.read_text_file_tail(p, 1_000_000), "line one\nline two\n"
+        )
+
+    def test_truncates_to_the_tail_and_drops_the_partial_first_line(self) -> None:
+        body = ("".join(f"line {i}\n" for i in range(1000))).encode()
+        p = self._tmp(body)
+        out = dashboard_server.read_text_file_tail(p, 200)
+        self.assertLessEqual(len(out.encode()), 200)
+        self.assertTrue(out.endswith("line 999\n"))
+        # never starts mid-line
+        self.assertTrue(out.startswith("line "))
+
+    def test_multibyte_seek_does_not_produce_replacement_junk(self) -> None:
+        body = ("".join(f"satır-{i} ölçüm\n" for i in range(500))).encode("utf-8")
+        p = self._tmp(body)
+        out = dashboard_server.read_text_file_tail(p, 201)
+        self.assertNotIn("�", out)
+
+    def test_missing_file_returns_fallback(self) -> None:
+        self.assertEqual(
+            dashboard_server.read_text_file_tail(Path("/nope/none.log"), 100, "fb"), "fb"
+        )
+
+    def test_engine_runtime_falls_back_to_full_file_when_banner_is_out_of_window(self) -> None:
+        # Banner at the very top, then more than the window's worth of churn after it.
+        banner = (
+            "Tier ladder: ON (round-robin) | Claude [claude-sonnet-5:low] | "
+            "Codex effort [low,medium]\n"
+            "Window budget: $40 per 18000s (pause 1800s when reached)\n"
+        )
+        churn = "".join(f"[TIER] fill-weighted -> Claude=m{i} effort=low [claude $1/40], "
+                        f"Codex effort=low [codex 1/2]\n" for i in range(3000))
+        p = self._tmp((banner + churn).encode())
+
+        def fake_read(path, default=""):
+            return "claude" if path.name == "router-state" else p.read_text()
+
+        with mock.patch.object(dashboard_server, "LOG_FILE", p), \
+             mock.patch.object(dashboard_server, "ENGINE_RUNTIME_TAIL_BYTES", 2000), \
+             mock.patch.object(dashboard_server, "read_text_file", fake_read):
+            out = dashboard_server.read_engine_runtime()
+        # Recovered from the full file rather than silently losing the fields.
+        self.assertEqual(out["windowBudget"], "40")
+        self.assertEqual(out["claudeLadder"], ["claude-sonnet-5:low"])
