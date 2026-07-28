@@ -270,8 +270,18 @@ export CLAUDE_PERMISSION_MODE="${CLAUDE_PERMISSION_MODE:-bypassPermissions}"
 LOOP_PID=$!
 
 # --- if either process exits, tear the container down so the runtime restarts it ---
+# `set -euo pipefail` (line 4) applies here, and `wait -n` is a simple command in
+# non-conditional position: a NON-ZERO child exit kills this script instantly,
+# before `_rc=$?` and before the naming block below -- and a `set -e` exit is
+# silent, so nothing reaches `docker logs` either. That is why APP-240 could not
+# name the culprit for three days: the diagnostic added in `a71afc6` only ever ran
+# for a CLEAN (rc=0) child exit, which is not the failing case. Verified in the
+# container's own bash 5.2.15: child rc=1 -> no diagnostic, script exits 1;
+# child rc=0 -> diagnostic runs. Disarm set -e for exactly this one call.
+set +e
 wait -n "$DASH_PID" "$LOOP_PID"
 _rc=$?
+set -e
 # Name the process that died. "a managed process exited" told us nothing, and the
 # container has restarted 64 times today without us being able to say which side
 # fell over (APP-240). Whichever pid is still alive is the survivor.
@@ -283,6 +293,12 @@ else
     _dead="both processes"
 fi
 echo "[entrypoint] $_dead exited with rc=$_rc; stopping container"
+# The loop logs to a file, not to stdout, so `docker logs` has never carried any
+# context about what it was doing when it died. Echo its tail into the container
+# log, which survives the restart and is what forensics actually reach for.
+echo "[entrypoint] --- last 20 lines of logs/auto-loop.log ---"
+tail -n 20 /app/logs/auto-loop.log 2>/dev/null | sed 's/^/[entrypoint]   /' || true
+echo "[entrypoint] --- end of loop log tail ---"
 term
 wait || true
 exit 1
