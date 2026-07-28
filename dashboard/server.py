@@ -581,32 +581,51 @@ def read_engine_runtime() -> dict[str, Any]:
     out: dict[str, Any] = {"routedEngine": engine}
 
     # Tolerant to both the fill-weighted line and the legacy round-robin line.
+    # The Claude effort group is optional: pre-APP-241 lines carried no
+    # `effort=` after the model name, so requiring it would silently fall back
+    # to a years-old line instead of the current one.
     tiers = re.findall(
-        r"\[TIER\] (\S+).*?Claude=([^\s,\[]+).*?Codex effort=(\w+)", text)
+        r"\[TIER\] (\S+).*?Claude=([^\s,\[]+)(?:\s+effort=([A-Za-z0-9_-]+))?"
+        r".*?Codex effort=(\w+)",
+        text,
+    )
     if tiers:
-        mode, cmodel, ceff = tiers[-1]
+        mode, cmodel, cmeff, ceff = tiers[-1]
         out["tierMode"] = mode
         out["claudePick"] = cmodel
+        out["claudeEffort"] = cmeff
         out["codexEffort"] = ceff
         if engine == "codex":
             out["routedModel"] = os.environ.get("CODEX_MODEL", "gpt-5.6-sol")
             out["routedEffort"] = ceff
         else:
             out["routedModel"] = cmodel
-            out["routedEffort"] = ""
+            # Was hardcoded "" — since APP-241 a ladder rung carries its own
+            # effort (`model:effort`) and the live ladder's rungs differ ONLY
+            # by effort (sonnet-5:low..opus-5:high), so a blank field hid the
+            # single most decision-relevant value of a Claude cycle.
+            out["routedEffort"] = cmeff
 
     routers = re.findall(r"\[ROUTER\] (.+)", text)
     if routers:
         out["routerReason"] = routers[-1].strip()[:180]
 
-    m = re.search(r"Tier ladder:.*?Claude \[([^\]]*)\].*?Codex effort \[([^\]]*)\]", text)
-    if m:
-        out["claudeLadder"] = [s.strip() for s in m.group(1).split(",") if s.strip()]
-        out["codexLadder"] = [s.strip() for s in m.group(2).split(",") if s.strip()]
+    # auto-loop.log is PERSISTENT across redeploys (~390 KB / 4700+ lines by
+    # 2026-07-28), so everything parsed out of it must take the LAST match.
+    # These two used re.search(), which returns the FIRST — pinning the panel
+    # to a 2026-07-21 boot: it reported a `$8` budget and a `haiku,sonnet`
+    # ladder for a week after both had changed, while `interval` (findall[-1],
+    # two lines below) stayed correct. Same function, adjacent lines.
+    lad = re.findall(
+        r"Tier ladder:.*?Claude \[([^\]]*)\].*?Codex effort \[([^\]]*)\]", text)
+    if lad:
+        claude_lad, codex_lad = lad[-1]
+        out["claudeLadder"] = [s.strip() for s in claude_lad.split(",") if s.strip()]
+        out["codexLadder"] = [s.strip() for s in codex_lad.split(",") if s.strip()]
 
-    mb = re.search(r"Window budget: \$([0-9.]+) per (\d+)s", text)
+    mb = re.findall(r"Window budget: \$([0-9.]+) per (\d+)s", text)
     if mb:
-        out["windowBudget"] = mb.group(1)
+        out["windowBudget"] = mb[-1][0]
     itv = re.findall(r"Interval: (\d+)s", text)
     if itv:
         out["interval"] = itv[-1]

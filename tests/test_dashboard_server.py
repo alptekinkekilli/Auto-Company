@@ -187,8 +187,89 @@ Raw=Loop not running
         self.assertEqual(dashboard_server.parse_positive_int("12", default=180), 12)
 
     def test_unsupported_host_raises(self) -> None:
-        with self.assertRaisesRegex(RuntimeError, "only supports Windows hosts"):
-            dashboard_server.detect_host_kind("Linux")
+        # Was asserting that "Linux" raises. Linux/container support was added to
+        # detect_host_kind() (the company itself runs in a Linux container) but
+        # this test was never updated, so it had been failing independently of
+        # the change it now sits beside. Assert the real contract instead:
+        # Windows/Darwin/Linux resolve, anything else raises.
+        self.assertEqual(dashboard_server.detect_host_kind("Linux"),
+                         dashboard_server.LINUX_HOST)
+        with self.assertRaisesRegex(RuntimeError, "only supports Windows"):
+            dashboard_server.detect_host_kind("Plan9")
+
+
+# auto-loop.log is persistent across redeploys, so the Runtime State panel is
+# parsing a file that contains every historical boot. These cover the 2026-07-28
+# regressions where three fields were pinned to a 2026-07-21 boot line.
+STALE_THEN_CURRENT_LOG = """\
+[2026-07-21 19:02:10] Interval: 60s | Timeout: 1800s | Breaker: 5 errors
+[2026-07-21 19:02:10] Window budget: $8 per 18000s (pause 1800s when reached)
+[2026-07-21 19:02:10] Tier ladder: ON (round-robin) | \
+Claude [claude-haiku-4-5-20251001,claude-sonnet-5] | Codex effort [low,medium]
+[2026-07-21 19:02:11] [ROUTER] Alternate -> Claude (old)
+[2026-07-21 19:02:11] [TIER] round-robin -> Claude=claude-haiku-4-5-20251001 \
+[claude $0.10/8], Codex effort=medium [codex 0/5]
+[2026-07-28 08:59:17] Interval: 900s | Timeout: 1800s | Breaker: 5 errors
+[2026-07-28 08:59:17] Window budget: $40 per 18000s (pause 1800s when reached)
+[2026-07-28 08:59:17] Tier ladder: ON (round-robin) | \
+Claude [claude-sonnet-5:low,claude-sonnet-5:high,claude-opus-5:high] | \
+Codex effort [low,medium,high]
+[2026-07-28 08:59:17] [ROUTER] Alternate -> Claude (both have headroom)
+[2026-07-28 08:59:17] [TIER] fill-weighted -> Claude=claude-opus-5 effort=high \
+[claude $3.1630/40.00], Codex effort=low [codex 1/inf]
+"""
+
+
+class EngineRuntimeParsingTests(unittest.TestCase):
+    """read_engine_runtime() must reflect the LATEST boot, not the first one."""
+
+    def _run(self, log_text: str, router_state: str) -> dict:
+        def fake_read(path, default=""):
+            return router_state if path.name == "router-state" else log_text
+
+        with mock.patch.object(dashboard_server, "read_text_file", fake_read):
+            return dashboard_server.read_engine_runtime()
+
+    def test_claude_cycle_reports_its_effort(self) -> None:
+        # Regression: routedEffort was hardcoded "" on the Claude branch, so the
+        # panel could never show which rung ran — and the live ladder's rungs
+        # differ only by effort.
+        out = self._run(STALE_THEN_CURRENT_LOG, "claude")
+        self.assertEqual(out["routedEngine"], "claude")
+        self.assertEqual(out["routedModel"], "claude-opus-5")
+        self.assertEqual(out["routedEffort"], "high")
+        self.assertEqual(out["claudeEffort"], "high")
+
+    def test_codex_cycle_still_reports_codex_effort(self) -> None:
+        out = self._run(STALE_THEN_CURRENT_LOG, "codex")
+        self.assertEqual(out["routedEffort"], "low")
+        # The Claude-ladder pick is still surfaced separately on a Codex cycle.
+        self.assertEqual(out["claudePick"], "claude-opus-5")
+
+    def test_window_budget_and_ladders_take_the_latest_boot(self) -> None:
+        # Regression: re.search() returned the FIRST match, so the panel showed
+        # a $8 cap and a haiku/sonnet ladder days after both had changed.
+        out = self._run(STALE_THEN_CURRENT_LOG, "claude")
+        self.assertEqual(out["windowBudget"], "40")
+        self.assertEqual(out["interval"], "900")
+        self.assertEqual(
+            out["claudeLadder"],
+            ["claude-sonnet-5:low", "claude-sonnet-5:high", "claude-opus-5:high"],
+        )
+        self.assertEqual(out["codexLadder"], ["low", "medium", "high"])
+
+    def test_legacy_tier_line_without_claude_effort_still_parses(self) -> None:
+        # Pre-APP-241 lines carry no `effort=` after the model. Requiring it
+        # would silently fall back to an even older line.
+        legacy_only = (
+            "[2026-07-21 19:02:10] Window budget: $8 per 18000s (pause 1800s when reached)\n"
+            "[2026-07-21 19:02:11] [TIER] round-robin -> Claude=claude-sonnet-5 "
+            "[claude $0.10/8], Codex effort=medium [codex 0/5]\n"
+        )
+        out = self._run(legacy_only, "claude")
+        self.assertEqual(out["routedModel"], "claude-sonnet-5")
+        self.assertEqual(out["routedEffort"], "")
+        self.assertEqual(out["codexEffort"], "medium")
 
 
 if __name__ == "__main__":
