@@ -1,5 +1,10 @@
 import importlib.util
+import json
+import os
 import sys
+import tempfile
+import time
+from datetime import datetime, timedelta, timezone
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -308,6 +313,123 @@ class EngineRuntimeParsingTests(unittest.TestCase):
         out = self._settings("", {})
         self.assertEqual(out["source"]["MODEL"], "default")
         self.assertEqual(out["effective"]["MODEL"], "")
+
+    # --- an escalated cycle must report what RAN, not what the ladder picked ----
+    #
+    # [TIER] is written before apply_cycle_escalation() overrides the model, so
+    # reading only [TIER] made Runtime State claim claude-sonnet-5 for a cycle
+    # that executed claude-opus-5:high (observed live 2026-07-28 14:07:56).
+
+    ESCALATED_LOG = (
+        "Tier ladder: ON | Claude [claude-sonnet-5:low] | Codex effort [low]\n"
+        "Window budget: $40 per 18000s\n"
+        "[TIER] fill-weighted \u2192 Claude=claude-sonnet-5 effort=high [claude $7/40], "
+        "Codex effort=low [codex 4/\u221e]\n"
+        "[ESCALATE] one-shot 'claude-opus-5:high' CONSUMED \u2014 "
+        "model=claude-opus-5 effort=high timeout=1800s\n"
+    )
+
+    def _runtime(self, log_text: str, engine: str = "claude"):
+        def fake_read(path, default="", *a, **k):
+            return engine if str(path).endswith("router-state") else log_text
+
+        with mock.patch.object(dashboard_server, "read_text_file", fake_read), \
+             mock.patch.object(
+                 dashboard_server, "read_text_file_tail",
+                 lambda *a, **k: log_text):
+            return dashboard_server.read_engine_runtime()
+
+    def test_escalated_cycle_reports_the_escalated_model(self) -> None:
+        out = self._runtime(self.ESCALATED_LOG)
+        self.assertEqual(out["routedModel"], "claude-opus-5")
+        self.assertEqual(out["routedEffort"], "high")
+        self.assertTrue(out.get("escalated"))
+        # The ladder's own pick is still reported separately, unchanged.
+        self.assertEqual(out["claudePick"], "claude-sonnet-5")
+
+    def test_escalation_before_the_tier_line_is_ignored(self) -> None:
+        # A consumed escalation from an EARLIER cycle must not leak into this one.
+        stale = (
+            "[ESCALATE] one-shot 'claude-opus-5:high' CONSUMED \u2014 "
+            "model=claude-opus-5 effort=high timeout=1800s\n"
+            "Tier ladder: ON | Claude [claude-sonnet-5:low] | Codex effort [low]\n"
+            "Window budget: $40 per 18000s\n"
+            "[TIER] fill-weighted \u2192 Claude=claude-sonnet-5 effort=low [claude $9/40], "
+            "Codex effort=low [codex 4/\u221e]\n"
+        )
+        out = self._runtime(stale)
+        self.assertEqual(out["routedModel"], "claude-sonnet-5")
+        self.assertEqual(out["routedEffort"], "low")
+        self.assertNotIn("escalated", out)
+
+    def test_codex_cycle_ignores_escalation_entirely(self) -> None:
+        out = self._runtime(self.ESCALATED_LOG, engine="codex")
+        self.assertNotEqual(out["routedModel"], "claude-opus-5")
+        self.assertNotIn("escalated", out)
+
+
+class WindowCutoffTests(unittest.TestCase):
+    """The dashboard must measure spend over the SAME window the loop enforces.
+
+    auto-loop.sh anchors on ccusage's blockStart (the current Claude billing
+    block) and only falls back to rolling now-5h. The dashboard used the rolling
+    bound unconditionally and then printed the result against the loop's cap.
+    """
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.logdir = Path(self._tmp.name)
+        self.usage = self.logdir / "operator-usage.json"
+        self.patch = mock.patch.object(
+            dashboard_server, "LOG_FILE", self.logdir / "auto-loop.log"
+        )
+        self.patch.start()
+
+    def tearDown(self):
+        self.patch.stop()
+        self._tmp.cleanup()
+
+    def _write(self, payload: str, age_secs: float = 0.0):
+        self.usage.write_text(payload, encoding="utf-8")
+        if age_secs:
+            old = time.time() - age_secs
+            os.utime(self.usage, (old, old))
+
+    def test_fresh_blockstart_anchors_the_window(self):
+        start = datetime.now(timezone.utc) - timedelta(seconds=1200)
+        self._write(json.dumps({"blockStart": start.isoformat().replace("+00:00", "Z")}))
+        rolling = time.time() - 18000
+        cutoff = dashboard_server._window_cutoff_epoch()
+        self.assertAlmostEqual(cutoff, start.timestamp(), delta=2)
+        self.assertGreater(cutoff, rolling)
+
+    def test_stale_usage_file_falls_back_to_rolling(self):
+        start = datetime.now(timezone.utc) - timedelta(seconds=1200)
+        self._write(
+            json.dumps({"blockStart": start.isoformat().replace("+00:00", "Z")}),
+            age_secs=1800,  # older than OPERATOR_USAGE_STALE_SECS (900)
+        )
+        self.assertAlmostEqual(
+            dashboard_server._window_cutoff_epoch(), time.time() - 18000, delta=2
+        )
+
+    def test_blockstart_older_than_rolling_never_widens_the_window(self):
+        start = datetime.now(timezone.utc) - timedelta(seconds=40000)
+        self._write(json.dumps({"blockStart": start.isoformat().replace("+00:00", "Z")}))
+        self.assertAlmostEqual(
+            dashboard_server._window_cutoff_epoch(), time.time() - 18000, delta=2
+        )
+
+    def test_missing_or_unparseable_file_falls_back(self):
+        for payload in (None, "not json", json.dumps({}), json.dumps({"blockStart": "?"})):
+            with self.subTest(payload=payload):
+                if payload is None:
+                    self.usage.unlink(missing_ok=True)
+                else:
+                    self._write(payload)
+                self.assertAlmostEqual(
+                    dashboard_server._window_cutoff_epoch(), time.time() - 18000, delta=2
+                )
 
 
 if __name__ == "__main__":

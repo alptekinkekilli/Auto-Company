@@ -687,6 +687,26 @@ def read_engine_runtime() -> dict[str, Any]:
             # single most decision-relevant value of a Claude cycle.
             out["routedEffort"] = cmeff
 
+    # A one-shot escalation OVERRIDES the ladder's pick for that cycle, and the
+    # panel was reporting the pick rather than what ran: on 2026-07-28 the last
+    # cycle executed claude-opus-5:high while Runtime State said claude-sonnet-5
+    # — from the [TIER] line, which is written before the override is applied.
+    # Position, not recency of match, is what decides: [ESCALATE] CONSUMED is
+    # logged immediately after [TIER] within the same cycle, so it counts only
+    # when it appears AFTER the [TIER] line being reported.
+    if tiers and engine != "codex":
+        last_tier = text.rfind("[TIER]")
+        esc = None
+        for m in re.finditer(
+            r"\[ESCALATE\] one-shot '\S+' CONSUMED — model=(\S+) effort=(\S+)", text
+        ):
+            if m.start() > last_tier:
+                esc = m
+        if esc:
+            out["routedModel"] = esc.group(1)
+            out["routedEffort"] = esc.group(2)
+            out["escalated"] = True
+
     routers = re.findall(r"\[ROUTER\] (.+)", text)
     if routers:
         out["routerReason"] = routers[-1].strip()[:180]
@@ -712,6 +732,37 @@ def read_engine_runtime() -> dict[str, Any]:
         out["interval"] = itv[-1]
 
     return out
+
+
+def _window_cutoff_epoch() -> float:
+    """The same window boundary auto-loop.sh enforces the budget on.
+
+    The loop's `_window_anchor_epoch()` prefers ccusage's `blockStart` — the start
+    of the CURRENT Claude billing block — and only falls back to a rolling
+    now-minus-5h when that reading is missing or stale. The dashboard used the
+    rolling cutoff unconditionally, so right after a block reset it still counted
+    the previous block's spend and then printed that total against the loop's cap:
+    on 2026-07-28 the panel showed $49.36 / $40 "over budget" while the component
+    that actually enforces the gate saw $10.75 / $40. Two windows, one cap, and the
+    number on screen belonged to neither.
+    """
+    stale_secs = int(os.environ.get("OPERATOR_USAGE_STALE_SECS", "900"))
+    cutoff = time.time() - int(os.environ.get("WINDOW_SECONDS", "18000"))
+    usage = LOG_FILE.parent / "operator-usage.json"
+    try:
+        if time.time() - usage.stat().st_mtime > stale_secs:
+            return cutoff
+        block_start = json.loads(usage.read_text(encoding="utf-8")).get("blockStart")
+        if not block_start:
+            return cutoff
+        anchor = datetime.fromisoformat(
+            str(block_start).replace("Z", "+00:00")
+        ).timestamp()
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        return cutoff
+    # Never widen the window past the rolling bound — a stale-but-parseable
+    # blockStart from a previous block would otherwise pull in older spend.
+    return max(cutoff, anchor)
 
 
 def read_cost_summary() -> dict[str, Any]:
@@ -740,7 +791,7 @@ def read_cost_summary() -> dict[str, Any]:
     try:
         ledger = LOG_FILE.parent / "spend-window.log"
         if ledger.exists():
-            cutoff = time.time() - int(os.environ.get("WINDOW_SECONDS", "18000"))
+            cutoff = _window_cutoff_epoch()
             for line in ledger.read_text(encoding="utf-8").splitlines():
                 parts = line.split()
                 if len(parts) == 2:

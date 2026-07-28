@@ -119,7 +119,8 @@
         <div class="cost-stat"><span class="cost-num" id="costCycles">0</span><span class="muted">Costed cycles</span></div>
       </div>
       <p class="muted cost-foot">
-        Engine now <b id="costEngine">—</b> · Codex cycles (5h) <b id="codexWindow">0</b> · Limit hits <b id="costLimits">0</b> · Codex fallbacks <b id="costFallbacks">0</b> · Budget→Codex <b id="costOffloads">0</b> · Budget pauses <b id="costBudget">0</b>
+        Engine now <b id="costEngine">—</b> · Codex cycles this window <b id="codexWindow">0</b>
+        <br>Since this log began (persists across redeploys) — Limit hits <b id="costLimits">0</b> · Codex fallbacks <b id="costFallbacks">0</b> · Budget→Codex <b id="costOffloads">0</b> · Budget pauses <b id="costBudget">0</b>
       </p>
       <div class="cost-ccusage" id="ccusageBlock" hidden>
         <div class="cost-ccusage-head">
@@ -145,10 +146,13 @@
       </div>
       <div id="settingsBody" class="collapsible collapsed">
         <p class="muted director-hint">
-          Non-secret knobs written to <code>logs/runtime.env</code> (a persistent volume) and
-          sourced on container start. Changes take effect after a <strong>redeploy/restart</strong>.
-          Secrets stay in Coolify — never entered here. Full knob + required-secret reference
-          for a fresh deploy: <code>logs/runtime.env.example</code>.
+          Knobs written to <code>logs/runtime.env</code> (a persistent volume) and sourced on
+          container start. Changes take effect after a <strong>redeploy/restart</strong>.
+          <code>runtime.env</code> <strong>overrides</strong> the Coolify env, so a key set in
+          both places takes the value here and the Coolify UI keeps showing one that does
+          nothing — the entrypoint names any such key in the deploy log. This panel can only
+          write the knobs below, never a credential. Ownership rules and the current split:
+          <code>docs/devops/env-ownership.md</code>.
         </p>
         <div id="settingsForm" class="settings-form"><p class="muted">(loading...)</p></div>
         <div class="director-actions">
