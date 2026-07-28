@@ -1137,20 +1137,47 @@ run_engine_cycle() {
     esac
 }
 
+# Did THIS cycle actually run on Codex? `$ENGINE` alone is the wrong question:
+# with router alternation (or a usage-limit fallback) the configured engine stays
+# `claude` while the cycle is routed to Codex. Three other sites below already
+# spell this test out inline; this is the same predicate, named.
+_cycle_ran_on_codex() {
+    [ "$FALLBACK_USED" -eq 1 ] || [ "$CYCLE_ENGINE_OVERRIDE" = "codex" ] || [ "$ENGINE" = "codex" ]
+}
+
 extract_cycle_metadata() {
     RESULT_TEXT=""
     CYCLE_COST="N/A"
     CYCLE_SUBTYPE="unknown"
-    CYCLE_TYPE="${ENGINE}_exec"
+    if _cycle_ran_on_codex; then
+        CYCLE_TYPE="codex_exec"
+    else
+        CYCLE_TYPE="${ENGINE}_exec"
+    fi
 
-    if [ "$ENGINE" = "claude" ]; then
+    # APP-240 root cause: this branch used to be gated on `[ "$ENGINE" = "claude" ]`,
+    # which is TRUE on an alternation-routed Codex cycle — so Codex's plain-prose
+    # final message was fed to the Claude JSON parser below. `grep` then matched
+    # nothing and exited 1, `set -o pipefail` propagated it, and `set -e` killed the
+    # loop SILENTLY mid-cycle, taking the container down with it (the entrypoint
+    # supervises this process). That is the whole "container restarts every 5-10
+    # minutes" mystery: 6 of 6 Codex-routed cycles died here, 6 of 6 Claude-routed
+    # cycles survived because Claude's --output-format json always has a `{` line.
+    # It also explains why `ENGINE=codex` as PRIMARY was never affected: the branch
+    # was skipped entirely. Located by the ERR trap at the top of this file:
+    #   [FATAL] auto-loop exiting rc=1 at line 1153: RESULT_JSON=$(printf ... | tail -1)
+    if ! _cycle_ran_on_codex; then
         # `claude -p --output-format json` writes its result JSON as ONE line, but the
         # CLI may prepend warnings on stdout/stderr (e.g. the untrusted-workspace
         # "Ignoring N permissions.allow entries" notice). Feeding the whole blob to jq
         # then fails, silently zeroing CYCLE_COST — which also stops record_spend, so
         # the Claude budget window undercounts and the cap never binds. Parse the LAST
         # JSON-looking line instead of the raw output.
-        RESULT_JSON=$(printf '%s\n' "$RESULT_MESSAGE" | grep -E '^[[:space:]]*\{' | tail -1)
+        # `|| true` is load-bearing under `set -o pipefail`: "no JSON-looking line"
+        # is a normal outcome, not an error, but grep signals it with exit 1 and
+        # pipefail turns that into a failed assignment. Keep it even now that the
+        # branch is Claude-only — a warning-only run would hit the same edge.
+        RESULT_JSON=$(printf '%s\n' "$RESULT_MESSAGE" | grep -E '^[[:space:]]*\{' | tail -1 || true)
         [ -z "$RESULT_JSON" ] && RESULT_JSON="$RESULT_MESSAGE"
         if command -v jq >/dev/null 2>&1; then
             RESULT_TEXT=$(echo "$RESULT_JSON" | jq -r '.result // .message // .output_text // empty' 2>/dev/null | head -c 2000 || true)
