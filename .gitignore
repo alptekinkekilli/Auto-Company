@@ -188,6 +188,7 @@ docs/*/*
 !docs/devops/phase-6-runbook.md
 !docs/devops/app-230-mcp-wiring.md
 !docs/devops/app-250-crash-alarm.md
+!docs/devops/env-ownership.md
 !docs/handoff.html
 # Ignore all memories (keep folder marker only)
 memories/*
