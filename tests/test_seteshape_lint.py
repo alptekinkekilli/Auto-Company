@@ -22,6 +22,17 @@ SCRIPTS = [
     ROOT / "docker-entrypoint.sh",
 ]
 
+# Scope note, measured in bash 2026-07-28 — do NOT widen this lint to every block
+# terminator. `set -e` exempts the LEFT operand of an AND-OR list, so `[ x ] && y`
+# is survivable as the last statement before `done`, `fi`, or `esac`. It is fatal
+# only where the list's exit status becomes the status of something `set -e` checks:
+#   * the last statement of a FUNCTION body   -> the caller sees rc=1   (checked here)
+#   * immediately before a bare `return`      -> the return inherits it (checked here)
+#   * the last statement of a loop fed by a PIPE (`cmd | while ...; done`), because
+#     the pipeline inherits the loop's status — but a loop fed by a REDIRECT
+#     (`done < file`) does NOT, and the two are indistinguishable to a line-based
+#     scan. Flagging `done` outright would fire on the safe redirect form, which is
+#     what docker-entrypoint.sh's runtime.env parser uses.
 FUNC_START = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\(\)\s*\{")
 TEST_AND = re.compile(r"^\[\s.*\s\]\s*&&\s")
 # `... || true` / `... || :` makes the whole list return 0, so the shape is safe.

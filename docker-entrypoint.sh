@@ -19,14 +19,25 @@ export HOME=/home/app
 cd /app
 
 # --- operator runtime overrides (SSH-editable; no Coolify env UI needed) --------
-# A KEY=value file on a persistent volume lets non-secret config be tuned by
-# editing it over SSH + redeploying — instead of the Coolify env UI. Values here
-# OVERRIDE the container env (last write wins). Intended for knobs like
-# ROUTER_ALTERNATE, WINDOW_BUDGET_USD, CODEX_WINDOW_LIMIT, MODEL, CLAUDE_EFFORT,
-# LOOP_INTERVAL. Secrets may go here too but are better left as Coolify secrets.
+# A KEY=value file on a persistent volume lets config be tuned by editing it over
+# SSH or the cockpit Settings panel + redeploying, instead of the Coolify env UI.
+# Values here OVERRIDE the container env (last write wins).
+#
+# There are exactly TWO config stores, and each key should have ONE owner:
+#   * Coolify env UI  — image/identity values fixed at build/boot: auth tokens the
+#     container cannot function without, git identity, DASHBOARD_PORT.
+#   * this file       — every operator-tunable knob, plus the API keys the loop
+#     acquires over its life. It is on a persistent volume and is the only store
+#     the cockpit can write.
+# A key set in BOTH is not an error, but it IS invisible: this file wins and the
+# Coolify UI keeps displaying a value that has no effect (found 2026-07-28 with a
+# stale MODEL=claude-haiku-4-5-20251001 and a LOOP_INTERVAL that disagreed with
+# the live one). The override report below makes that shadowing visible at boot
+# instead of leaving it to be discovered from behaviour. See docs/devops/env-ownership.md.
 RUNTIME_ENV_FILE="${RUNTIME_ENV_FILE:-/app/logs/runtime.env}"
 if [ -f "$RUNTIME_ENV_FILE" ]; then
     echo "[entrypoint] applying runtime overrides from $RUNTIME_ENV_FILE"
+    _shadowed=""
     # Parse KEY=value literally (NOT `. file`) so values with shell-special chars
     # — e.g. a Coolify token like `1|abcdef` whose `|` would otherwise be read as a
     # pipe — are exported verbatim. Handles `=` in the value and optional quotes.
@@ -39,9 +50,29 @@ if [ -f "$RUNTIME_ENV_FILE" ]; then
             \"*\") _v=${_v#\"}; _v=${_v%\"} ;;
             \'*\') _v=${_v#\'}; _v=${_v%\'} ;;
         esac
-        [ -n "$_k" ] && export "$_k=$_v"
+        # An explicit `if`, not `[ -n "$_k" ] && export ...`. Measured 2026-07-28:
+        # in THIS position the AND-list is safe, because the loop is fed by a
+        # redirect (`done < FILE`) and `set -e` exempts the left operand of an
+        # AND-OR list. The same shape as the last command of a loop fed by a PIPE
+        # is fatal — the pipeline inherits status 1 and `set -e` fires. Since the
+        # difference is invisible at the call site, the shape is simply not used
+        # here; a blank line or a line starting with `=` now skips quietly.
+        if [ -n "$_k" ]; then
+            # Shadowing check before the export, while the container-env value is
+            # still readable. Only a DIFFERENT value is worth reporting; a key set
+            # identically in both places is redundant, not confusing.
+            if [ -n "${!_k+set}" ] && [ "${!_k}" != "$_v" ]; then
+                _shadowed="$_shadowed $_k"
+            fi
+            export "$_k=$_v"
+        fi
     done < "$RUNTIME_ENV_FILE"
-    unset _line _k _v
+
+    if [ -n "$_shadowed" ]; then
+        echo "[entrypoint] runtime.env OVERRIDES the container env for:$_shadowed"
+        echo "[entrypoint]   (the Coolify UI still shows its own value for these; it has no effect)"
+    fi
+    unset _line _k _v _shadowed
 fi
 
 # --- required auth (from `claude setup-token`, injected as a Coolify secret) ---

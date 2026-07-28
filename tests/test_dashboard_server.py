@@ -1,10 +1,17 @@
 import importlib.util
+import sys
 import unittest
 from pathlib import Path
 from unittest import mock
 
 
 SERVER_PATH = Path(__file__).resolve().parents[1] / "dashboard" / "server.py"
+# server.py imports its sibling `sentry_client`. Loading it by file path does NOT
+# put dashboard/ on sys.path (production gets that for free from `python
+# dashboard/server.py`), so without this the whole module fails to import and all
+# of these tests are skipped as a single collection error — silently, since a
+# missing module reads like an environment problem rather than a dead suite.
+sys.path.insert(0, str(SERVER_PATH.parent))
 SPEC = importlib.util.spec_from_file_location("dashboard_server", SERVER_PATH)
 assert SPEC is not None
 assert SPEC.loader is not None
