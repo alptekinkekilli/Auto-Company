@@ -578,7 +578,14 @@ def verify_authorization(req_id: str, directive_text: str) -> tuple[bool, str]:
         return False, f"human-directive.md has no 'Authorization for {req_id}:' block"
     values = {}
     for label in ("System", "Action", "Target", "Limit"):
-        m = re.search(rf"{label}:\s*(.+)", window)
+        # `[ \t]*` and `[^\n]+`, NOT `\s*(.+)`: `\s` matches a newline, so an EMPTY
+        # field used to swallow the following line as its own value. A directive with
+        # a bare `System:` silently passed by capturing the `Action:` line, and a bare
+        # `Limit:` captured the next paragraph — closing the request with a value the
+        # operator never wrote, which is worse than leaving it open. The ledger tells
+        # the operator "any missing or empty line leaves this request OPEN"; this makes
+        # that true.
+        m = re.search(rf"{label}:[ \t]*([^\n]+)", window)
         if m and m.group(1).strip():
             values[label] = m.group(1).strip()
     missing = [l for l in ("System", "Action", "Target", "Limit") if l not in values]

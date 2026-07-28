@@ -1,6 +1,7 @@
 import hashlib
 import importlib.util
 import json
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -562,6 +563,45 @@ class OperatorRequestNotifyTests(unittest.TestCase):
         # A second, now-writable run must NOT re-send — state survived the failure.
         orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
         self.assertEqual(len(send.calls), 1)
+
+    # --- verify_authorization: an empty field must never borrow the next line ---
+    #
+    # The ledger promises the operator that "any missing or empty line leaves this
+    # request OPEN". Before the `[^\n]+` fix it did the opposite: `\s` matches a
+    # newline, so a bare `System:` captured the `Action:` line as its value and the
+    # block passed. That closes an authorization with a value nobody wrote — a
+    # silent-wrong-close, strictly worse than a silent-stay-open.
+
+    AUTH_BLOCK = (
+        "Resolves: OPREQ-TEST-AUTH-001\n\n"
+        "Authorization for OPREQ-TEST-AUTH-001:\n"
+        "System: OpenTimestamps public calendar servers\n"
+        "Action: submit a SHA-256 digest and store the receipt\n"
+        "Target: opentimestamps.org only\n"
+        "Limit: at most 30 submissions, expires in 14 days\n\n"
+        "Record each submission in the fixture work ledger.\n"
+    )
+
+    def test_authorization_complete_block_passes(self):
+        ok, msg = orn.verify_authorization("OPREQ-TEST-AUTH-001", self.AUTH_BLOCK)
+        self.assertTrue(ok, msg)
+        self.assertIn("OpenTimestamps", msg)
+
+    def test_authorization_blank_field_does_not_borrow_next_line(self):
+        for label in ("System", "Action", "Target", "Limit"):
+            with self.subTest(label=label):
+                blanked = re.sub(
+                    rf"^{label}:.*$", f"{label}:", self.AUTH_BLOCK, count=1, flags=re.M
+                )
+                ok, msg = orn.verify_authorization("OPREQ-TEST-AUTH-001", blanked)
+                self.assertFalse(ok, f"blank {label} wrongly accepted: {msg}")
+                self.assertIn(label, msg)
+
+    def test_authorization_missing_field_reported(self):
+        dropped = re.sub(r"^Target:.*\n", "", self.AUTH_BLOCK, count=1, flags=re.M)
+        ok, msg = orn.verify_authorization("OPREQ-TEST-AUTH-001", dropped)
+        self.assertFalse(ok)
+        self.assertIn("Target", msg)
 
 
 if __name__ == "__main__":
