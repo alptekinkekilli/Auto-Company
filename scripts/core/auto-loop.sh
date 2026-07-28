@@ -39,6 +39,21 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 LOG_DIR="$PROJECT_DIR/logs"
+
+# --- Locate silent `set -e` deaths (APP-240) --------------------------------
+# The entrypoint's teardown now names THIS script as the child that exits rc=1
+# during Codex-routed cycles, but a `set -e` exit prints nothing at all, so the
+# failing command is still invisible. This trap records it. `set -E` is required
+# for the ERR trap to be inherited into functions and subshells -- the failure is
+# somewhere inside one, and without errtrace the trap would never fire there.
+# Deliberately writes with printf rather than log(): log() is not defined yet at
+# this point in the file, and a diagnostic that depends on later setup is exactly
+# the kind of thing that fails when you need it.
+set -E
+trap '_erc=$?; printf "[%s] [FATAL] auto-loop exiting rc=%s at line %s: %s\n" \
+    "$(date "+%Y-%m-%d %H:%M:%S")" "$_erc" "$LINENO" "$BASH_COMMAND" \
+    >> "$LOG_DIR/auto-loop.log" 2>/dev/null || true' ERR
+
 CONSENSUS_FILE="$PROJECT_DIR/memories/consensus.md"
 PROMPT_FILE="$PROJECT_DIR/PROMPT.md"
 PID_FILE="$PROJECT_DIR/.auto-loop.pid"
