@@ -49,8 +49,14 @@ LOG_DIR="$PROJECT_DIR/logs"
 # Deliberately writes with printf rather than log(): log() is not defined yet at
 # this point in the file, and a diagnostic that depends on later setup is exactly
 # the kind of thing that fails when you need it.
+# NOTE the wording: an ERR trap fires on ANY non-zero command under errtrace,
+# including ones `set -e` tolerates (conditionals, subshells, guarded calls). It
+# cannot know whether the shell is about to exit, so it must not claim it is.
+# The first version said "exiting rc=..." and was immediately misleading on a
+# harmless SIGPIPE. A diagnostic that lies is worse than no diagnostic — the
+# whole point of APP-240 was that we could not trust what the logs told us.
 set -E
-trap '_erc=$?; printf "[%s] [FATAL] auto-loop exiting rc=%s at line %s: %s\n" \
+trap '_erc=$?; printf "[%s] [ERR] rc=%s at line %s: %s\n" \
     "$(date "+%Y-%m-%d %H:%M:%S")" "$_erc" "$LINENO" "$BASH_COMMAND" \
     >> "$LOG_DIR/auto-loop.log" 2>/dev/null || true' ERR
 
@@ -538,7 +544,9 @@ _work_fingerprint() {
     [ -d "$RESEARCH_DIR" ] || return 0
     local files newest registry
     files=$(ls -1 "$RESEARCH_DIR" 2>/dev/null | wc -l | tr -d ' ')
-    newest=$(ls -1t "$RESEARCH_DIR" 2>/dev/null | head -1)
+    # `head -1` closes the pipe after one line, so `ls` takes SIGPIPE and pipefail
+    # surfaces 141 every cycle. Harmless, but it fired the ERR trap on each pass.
+    newest=$(ls -1t "$RESEARCH_DIR" 2>/dev/null | head -1 || true)
     registry=$(wc -c < "$CANDIDATE_REGISTRY" 2>/dev/null | tr -d ' ')
     printf '%s|%s|%s' "${files:-0}" "${newest:-none}" "${registry:-0}"
 }
