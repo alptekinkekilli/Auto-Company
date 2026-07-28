@@ -281,6 +281,20 @@ uses it to require that many evidence files, not just one.
 Do not write a `Content fingerprint` field — the script computes and rewrites it. Pick a
 stable, descriptive ID (e.g. `OPREQ-208A-001`) and never reuse an ID.
 
+**Refusal is a first-class answer, for every request type.** The operator declines by
+putting `REFUSE` at the start of its own line in the same directive that carries
+`Resolves: OPREQ-<id>` — optionally as `REFUSE: <reason>` or `REFUSE OPREQ-<id> — <reason>`.
+The request then closes as `Status: REFUSED` (not `RESOLVED`), with a `Refusal recorded`
+field. No authorization block is required or expected: demanding one from someone who is
+declining to authorize is incoherent. Two rules keep it unambiguous — the word must be
+UPPERCASE and start its own line, so prose *discussing* a refusal never closes a request;
+and a bare `REFUSE` only applies when the directive resolves exactly one request, otherwise
+it must name the request. Anything ambiguous stays OPEN and is audited as
+`REFUSE-AMBIGUOUS`. When you write `Acceptable response format`, describe this path as
+accurately as the authorization path — a refusal is not a non-answer, it is the operator
+deciding, and the affected scope should then be recorded as blocked-by-authority rather
+than left pending.
+
 `Blocked scope: GLOBAL` means treat this exactly like a `PENDING` human directive: do
 not proceed with normal autonomous discretion elsewhere until it is resolved or
 cancelled. Any other scope value blocks only that candidate/axis — the rest of the

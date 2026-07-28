@@ -91,6 +91,8 @@ BLOCK_RE = re.compile(r"^## (OPREQ-[A-Za-z0-9_-]+)\s*$", re.MULTILINE)
 FIELD_RE = re.compile(r"^- ([A-Za-z][A-Za-z /]*):\s?(.*)$")
 DIRECTIVE_STATUS_DONE_RE = re.compile(r"^## Status\s*\nDONE\b", re.MULTILINE)
 RESOLVES_RE = re.compile(r"Resolves:\s*(OPREQ-[A-Za-z0-9_-]+)")
+# Bare request id, for reading a target off a REFUSE line.
+RESOLVES_RE_ID = re.compile(r"OPREQ-[A-Za-z0-9_-]+")
 
 MAX_ATTEMPTS = 3
 BACKOFF_SECONDS = [2, 4]
@@ -601,6 +603,46 @@ def verify_authorization(req_id: str, directive_text: str) -> tuple[bool, str]:
     )
 
 
+# A refusal is a DECISION, not an absent answer, and it is valid for every request
+# type — the operator declining to authorize is as final as authorizing. Until
+# 2026-07-28 the ledger promised this ("to refuse instead, ... and the word REFUSE")
+# and no code implemented it: a refusal fell through to the type verifier, failed for
+# want of an authorization block, and left the request OPEN with only a RESOLVE-BLOCKED
+# line in an audit file nobody reads.
+#
+# Uppercase and line-anchored on purpose. Prose discussing what a refusal would mean
+# must not close a request, and `REFUSE` at the start of its own line is not something
+# a sentence produces by accident.
+REFUSE_RE = re.compile(r"^[ \t]*REFUSE\b[ \t]*:?[ \t]*(.*)$", re.MULTILINE)
+
+
+def refusal_for(req_id: str, directive_text: str, resolves_ids: set) -> tuple[bool, str]:
+    """Is THIS request refused by the directive? Fail closed when ambiguous."""
+    matches = REFUSE_RE.findall(directive_text)
+    if not matches:
+        return False, ""
+    named = {i for tail in matches for i in RESOLVES_RE_ID.findall(tail)}
+    if named:
+        # An explicit target always wins, and refuses only what it names.
+        if req_id in named:
+            reason = next(
+                (t.strip() for t in matches if req_id in t and t.strip()), ""
+            )
+            return True, reason or "refused by name"
+        return False, ""
+    # A bare REFUSE is only unambiguous when the directive settles ONE request.
+    # Refusing several at once by implication is exactly the kind of over-reach
+    # this ledger exists to prevent.
+    if len(resolves_ids) != 1:
+        return (
+            False,
+            f"bare REFUSE but the directive resolves {len(resolves_ids)} requests — "
+            "name the request on the REFUSE line to disambiguate",
+        )
+    reason = next((t.strip() for t in matches if t.strip()), "")
+    return True, reason or "refused"
+
+
 def verify_resolution(req_id: str, fields: dict, directive_text: str, app: Path):
     """Type-specific deterministic resolution check. The model's own prose can
     never close its own escalation — each type requires an objectively checkable
@@ -644,6 +686,23 @@ def process_resolutions(text, directive_text, audit_path, app: Path):
                 f"RESOLVE-PENDING {req_id}: human-directive.md references it but "
                 "Status is not yet DONE",
             )
+            continue
+
+        # Checked BEFORE the type verifier: a refusal is a complete answer, and
+        # demanding an authorization block from someone who is declining to
+        # authorize is incoherent.
+        refused, why = refusal_for(req_id, directive_text, resolves_ids)
+        if refused:
+            text = set_field_in_text(text, req_id, "Status", "REFUSED")
+            text = set_field_in_text(
+                text, req_id, "Refusal recorded", f"{why} (at {now_iso()})"
+            )
+            changed = True
+            audit(audit_path, f"REFUSED {req_id} via human-directive.md — {why}")
+            continue
+        if why:
+            # An ambiguous refusal must not quietly become a non-refusal.
+            audit(audit_path, f"REFUSE-AMBIGUOUS {req_id}: {why} — leaving OPEN")
             continue
 
         ok, detail = verify_resolution(req_id, fields, directive_text, app)

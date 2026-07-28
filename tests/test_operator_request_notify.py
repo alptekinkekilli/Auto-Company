@@ -603,6 +603,75 @@ class OperatorRequestNotifyTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("Target", msg)
 
+    # --- REFUSE: a refusal is a decision, and it must actually close the request ---
+    #
+    # The ledger promised "an entry containing Resolves: <id> and the word REFUSE"
+    # since the mechanism shipped, and nothing implemented it: the refusal fell
+    # through to the type verifier, failed for want of an authorization block, and
+    # left the request OPEN with only an audit line nobody watches.
+
+    def _refuse_run(self, directive: str, *blocks):
+        self.write_requests(*blocks)
+        self.directive_path.write_text(
+            "# Human Directive\n\n## Status\nDONE\n\n## Directive\n" + directive,
+            encoding="utf-8",
+        )
+        send = make_send_fn([(True, None)])
+        orn.main(app_dir=self.app, send_fn=send, sleep_fn=self.noop_sleep)
+        return self.requests_path.read_text(encoding="utf-8")
+
+    def test_refuse_closes_the_request_as_refused_not_resolved(self):
+        out = self._refuse_run(
+            "Resolves: OPREQ-208A-001\n\nREFUSE: not a registered trader.\n",
+            block_text("OPREQ-208A-001", type_="external-action-authorization"),
+        )
+        self.assertIn("Status: REFUSED", out)
+        self.assertNotIn("Status: RESOLVED", out)
+        self.assertIn("Refusal recorded:", out)
+        self.assertIn("not a registered trader", out)
+
+    def test_refuse_works_without_an_authorization_block(self):
+        # The whole point: someone declining to authorize cannot supply
+        # System/Action/Target/Limit, and must not be asked to.
+        out = self._refuse_run(
+            "Resolves: OPREQ-208A-001\nREFUSE\n",
+            block_text("OPREQ-208A-001", type_="external-action-authorization"),
+        )
+        self.assertIn("Status: REFUSED", out)
+
+    def test_prose_mentioning_refusal_does_not_close_anything(self):
+        out = self._refuse_run(
+            "Resolves: OPREQ-208A-001\n\nI considered whether to REFUSE this and "
+            "decided to authorize it instead.\n\n"
+            "Authorization for OPREQ-208A-001:\nSystem: S\nAction: A\n"
+            "Target: T\nLimit: L\n",
+            block_text("OPREQ-208A-001", type_="external-action-authorization"),
+        )
+        self.assertNotIn("Status: REFUSED", out)
+        self.assertIn("Status: RESOLVED", out)
+
+    def test_bare_refuse_with_two_requests_fails_closed(self):
+        out = self._refuse_run(
+            "Resolves: OPREQ-208A-001\nResolves: OPREQ-215TFB-WTP-001\n\nREFUSE\n",
+            block_text("OPREQ-208A-001", type_="external-action-authorization"),
+            block_text("OPREQ-215TFB-WTP-001", type_="external-action-authorization"),
+        )
+        self.assertNotIn("REFUSED", out)
+        audit = (self.app / "memories" / "operator-requests-audit.log").read_text()
+        self.assertIn("REFUSE-AMBIGUOUS", audit)
+
+    def test_named_refuse_targets_only_that_request(self):
+        out = self._refuse_run(
+            "Resolves: OPREQ-208A-001\nResolves: OPREQ-215TFB-WTP-001\n\n"
+            "REFUSE OPREQ-215TFB-WTP-001 — sender identification cannot be satisfied.\n",
+            block_text("OPREQ-208A-001", type_="external-action-authorization"),
+            block_text("OPREQ-215TFB-WTP-001", type_="external-action-authorization"),
+        )
+        wtp = out[out.index("## OPREQ-215TFB-WTP-001"):]
+        other = out[out.index("## OPREQ-208A-001"):out.index("## OPREQ-215TFB-WTP-001")]
+        self.assertIn("Status: REFUSED", wtp)
+        self.assertIn("Status: OPEN", other)
+
 
 if __name__ == "__main__":
     unittest.main()
