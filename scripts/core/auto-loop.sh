@@ -136,6 +136,10 @@ LOOP_INTERVAL="${LOOP_INTERVAL:-30}"
 # to the wall is the single biggest cost driver. The one cycle that actually reached the
 # old 1800s wall did 145 turns / 19.2M cache-read tokens and cost $32.22, 88% of a whole
 # $40 5h window; normal cycles finish in ~4 min, so 900s still leaves 3-4x headroom.
+# Money ceiling across BOTH engines (Claude USD + Codex USD, priced by ccusage).
+# Separate from WINDOW_BUDGET_USD on purpose -- see the gate in
+# select_cycle_engine(). Blank = no total ceiling (prior behaviour).
+TOTAL_BUDGET_USD="${TOTAL_BUDGET_USD:-}"
 CYCLE_TIMEOUT_SECONDS="${CYCLE_TIMEOUT_SECONDS:-900}"
 # An operator-escalated cycle (see apply_cycle_escalation) is deliberately allowed the
 # old, longer wall: it is a human-approved, one-shot, expensive-on-purpose run.
@@ -212,6 +216,75 @@ record_spend() {
 }
 
 # Sum spend within the last WINDOW_SECONDS, pruning older entries. Echoes USD.
+# The instant the current plan window starts. Extracted so the Claude cap and the
+# combined TOTAL cap can never disagree about where the window begins — two
+# independent copies of this logic drifting apart is exactly the kind of bug that
+# makes a budget guard silently wrong.
+_window_anchor_epoch() {
+    local now cutoff anchor
+    now=$(date +%s)
+    cutoff=$((now - WINDOW_SECONDS))
+    if [ -f "$OPERATOR_USAGE_FILE" ] \
+       && [ $(( now - $(stat -c %Y "$OPERATOR_USAGE_FILE" 2>/dev/null || echo 0) )) -le "$OPERATOR_USAGE_STALE_SECS" ]; then
+        anchor=$(jq -r '.blockStart // empty' "$OPERATOR_USAGE_FILE" 2>/dev/null || true)
+        if [ -n "$anchor" ]; then
+            anchor=$(date -u -d "$anchor" +%s 2>/dev/null || echo "")
+            if [ -n "$anchor" ] && [ "$anchor" -gt "$cutoff" ] 2>/dev/null; then
+                cutoff="$anchor"
+            fi
+        fi
+    fi
+    echo "$cutoff"
+}
+
+# Codex USD inside the CURRENT plan window, priced by ccusage — the same tool that
+# already prices Claude, so the two figures are in the same currency and can be
+# added. Codex bills against a ChatGPT subscription rather than per token, so this
+# is API-equivalent cost, which is exactly what WINDOW_BUDGET_USD already measures.
+# ~380ms over 794 sessions, i.e. cheap enough for once per cycle.
+# Prints TWO fields: "<usd> <stale 0|1>". Deliberately not a global flag --
+# callers use this inside $( ), which is a subshell, so a global set in here would
+# never reach the caller and the STALE warning would silently never fire. Caught
+# by tests/test_total_budget.sh before it shipped.
+CODEX_SPEND_CACHE="$LOG_DIR/.codex-spend-cache"
+codex_window_spend() {
+    local anchor out
+    anchor="$(_window_anchor_epoch)"
+    out="$(CODEX_HOME="${CODEX_HOME:-$LOG_DIR/.codex}" ccusage codex session --json 2>/dev/null \
+        | python3 -c '
+import json, sys, datetime
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+anchor = int(sys.argv[1])
+total = 0.0
+for s in d.get("sessions", []):
+    la = s.get("lastActivity")
+    if not la:
+        continue
+    try:
+        e = int(datetime.datetime.fromisoformat(la.replace("Z", "+00:00")).timestamp())
+    except Exception:
+        continue
+    # lastActivity is the sessions END, so a session straddling the anchor is
+    # counted in full. That over-counts, which is the safe direction for a cap.
+    if e >= anchor:
+        total += float(s.get("costUSD") or 0)
+print("%.4f" % total)
+' "$anchor" 2>/dev/null || true)"
+    if [ -n "$out" ]; then
+        printf '%s' "$out" > "$CODEX_SPEND_CACHE" 2>/dev/null || true
+        printf '%s 0' "$out"
+        return 0
+    fi
+    # Measurement failed. Fall back to the last known value rather than printing
+    # 0 — reporting zero would quietly switch the ceiling off, which is the one
+    # failure mode a budget guard must never have.
+    printf '%s 1' "$(cat "$CODEX_SPEND_CACHE" 2>/dev/null || echo "0")"
+    return 0
+}
+
 window_spend() {
     [ -f "$SPEND_LEDGER" ] || { echo "0"; return; }
     local now cutoff
@@ -226,17 +299,9 @@ window_spend() {
     # the rolling window still carries pre-reset spend: the loop would read itself as
     # a third full against a plan that is actually empty, and downgrade the model for
     # no reason. blockStart comes from `ccusage blocks --active` via the reporter.
-    local anchor
-    if [ -f "$OPERATOR_USAGE_FILE" ] \
-       && [ $(( now - $(stat -c %Y "$OPERATOR_USAGE_FILE" 2>/dev/null || echo 0) )) -le "$OPERATOR_USAGE_STALE_SECS" ]; then
-        anchor=$(jq -r '.blockStart // empty' "$OPERATOR_USAGE_FILE" 2>/dev/null || true)
-        if [ -n "$anchor" ]; then
-            anchor=$(date -u -d "$anchor" +%s 2>/dev/null || echo "")
-            if [ -n "$anchor" ] && [ "$anchor" -gt "$cutoff" ] 2>/dev/null; then
-                cutoff="$anchor"
-            fi
-        fi
-    fi
+    # Shared with codex_window_spend() via _window_anchor_epoch() so the Claude cap
+    # and the TOTAL cap can never disagree about where the window starts.
+    cutoff="$(_window_anchor_epoch)"
 
     awk -v c="$cutoff" '$1 >= c {s += $2} END {printf "%.4f", s + 0}' "$SPEND_LEDGER" 2>/dev/null || echo "0"
 }
@@ -596,10 +661,59 @@ refresh_dynamic_budget() {
     fi
 }
 
+# Fire the total-cap Telegram once per plan window, not once per paused cycle.
+# Keyed on the window anchor, so the next window notifies again on its own.
+_notify_total_cap_once() {
+    local total="$1" claude_part="$2" codex_part="$3" anchor marker
+    anchor="$(_window_anchor_epoch)"
+    marker="$LOG_DIR/.total-cap-notified-$anchor"
+    if [ -f "$marker" ]; then
+        return 0
+    fi
+    : > "$marker" 2>/dev/null || true
+    find "$LOG_DIR" -maxdepth 1 -name '.total-cap-notified-*' ! -name "*-$anchor" -delete 2>/dev/null || true
+    if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+        bash "$SCRIPT_DIR/telegram-notify.sh" "💸 Total spend cap reached — company paused.
+Claude \$$claude_part + Codex \$$codex_part = \$$total of \$$TOTAL_BUDGET_USD.
+Pausing ${BUDGET_PAUSE_SECONDS}s at a time; it resumes on its own when the 5h window rolls." \
+            >/dev/null 2>&1 || true
+    fi
+}
+
 select_cycle_engine() {
     CYCLE_ENGINE_OVERRIDE=""
     CYCLE_ROUTER_ACTION="run"
     CYCLE_ROUTER_MSG=""
+
+    # --- TOTAL spend ceiling, BOTH engines (2026-07-28) ---------------------
+    # Deliberately separate from WINDOW_BUDGET_USD, which is a *Claude plan*
+    # guard: it is derived from PLAN_CEILING_USD minus the operator's own Claude
+    # spend, so it protects the human's interactive sessions from being starved.
+    # Folding Codex into that number would conflate two different quotas (Claude
+    # plan vs ChatGPT subscription) and break the reserve maths. This is the
+    # money ceiling instead, and it is checked FIRST and for EVERY engine —
+    # including ENGINE=codex primary, which the Claude routing below never sees.
+    # Codex ran ~$640 total / $44 in one day entirely unbudgeted before this.
+    if [ -n "$TOTAL_BUDGET_USD" ]; then
+        local _c_now _x_raw _x_now _x_stale _total
+        _c_now="$(window_spend)"
+        _x_raw="$(codex_window_spend)"
+        _x_now="${_x_raw%% *}"
+        _x_stale="${_x_raw##* }"
+        _total="$(awk -v a="$_c_now" -v b="$_x_now" 'BEGIN { printf "%.4f", a + b }')"
+        if [ "$_x_stale" = "1" ]; then
+            log "[TOTAL] claude \$$_c_now + codex \$$_x_now = \$$_total / cap \$$TOTAL_BUDGET_USD (codex figure STALE — ccusage failed, reusing last known)"
+        else
+            log "[TOTAL] claude \$$_c_now + codex \$$_x_now = \$$_total / cap \$$TOTAL_BUDGET_USD"
+        fi
+        if awk -v s="$_total" -v b="$TOTAL_BUDGET_USD" 'BEGIN { exit !(s + 0 >= b + 0) }'; then
+            CYCLE_ROUTER_ACTION="pause"
+            CYCLE_ROUTER_MSG="[ROUTER] TOTAL spend \$$_total >= cap \$$TOTAL_BUDGET_USD (claude \$$_c_now + codex \$$_x_now) — both engines exhausted, pausing ${BUDGET_PAUSE_SECONDS}s"
+            _notify_total_cap_once "$_total" "$_c_now" "$_x_now"
+            _router_persist "${ENGINE}"
+            return 0
+        fi
+    fi
 
     # This whole function only ever offloads Claude -> Codex on a Claude budget cap —
     # every fallback path below hardcodes "claude" as the assumed primary. When the
@@ -1327,6 +1441,11 @@ if [ "$ENGINE" = "claude" ] && [ -n "$FALLBACK_ENGINE" ]; then
 fi
 if [ -n "$WINDOW_BUDGET_USD" ]; then
     log "Window budget: \$$WINDOW_BUDGET_USD per ${WINDOW_SECONDS}s (pause ${BUDGET_PAUSE_SECONDS}s when reached)"
+fi
+if [ -n "$TOTAL_BUDGET_USD" ]; then
+    log "Total spend cap: \$$TOTAL_BUDGET_USD per window (Claude USD + Codex USD, both priced by ccusage)"
+else
+    log "Total spend cap: none — Codex spend is UNBOUNDED (set TOTAL_BUDGET_USD to bound it)"
 fi
 if [ "$ENGINE" != "claude" ]; then
     log "Router: n/a — \$ENGINE=$ENGINE is primary directly, no Claude-budget routing applies"

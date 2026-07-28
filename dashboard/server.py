@@ -52,7 +52,12 @@ SETTINGS_SPEC: list[dict[str, str]] = [
     {"key": "ROUTER_ALTERNATE", "type": "bool",
      "label": "Router alternation (Claude↔Codex when both have headroom)"},
     {"key": "WINDOW_BUDGET_USD", "type": "number",
-     "label": "Claude 5h window budget (USD, blank = no cap)"},
+     "label": "Claude 5h window budget (USD, blank = no cap) — protects YOUR Claude plan; the "
+              "dynamic reserve can lower it below this value"},
+    {"key": "TOTAL_BUDGET_USD", "type": "number",
+     "label": "TOTAL spend cap per window (USD) — Claude + Codex together, both priced by "
+              "ccusage. Blank = Codex spend is unbounded. Pausing here stops the company "
+              "entirely (no engine left to offload to) until the window rolls."},
     {"key": "CODEX_WINDOW_LIMIT", "type": "number",
      "label": "Codex cycles per window (blank = unmetered)"},
     {"key": "MODEL", "type": "text",
