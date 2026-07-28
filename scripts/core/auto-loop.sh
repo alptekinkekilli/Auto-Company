@@ -116,7 +116,17 @@ ROUTER_ALTERNATE="${ROUTER_ALTERNATE:-0}"
 ROUTER_STATE_FILE="$LOG_DIR/router-state"
 TIER_STATE_FILE="$LOG_DIR/tier-state"
 LOOP_INTERVAL="${LOOP_INTERVAL:-30}"
-CYCLE_TIMEOUT_SECONDS="${CYCLE_TIMEOUT_SECONDS:-1800}"
+# Default cut 1800 -> 900 on 2026-07-28 (APP-238). Cache-read cost is SUPERLINEAR in
+# cycle length -- every turn re-reads the whole (growing) context -- so a cycle that runs
+# to the wall is the single biggest cost driver. The one cycle that actually reached the
+# old 1800s wall did 145 turns / 19.2M cache-read tokens and cost $32.22, 88% of a whole
+# $40 5h window; normal cycles finish in ~4 min, so 900s still leaves 3-4x headroom.
+CYCLE_TIMEOUT_SECONDS="${CYCLE_TIMEOUT_SECONDS:-900}"
+# An operator-escalated cycle (see apply_cycle_escalation) is deliberately allowed the
+# old, longer wall: it is a human-approved, one-shot, expensive-on-purpose run.
+ESCALATED_CYCLE_TIMEOUT_SECONDS="${ESCALATED_CYCLE_TIMEOUT_SECONDS:-1800}"
+# Per-cycle effective wall, reset every cycle by apply_cycle_escalation.
+CYCLE_TIMEOUT_ACTIVE="$CYCLE_TIMEOUT_SECONDS"
 MAX_CONSECUTIVE_ERRORS="${MAX_CONSECUTIVE_ERRORS:-5}"
 COOLDOWN_SECONDS="${COOLDOWN_SECONDS:-300}"
 LIMIT_WAIT_SECONDS="${LIMIT_WAIT_SECONDS:-3600}"
@@ -345,6 +355,76 @@ apply_tier_ladder() {
     # /api/status and reasonably concluded the engine switch hadn't taken effect).
     if [ "${CYCLE_ENGINE_OVERRIDE:-$ENGINE}" = "codex" ]; then
         MODEL_LABEL="${CODEX_MODEL:-codex-default}:${CODEX_EFFORT}"
+    fi
+}
+
+# --- One-shot operator escalation (APP-238, 2026-07-28) ----------------------------
+# The company runs on the cheap ladder by default. When the operator wants a single
+# cycle done by the expensive model (e.g. approving a GO), they arm
+# `ESCALATE_NEXT_CYCLE=claude-opus-5:high` in the cockpit Settings panel; the next
+# eligible cycle uses it, and the loop CONSUMES it so it can never fire twice.
+#
+# Read straight from runtime.env rather than the environment: the loop's env is fixed
+# at container boot, so an env-only read would need a restart to see the operator's
+# edit -- which defeats the point of a one-shot approval.
+_read_runtime_env_key() {
+    local f="$LOG_DIR/runtime.env" k="$1"
+    [ -f "$f" ] || return 0
+    sed -n "s/^${k}=//p" "$f" 2>/dev/null | tail -1 | tr -d '\r'
+}
+
+# Remove the key from runtime.env. Line-oriented on purpose: the file is a flat
+# KEY=value list (docker-entrypoint.sh parses it literally, never sources it), and
+# dropping a key is exactly how dashboard/server.py represents "blank = default".
+_consume_escalation() {
+    local f="$LOG_DIR/runtime.env" tmp
+    [ -f "$f" ] || return 0
+    tmp="$(mktemp)" || return 0
+    if grep -v '^ESCALATE_NEXT_CYCLE=' "$f" > "$tmp" 2>/dev/null; then
+        cat "$tmp" > "$f" 2>/dev/null || true   # preserve inode/ownership
+    fi
+    rm -f "$tmp" 2>/dev/null || true
+}
+
+# Sets MODEL / CLAUDE_EFFORT / CYCLE_TIMEOUT_ACTIVE for THIS cycle only. Must run
+# AFTER apply_tier_ladder (it deliberately overrides the ladder's pick) and AFTER
+# select_cycle_engine (it refuses to burn an escalation on a Codex cycle).
+ESCALATION_USED=""
+apply_cycle_escalation() {
+    CYCLE_TIMEOUT_ACTIVE="$CYCLE_TIMEOUT_SECONDS"
+    ESCALATION_USED=""
+    local esc
+    esc="$(_read_runtime_env_key ESCALATE_NEXT_CYCLE)"
+    [ -n "$esc" ] || return 0
+
+    # Two refusals, both LEAVE THE ESCALATION ARMED rather than silently burning it:
+    # an approval the operator paid attention to should not be spent on a cycle they
+    # did not mean. Both are logged every cycle so an armed escalation is never invisible.
+    if [ "${CYCLE_ENGINE_OVERRIDE:-$ENGINE}" = "codex" ]; then
+        log "[ESCALATE] armed ($esc) but this cycle routed to Codex — left armed, not consumed"
+        return 0
+    fi
+    if ! _directive_is_pending; then
+        log "[ESCALATE] armed ($esc) but human-directive.md is not PENDING — left armed, not consumed"
+        return 0
+    fi
+
+    case "$esc" in
+        *:*) MODEL="${esc%%:*}"; CLAUDE_EFFORT="${esc##*:}" ;;
+        *)   MODEL="$esc" ;;
+    esac
+    MODEL_LABEL="${MODEL:-config-default}"
+    CYCLE_TIMEOUT_ACTIVE="$ESCALATED_CYCLE_TIMEOUT_SECONDS"
+    ESCALATION_USED="$esc"
+    _consume_escalation
+    log "[ESCALATE] one-shot '$esc' CONSUMED — model=$MODEL effort=${CLAUDE_EFFORT:-default} timeout=${CYCLE_TIMEOUT_ACTIVE}s"
+    # Notify unconditionally: nothing else in the system is model-proof (the cycle runs
+    # with a full shell), so the operator seeing every escalation that fires is the real
+    # control, exactly as with the OPREQ ledger's notify-on-escalation rule.
+    if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+        bash "$SCRIPT_DIR/telegram-notify.sh" "⬆️ Escalated cycle: $esc (one-shot, consumed).
+Timeout ${CYCLE_TIMEOUT_ACTIVE}s. If you did not arm this, the escalation was set from inside the container." \
+            >/dev/null 2>&1 || true
     fi
 }
 
@@ -894,7 +974,7 @@ run_codex_cycle() {
     local codex_pid=$!
 
     (
-        sleep "$CYCLE_TIMEOUT_SECONDS"
+        sleep "$CYCLE_TIMEOUT_ACTIVE"
         if kill -0 "$codex_pid" 2>/dev/null; then
             echo "1" > "$timeout_flag"
             kill -TERM "$codex_pid" 2>/dev/null || true
@@ -949,7 +1029,7 @@ run_claude_cycle() {
     local claude_pid=$!
 
     (
-        sleep "$CYCLE_TIMEOUT_SECONDS"
+        sleep "$CYCLE_TIMEOUT_ACTIVE"
         if kill -0 "$claude_pid" 2>/dev/null; then
             echo "1" > "$timeout_flag"
             kill -TERM "$claude_pid" 2>/dev/null || true
@@ -1196,7 +1276,7 @@ if [ -n "$engine_version" ]; then
         log "Claude version: $engine_version"
     fi
 fi
-log "Interval: ${LOOP_INTERVAL}s | Timeout: ${CYCLE_TIMEOUT_SECONDS}s | Breaker: ${MAX_CONSECUTIVE_ERRORS} errors"
+log "Interval: ${LOOP_INTERVAL}s | Timeout: ${CYCLE_TIMEOUT_SECONDS}s (escalated ${ESCALATED_CYCLE_TIMEOUT_SECONDS}s) | Breaker: ${MAX_CONSECUTIVE_ERRORS} errors"
 # Fallback/alternation only mean anything when Claude is primary — when $ENGINE is
 # already codex there's no "Claude usage limit" to fall back from, so logging this
 # unconditionally (old behavior) was actively misleading on a codex-primary config.
@@ -1242,6 +1322,8 @@ while true; do
 
     # Tier ladder: pick this cycle's model/effort within the configured MIN..MAX range.
     apply_tier_ladder
+    # One-shot operator escalation overrides the ladder's pick for this cycle only.
+    apply_cycle_escalation
 
     loop_count=$((loop_count + 1))
     cycle_log="$LOG_DIR/cycle-$(printf '%04d' "$loop_count")-$(date '+%Y%m%d-%H%M%S').log"
@@ -1345,7 +1427,7 @@ This is Cycle #$loop_count. Act decisively."
         if validate_consensus && consensus_changed_since_backup; then
             cycle_soft_timeout=1
         else
-            cycle_failed_reason="Timed out after ${CYCLE_TIMEOUT_SECONDS}s"
+            cycle_failed_reason="Timed out after ${CYCLE_TIMEOUT_ACTIVE}s"
         fi
     elif [ "$EXIT_CODE" -ne 0 ]; then
         cycle_failed_reason="Exit code $EXIT_CODE"
@@ -1354,7 +1436,7 @@ This is Cycle #$loop_count. Act decisively."
     fi
 
     if [ "$cycle_soft_timeout" -eq 1 ]; then
-        log_cycle "$loop_count" "OK" "Timed out after ${CYCLE_TIMEOUT_SECONDS}s but consensus was updated; keeping progress (cost: ${CYCLE_COST}, subtype: ${CYCLE_SUBTYPE})"
+        log_cycle "$loop_count" "OK" "Timed out after ${CYCLE_TIMEOUT_ACTIVE}s but consensus was updated; keeping progress (cost: ${CYCLE_COST}, subtype: ${CYCLE_SUBTYPE})"
         if [ -n "$RESULT_TEXT" ]; then
             log_cycle "$loop_count" "SUMMARY" "$(echo "$RESULT_TEXT" | head -c 300)"
         fi

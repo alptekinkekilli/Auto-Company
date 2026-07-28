@@ -69,6 +69,15 @@ SETTINGS_SPEC: list[dict[str, str]] = [
      "label": "Claude model ladder, cheapest first (comma-sep), e.g. claude-haiku-4-5-20251001,claude-sonnet-5"},
     {"key": "CODEX_TIER_LADDER", "type": "text",
      "label": "Codex effort ladder, cheapest first (comma-sep), e.g. low,medium"},
+    {"key": "ESCALATE_NEXT_CYCLE", "type": "text",
+     "label": "Escalate ONE cycle (e.g. claude-opus-5:high) — overrides the ladder for a single "
+              "cycle, only while a directive is PENDING, then clears itself. Takes effect on the "
+              "next cycle, no restart needed. Blank = normal ladder."},
+    {"key": "CYCLE_TIMEOUT_SECONDS", "type": "number",
+     "label": "Per-cycle wall clock (seconds, default 900) — the main cost lever: cache-read cost "
+              "is superlinear in cycle length"},
+    {"key": "ESCALATED_CYCLE_TIMEOUT_SECONDS", "type": "number",
+     "label": "Wall clock for an escalated cycle (seconds, default 1800)"},
     {"key": "LOOP_INTERVAL", "type": "number",
      "label": "Loop interval between cycles (seconds)"},
     {"key": "BUDGET_PAUSE_SECONDS", "type": "number",
