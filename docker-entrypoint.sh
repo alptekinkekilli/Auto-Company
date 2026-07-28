@@ -249,6 +249,18 @@ enabled_tools = [
   "create_record_comment",
   "create_table", "create_field", "update_table", "update_field",
 ]
+
+# Browser, reached through the host-side gateway on the docker bridge — the container has
+# no route to the tailnet itself. The gateway also holds the single-flight lock (the VM
+# fits one active task) and alerts the operator on connector activity. Deliberately no
+# enabled_tools allowlist: the operator chose to watch the connector surface rather than
+# restrict it (2026-07-28). Rules for using this live in PROMPT.md "BROWSER".
+[mcp_servers.browseros]
+url = "http://172.17.0.1:9245/mcp"
+enabled = true
+required = false
+startup_timeout_sec = 30
+tool_timeout_sec = 180
 EOF
 fi
 if [ -s "$CODEX_HOME/auth.json" ]; then
