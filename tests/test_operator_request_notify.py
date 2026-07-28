@@ -672,6 +672,67 @@ class OperatorRequestNotifyTests(unittest.TestCase):
         self.assertIn("Status: REFUSED", wtp)
         self.assertIn("Status: OPEN", other)
 
+    # --- document-procurement: the operator writes the path where they were told to ---
+    #
+    # Every such request says "add a human-directive.md entry containing Resolves: <id>
+    # and an Evidence files: field". The verifier read that field only from the request
+    # block in operator-requests.md, so following the instruction as written left the
+    # request OPEN. Both places are now read; the checksum and path confinement are
+    # unchanged and are what actually gate this.
+
+    def _evidence(self, req_id="OPREQ-208A-001", body=b"approved footer text"):
+        d = self.app / "memories" / "operator-evidence" / req_id
+        d.mkdir(parents=True, exist_ok=True)
+        f = d / "footer.md"
+        f.write_bytes(body)
+        rel = f"memories/operator-evidence/{req_id}/footer.md"
+        return rel, hashlib.sha256(body).hexdigest()
+
+    def test_evidence_files_in_the_directive_resolves(self):
+        rel, h = self._evidence()
+        ok, msg = orn.verify_resolution(
+            "OPREQ-208A-001",
+            {"Type": "document-procurement", "Expected document class": "at least 1 file"},
+            f"Resolves: OPREQ-208A-001\nEvidence files: {rel} sha256:{h}\n",
+            self.app,
+        )
+        self.assertTrue(ok, msg)
+
+    def test_evidence_files_in_the_request_block_still_resolves(self):
+        rel, h = self._evidence()
+        ok, msg = orn.verify_resolution(
+            "OPREQ-208A-001",
+            {
+                "Type": "document-procurement",
+                "Expected document class": "at least 1 file",
+                "Evidence files": f"{rel} sha256:{h}",
+            },
+            "Resolves: OPREQ-208A-001\n",
+            self.app,
+        )
+        self.assertTrue(ok, msg)
+
+    def test_directive_entry_with_a_wrong_checksum_is_rejected(self):
+        rel, _ = self._evidence()
+        ok, msg = orn.verify_resolution(
+            "OPREQ-208A-001",
+            {"Type": "document-procurement"},
+            f"Resolves: OPREQ-208A-001\nEvidence files: {rel} sha256:{'0' * 64}\n",
+            self.app,
+        )
+        self.assertFalse(ok)
+
+    def test_directive_entry_cannot_escape_the_evidence_directory(self):
+        _, h = self._evidence()
+        ok, msg = orn.verify_resolution(
+            "OPREQ-208A-001",
+            {"Type": "document-procurement"},
+            f"Resolves: OPREQ-208A-001\nEvidence files: ../../etc/passwd sha256:{h}\n",
+            self.app,
+        )
+        self.assertFalse(ok)
+        self.assertIn("outside", msg)
+
 
 if __name__ == "__main__":
     unittest.main()

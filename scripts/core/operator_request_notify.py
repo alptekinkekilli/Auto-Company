@@ -438,8 +438,23 @@ def _resolve_evidence_path(app: Path, rel_path: str) -> Path | None:
     return candidate
 
 
-def verify_document_procurement(fields: dict, app: Path) -> tuple[bool, str]:
-    raw = fields.get("Evidence files", "").strip()
+def verify_document_procurement(
+    fields: dict, app: Path, directive_text: str = ""
+) -> tuple[bool, str]:
+    # Read the field from the OPERATOR'S directive first, falling back to the
+    # request block. Until 2026-07-28 only the block was read, while every
+    # document-procurement request told the operator to put `Evidence files:` in
+    # human-directive.md — following the stated instructions left the request OPEN
+    # with no error. Reading both makes the documented path work and keeps the
+    # older one alive. Nothing is weakened: the checksum, the non-empty check and
+    # the operator-evidence/ path confinement below are what actually gate this,
+    # and they run identically whichever place the line came from.
+    raw = ""
+    m = re.search(r"Evidence files:[ \t]*([^\n]+)", directive_text or "")
+    if m:
+        raw = m.group(1).strip()
+    if not raw:
+        raw = fields.get("Evidence files", "").strip()
     if not raw:
         return False, "no 'Evidence files' field"
     entries = [e.strip() for e in raw.split(";") if e.strip()]
@@ -650,7 +665,7 @@ def verify_resolution(req_id: str, fields: dict, directive_text: str, app: Path)
     into human-directive.md) rather than trusting a free-text claim."""
     req_type = fields.get("Type", "").strip().lower()
     if req_type == "document-procurement":
-        return verify_document_procurement(fields, app)
+        return verify_document_procurement(fields, app, directive_text)
     if req_type == "credential":
         return verify_credential(fields, app)
     if req_type in ("legal-decision", "financial-decision", "adjudication-pending"):
