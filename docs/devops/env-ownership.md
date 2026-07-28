@@ -41,13 +41,22 @@ who edits it**, which is the distinction that actually exists.
 Secrets are still never printed: the entrypoint's override report emits key names only, and
 the cockpit's `SETTINGS_SPEC` whitelist means the panel can only ever write knobs.
 
-## Known drift, 2026-07-28
+## Drift found and cleared, 2026-07-28
 
-Shadowed (set in both, `runtime.env` in effect): `LOOP_INTERVAL`, `ROUTER_ALTERNATE`,
-`WINDOW_BUDGET_USD`. The Coolify copy of `LOOP_INTERVAL` disagrees with the live value.
+Three keys were set in both stores, and every Coolify value disagreed with the live one:
+`LOOP_INTERVAL` 3600 vs 900, `WINDOW_BUDGET_USD` 8 vs 40, `ROUTER_ALTERNATE` 0 vs 1. Read
+together with a stale `MODEL`, the Coolify panel described a different company than the one
+running — hourly cycles on an $8 budget with no engine alternation.
 
-Stale in Coolify and owned by `runtime.env` per the rule above, but not yet moved:
-`MODEL` (still `claude-haiku-4-5-20251001`, superseded by `CLAUDE_TIER_LADDER` on every
-cycle) and `CLAUDE_EFFORT`. Removing them from Coolify changes the effective value unless
-they are written into `runtime.env` first, so that is a deliberate two-step, not a cleanup
-to do casually.
+The production copies of those three were deleted from Coolify (values and env uuids
+recorded in `autocompany-deploy/coolify-env-backup-2026-07-28.md`). Behaviour did not
+change: `runtime.env` already supplied all three and already won. The shadow set is now
+empty, and the boot report is what will catch the next one.
+
+**Still outstanding, deliberately.** `MODEL` (`claude-haiku-4-5-20251001`) and
+`CLAUDE_EFFORT` (`low`) remain in Coolify. They are stale in the same way —
+`CLAUDE_TIER_LADDER` supersedes both on every cycle — but they are absent from
+`runtime.env`, so deleting them WOULD change the inherited default rather than just tidy the
+display. Moving them means writing them into `runtime.env` first, which is a two-step worth
+doing on purpose rather than as a cleanup. The `is_preview=true` copies of the deleted three
+also remain; they belong to preview deployments, not the running app.
