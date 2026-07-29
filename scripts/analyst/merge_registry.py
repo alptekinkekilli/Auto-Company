@@ -120,6 +120,72 @@ def extract_axes(text: str) -> list[str]:
     return axes
 
 
+def table_rows(text: str) -> list[list[str]]:
+    """Data rows of every pipe table in `text`, as lists of stripped cells."""
+    rows = []
+    for line in text.splitlines():
+        s = line.strip()
+        if not s.startswith("|") or set(s) <= {"|", "-", " ", ":"}:
+            continue
+        rows.append([c.strip() for c in s.strip("|").split("|")])
+    return rows
+
+
+def row_identity(cells: list[str]) -> tuple[str, str, str] | None:
+    """(id, axis, verdict) for a candidate row, or None if it isn't one.
+
+    The ID sits in cell 0 or cell 1 depending on the table layout (the Pending
+    shortlist leads with a rank column); the axis is always the cell right after it.
+    The verdict is the first bolded cell after the axis, falling back to the last.
+    """
+    for k in (0, 1):
+        if k >= len(cells):
+            break
+        m = ID_AT_START_RE.match(cells[k])
+        if not m or k + 1 >= len(cells):
+            continue
+        axis = cells[k + 1]
+        rest = cells[k + 2 :]
+        verdict = next((c for c in rest if "**" in c), rest[-1] if rest else "")
+        return m.group(1), axis, verdict
+    return None
+
+
+def sections(text: str) -> dict[str, str]:
+    out: dict[str, str] = {}
+    current = ""
+    for line in text.splitlines(keepends=True):
+        if line.startswith("## "):
+            current = line.strip()
+            out.setdefault(current, "")
+        elif current:
+            out[current] += line
+    return out
+
+
+def active_candidates(live: str) -> dict[str, tuple[str, str]]:
+    """The candidates whose IDENTITY an automated merge may not rewrite: anything in
+    `## Selected`, plus rank 1 of `## Pending shortlist`. Returns {id: (axis, verdict)}.
+
+    Deliberately table-only. Bullet entries in the HOLD index are research-stage and
+    are not the live offer, so leaving them out keeps the guard narrow enough to stay
+    useful — pass-2's whole job is reshaping those.
+    """
+    secs = sections(live)
+    active: dict[str, tuple[str, str]] = {}
+    for cells in table_rows(secs.get("## Selected", "")):
+        ident = row_identity(cells)
+        if ident:
+            active[ident[0]] = (ident[1], ident[2])
+    for cells in table_rows(secs.get("## Pending shortlist", "")):
+        if cells and cells[0] == "1":
+            ident = row_identity(cells)
+            if ident:
+                active[ident[0]] = (ident[1], ident[2])
+            break
+    return active
+
+
 def normalize_axis(axis: str) -> str:
     return re.sub(r"\s+", " ", axis).strip().lower()
 
@@ -289,6 +355,39 @@ def main() -> None:
             + f" | prefix_hash={before_hash[:12]} suffix_hash={after_hash[:12]} (registry untouched)"
         )
 
+    # --- invariant 3: the active candidate's IDENTITY is not the merge's to rewrite ---
+    # Added 2026-07-29 after pass-2 autonomously redefined the live offer: it rewrote
+    # 215-TF-B's buyer from "opted-in existing Turkish bidder" to one "already seeking
+    # help with one self-identified live tender" and declared the company's actual
+    # outreach segment NO-GO. The directive-promotion gate held, but nothing stopped the
+    # registry write, and a later cycle then treated the rewritten row as settled state.
+    # A verdict change (HOLD -> CONDITIONAL GO) is pass-2's job and stays allowed — it is
+    # surfaced in the summary instead. Redefining WHO the buyer is and WHAT is delivered
+    # is not, and needs the operator.
+    old_active = active_candidates(old_live)
+    new_rows = {}
+    for cells in table_rows(new_live):
+        ident = row_identity(cells)
+        if ident:
+            new_rows[ident[0]] = (ident[1], ident[2])
+
+    verdict_changes = []
+    for cid, (old_axis, old_verdict) in old_active.items():
+        if cid not in new_rows:
+            blocked(
+                f"active candidate {cid} is no longer a table row in the proposed registry "
+                f"| prefix_hash={before_hash[:12]} suffix_hash={after_hash[:12]} (registry untouched)"
+            )
+        new_axis, new_verdict = new_rows[cid]
+        if normalize_axis(old_axis) != normalize_axis(new_axis):
+            blocked(
+                f"active candidate {cid}: axis rewritten, which needs the operator. "
+                f"BEFORE: {old_axis[:160]!r} AFTER: {new_axis[:160]!r} "
+                f"| prefix_hash={before_hash[:12]} suffix_hash={after_hash[:12]} (registry untouched)"
+            )
+        if normalize_axis(old_verdict) != normalize_axis(new_verdict):
+            verdict_changes.append(f"{cid}: {old_verdict[:70]} -> {new_verdict[:70]}")
+
     # --- assemble, write, read back, verify ---
     # `before` ends with the newline that closes the line above the heading, and
     # `after` begins with the blank line that precedes the next heading's rule —
@@ -316,12 +415,16 @@ def main() -> None:
         f"old_id_count={len(old_ids)} new_id_count={len(new_ids)} "
         f"ids_added={sorted(added)} ids_removed=[] "
         f"prefix_hash={before_hash[:12]} suffix_hash={after_hash[:12]} "
+        f"active_verdict_changes={verdict_changes} "
         f"final_sha256={final_hash}"
     )
+    # Verdict changes on the active candidate are allowed but must not be quiet — this
+    # line lands in the cron log and the report header, where the operator sees it.
+    notice = f" ACTIVE_VERDICT_CHANGED[{'; '.join(verdict_changes)}]" if verdict_changes else ""
     print(
         f"MERGED: old_live_lines={old_lines} new_live_lines={new_lines} "
         f"ids_preserved={len(old_ids)} ids_added={len(added)} "
-        f"final_sha256={final_hash[:12]}..."
+        f"final_sha256={final_hash[:12]}...{notice}"
     )
 
 
