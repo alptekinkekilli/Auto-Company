@@ -41,6 +41,14 @@ CONSENSUS_FILE = REPO_ROOT / "memories" / "consensus.md"
 DIRECTIVE_FILE = REPO_ROOT / "memories" / "human-directive.md"
 CANDIDATE_REGISTRY_FILE = REPO_ROOT / "memories" / "candidate-registry.md"
 ANALYSIS_FILE = REPO_ROOT / "memories" / "analysis-directive.md"
+# Operator-request ledger (written by the company + scripts/core/operator_request_notify.py)
+# and the cockpit's answer channel. The answer channel is deliberately NOT
+# human-directive.md: that file is a single slot holding one PENDING work instruction, so
+# answering a request through it meant overwriting whatever the loop was mid-way through
+# executing. See APP-264.
+OPERATOR_REQUESTS_FILE = REPO_ROOT / "memories" / "operator-requests.md"
+OPERATOR_DECISIONS_FILE = REPO_ROOT / "memories" / "operator-decisions.md"
+OPERATOR_DECISIONS_AUDIT = REPO_ROOT / "memories" / "operator-decisions-audit.log"
 # Operator-editable runtime overrides, sourced by docker-entrypoint.sh on start.
 RUNTIME_ENV_FILE = REPO_ROOT / "logs" / "runtime.env"
 
@@ -343,6 +351,171 @@ def write_directive(text: str) -> dict[str, Any]:
     DIRECTIVE_FILE.parent.mkdir(parents=True, exist_ok=True)
     DIRECTIVE_FILE.write_text(body, encoding="utf-8")
     return read_directive()
+
+
+# --- Operator requests: read the ledger, write decisions ---------------------------
+#
+# The request record is ALREADY option-shaped — `Required input` is the question,
+# `Proposed authorization` is a pre-filled default the company itself labels "copy, edit,
+# or replace", and REFUSE is valid for every type. The panel renders that; it does not
+# invent a protocol.
+
+OPREQ_BLOCK_RE = re.compile(r"^## (OPREQ-[A-Za-z0-9_-]+)\s*$", re.MULTILINE)
+# Label is everything up to the FIRST colon, deliberately looser than the ledger
+# writer's own `^- ([A-Za-z][A-Za-z /]*):` — because the field this panel most needs is
+# written as `- Proposed authorization (copy, edit, or replace — this is the company's
+# request, not a decision): System: ...`, and a letters-and-spaces label class cannot
+# match past the parenthesis. That field is not in REQUIRED_FIELDS, so the writer's
+# parser silently skipping it was never noticed. The parenthetical is stripped to
+# normalise the key.
+OPREQ_FIELD_RE = re.compile(r"^- ([A-Za-z][^:]*?):\s?(.*)$")
+AUTH_LABELS = ("System", "Action", "Target", "Limit")
+# The four labels arrive concatenated on one line inside `Proposed authorization`;
+# slice between label positions rather than matching greedily past the next one.
+AUTH_LABEL_RE = re.compile(rf"\b({'|'.join(AUTH_LABELS)}):\s*")
+# Types whose answer is an authorization block. Everything else the panel shows
+# read-only with a Refuse option, because inventing a response shape for a type the
+# verifier checks differently would close a request with an answer it never got.
+AUTHORIZATION_TYPES = {"expenditure-approval", "external-action-authorization"}
+
+
+def parse_proposed_authorization(text: str) -> dict[str, str]:
+    """Split a `Proposed authorization` value into System/Action/Target/Limit."""
+    marks = [(m.group(1), m.start(), m.end()) for m in AUTH_LABEL_RE.finditer(text)]
+    out: dict[str, str] = {}
+    for i, (label, _start, end) in enumerate(marks):
+        stop = marks[i + 1][1] if i + 1 < len(marks) else len(text)
+        value = text[end:stop].strip()
+        if value:
+            out[label] = value
+    return out
+
+
+def read_operator_requests() -> dict[str, Any]:
+    """Every OPEN request in the ledger, shaped for the cockpit panel."""
+    raw = read_text_file(OPERATOR_REQUESTS_FILE, "")
+    if not raw.strip():
+        return {"present": False, "open": []}
+
+    marks = [(m.group(1), m.start(), m.end()) for m in OPREQ_BLOCK_RE.finditer(raw)]
+    items: list[dict[str, Any]] = []
+    for i, (req_id, _start, end) in enumerate(marks):
+        stop = marks[i + 1][1] if i + 1 < len(marks) else len(raw)
+        fields: dict[str, str] = {}
+        for line in raw[end:stop].splitlines():
+            fm = OPREQ_FIELD_RE.match(line)
+            if fm:
+                label = fm.group(1).split(" (", 1)[0].strip()
+                fields[label] = fm.group(2).strip()
+        if fields.get("Status", "").strip().upper() != "OPEN":
+            continue
+        req_type = fields.get("Type", "").strip()
+        proposed = fields.get("Proposed authorization", "")
+        items.append(
+            {
+                "id": req_id,
+                "type": req_type,
+                "blockedScope": fields.get("Blocked scope", ""),
+                "requiredInput": fields.get("Required input", ""),
+                "acceptableResponse": fields.get("Acceptable response format", ""),
+                "sourceBrief": fields.get("Source brief", ""),
+                "created": fields.get("Created", ""),
+                # Only offer an authorization form for the types whose verifier
+                # actually reads one.
+                "authorizable": req_type in AUTHORIZATION_TYPES,
+                "proposed": parse_proposed_authorization(proposed) if proposed else {},
+            }
+        )
+    return {"present": True, "open": items}
+
+
+def _decisions_audit(msg: str) -> None:
+    stamp = datetime.now(timezone.utc).isoformat()
+    try:
+        OPERATOR_DECISIONS_AUDIT.parent.mkdir(parents=True, exist_ok=True)
+        with OPERATOR_DECISIONS_AUDIT.open("a", encoding="utf-8") as handle:
+            handle.write(f"[{stamp}] {msg}\n")
+    except OSError:
+        pass  # auditing must never block the decision itself
+
+
+def write_operator_decision(
+    req_id: str, decision: str, fields: dict[str, str], reason: str = ""
+) -> dict[str, Any]:
+    """Append one operator answer in exactly the shape the verifier already reads.
+
+    Layout is load-bearing, not cosmetic. `_directive_window_after()` in
+    operator_request_notify.py starts at `Authorization for <id>:` and then cuts the
+    window at the FIRST `OPREQ-` token after it, capped at 1000 chars — so the four
+    fields must come immediately after the anchor, and every other mention of the id
+    must sit before it. Get that order wrong and the window is empty, which reads as a
+    missing authorization rather than a malformed one.
+    """
+    req_id = (req_id or "").strip()
+    if not OPREQ_BLOCK_RE.match(f"## {req_id}"):
+        raise ValueError("unknown or malformed request id")
+
+    known = {item["id"]: item for item in read_operator_requests()["open"]}
+    if req_id not in known:
+        raise ValueError(f"{req_id} is not an OPEN request")
+
+    stamp = datetime.now(timezone.utc).isoformat()
+    if decision == "refuse":
+        why = " ".join((reason or "").split()).strip()
+        block = (
+            f"\n## {req_id} — refused {stamp}\n\n"
+            f"Resolves: {req_id}\n"
+            f"Decided via: cockpit operator-decision panel\n"
+            f"REFUSE {req_id} — {why or 'refused by the operator, no reason given'}\n"
+        )
+    elif decision == "authorize":
+        if not known[req_id]["authorizable"]:
+            raise ValueError(
+                f"{req_id} is type '{known[req_id]['type']}', which is not answered "
+                "with an authorization block — refuse it here or answer it in a directive"
+            )
+        clean = {}
+        for label in AUTH_LABELS:
+            value = " ".join(str(fields.get(label, "")).split()).strip()
+            # A blank field would authorize an unbounded action; the ledger already
+            # promises the operator that a missing line leaves the request OPEN.
+            if not value:
+                raise ValueError(f"'{label}' is required and must not be empty")
+            if "\n" in value:
+                raise ValueError(f"'{label}' must be a single line")
+            clean[label] = value
+        body = "".join(f"{label}: {clean[label]}\n" for label in AUTH_LABELS)
+        block = (
+            f"\n## {req_id} — authorized {stamp}\n\n"
+            f"Resolves: {req_id}\n"
+            f"Decided via: cockpit operator-decision panel\n"
+            f"Authorization for {req_id}:\n"
+            f"{body}"
+        )
+    else:
+        raise ValueError("decision must be 'authorize' or 'refuse'")
+
+    header = (
+        "# Operator Decisions\n\n"
+        "<!-- Answers to memories/operator-requests.md, submitted from the cockpit\n"
+        "     panel. Append-only. Read by scripts/core/operator_request_notify.py as a\n"
+        "     second answer source alongside human-directive.md; unlike a directive,\n"
+        "     an entry here needs no DONE status because it is a decision, not work.\n"
+        "     Do not hand-edit: the exact field shape is what the verifier checks. -->\n"
+    )
+    existing = read_text_file(OPERATOR_DECISIONS_FILE, "")
+    if not existing.strip():
+        existing = header
+    OPERATOR_DECISIONS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    OPERATOR_DECISIONS_FILE.write_text(existing.rstrip("\n") + "\n" + block, encoding="utf-8")
+
+    readback = read_text_file(OPERATOR_DECISIONS_FILE, "")
+    if block.strip() not in readback:
+        _decisions_audit(f"WRITE-FAILED {req_id}: read-back mismatch")
+        raise ValueError("decision write failed read-back verification")
+
+    _decisions_audit(f"{decision.upper()} {req_id} via cockpit panel")
+    return {"id": req_id, "decision": decision, "recorded": stamp}
 
 
 def _parse_env_file(raw: str) -> dict[str, str]:
@@ -1191,6 +1364,15 @@ class DashboardHandler(BaseHTTPRequestHandler):
         if path == "/api/settings":
             self._json(read_settings())
             return
+        if path == "/api/operator-requests":
+            self._json(
+                {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    **read_operator_requests(),
+                }
+            )
+            return
+
         if path == "/api/directive-templates":
             self._json(read_directive_templates())
             return
@@ -1225,6 +1407,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self._handle_settings()
             return
 
+        if path == "/api/operator-decision":
+            self._handle_operator_decision()
+            return
+
         if path == "/api/redeploy":
             result = trigger_redeploy()
             result["timestamp"] = datetime.now(timezone.utc).isoformat()
@@ -1246,6 +1432,48 @@ class DashboardHandler(BaseHTTPRequestHandler):
             "output": result["output"],
         }
         self._json(payload, code=HTTPStatus.OK if result["ok"] else HTTPStatus.BAD_REQUEST)
+
+    def _handle_operator_decision(self) -> None:
+        body = self._read_body()
+        try:
+            data = json.loads(body.decode("utf-8")) if body else {}
+            if not isinstance(data, dict):
+                data = {}
+        except (ValueError, UnicodeDecodeError):
+            data = {}
+
+        raw_fields = data.get("fields")
+        fields = {
+            label: str(raw_fields.get(label, ""))
+            for label in AUTH_LABELS
+            if isinstance(raw_fields, dict)
+        }
+        try:
+            result = write_operator_decision(
+                str(data.get("id", "")),
+                str(data.get("decision", "")),
+                fields,
+                str(data.get("reason", "")),
+            )
+        except ValueError as exc:
+            self._json(
+                {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "ok": False,
+                    "error": str(exc),
+                },
+                code=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        self._json(
+            {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "ok": True,
+                "result": result,
+                **read_operator_requests(),
+            }
+        )
 
     def _handle_directive(self) -> None:
         body = self._read_body()

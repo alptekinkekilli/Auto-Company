@@ -644,8 +644,126 @@ document.querySelectorAll(".collapse-toggle").forEach((btn) => {
     }
   });
 });
+// --- Requests to you (operator requests) -------------------------------------------
+// Answers go to memories/operator-decisions.md, NOT to the directive slot, so replying
+// here can never overwrite a directive the loop is mid-way through executing.
+const AUTH_LABELS = ["System", "Action", "Target", "Limit"];
+const opreqEls = {
+  list: document.getElementById("opreqList"),
+  badge: document.getElementById("opreqBadge"),
+};
+
+function renderOperatorRequests(payload) {
+  const open = (payload && payload.open) || [];
+  opreqEls.badge.textContent = String(open.length);
+  opreqEls.badge.className = `badge badge-${open.length ? "pending" : "none"}`;
+
+  if (!open.length) {
+    opreqEls.list.innerHTML = '<p class="muted mono">Nothing waiting on you.</p>';
+    return;
+  }
+
+  opreqEls.list.innerHTML = open
+    .map((req) => {
+      const fields = req.authorizable
+        ? AUTH_LABELS.map(
+            (label) => `
+          <label class="opreq-field">
+            <span class="opreq-field-label">${label}</span>
+            <textarea rows="2" data-field="${label}">${escapeHtml(
+              (req.proposed && req.proposed[label]) || ""
+            )}</textarea>
+          </label>`
+          ).join("")
+        : `<p class="muted">This request type is not answered with an authorization block.
+             Refuse it here, or answer it in a directive.</p>`;
+      const authBtn = req.authorizable
+        ? `<button class="btn btn-start" data-act="authorize">Authorize</button>`
+        : "";
+      return `
+      <article class="opreq-card" data-id="${escapeHtml(req.id)}">
+        <div class="opreq-head">
+          <span class="mono opreq-id">${escapeHtml(req.id)}</span>
+          <span class="muted mono">${escapeHtml(req.type)} · blocks ${escapeHtml(
+        req.blockedScope || "—"
+      )}</span>
+        </div>
+        <p class="opreq-question">${escapeHtml(req.requiredInput)}</p>
+        <details class="opreq-form" ${req.authorizable ? "" : "open"}>
+          <summary>Proposed authorization — read and edit before approving</summary>
+          ${fields}
+        </details>
+        <label class="opreq-field">
+          <span class="opreq-field-label">Reason (refusal only)</span>
+          <textarea rows="1" data-reason="1" placeholder="why you are declining"></textarea>
+        </label>
+        <div class="director-actions">
+          ${authBtn}
+          <button class="btn btn-stop" data-act="refuse">Refuse</button>
+          <span class="muted mono" data-status="1"></span>
+        </div>
+      </article>`;
+    })
+    .join("");
+
+  opreqEls.list.querySelectorAll("button[data-act]").forEach((btn) => {
+    btn.addEventListener("click", () => submitDecision(btn));
+  });
+}
+
+async function submitDecision(btn) {
+  const card = btn.closest(".opreq-card");
+  const statusEl = card.querySelector("[data-status]");
+  const decision = btn.getAttribute("data-act");
+  const fields = {};
+  AUTH_LABELS.forEach((label) => {
+    const box = card.querySelector(`[data-field="${label}"]`);
+    fields[label] = box ? box.value : "";
+  });
+  const reasonBox = card.querySelector("[data-reason]");
+
+  card.querySelectorAll("button").forEach((b) => (b.disabled = true));
+  statusEl.textContent = "Recording…";
+  try {
+    const res = await fetch("/api/operator-decision", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: card.getAttribute("data-id"),
+        decision,
+        fields,
+        reason: reasonBox ? reasonBox.value : "",
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || "Failed to record decision");
+    // Deliberately NOT a full re-render. The request legitimately stays OPEN until the
+    // company's own verifier moves it, so redrawing the list would replace this card
+    // with an identical one and silently erase the confirmation — the operator would
+    // reasonably click again and append a duplicate decision.
+    card.classList.add("opreq-answered");
+    statusEl.textContent =
+      decision === "authorize"
+        ? "Authorized — recorded. The company applies it on its next cycle."
+        : "Refused — recorded. The company will take no action on this.";
+  } catch (err) {
+    statusEl.textContent = err instanceof Error ? err.message : String(err);
+    card.querySelectorAll("button").forEach((b) => (b.disabled = false));
+  }
+}
+
+async function loadOperatorRequests() {
+  try {
+    const res = await fetch("/api/operator-requests");
+    renderOperatorRequests(await res.json());
+  } catch {
+    opreqEls.list.innerHTML = '<p class="muted mono">(requests unavailable)</p>';
+  }
+}
+
 els.autoToggle.addEventListener("change", resetAutoTimer);
 els.refreshInterval.addEventListener("change", resetAutoTimer);
+loadOperatorRequests().catch(() => {});
 
 fetchStatus().catch((err) => {
   const msg = err instanceof Error ? err.message : String(err);

@@ -682,57 +682,85 @@ def verify_resolution(req_id: str, fields: dict, directive_text: str, app: Path)
     return False, f"unrecognized type {req_type!r} — no verifier, refusing to resolve"
 
 
-def process_resolutions(text, directive_text, audit_path, app: Path):
-    changed = False
-    directive_done = bool(DIRECTIVE_STATUS_DONE_RE.search(directive_text))
-    resolves_ids = set(RESOLVES_RE.findall(directive_text))
+def _answer_sources(directive_text: str, decisions_text: str):
+    """Where an operator answer may live, as (label, text, requires_directive_done).
 
+    `human-directive.md` is WORK: the loop must execute it, so an answer embedded in
+    it only counts once Status is DONE. `memories/operator-decisions.md` is not work —
+    it is the operator answering one specific request from the cockpit, and it is
+    complete the moment it is submitted, so it carries no DONE precondition.
+
+    Conflating the two is what made this painful: the directive is a SINGLE slot that
+    `write_directive()` overwrites, so answering a request meant hand-composing exact
+    syntax into the same file the company was mid-way through executing (on 2026-07-29
+    the promotion gate correctly refused to overwrite in-flight work). Splitting the
+    channel changes only WHEN an answer counts. The verifiers below are identical for
+    both, and nothing about them is relaxed.
+    """
+    return [
+        ("human-directive.md", directive_text, True),
+        ("operator-decisions.md", decisions_text, False),
+    ]
+
+
+def process_resolutions(text, directive_text, audit_path, app: Path, decisions_text=""):
+    changed = False
     blocks = parse_blocks(text)
+    sources = _answer_sources(directive_text, decisions_text)
+
     for req_id in sorted(blocks):
         fields, _span = blocks[req_id]
         status = fields.get("Status", "").strip().upper()
         if status != "OPEN":
             continue
-        if req_id not in resolves_ids:
-            continue
-        if not directive_done:
-            audit(
-                audit_path,
-                f"RESOLVE-PENDING {req_id}: human-directive.md references it but "
-                "Status is not yet DONE",
-            )
-            continue
 
-        # Checked BEFORE the type verifier: a refusal is a complete answer, and
-        # demanding an authorization block from someone who is declining to
-        # authorize is incoherent.
-        refused, why = refusal_for(req_id, directive_text, resolves_ids)
-        if refused:
-            text = set_field_in_text(text, req_id, "Status", "REFUSED")
+        for label, src_text, requires_done in sources:
+            if not src_text:
+                continue
+            resolves_ids = set(RESOLVES_RE.findall(src_text))
+            if req_id not in resolves_ids:
+                continue
+            if requires_done and not DIRECTIVE_STATUS_DONE_RE.search(src_text):
+                audit(
+                    audit_path,
+                    f"RESOLVE-PENDING {req_id}: {label} references it but "
+                    "Status is not yet DONE",
+                )
+                continue
+
+            # Checked BEFORE the type verifier: a refusal is a complete answer, and
+            # demanding an authorization block from someone who is declining to
+            # authorize is incoherent.
+            refused, why = refusal_for(req_id, src_text, resolves_ids)
+            if refused:
+                text = set_field_in_text(text, req_id, "Status", "REFUSED")
+                text = set_field_in_text(
+                    text, req_id, "Refusal recorded", f"{why} (at {now_iso()})"
+                )
+                changed = True
+                audit(audit_path, f"REFUSED {req_id} via {label} — {why}")
+                break
+            if why:
+                # An ambiguous refusal must not quietly become a non-refusal.
+                audit(audit_path, f"REFUSE-AMBIGUOUS {req_id}: {why} — leaving OPEN")
+                continue
+
+            ok, detail = verify_resolution(req_id, fields, src_text, app)
+            if not ok:
+                audit(
+                    audit_path,
+                    f"RESOLVE-BLOCKED {req_id}: {label} references it, but "
+                    f"deterministic verification failed — {detail} — leaving OPEN",
+                )
+                continue
+
+            text = set_field_in_text(text, req_id, "Status", "RESOLVED")
             text = set_field_in_text(
-                text, req_id, "Refusal recorded", f"{why} (at {now_iso()})"
+                text, req_id, "Resolution verified", f"{detail} (at {now_iso()})"
             )
             changed = True
-            audit(audit_path, f"REFUSED {req_id} via human-directive.md — {why}")
-            continue
-        if why:
-            # An ambiguous refusal must not quietly become a non-refusal.
-            audit(audit_path, f"REFUSE-AMBIGUOUS {req_id}: {why} — leaving OPEN")
-            continue
-
-        ok, detail = verify_resolution(req_id, fields, directive_text, app)
-        if not ok:
-            audit(
-                audit_path,
-                f"RESOLVE-BLOCKED {req_id}: directive is DONE and references it, "
-                f"but deterministic verification failed — {detail} — leaving OPEN",
-            )
-            continue
-
-        text = set_field_in_text(text, req_id, "Status", "RESOLVED")
-        text = set_field_in_text(text, req_id, "Resolution verified", f"{detail} (at {now_iso()})")
-        changed = True
-        audit(audit_path, f"RESOLVED {req_id} via human-directive.md — {detail}")
+            audit(audit_path, f"RESOLVED {req_id} via {label} — {detail}")
+            break
     return text, changed
 
 
@@ -778,7 +806,13 @@ def _main_impl(app: Path, send_fn, sleep_fn) -> int:
     directive_text = (
         directive_path.read_text(encoding="utf-8") if directive_path.is_file() else ""
     )
-    text, resolve_changed = process_resolutions(text, directive_text, audit_path, app)
+    decisions_path = memories / "operator-decisions.md"
+    decisions_text = (
+        decisions_path.read_text(encoding="utf-8") if decisions_path.is_file() else ""
+    )
+    text, resolve_changed = process_resolutions(
+        text, directive_text, audit_path, app, decisions_text
+    )
 
     if notif_changed or resolve_changed:
         try:

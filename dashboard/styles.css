@@ -782,3 +782,91 @@ select {
   .cost-grid-3 { grid-template-columns: repeat(3, 1fr); }
 }
 .cost-ccusage #ccModels { overflow-wrap: anywhere; }
+
+/* --- Requests to you (operator requests) ------------------------------------- */
+
+.opreq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.opreq-card {
+  border: 1px solid var(--panel-border);
+  border-left: 3px solid var(--amber);
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: rgba(6, 15, 20, 0.45);
+}
+
+.opreq-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.opreq-id {
+  color: var(--amber);
+  font-size: 0.9rem;
+}
+
+.opreq-question {
+  margin: 0 0 12px;
+  line-height: 1.5;
+  /* These can run long; keep the card readable instead of letting it dominate. */
+  max-height: 9.5em;
+  overflow-y: auto;
+}
+
+.opreq-form {
+  margin-bottom: 10px;
+}
+
+.opreq-form > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.86rem;
+  margin-bottom: 10px;
+}
+
+.opreq-field {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.opreq-field-label {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.opreq-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: rgba(6, 15, 20, 0.6);
+  color: var(--text);
+  font-family: "Rajdhani", system-ui, sans-serif;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.opreq-field textarea:focus {
+  outline: none;
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 2px rgba(103, 217, 255, 0.18);
+}
+
+.opreq-answered {
+  border-left-color: var(--good);
+  opacity: 0.72;
+}
