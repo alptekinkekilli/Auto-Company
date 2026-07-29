@@ -1697,5 +1697,13 @@ $(printf '%s' "${RESULT_TEXT:-}" | head -c 600)" >/dev/null 2>&1 || true
 
     save_state "idle"
     log_cycle "$loop_count" "WAIT" "Sleeping ${LOOP_INTERVAL}s before next cycle..."
-    sleep "$LOOP_INTERVAL"
+    # `|| true` is load-bearing twice over. Under `set -e` a killed sleep exits
+    # non-zero and would take the whole loop down with it — the same failure
+    # shape as the 2026-07-26 crash-loop. With the guard, killing this sleep
+    # becomes a deliberate "run the next cycle now" primitive:
+    #   docker exec <container> pkill -f "sleep ${LOOP_INTERVAL}"
+    # which starts the next cycle immediately without a rebuild, without
+    # resetting loop_count, and without shortening LOOP_INTERVAL (shortening it
+    # multiplies spend against the Claude window; waking on demand does not).
+    sleep "$LOOP_INTERVAL" || true
 done
