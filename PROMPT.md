@@ -606,6 +606,16 @@ Stopping was the right call; the spec was the thing at fault. Both ends now call
 "metadata agrees, so it is probably the same page" — matching Toplantı/Gündem/Karar No
 establishes probable identity, not content integrity.
 
+**Leak-scan bridge records with `scripts/core/bridge_leak_scan.py`. Never by word presence.**
+The scanner is VALUE-SENSITIVE: it fails on a credential key together with a real value
+(`Cookie: name=value`, `Authorization: Bearer …`, `access_token=…`, a populated
+localStorage/sessionStorage dump) and passes assurance sentences that merely name those words,
+plus the allowed public-evidence fields (`KararId=<hex>`, `content_hash`, source hashes). A
+word-presence scan flagged the 1280 record's own "no session material crossed" sentence — a
+false positive is fixed by making the scan value-aware, NEVER by loosening the gate. The script
+carries regression fixtures (`--selftest`, rc 3 if any fixture misbehaves): run selftest before
+trusting a CLEAN verdict.
+
 **KararId discipline:** treat every KararId as `identifier_type: OPAQUE`, `persistence: UNKNOWN`.
 Different KararIds have been seen for the same decision, but that alone does NOT prove they are
 ephemeral/signed — do not claim that without a controlled repeat test. Never treat a KararId as
