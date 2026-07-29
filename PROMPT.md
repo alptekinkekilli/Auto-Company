@@ -615,6 +615,48 @@ complainant / award-winner / excluded before recording anyone; skip gerçek-kiş
 segment is legal persons; a ground rests on the authority's own decision, never a competitor
 mirror. `Email queue` is never yours to set.
 
+### TENDER TRACK STANDING RULES — the gates, in the only place they count
+
+Every rule below was previously carried only in `memories/human-directive.md`. That file is a
+SINGLE SLOT the next directive overwrites, so each of these survived purely because whoever
+wrote the next directive remembered to retype it — and on 2026-07-29 a check found seven of
+them present in no standing file at all. A rule that lives only in a transient slot is not a
+rule; nothing errors when it evaporates. They live here now. Directives may add to them and may
+not silently drop them.
+
+1. **Segment: legal persons only.** Turkish A.Ş. / Ltd. Şti. bidders identified from public
+   KİK/EKAP records, reached by cold outbound. A **gerçek kişi is out of scope even inside an
+   iş ortaklığı** — take the legal-person members, leave the natural person. The
+   intent-qualified pivot was rejected by the operator; do not reopen it.
+2. **The four gates.** G1 = the exclusion ground, from the authority's own structured record or
+   decision text. **G2 = the exclusion is within the last 12 months** — an older one cannot
+   qualify however clean its ground. G3 = firm identity/legal form verified. G4 = a public
+   generic corporate e-mail attributable to that exact legal person. **All four are hard.**
+   Held-for-recency and held-for-missing-evidence are different facts: use
+   `Held - Out of G2 window` and `Held - Evidence insufficient` accordingly.
+3. **OPTION A stands** (operator authorization, `OPREQ-215TFB-CONTACT-TIER-001`, 2026-07-29):
+   G4 is retained as a hard requirement and **no alternate contact tier is authorized** — no
+   guessed address, no third-party directory, no different outreach channel. G4 is not the
+   bottleneck; in-window authority-sourced G1 supply is.
+4. **Pool shape before any first-send proposal.** Both currently qualified firms come from the
+   SAME procurement (`2026/UH.II-1614`) and are both IT firms. A pool of that shape tests
+   whether those two firms want this, not whether tender consultancy has demand. The pool must
+   contain at least one qualified firm from a **different procurement AND a different sector**
+   before a first send is proposed — and on meeting that condition, REPORT it, do not send.
+5. **Mirrors are a `KararNo` discovery source and nothing else.** That includes the named
+   competitor mirrors (`asiridusuk`, `ihaledanismani`, `ihalehatti`, `herpoz` and their like):
+   fine for locating a decision number, **never** evidence of G1, of a firm's role, of a
+   violation, of an elimination, or of an outcome — those come from the canonical Kurul text
+   only. Record the mirror in `selection_source`, never in `Exclusion ground source`.
+6. **Two hard stops on EKAP.** Do NOT reverse-engineer the signed search API (the 401
+   "CryptoJs engellendi: zorunlu header eksik" endpoint) — replicating `iv`/`apiSecretKey`/`ts`
+   is bot-detection evasion and is forbidden **even though competitors do it**. Do NOT attempt
+   an EKAP login, and never enter the operator's authenticated session; you work session-free,
+   the bridge exists precisely so you never have to.
+7. **`Email queue` is never yours to set, and WTP is unchanged.** Every send is
+   operator-triggered. Only a real, settled payment from a real, unrelated buyer is WTP
+   evidence — a test-mode transaction never is, whatever the processor.
+
 ## WORK CYCLE
 
 ### 1. Read Consensus

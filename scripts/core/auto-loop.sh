@@ -246,6 +246,11 @@ REQUIRED_PROMPT_GUARDRAILS=(
     "OPERATOR ESCALATION — deterministic request ledger (OPREQ)"
     "EXTERNAL ADJUDICATION — when the company must not rule on itself"
     "EXTERNAL-SYSTEM WRITE AUTHORITY"
+    # The tender-track gates. These spent weeks living only in the single-slot
+    # human-directive.md, surviving each rewrite only because whoever wrote the next
+    # directive remembered to retype them; a 2026-07-29 check found seven of them in
+    # no standing file at all. Anchored here so their disappearance is loud.
+    "TENDER TRACK STANDING RULES"
 )
 
 # Gates that were MOVED OUT of the every-cycle prompt (2026-07-29) and now live in
