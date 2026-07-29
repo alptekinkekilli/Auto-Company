@@ -303,6 +303,49 @@ prompt_guardrails_intact() {
     [ -z "$MISSING_GUARDRAILS" ]
 }
 
+# Did human-directive.md change without the writer? Fail closed if so.
+#
+# This is an INTERIM control and it is important to be honest about what it is
+# not. The real fix is ownership: the file writable only by a separate UID, with
+# the agent reaching the writer through a narrow socket that has no override
+# operation at all. Today the loop, the dashboard and the writer all run as `app`
+# and the file is `app:app 0644`, so the autonomous model can simply redirect
+# into it — measured 2026-07-29, and it succeeded. Flag-gating `--allow-pending`
+# against a process that can bypass the writer entirely would be theatre.
+#
+# So instead of pretending to prevent it, DETECT it: every writer action records
+# its resulting hash in memories/directive-audit.log. A live hash that matches no
+# audit entry means something wrote the slot outside the writer. That is not a
+# cycle we run — it is a cycle we refuse, loudly, until a human looks.
+directive_unaudited() {
+    local f="$PROJECT_DIR/memories/human-directive.md"
+    local audit="$PROJECT_DIR/memories/directive-audit.log"
+    DIRECTIVE_AUDIT_DETAIL=""
+    [ -f "$f" ] || return 1
+    local live
+    live=$(sha256sum "$f" 2>/dev/null | cut -c1-16)
+    [ -n "$live" ] || return 1
+    if [ ! -s "$audit" ]; then
+        # First run after the writer shipped: record a baseline rather than block
+        # forever. Deleting the audit log to escape this check therefore does not
+        # buy silence — it produces a fresh, timestamped, notified baseline line,
+        # which is itself the signal.
+        mkdir -p "$(dirname "$audit")"
+        printf '%s\taction=baseline\tactor=auto-loop\tbefore_sha=-\tafter_sha=%s\tseeded because the audit log was absent\n' \
+            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$live" >> "$audit"
+        log "[DIRECTIVE-AUDIT] no audit log — seeded a baseline for live hash $live"
+        if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+            bash "$SCRIPT_DIR/telegram-notify.sh" \
+                "ℹ️ Directive audit log was absent; baseline seeded for hash ${live}. If you did not clear it, investigate." \
+                >/dev/null 2>&1 || true
+        fi
+        return 1
+    fi
+    grep -qF "after_sha=$live" "$audit" && return 1
+    DIRECTIVE_AUDIT_DETAIL="live=$live has no matching after_sha in directive-audit.log"
+    return 0
+}
+
 # Append a cycle's cost to the rolling-window ledger (skips 0 / N/A).
 record_spend() {
     local cost="$1"
@@ -1664,6 +1707,20 @@ This is Cycle #$loop_count. Act decisively."
     # continue "regardless of this toggle". Shipped, it would have removed all three
     # BY DEFAULT, since DISCOVERY_ENABLED defaults to 0, and nothing would have
     # errored. This check is what makes that class of edit fail loudly instead.
+    if directive_unaudited; then
+        log "[DIRECTIVE-UNAUDITED] Refusing to run Cycle #$loop_count — human-directive.md changed outside the writer ($DIRECTIVE_AUDIT_DETAIL)"
+        log "[DIRECTIVE-UNAUDITED] Something wrote the slot without going through scripts/core/directive_writer.py. Inspect memories/directive-audit.log and the backups, then re-apply through the writer."
+        if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+            bash "$SCRIPT_DIR/telegram-notify.sh" \
+                "🛑 Cycle #${loop_count} BLOCKED — human-directive.md was written OUTSIDE the deterministic writer. No cycle ran. ${DIRECTIVE_AUDIT_DETAIL}" \
+                >/dev/null 2>&1 || true
+        fi
+        save_state "idle"
+        log_cycle "$loop_count" "WAIT" "Sleeping ${LOOP_INTERVAL}s before next cycle..."
+        sleep "$LOOP_INTERVAL" || true
+        continue
+    fi
+
     if ! prompt_guardrails_intact "$FULL_PROMPT"; then
         log "[GUARDRAIL-MISSING] Refusing to run Cycle #$loop_count — the assembled prompt is missing: $MISSING_GUARDRAILS"
         log "[GUARDRAIL-MISSING] Not a crash: the loop stays up and will retry next interval. Fix PROMPT.md or the assembly, do NOT bypass this."
