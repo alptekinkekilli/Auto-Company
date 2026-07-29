@@ -186,6 +186,11 @@ docs/*/*
 !docs/*/.gitkeep
 !docs/windows-setup.md
 !docs/devops/phase-6-runbook.md
+# Adjudication packs are the audit trail of every judgement call the company
+# did not make on its own. They are written to be verified by someone who has
+# only the repo, so they must actually be IN the repo -- a pack citing files a
+# reviewer cannot open is how the 2026-07-29 packs both went out.
+!docs/devops/decision-pack-*.md
 !docs/devops/app-230-mcp-wiring.md
 !docs/devops/app-250-crash-alarm.md
 !docs/devops/env-ownership.md
