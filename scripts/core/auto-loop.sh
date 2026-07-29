@@ -209,9 +209,28 @@ check_usage_limit() {
 # PERMANENT Codex auth failure (rotated/consumed/revoked refresh token, or a
 # missing bearer). Distinct from a transient usage limit — retrying will not fix
 # it; the operator must re-login and reseed. Used to disable Codex for the run.
+# A PERMANENT codex auth rejection. BOTH conditions are required:
+#   1. the engine actually failed (EXIT_CODE != 0), and
+#   2. an auth-rejection phrase appears in its output.
+# Condition 1 is not belt-and-braces, it is the whole correctness argument: $OUTPUT is
+# the full JSONL transcript, which embeds every file the agent read or wrote. On
+# 2026-07-29 a SUCCESSFUL Codex cycle (it rotated the Twilio SEND_SECRET, exit 0) was
+# disabled for the rest of the run because a devops doc it authored quoted a Worker
+# returning `401 unauthorized`. A cycle that completed its work did not have its
+# credentials rejected — never decide this from transcript prose alone.
+# Sets CODEX_AUTH_EVIDENCE to the matched fragment so the log says WHY.
 codex_auth_failed() {
     local output="$1"
-    echo "$output" | grep -qiE "refresh token was already used|token_invalidated|invalid_grant|missing bearer|401 unauthorized|not logged in"
+    CODEX_AUTH_EVIDENCE=""
+    [ "${EXIT_CODE:-0}" -ne 0 ] || return 1
+    # 124 is the watchdog timeout. A cycle killed at the wall clock says nothing
+    # about credentials, and its transcript is long — i.e. maximally likely to
+    # contain an unrelated "401 unauthorized" somewhere in a file it read.
+    [ "${EXIT_CODE}" -ne 124 ] || return 1
+    CODEX_AUTH_EVIDENCE=$(echo "$output" \
+        | grep -oiE ".{0,60}(refresh token was already used|token_invalidated|invalid_grant|missing bearer|401 unauthorized|not logged in).{0,60}" \
+        | head -1 || true)
+    [ -n "$CODEX_AUTH_EVIDENCE" ]
 }
 
 # Append a cycle's cost to the rolling-window ledger (skips 0 / N/A).
@@ -1565,7 +1584,7 @@ This is Cycle #$loop_count. Act decisively."
     if { [ "$FALLBACK_USED" -eq 1 ] || [ "$CYCLE_ENGINE_OVERRIDE" = "codex" ] || [ "$ENGINE" = "codex" ]; } \
         && [ "$CODEX_DISABLED" != "1" ] && codex_auth_failed "$OUTPUT"; then
         CODEX_DISABLED=1
-        log "[CODEX-AUTH-FAIL] Codex auth permanently rejected (rotated/consumed token) — disabling Codex for this run; re-login + reseed required"
+        log "[CODEX-AUTH-FAIL] Codex auth permanently rejected (rotated/consumed token) — disabling Codex for this run; re-login + reseed required (exit=$EXIT_CODE, evidence: ${CODEX_AUTH_EVIDENCE:-none})"
     fi
 
     # Save full output to cycle log

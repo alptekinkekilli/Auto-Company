@@ -647,14 +647,23 @@ that session, never log in, never get a KararId yourself.** The bridge is a data
    - `request_id` (unique), `KararNo`, `selection_source`, `selection_reason`, `research_axis`,
      `status: PENDING`.
    - **`selection_source` is mandatory and must be a concrete evidenced source** — the page /
-     search result / firm record where this KararNo actually appeared. A request with no
-     `selection_source`, or one that looks GUESSED, SEQUENTIAL, or like ID ENUMERATION
-     (`…-1614, -1615, -1616…`), **will not be processed and is a protocol violation.** You may
-     only queue a KararNo you found in a real source, not one you incremented to.
+     search result / firm record where this KararNo actually appeared. It must contain, in the
+     field itself, ALL of: (a) the **source URL**, (b) a **verbatim quote from that source in
+     which the KararNo literally appears**, and (c) a **content hash** of the fetched source
+     where one can be taken (`sha256`, first 16 hex chars is enough) — state plainly why not if
+     it cannot. A request missing (a) or (b), or one that looks GUESSED, SEQUENTIAL, or like ID
+     ENUMERATION (`…-1614, -1615, -1616…`), **is closed `INVALID_SOURCE` without being resolved**
+     and is a protocol violation. You may only queue a KararNo you found in a real source, not
+     one you incremented to.
+   - **The FIRST request ever written to this queue is a production canary.** Write exactly ONE
+     row and stop queueing until it has been resolved and consumed end-to-end. Not a rehearsal —
+     a real KararNo you actually need, held to the full standard above.
 2. **The operator-session resolver** (Claude, in the operator's live EKAP UI — NOT you, NOT this
-   loop) drains PENDING requests, ≤20 per run, sequentially, and closes each with exactly one
-   status: `PUBLIC_VERIFIED` / `LOGIN_REQUIRED` / `NOT_FOUND` / `SESSION_EXPIRED` /
-   `RATE_LIMITED` / `UNRESOLVED`. **Only `PUBLIC_VERIFIED` writes back a `public_url`.** No
+   loop) drains PENDING requests, ≤20 per run — **exactly 1 on the canary run** — sequentially,
+   and closes each with exactly one status: `PUBLIC_VERIFIED` / `LOGIN_REQUIRED` / `NOT_FOUND` /
+   `SESSION_EXPIRED` / `RATE_LIMITED` / `UNRESOLVED` / `INVALID_SOURCE` (the last one is a
+   rejection of YOUR request's evidence, not a site outcome — fix the source, do not re-queue the
+   same weak row). **Only `PUBLIC_VERIFIED` writes back a `public_url`.** No
    cookie, token, header, localStorage, or logged-in HTML is ever written to the bridge — the
    channel carries a data-only request and, at most, a verified public URL.
 3. **You READ the result.** For a `PUBLIC_VERIFIED` row, open its `public_url` with the ordinary
