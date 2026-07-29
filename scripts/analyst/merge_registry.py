@@ -41,10 +41,39 @@ HEADING_LIVE_START = re.compile(r"(?m)^## Selected[ \t]*$")
 HEADING_LIVE_END = re.compile(r"(?m)^## Exhausted patterns / lessons[ \t]*$")
 
 # Candidate-ID token shapes actually observed in this registry: "176-R",
-# "266-A", "192-REM", "216-C12-P", "215-TF-B", "Candidate #25". Deliberately
-# broad — a false-positive token just makes the preservation check slightly
-# stricter (safe direction), never looser.
+# "266-A", "192-REM", "216-C12-P", "215-TF-B", "Candidate #25".
 ID_TOKEN_RE = re.compile(r"\b\d{2,4}-[A-Z][A-Za-z0-9-]*\b|Candidate #\d+")
+# The optional word prefix is load-bearing: real IDs in this registry include
+# `H-120-B1` and `Cycle 97-A`, which a bare numeric anchor silently drops.
+ID_AT_START_RE = re.compile(
+    r"^[`*_\s]*((?:[A-Za-z]{1,8}[- ])?(?:\d{2,4}-[A-Z][A-Za-z0-9-]*|Candidate #\d+))\b"
+)
+
+# ...but only where an IDENTIFIER can actually live. Scanning the whole span was
+# assumed to be "stricter, therefore safe"; in practice it was neither, and it is
+# what blocked the 2026-07-29 merge. It flagged four supposedly-missing candidates
+# that were never candidates at all: `100-SKU` out of "≤100-SKU category inventory
+# file", `500-RAW` out of "≤1,500-RAW catalog", `990-PF` out of "Free Candid/990-PF
+# research" (a US tax form), and `177-R` out of a historical narrative sentence.
+# Prose is the model's to rewrite; the moment it legitimately rephrases a sentence,
+# an ID-shaped token vanishes and the merge is blocked forever.
+#
+# This NARROWS where identifiers are looked for, not what counts as one. Every
+# candidate in this registry occupies either a table row (ID in the first or second
+# cell, across the three column layouts in use) or a `- \`ID\` — ...` bullet in the
+# HOLD index. A token that appears ONLY in prose or in an axis description is not a
+# candidate, so nothing real loses protection.
+def identifier_fields(text: str) -> list[str]:
+    fields: list[str] = []
+    for line in text.splitlines():
+        s = line.strip()
+        if s.startswith("|"):
+            cells = [c.strip() for c in s.strip("|").split("|")]
+            fields.extend(cells[:2])
+        elif s.startswith(("- ", "* ")):
+            head = s[2:]
+            fields.append(head.split("—", 1)[0])
+    return fields
 
 
 def audit(msg: str) -> None:
@@ -60,7 +89,20 @@ def blocked(reason: str) -> None:
 
 
 def extract_ids(text: str) -> set[str]:
-    return set(ID_TOKEN_RE.findall(text))
+    """Candidate IDs, anchored to the START of an identifier field.
+
+    Anchoring is the second half of the narrowing. Restricting to the first two
+    cells alone still leaked, because the axis cell IS cell 2 in the `| ID | axis |
+    ... |` layout — so `≤100-SKU category inventory file` and `≤1,500-RAW catalog`
+    were still read as candidates. A real ID owns its cell; a measurement buried in
+    a sentence does not.
+    """
+    ids = set()
+    for field in identifier_fields(text):
+        m = ID_AT_START_RE.match(field)
+        if m:
+            ids.add(m.group(1))
+    return ids
 
 
 def extract_axes(text: str) -> list[str]:
