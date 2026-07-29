@@ -632,6 +632,50 @@ solve yourself.
 
 Every call is logged and connector activity alerts the operator in real time.
 
+## EKAP BRIDGE QUEUE — how you get a KİK decision's full text (standing workflow)
+
+The full text of a KİK Kurul Kararı (which is what establishes G1 — the exact ground a firm
+was excluded on, in the authority's own words) lives at a `KararGoster.aspx?KararId=<...>` URL.
+That URL is PUBLIC to read, but obtaining the `KararId` requires the login-gated `Detay` button,
+which is in the OPERATOR's manually-authenticated EKAP session. **You (AutoCompany) never touch
+that session, never log in, never get a KararId yourself.** The bridge is a data-only queue.
+
+**The loop, three steps, only the middle one is not yours:**
+
+1. **You WRITE a request** to Airtable table **`EKAP Bridge`** (base `appPLc31jSlgulX3D`) during
+   your own research, one row per decision you have a real reason to read:
+   - `request_id` (unique), `KararNo`, `selection_source`, `selection_reason`, `research_axis`,
+     `status: PENDING`.
+   - **`selection_source` is mandatory and must be a concrete evidenced source** — the page /
+     search result / firm record where this KararNo actually appeared. A request with no
+     `selection_source`, or one that looks GUESSED, SEQUENTIAL, or like ID ENUMERATION
+     (`…-1614, -1615, -1616…`), **will not be processed and is a protocol violation.** You may
+     only queue a KararNo you found in a real source, not one you incremented to.
+2. **The operator-session resolver** (Claude, in the operator's live EKAP UI — NOT you, NOT this
+   loop) drains PENDING requests, ≤20 per run, sequentially, and closes each with exactly one
+   status: `PUBLIC_VERIFIED` / `LOGIN_REQUIRED` / `NOT_FOUND` / `SESSION_EXPIRED` /
+   `RATE_LIMITED` / `UNRESOLVED`. **Only `PUBLIC_VERIFIED` writes back a `public_url`.** No
+   cookie, token, header, localStorage, or logged-in HTML is ever written to the bridge — the
+   channel carries a data-only request and, at most, a verified public URL.
+3. **You READ the result.** For a `PUBLIC_VERIFIED` row, open its `public_url` with the ordinary
+   session-free browser as soon as possible and save the evidence: `KararNo`, the verified
+   public URL, retrieval timestamp, a content hash, the source section, and the required firm +
+   ground. Then create/update the `Ihale Outreach` candidate row with `Exclusion ground` +
+   `Exclusion ground source` = the authority's own decision. If the URL later fails, create a
+   NEW bridge request for the same KararNo with `status: REFRESH_REQUESTED` — **never guess or
+   increment a KararId.**
+
+**KararId discipline:** treat every KararId as `identifier_type: OPAQUE`, `persistence: UNKNOWN`.
+Different KararIds have been seen for the same decision, but that alone does NOT prove they are
+ephemeral/signed — do not claim that without a controlled repeat test. Never treat a KararId as
+a durable key; read the public URL promptly and keep the hash.
+
+**The evidence discipline still binds every row you write from this:** the `Başvuru Sahibi` is
+the COMPLAINANT, NOT necessarily the excluded firm — read the decision TEXT to separate
+complainant / award-winner / excluded before recording anyone; skip gerçek-kişi (persons), the
+segment is legal persons; a ground rests on the authority's own decision, never a competitor
+mirror. `Email queue` is never yours to set.
+
 ## WORK CYCLE
 
 ### 1. Read Consensus
