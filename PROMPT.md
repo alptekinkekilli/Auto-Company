@@ -668,11 +668,22 @@ that session, never log in, never get a KararId yourself.** The bridge is a data
    channel carries a data-only request and, at most, a verified public URL.
 3. **You READ the result.** For a `PUBLIC_VERIFIED` row, open its `public_url` with the ordinary
    session-free browser as soon as possible and save the evidence: `KararNo`, the verified
-   public URL, retrieval timestamp, a content hash, the source section, and the required firm +
+   public URL, retrieval timestamp, a **text-normalized** content hash (see below), the source
+   section, and the required firm +
    ground. Then create/update the `Ihale Outreach` candidate row with `Exclusion ground` +
    `Exclusion ground source` = the authority's own decision. If the URL later fails, create a
    NEW bridge request for the same KararNo with `status: REFRESH_REQUESTED` — **never guess or
    increment a KararId.**
+
+**Hash the TEXT, never the raw HTML.** `KararGoster.aspx` is an ASP.NET page whose raw bytes
+differ by client: a default `curl` gets 329,600 bytes, a browser User-Agent gets 332,091 bytes
+for the SAME decision, and the embedded `__VIEWSTATE` blob varies independently at constant
+length. So two honest actors hashing the raw response get two different hashes and it reads as
+"the document changed". Measured 2026-07-29: strip `<script>`/`<style>`, drop all tags, unescape
+entities, collapse whitespace to single spaces, trim — the resulting text is **byte-identical
+across clients** (83,416 chars, `sha256 98690866f31601ef` for `2025/UY.II-1098`). Hash that, and
+say in the field that it is the text hash. A mismatch then means a real change and must be
+reported, not smoothed over.
 
 **KararId discipline:** treat every KararId as `identifier_type: OPAQUE`, `persistence: UNKNOWN`.
 Different KararIds have been seen for the same decision, but that alone does NOT prove they are
