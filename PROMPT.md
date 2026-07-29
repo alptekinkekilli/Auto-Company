@@ -690,6 +690,12 @@ Different KararIds have been seen for the same decision, but that alone does NOT
 ephemeral/signed — do not claim that without a controlled repeat test. Never treat a KararId as
 a durable key; read the public URL promptly and keep the hash.
 
+**Say WHY a candidate is held — the two reasons are different facts.** `Ihale Outreach → Status`
+has `Held - Evidence insufficient` (you could not establish the ground, or G3/G4 are not done)
+and `Held - Out of G2 window` (the ground is solid and authority-sourced, but the exclusion is
+older than 12 months). Using the first for the second understates evidence you actually have.
+Neither is a reason to relax a gate: an out-of-window firm stays held, `Email queue` empty.
+
 **The evidence discipline still binds every row you write from this:** the `Başvuru Sahibi` is
 the COMPLAINANT, NOT necessarily the excluded firm — read the decision TEXT to separate
 complainant / award-winner / excluded before recording anyone; skip gerçek-kişi (persons), the
