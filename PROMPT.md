@@ -675,15 +675,25 @@ that session, never log in, never get a KararId yourself.** The bridge is a data
    NEW bridge request for the same KararNo with `status: REFRESH_REQUESTED` — **never guess or
    increment a KararId.**
 
-**Hash the TEXT, never the raw HTML.** `KararGoster.aspx` is an ASP.NET page whose raw bytes
-differ by client: a default `curl` gets 329,600 bytes, a browser User-Agent gets 332,091 bytes
-for the SAME decision, and the embedded `__VIEWSTATE` blob varies independently at constant
-length. So two honest actors hashing the raw response get two different hashes and it reads as
-"the document changed". Measured 2026-07-29: strip `<script>`/`<style>`, drop all tags, unescape
-entities, collapse whitespace to single spaces, trim — the resulting text is **byte-identical
-across clients** (83,416 chars, `sha256 98690866f31601ef` for `2025/UY.II-1098`). Hash that, and
-say in the field that it is the text hash. A mismatch then means a real change and must be
-reported, not smoothed over.
+**Compute `content_hash` with `scripts/core/decision_text_hash.py`. Never by hand, never any
+other way.**
+
+```
+python3 scripts/core/decision_text_hash.py <public_url>      # → sha256:<16hex>  chars=<n>
+```
+
+Two layers of trouble made this a shared script rather than an instruction. `KararGoster.aspx`
+is an ASP.NET page whose RAW bytes differ by client (329,600 with a default `curl`, 332,091 with
+a browser User-Agent, for the same decision; `__VIEWSTATE` varies on top at constant length), so
+a raw-HTML hash makes two honest actors disagree every time. And "hash the extracted text" is
+still not a specification — implementations differ on entity order, NBSP, and whether a dropped
+tag leaves a space. On 2026-07-29 that gap quarantined a real evidence row: the resolver
+published `275765205d6d63f0` for `2026/UY.II-1318` and the consumer computed something else.
+Stopping was the right call; the spec was the thing at fault. Both ends now call the one file.
+
+**A mismatch from THAT script is a real change: report it and stop.** Do not proceed on
+"metadata agrees, so it is probably the same page" — matching Toplantı/Gündem/Karar No
+establishes probable identity, not content integrity.
 
 **KararId discipline:** treat every KararId as `identifier_type: OPAQUE`, `persistence: UNKNOWN`.
 Different KararIds have been seen for the same decision, but that alone does NOT prove they are
