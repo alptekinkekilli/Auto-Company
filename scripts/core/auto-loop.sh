@@ -233,6 +233,35 @@ codex_auth_failed() {
     [ -n "$CODEX_AUTH_EVIDENCE" ]
 }
 
+# The brakes that must be present in every assembled prompt. Each is a section
+# heading the company is required to obey, chosen because losing one is silent:
+# the prompt still assembles, the cycle still runs, and the only symptom is the
+# company doing something it should have been stopped from doing.
+#
+# Match on the HEADING TEXT, not on a whole line — headings get reworded. If a
+# rename is deliberate, update this list in the same commit; that is the point,
+# it forces the edit to be conscious.
+REQUIRED_PROMPT_GUARDRAILS=(
+    "HARD STOP — no build before willingness-to-pay evidence"
+    "OPERATOR ESCALATION — deterministic request ledger (OPREQ)"
+    "EXTERNAL ADJUDICATION — when the company must not rule on itself"
+    "EXTERNAL-SYSTEM WRITE AUTHORITY"
+)
+
+# True when every required guardrail survived into the assembled prompt.
+# Sets MISSING_GUARDRAILS to the ones that did not.
+prompt_guardrails_intact() {
+    local assembled="$1" g
+    MISSING_GUARDRAILS=""
+    for g in "${REQUIRED_PROMPT_GUARDRAILS[@]}"; do
+        case "$assembled" in
+            *"$g"*) ;;
+            *) MISSING_GUARDRAILS="${MISSING_GUARDRAILS:+$MISSING_GUARDRAILS; }$g" ;;
+        esac
+    done
+    [ -z "$MISSING_GUARDRAILS" ]
+}
+
 # Append a cycle's cost to the rolling-window ledger (skips 0 / N/A).
 record_spend() {
     local cost="$1"
@@ -1550,7 +1579,13 @@ while true; do
     if [ "${DISCOVERY_ENABLED:-0}" = "1" ]; then
         _discovery_line="6. Opportunity Discovery is ENABLED (cockpit setting) — normal new-axis discovery may run per PROMPT.md's own rules."
     else
-        _discovery_line="6. Opportunity Discovery is DISABLED (cockpit setting, default) — do NOT scan/rank/propose brand-new candidate axes this cycle. Follow PROMPT.md's \`### TENDER TRACK\` section instead: pursue tender candidates and/or improve \`176-R\`. This does not pause an already-Active Validation, an in-flight tender feasibility packet, or Human Directive / OPREQ handling."
+        # No candidate ID is hardcoded here, deliberately. This line used to name
+        # `176-R`, and it kept naming it after the operator terminated and archived
+        # that candidate — so every cycle, by default, the loop's own authoritative
+        # instruction told the company to develop something that no longer existed.
+        # A shell script must not carry an identifier a registry can retire underneath
+        # it; ask the registry instead.
+        _discovery_line="6. Opportunity Discovery is DISABLED (cockpit setting, default) — do NOT scan/rank/propose brand-new candidate axes this cycle. Follow PROMPT.md's \`### TENDER TRACK\` section instead: pursue tender candidates, and/or continue whatever candidate \`memories/candidate-registry.md\` currently records as the Active Validation — read it, do not assume one from memory, and if Selected is empty then there is no such candidate and the Tender Track is the whole job. This does not pause an in-flight tender feasibility packet, or Human Directive / OPREQ handling."
     fi
     FULL_PROMPT="$PROMPT
 
@@ -1574,6 +1609,33 @@ $CONSENSUS
 ---
 
 This is Cycle #$loop_count. Act decisively."
+
+    # The company's own brakes must be IN the prompt that is actually sent. Assert on
+    # the assembled text, never on the source files — every silent failure this loop
+    # has shipped was source-level logic that looked right and was never checked
+    # against what actually came out the other end.
+    #
+    # Concretely: a 2026-07-29 proposal to make the selection section conditional on
+    # DISCOVERY_ENABLED was measured with a parser that ignored fenced code blocks. It
+    # drew the section boundary at 16,857 bytes when the real section is 32,720
+    # (PROMPT.md:24-507) and CONTAINS the WTP hard stop, the OPREQ escalation ledger
+    # and the external-adjudication rule — the three things PROMPT.md:787-788 says
+    # continue "regardless of this toggle". Shipped, it would have removed all three
+    # BY DEFAULT, since DISCOVERY_ENABLED defaults to 0, and nothing would have
+    # errored. This check is what makes that class of edit fail loudly instead.
+    if ! prompt_guardrails_intact "$FULL_PROMPT"; then
+        log "[GUARDRAIL-MISSING] Refusing to run Cycle #$loop_count — the assembled prompt is missing: $MISSING_GUARDRAILS"
+        log "[GUARDRAIL-MISSING] Not a crash: the loop stays up and will retry next interval. Fix PROMPT.md or the assembly, do NOT bypass this."
+        if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+            bash "$SCRIPT_DIR/telegram-notify.sh" \
+                "🛑 Cycle #${loop_count} BLOCKED — assembled prompt lost a guardrail: ${MISSING_GUARDRAILS}. No cycle ran." \
+                >/dev/null 2>&1 || true
+        fi
+        save_state "idle"
+        log_cycle "$loop_count" "WAIT" "Sleeping ${LOOP_INTERVAL}s before next cycle..."
+        sleep "$LOOP_INTERVAL" || true
+        continue
+    fi
 
     # Run selected engine in headless mode with per-cycle timeout
     run_engine_cycle "$FULL_PROMPT"

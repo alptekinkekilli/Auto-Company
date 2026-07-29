@@ -809,9 +809,15 @@ new-axis discovery:
    bounded-internal-feasibility-packet authority as `cycle209`/`cycle272`/`cycle274` — no
    purchase, no bid submission, no external contact — unless a separate explicit directive
    grants more.
-2. **`176-R` development.** Improve the existing live offering (bug fixes, pricing/positioning,
-   marketing, outreach, conversion work) within its existing bounded authority — this does not
-   need a new directive either, it is standing work on an already-Active Validation.
+2. **Active-Validation development.** If — and only if — `memories/candidate-registry.md`
+   currently records an Active Validation, improve that offering (bug fixes,
+   pricing/positioning, marketing, outreach, conversion work) within its existing bounded
+   authority; that needs no new directive. **Read the registry for which candidate that is; do
+   not carry one over from memory or from an older cycle note.** The registry is append-only
+   newest-first history, so an older note can still read "X remains the sole Active Validation"
+   long after X was archived — go by the most recent entry, and by dates rather than cycle
+   numbers (`loop_count` resets on every redeploy). If Selected is empty, this item is simply
+   not available this cycle and the Tender Track is the whole job.
 
 **EKAP membership:** do not assume the company needs an EKAP account. Evaluate it like any
 other question — most tender research (reading notices, downloading public annexes, running
