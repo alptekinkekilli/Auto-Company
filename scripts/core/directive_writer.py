@@ -91,6 +91,7 @@ def audit(action: str, actor: str, before: str, after: str, detail: str) -> None
             f"\tbefore_sha={before[:16] or '-'}\tafter_sha={after[:16] or '-'}\t{detail}\n")
     with AUDIT.open("a", encoding="utf-8") as fh:
         fh.write(line)
+    normalize_ownership(AUDIT)
 
 
 def notify(msg: str) -> None:
@@ -117,7 +118,32 @@ def backup(text: str, reason: str) -> Path | None:
     p.write_text(text, encoding="utf-8")
     if p.read_text(encoding="utf-8") != text:
         raise OSError(f"backup verify failed: {p}")
+    normalize_ownership(p)
     return p
+
+
+def normalize_ownership(p: Path) -> None:
+    """Make the file readable by the loop/dashboard user regardless of invoker.
+
+    The writer is exec'd through more than one identity: the dashboard runs it as
+    `app`, but the operator's host-side channel reaches it via `docker exec`,
+    whose default user is root on this image. mkstemp creates 0600 files owned by
+    the invoker, and os.replace carries that onto the live slot — measured
+    2026-07-29: a root-invoked write left human-directive.md root:root 0600, the
+    app-uid loop could not even hash it, and the cockpit showed an empty PENDING.
+    So after every write, chown to the memories directory's owner (the app user)
+    and open the mode to 0644. chown needs root; when the invoker IS the app
+    user the file is already right, so failure here is fine to ignore.
+    """
+    try:
+        st = os.stat(DIRECTIVE.parent)
+        os.chown(p, st.st_uid, st.st_gid)
+    except (PermissionError, OSError):
+        pass
+    try:
+        os.chmod(p, 0o644)
+    except OSError:
+        pass
 
 
 def atomic_write(text: str) -> None:
@@ -128,6 +154,7 @@ def atomic_write(text: str) -> None:
             fh.write(text)
             fh.flush()
             os.fsync(fh.fileno())
+        normalize_ownership(Path(tmp))
         os.replace(tmp, DIRECTIVE)
     except BaseException:
         Path(tmp).unlink(missing_ok=True)
