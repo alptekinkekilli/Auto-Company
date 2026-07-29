@@ -32,11 +32,19 @@ log() { printf '%s\n' "$1" >> "$PROGRESS"; }
 fail() { log "[$STAMP] ANALYST_FAILED: $1"; echo "ANALYST_FAILED: $1" >&2; exit 1; }
 
 # --- preconditions ---
-for f in "$SCAN" "$REGISTRY" "$CONSENSUS"; do [ -f "$f" ] || fail "missing input: $f"; done
+# NOTE: $SCAN (opportunity-scan.md) is deliberately NOT a precondition since the
+# 2026-07-28 tender-track consolidation — it is historical input the skill is told to
+# ignore, so its absence must not fail the run.
+for f in "$REGISTRY" "$CONSENSUS"; do [ -f "$f" ] || fail "missing input: $f"; done
 [ -x "$CODEX_BIN" ] || fail "codex CLI not found"
 [ -s "$CODEX_HOME/auth.json" ] || fail "codex auth.json missing at $CODEX_HOME (needs CODEX_AUTH_B64 seed)"
-# self-heal the skill into the persistent CODEX_HOME from the repo copy
-if [ ! -f "$SKILL_DIR/SKILL.md" ] && [ -f "$SKILL_SRC/SKILL.md" ]; then
+# Sync the skill from the repo copy into the persistent CODEX_HOME on EVERY run.
+# This used to copy only when SKILL.md was ABSENT, which meant the live copy on the
+# volume could never be updated: editing the brief in the repo and redeploying looked
+# like it worked, but the analyst kept loading the stale volume copy forever (caught
+# 2026-07-29 while retargeting the brief to the Tender Track). The repo is the source
+# of truth; nothing hand-edits the volume copy.
+if [ -f "$SKILL_SRC/SKILL.md" ]; then
   mkdir -p "$CODEX_HOME/skills" && cp -r "$SKILL_SRC" "$CODEX_HOME/skills/"
   chmod +x "$SKILL_DIR"/scripts/*.sh 2>/dev/null || true
 fi
@@ -46,13 +54,22 @@ WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 MSG="$WORK/msg.txt"
 
 read -r -d '' PROMPT <<'EOF'
-$autocompany-opportunity-director ile bu opportunity scan'in tamamını incele, adayları kendin seç ve Auto Company direktifini yaz.
+$autocompany-opportunity-director ile Auto Company'nin Tender Track'ini bağımsız olarak sorgula ve direktifi yaz.
 
 Inputs are in this workspace (/app) — find them with rg:
-- docs/research/opportunity-scan.md  (the complete scan — read all of it)
-- memories/consensus.md              (Auto Company's own current selection + state)
-- memories/candidate-registry.md     (Selected / Archived / Pending buckets — dedup key is axis = buyer × delivery × price)
+- memories/candidate-registry.md     (read the LIVE span: ## Selected -> ## Archived; dedup key is axis = buyer × delivery × price)
+- memories/human-directive.md        (the operator's standing instruction — it outranks your judgment on scope)
+- memories/consensus.md              (Auto Company's own current reading + state)
 - PROJECT_EVALUATION_FRAMEWORK.md
+- docs/research/                     (tender-track reports, qualification passes, primary-source notes)
+
+PORTFOLIO SCOPE (standing operator directive, 2026-07-28): the portfolio was consolidated
+to the Tender Track. 176-R is terminated; the entire non-tender registry is archived;
+## Selected is empty; company-side discovery is OFF. The ONLY live axes are the EKAP /
+Turkish public-tender ones under ## Deferred / HOLD index (215-TF-B and the 247-* .. 262-*
+families). docs/research/opportunity-scan.md still exists on disk but is HISTORICAL —
+never nominate, requeue, or rank any candidate from it. Doing so violates the directive
+and makes the report worthless.
 
 Do NOT write or modify any files yourself — output your full decision report as your final message, following the skill's output order.
 EOF

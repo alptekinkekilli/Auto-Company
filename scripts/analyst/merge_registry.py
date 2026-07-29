@@ -76,6 +76,48 @@ def normalize_axis(axis: str) -> str:
     return re.sub(r"\s+", " ", axis).strip().lower()
 
 
+def resolve_span(value: str) -> str:
+    """Dereference the file-reference shorthand pass-2 sometimes emits instead of
+    inlining the span (2026-07-28: the model wrote a correct 105KB JSON payload to
+    /tmp/registry-updated.json and replied only `{"registry_live_span":
+    "@/tmp/registry-updated.json"}`, a 28-char path the <100-char guard rejected —
+    fail-closed and correct, but the real content never reached the merge).
+
+    This dereferences the pointer; it does NOT relax any check. Every invariant
+    below (ID preservation, duplicate axis, prefix/suffix byte-identity,
+    read-back) still runs on the resolved content exactly as if it had been
+    inlined. Deliberately narrow: a single-line absolute path to an existing
+    regular file. Anything else is returned untouched and hits the normal guards.
+    """
+    if not isinstance(value, str):
+        return ""
+    candidate = value.strip()
+    if not candidate or "\n" in candidate or len(candidate) > 400:
+        return value
+    if candidate.startswith("@"):
+        candidate = candidate[1:].strip()
+    if not candidate.startswith("/"):
+        return value
+    ref = Path(candidate)
+    if not ref.is_file():
+        audit(f"span-ref: {candidate} is not a regular file — falling through to normal guards")
+        return value
+    try:
+        content = ref.read_text(encoding="utf-8", errors="replace")
+    except Exception as exc:
+        audit(f"span-ref: could not read {candidate}: {exc}")
+        return value
+    # The referenced file is usually the whole JSON payload, not the bare span.
+    try:
+        inner = json.loads(content)
+        if isinstance(inner, dict) and isinstance(inner.get("registry_live_span"), str):
+            content = inner["registry_live_span"]
+    except Exception:
+        pass  # not JSON — treat the file's contents as the span itself
+    audit(f"span-ref: dereferenced {candidate} -> {len(content)} chars (invariants still enforced)")
+    return content
+
+
 def split_registry(text: str) -> tuple[str, str, str]:
     if LIVE_SPAN_START not in text:
         raise ValueError(f"marker not found: {LIVE_SPAN_START!r}")
@@ -124,7 +166,7 @@ def main() -> None:
     except Exception as exc:
         blocked(f"bad json: {exc}")
 
-    new_live = payload.get("registry_live_span", "")
+    new_live = resolve_span(payload.get("registry_live_span", ""))
     if not new_live or len(new_live) < 100:
         blocked("model's registry_live_span missing or too short")
     if not new_live.startswith("\n## Selected") and "## Selected" not in new_live[:50]:
