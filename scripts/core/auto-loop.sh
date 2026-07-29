@@ -248,10 +248,22 @@ REQUIRED_PROMPT_GUARDRAILS=(
     "EXTERNAL-SYSTEM WRITE AUTHORITY"
 )
 
-# True when every required guardrail survived into the assembled prompt.
-# Sets MISSING_GUARDRAILS to the ones that did not.
+# Gates that were MOVED OUT of the every-cycle prompt (2026-07-29) and now live in
+# PROJECT_EVALUATION_FRAMEWORK.md. Moving them saved prefix tokens and cost the
+# invariant its view of them — the assembled prompt only carries a pointer now. So
+# the check follows them: the file must exist and still contain both anchors. A
+# pointer to a section someone deleted, emptied or renamed is worse than no pointer,
+# because it reads as a live rule and enforces nothing.
+REQUIRED_FRAMEWORK_ANCHORS=(
+    "SEARCH REGIME"
+    "Fırsat kaydı ve tarama dedup"
+)
+
+# True when every required guardrail survived into the assembled prompt AND the
+# gates delegated to the framework file are still really there.
+# Sets MISSING_GUARDRAILS to whatever did not.
 prompt_guardrails_intact() {
-    local assembled="$1" g
+    local assembled="$1" g fw
     MISSING_GUARDRAILS=""
     for g in "${REQUIRED_PROMPT_GUARDRAILS[@]}"; do
         case "$assembled" in
@@ -259,6 +271,15 @@ prompt_guardrails_intact() {
             *) MISSING_GUARDRAILS="${MISSING_GUARDRAILS:+$MISSING_GUARDRAILS; }$g" ;;
         esac
     done
+    fw="$PROJECT_DIR/PROJECT_EVALUATION_FRAMEWORK.md"
+    if [ ! -s "$fw" ]; then
+        MISSING_GUARDRAILS="${MISSING_GUARDRAILS:+$MISSING_GUARDRAILS; }PROJECT_EVALUATION_FRAMEWORK.md missing or empty"
+    else
+        for g in "${REQUIRED_FRAMEWORK_ANCHORS[@]}"; do
+            grep -qF -- "$g" "$fw" || \
+                MISSING_GUARDRAILS="${MISSING_GUARDRAILS:+$MISSING_GUARDRAILS; }framework anchor: $g"
+        done
+    fi
     [ -z "$MISSING_GUARDRAILS" ]
 }
 

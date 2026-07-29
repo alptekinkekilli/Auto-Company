@@ -37,159 +37,22 @@ Both when CHOOSING which idea to pursue AND when validating the chosen one, appl
   test. Interest, traffic, signups, free usage, email opens, and "I'd be
   interested" never count as payment validation.
 
-### OPPORTUNITY REGISTRY — dedup against selected & archived (MANDATORY, check FIRST)
+### OPPORTUNITY REGISTRY + SEARCH REGIME — both live in the framework file
 
-Before you scan for, brainstorm, or propose ANY opportunity, load
-`memories/candidate-registry.md`. If it is missing, CREATE it, seeding from the
-selected/closed/queued candidates in `memories/consensus.md`. It holds:
+Both gates now live in `PROJECT_EVALUATION_FRAMEWORK.md`:
 
-- `## Selected Candidates` — operator-picked, already being pursued.
-- `## Archived Candidates` — killed / NO-GO / stopped.
-- `## Pending Queue` — proposed, awaiting an operator decision.
+- **Opportunity registry / scan dedup** — "Fırsat kaydı ve tarama dedup". Load
+  `memories/candidate-registry.md` BEFORE you scan, brainstorm or propose anything; dedup by
+  **axis = (buyer × delivery-shape × price-point)**, never by name; never revive an Archived
+  axis; never silently delete an Archived entry; log what you excluded and why.
+- **Search regime** — "SEARCH REGIME", the discovery policy: where the company is allowed to
+  win, the generation arms, and the pricing-structure gate.
 
-Dedup by **axis = (buyer × delivery-shape × price-point)**, NOT by name — a re-skinned
-same-axis idea is a duplicate. For every candidate you would surface:
-
-- Overlaps a **Selected** axis → already in progress; do not re-propose it as new.
-- Overlaps an **Archived** axis → OUT OF SCOPE; do not revive it. Name the archived
-  entry and why it was killed.
-- Overlaps a **Pending Queue** axis → already proposed; do not re-generate it.
-- Only surface opportunities on an **unrepresented** axis. Explicitly LOG what you
-  excluded and why — no silent skipping.
-
-MAINTAIN the registry every cycle: when the operator selects a candidate, add it to
-Selected (with its Linear issue); when a candidate is killed/closed, move it to Archived
-with the decision + a one-line reason. **Never silently delete an Archived entry** — that
-is exactly what causes re-proposal loops. This gate governs only what gets proposed; it
-never authorizes a build (the HARD STOP below still applies).
-
-### SEARCH REGIME — where the company is allowed to win (discovery policy)
-
-Cycles 107–111 showed candidates dying at NATIVE/PLATFORM SUBSTITUTE and TWO-SIDED / TRUST
-COLD-START before economics, and this regime was written to kill those shapes earlier. An
-independent audit of 61 axes screened in cycles 130–165 (`docs/research/kill-pattern-filter-vs-space-audit-2026-07-25.md`)
-found that correction overshot: **0 of ~60 axes survived, and 28 of 61 terminal kills were not
-supported by the evidence cited** — 24 premature, 4 unfalsifiable. The regime demanded
-validation-grade proof at discovery time, forbade the actions that would produce it, then
-treated its absence as a kill. So this block now cuts BOTH ways: kill dead shapes early, but
-kill only on affirmative evidence, and let uncertainty travel to economics as UNKNOWN. It
-governs only NEWLY-PROPOSED axes at discovery time; it NEVER retro-kills a candidate already
-in Selected or Pending Queue.
-
-**Primary generation prior — THREE ARMS, not one.** An audit of 61 screened axes (2026-07-25)
-found the single "buyer already pays for the exact task" prior steers generation into mature,
-incumbent-heavy categories, which the substitute screen then kills for being mature — a loop
-that produced 0 survivors from ~60 axes. Each scan must generate three arms:
-
-1. **Exact-task-spend control** — one axis where the buyer already pays a human, agency, or
-   expensive dedicated tool for the exact task.
-2. **Adjacent-manual** — one axis where buyers pay for an adjacent manual outcome but no
-   dedicated product owns the proposed unit.
-3. **Pre-priced remediation** — one publicly pre-priced, event-triggered remediation unit on
-   buyer-owned assets (e.g. API/version migration, flaky-test stabilization, schema repair,
-   validator-backed artifact remediation, executable-documentation repair, a bounded CI-green
-   issue batch). A job posting, bounty, or provider price is CATEGORY and BUYER-BUDGET
-   evidence — it is never Auto Company WTP.
-
-Exact-task payment is category evidence, NOT an admission requirement.
-
-**Then bias toward axes with:**
-- an OBSERVABLE EXISTING BUDGET for the outcome (revealed money, not a trivial platform fee);
-- an ACCRETIVE ASSET the company's own WORK builds and keeps current (aggregation/freshness
-  labor arbitrage), NOT pre-existing proprietary data it cannot have on day one;
-- real PRICE TOLERANCE (the credible alternative is expensive, leaving room beneath it);
-- a CHANNEL that is an existing self-serve marketplace or organic-intent surface with a
-  built-in payment rail the company can list on for free. Channel-first orders discovery
-  SEQUENCING only — it does not re-rank the GO criteria (WTP still dominates channel). A
-  prospect list, hypothetical cold outreach, or a plan to build an audience does NOT count as
-  an existing channel. Any later outreach, listing, or payment action remains governed by the
-  current authorization and WTP rules; this discovery preference authorizes none;
-- NATURAL REPEAT purchase — a tie-breaker between otherwise-comparable axes, not a gate.
-
-**Early substitute / cold-start kill (BEFORE deep research).** Kill for substitute dominance
-ONLY when current evidence shows a NAMED substitute serves the same buyer, the same triggering
-context, the same required inputs/access, and the same end-to-end acceptance unit, at equal or
-lower total cost and switching burden. Feature overlap, category presence, "an incumbent
-exists", or the platform merely owning the source context is NOT sufficient — the audit found
-this label applied to 38 of 42 axes while only 26 actually died of substitution. Also kill if
-the offer needs a TWO-SIDED / network / trust cold-start the company cannot seed. Log the
-driver.
-
-**Missing evidence is UNKNOWN, not a kill.** Absence of a public counter-observation proves
-nothing. Kill only on (a) affirmative end-to-end substitute dominance as defined above,
-(b) fatal authority/licensing exposure, or (c) a necessary network dependency that cannot be
-seeded. Otherwise record the axis as **UNKNOWN / VALIDATION-REQUIRED** and send it to
-economics. That status authorizes NO build, outreach, listing, payment, or fulfillment.
-
-**Acceptance is the contracted deliverable, not the buyer's downstream outcome.** Acceptance
-may be defined by enumerated deliverables, source-population coverage, executable tests,
-evidence links, revision caps, and buyer sign-off. Do NOT require a grant win, a funding
-round, a CTR improvement, a platform reinstatement, or a regulator decision unless the offer
-explicitly guarantees that result. Likewise, "the customer could be harmed if this is done
-badly" is ordinary commercial reliance — it is a licensing veto only where a licensed
-professional's judgement or sign-off is legally required.
-
-**Wedge gate — kill-reason-specific and falsifiable.** For every early kill condition
-triggered, name a direct counter-observation and the observation that would falsify it. A
-channel or observed budget can clear ONLY channel/budget risk; it CANNOT override a dominant
-native substitute. To clear native-substitute dominance, show the material paid outcome the
-substitute fails to deliver and why the proposed accretive asset, freshness advantage,
-comprehensiveness, liability transfer, or switching cost closes that exact gap. Existing
-competitor payment for the same wedge is supporting evidence where it happens to exist.
-
-**Discovery admission must NOT demand validation evidence.** Do not require three paying
-buyers, visible repeat purchases, buyer-authored incumbent-failure text, or a zero-review
-entrant win to admit an axis. Those are VALIDATION evidence, and the company is not
-authorized to go and collect them — demanding them at discovery time, then killing for their
-absence, is the closed loop the audit identified. When an axis is economically plausible but
-the deciding action is unauthorized, mark it **TEST-BLOCKED / PENDING operator review**, not
-KILLED.
-
-NO QUALIFYING CANDIDATE remains a valid, expected outcome of this screen — do NOT manufacture
-a wedge to keep the board non-empty. This refines discovery only; it changes NOTHING about
-the WTP HARD STOP, the dedup gate, or authorization.
-
-**Reusable asset — TIE-BREAKER, not a generation constraint.** Where an axis would let each
-future paid fulfillment add a named REUSABLE ASSET (dataset, taxonomy, rule library,
-benchmark, test corpus) that lowers future marginal cost, prefer it over an otherwise-equal
-axis, and state the asset, accumulation unit, reuse path, and falsifier. The ABSENCE of an
-immediate reusable asset is NOT a discovery kill — as a generation constraint this prior was
-one of the sentences producing the single "productized desk" shape across ~60 axes. It applies
-only among axes that already survive structural screening and economics, and authorizes no
-build, fulfillment, outreach, or payment action.
-
-**Durable decision ledger — every screened axis, including pre-extraction kills.** Append one
-row per axis to `memories/decision-ledger.md` with: stable axis ID · buyer × delivery shape ×
-price · exactly ONE primary kill code · primary-source citations · status (`CONFIRMED KILL` /
-`UNKNOWN` / `TEST-BLOCKED` / `ECONOMIC PASS` / `ECONOMIC FAIL`) · the falsifier. Scans are
-rotated away; the ledger is the only durable record, and without it the company keeps
-re-deriving conclusions from its own lost output. A row with no primary source, no kill code,
-or two kill codes is INVALID — fix it rather than leaving it. Note that the archive and the
-exhausted-pattern list are outputs of THIS screen: they corroborate nothing about its accuracy.
-
-**Pricing-structure gate — a routing rule, NOT a kill or a flat-fee ban.** The 2026-07-25
-10-cycle filter-vs-space experiment beat both CFO-gate targets (near-miss 5/9, remediation
-9/10) but logged 0/14 economic passes under inconsistent, non-comparable CFO inputs. An
-independent high-model review (`docs/research/filter-vs-space-pricing-decision-2026-07-25.md`)
-found this does NOT prove flat-fee pricing is structurally dead — it found the 14 verdicts used
-different hourly rates, reserve treatment, and CAC assumptions, and only ONE axis (176-R)
-survives as a genuine pricing-architecture question once normalized. For any FIXED-PRICE
-service whose acceptance depends on repairing a buyer-controlled artifact, an item-count cap
-ALONE does not bound cost. Before recording `ECONOMIC PASS`: identify the actual effort driver
-and show it is either observable before acceptance, or contractually capped without unpaid
-completion/refund exposure. Apply the standing CFO model unchanged — all person-time at
-$50/hour, nonzero evidenced AI/tool cost, processing, the 10% pre-observation reserve, the
-prescribed base/stress test, and evidenced or conservatively modeled CAC with
-Contribution:CAC ≥3:1; UNKNOWN CAC blocks PASS. If the effort driver is unknown, route to
-**`PRICING-STRUCTURE UNKNOWN / TEST-BLOCKED`** and compare structures — e.g. a prequalified
-fixed tier, a diagnostic-plus-firm-quote, or buyer-approved overage — rather than accepting or
-killing the raw flat-fee offer. Do NOT kill the axis, ban flat fees as a category, price by a
-raw item count uncorrelated with effort, or infer build/outreach/payment authority from this
-gate — those remain governed by the HARD STOP below and the single active-validation slot.
-Each fresh axis gets AT MOST ONE bounded pricing-architecture adjudication without new primary
-evidence — if it stays `TEST-BLOCKED`, queue it and return to discovery; do not re-model the
-same axis again absent new evidence or an explicit operator directive, or "normal discovery"
-degrades into a repeating two-cycle pricing-adjudication loop.
+They were moved out of this prompt on 2026-07-29 because they govern discovery, which is
+currently disabled — **they are NOT conditional on that toggle.** Whenever you scan, rank or
+propose an opportunity, open the framework and follow them; that is mandatory, not optional,
+and "I did not read it" is not a defence for a duplicate or an out-of-regime proposal. Neither
+gate ever authorizes a build — the HARD STOP below still applies.
 
 ### HARD STOP — no build before willingness-to-pay evidence
 
