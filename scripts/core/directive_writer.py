@@ -134,6 +134,31 @@ def normalize_ownership(p: Path) -> None:
     So after every write, chown to the memories directory's owner (the app user)
     and open the mode to 0644. chown needs root; when the invoker IS the app
     user the file is already right, so failure here is fine to ignore.
+
+    TEMPORARY OWNERSHIP COMPATIBILITY (operator mandate, verbatim, 2026-07-29):
+
+        The current `normalize_ownership()` behavior is a pre-isolation
+        compatibility fix only. It MUST NOT preserve `app:app` ownership after
+        OS isolation.
+
+        During migration:
+
+        - canonical directive, audit ledger, backups, and recovery artifacts
+          must remain owned by the dedicated writer UID;
+        - uid 10001 may receive read access only;
+        - the protected parent directory must not permit uid 10001 to replace,
+          rename, or unlink files;
+        - a root-invoked operator write must preserve writer-UID ownership
+          rather than converting protected files back to app ownership;
+        - production acceptance tests must verify ownership and EPERM again
+          after both an agent status transition and a host/root operator write.
+
+    In other words: this function chowns to the *directory owner*, and today the
+    memories directory is owned by `app`. When the isolation lands, the protected
+    directory's owner becomes the writer UID — at that point this function must
+    follow it (it already will, since it stats the parent), and any hardcoded
+    notion of "app owns these files" would silently undo the isolation. Do not
+    add one.
     """
     try:
         st = os.stat(DIRECTIVE.parent)

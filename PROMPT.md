@@ -608,7 +608,8 @@ establishes probable identity, not content integrity.
 
 **Leak-scan bridge records with `scripts/core/bridge_leak_scan.py`. Never by word presence.**
 The scanner is VALUE-SENSITIVE: it fails on a credential key together with a real value
-(`Cookie: name=value`, `Authorization: Bearer …`, `access_token=…`, a populated
+(`Cookie: name=value`, any `Authorization`/`Proxy-Authorization` header carrying a credential —
+Bearer, Basic, or a bare opaque token — `access_token=…`, a populated
 localStorage/sessionStorage dump) and passes assurance sentences that merely name those words,
 plus the allowed public-evidence fields (`KararId=<hex>`, `content_hash`, source hashes). A
 word-presence scan flagged the 1280 record's own "no session material crossed" sentence — a

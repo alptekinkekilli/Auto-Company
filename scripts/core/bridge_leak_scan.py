@@ -38,8 +38,18 @@ import sys
 RULES: list[tuple[str, re.Pattern]] = [
     ("cookie-header-with-value",
      re.compile(r"\b(set-cookie|cookie)\s*:\s*[^\s;=,\"']+=[^\s;,\"']+", re.I)),
-    ("authorization-bearer-token",
-     re.compile(r"\bauthorization\s*:\s*bearer\s+[A-Za-z0-9\-._~+/]{8,}", re.I)),
+    # Any Authorization/Proxy-Authorization header WITH a credential — not just
+    # Bearer (operator hardening, 2026-07-29). Two shapes: a known scheme
+    # followed by its credential, or a bare opaque token of credential length.
+    # Deliberately NOT "any text after the colon": bridge/OPREQ prose contains
+    # phrases like "authorization: granted" — short plain words are not
+    # credentials, and flagging them would recreate the word-presence bug.
+    ("authorization-header-with-credential",
+     re.compile(r"\b(proxy-)?authorization\s*:\s*"
+                r"(basic|bearer|digest|negotiate|ntlm|hoba|mutual|oauth|token|aws4-hmac-sha256)"
+                r"\s+\S+", re.I)),
+    ("authorization-header-opaque-token",
+     re.compile(r"\b(proxy-)?authorization\s*:\s*[A-Za-z0-9\-._~+/=]{16,}(?=[\s,\"']|$)", re.I)),
     ("named-credential-key-with-value",
      re.compile(r"\b(access_token|refresh_token|id_token|apisecretkey|"
                 r"asp\.?net_sessionid|jsessionid|phpsessid|sessionid)\b"
@@ -70,10 +80,16 @@ NEG_FIXTURES = {
         "?KararId=69a570df623c1e8c2dc00cbd6652b3c3090d9272852d30c58c4ceaf3ed4031a2\n"
         "content_hash: sha256:404320c73ef629d7 chars=28561 (canonical tool); "
         "source page hash 1b1440c34dd111c8"),
+    "authorization-prose-without-credential": (
+        "Authorization for OPREQ-215TFB-004: granted by operator 2026-07-28. "
+        "authorization: pending review; do not send without the separate "
+        "authority gate. Proxy-Authorization headers are never exported."),
 }
 POS_FIXTURES = {
     "session-cookie": "Set-Cookie: ASP.NET_SessionId=x4kq2vbn3rty8uio; path=/; HttpOnly",
     "bearer-token": "Authorization: Bearer eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJvcGVyYXRvciJ9.k9WqTz3v",
+    "non-bearer-auth-header": "Proxy-Authorization: Basic dXNlcjpwYXNzd29yZA==",
+    "opaque-auth-token": "authorization: 9f8e7d6c5b4a3210ffee1122",
     "storage-dump": 'localStorage: {"apiSecretKey": "9f8e7d6c5b4a3210ffee"}',
     "named-token-assignment": "refresh_token=1//0dXk2mPqLbn4vCgYIARAAGA0SNwF",
 }
@@ -90,8 +106,8 @@ def selftest() -> int:
         if not scan(text):
             ok = False
             print(f"SELFTEST FAIL: positive fixture '{name}' was NOT caught — scanner gone blind")
-    print("SELFTEST OK: 1 negative passes, 4 positives caught" if ok
-          else "SELFTEST FAILED — do not trust this scanner's CLEAN verdict")
+    print(f"SELFTEST OK: {len(NEG_FIXTURES)} negative passes, {len(POS_FIXTURES)} positives caught"
+          if ok else "SELFTEST FAILED — do not trust this scanner's CLEAN verdict")
     return 0 if ok else 3
 
 
