@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import signal
 import platform
 import re
 import shlex
@@ -687,6 +688,85 @@ def write_settings(incoming: dict[str, Any]) -> dict[str, Any]:
     RUNTIME_ENV_FILE.parent.mkdir(parents=True, exist_ok=True)
     RUNTIME_ENV_FILE.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return read_settings()
+
+
+def _proc_cmdline(pid: str) -> list[str]:
+    try:
+        raw = Path(f"/proc/{pid}/cmdline").read_bytes()
+    except OSError:
+        return []
+    return [p for p in raw.decode("utf-8", "replace").split("\0") if p]
+
+
+def _proc_ppid(pid: str) -> str:
+    try:
+        for line in Path(f"/proc/{pid}/status").read_text("utf-8", "replace").splitlines():
+            if line.startswith("PPid:"):
+                return line.split(":", 1)[1].strip()
+    except OSError:
+        pass
+    return ""
+
+
+def wake_loop() -> dict[str, Any]:
+    """End the inter-cycle sleep early so the next cycle starts now.
+
+    The alternative ways to hurry a cycle are both worse: a redeploy rebuilds the
+    image and resets loop_count, and shortening LOOP_INTERVAL multiplies spend
+    against the Claude window permanently, when what is wanted is one cycle now.
+
+    The loop's `sleep "$LOOP_INTERVAL"` is guarded with `|| true` (see
+    scripts/core/auto-loop.sh) precisely so this is safe — without that guard
+    `set -e` would take the whole loop down with the killed sleep.
+
+    Targeting is deliberately narrow. A cycle in flight ALSO has a `sleep` child:
+    the watchdog that enforces CYCLE_TIMEOUT_SECONDS. Killing that one would
+    disarm the timeout on a running cycle. The two are told apart by parentage —
+    the inter-cycle sleep is a DIRECT child of the main loop process, while the
+    watchdog sleep hangs off a subshell — and the state file must additionally
+    say the loop is idle. Anything ambiguous is refused rather than guessed at.
+    """
+    state = read_state_file_pairs()
+    status = (state.get("STATUS") or "").lower()
+    if status != "idle":
+        return {"ok": False, "reason": "busy",
+                "error": f"Loop is not sleeping (STATUS={status or 'unknown'}). "
+                         "A cycle is already running — nothing to wake."}
+
+    try:
+        pids = [p for p in os.listdir("/proc") if p.isdigit()]
+    except OSError as exc:  # noqa: BLE001
+        return {"ok": False, "error": f"Cannot read /proc: {exc}"}
+
+    loop_pids = {p for p in pids if any("auto-loop.sh" in a for a in _proc_cmdline(p))}
+    if not loop_pids:
+        return {"ok": False, "error": "auto-loop.sh is not running in this container."}
+    # The main loop is the auto-loop.sh whose parent is not itself auto-loop.sh.
+    main = [p for p in loop_pids if _proc_ppid(p) not in loop_pids]
+    if len(main) != 1:
+        return {"ok": False,
+                "error": f"Expected exactly one main loop process, found {len(main)}. "
+                         "Refusing to guess which sleep to end."}
+    main_pid = main[0]
+
+    targets = []
+    for p in pids:
+        cmd = _proc_cmdline(p)
+        if cmd and cmd[0] == "sleep" and _proc_ppid(p) == main_pid:
+            targets.append((p, " ".join(cmd)))
+    if not targets:
+        return {"ok": False, "error": "No inter-cycle sleep found under the main loop."}
+    if len(targets) > 1:
+        return {"ok": False,
+                "error": f"Found {len(targets)} sleeps under the main loop; refusing to guess."}
+
+    pid, cmd = targets[0]
+    try:
+        os.kill(int(pid), signal.SIGTERM)
+    except OSError as exc:  # noqa: BLE001
+        return {"ok": False, "error": f"Could not signal pid {pid}: {exc}"}
+    return {"ok": True, "pid": pid, "killed": cmd,
+            "message": "Sleep ended — the next cycle starts within seconds."}
 
 
 def trigger_redeploy() -> dict[str, Any]:
@@ -1409,6 +1489,12 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
         if path == "/api/operator-decision":
             self._handle_operator_decision()
+            return
+
+        if path == "/api/wake":
+            result = wake_loop()
+            result["timestamp"] = datetime.now(timezone.utc).isoformat()
+            self._json(result, code=HTTPStatus.OK if result.get("ok") else HTTPStatus.CONFLICT)
             return
 
         if path == "/api/redeploy":

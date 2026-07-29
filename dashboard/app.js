@@ -60,6 +60,7 @@ const els = {
   settingsStatus: document.getElementById("settingsStatus"),
   btnSaveSettings: document.getElementById("btnSaveSettings"),
   btnRedeploy: document.getElementById("btnRedeploy"),
+  btnWake: document.getElementById("btnWake"),
 
   btnRefresh: document.getElementById("btnRefresh"),
   btnStart: document.getElementById("btnStart"),
@@ -272,6 +273,7 @@ async function fetchStatus() {
   applyCardState(els.cardAutostart, "autostart", autostart.state);
 
   renderStateList(parsed, data.stateFile || {}, data.router || {});
+  setWakeAvailability(data.stateFile || {});
 
   const consensusRaw = (data.consensusHead || parsed.consensusPreview || "(no consensus)").trim();
   els.consensusText.innerHTML = renderMarkdown(consensusRaw);
@@ -582,6 +584,38 @@ async function saveSettings(withRedeploy) {
   }
 }
 
+// "Run cycle now" ends the sleep between cycles. It is enabled ONLY while the loop
+// is idle: during a running cycle there is nothing to wake, and the only sleep alive
+// then is the cycle-timeout watchdog, which must not be touched. The server enforces
+// this too — the button state is a courtesy, not the guard.
+function setWakeAvailability(stateFile) {
+  const status = String((stateFile && stateFile.STATUS) || "").toLowerCase();
+  const sleeping = status === "idle";
+  els.btnWake.disabled = !sleeping;
+  els.btnWake.title = sleeping
+    ? "Loop is sleeping — start the next cycle now."
+    : `Loop is ${status || "in an unknown state"} — nothing to wake.`;
+}
+
+async function wakeLoop() {
+  const label = els.btnWake.textContent;
+  els.btnWake.disabled = true;
+  els.btnWake.textContent = "Waking...";
+  try {
+    const res = await fetch("/api/wake", { method: "POST" });
+    const data = await res.json();
+    els.settingsStatus.textContent =
+      res.ok && data.ok
+        ? "Cycle starting now — the wait was ended, LOOP_INTERVAL is unchanged."
+        : `Wake refused: ${data.error || "unknown reason"}`;
+  } catch (err) {
+    els.settingsStatus.textContent = err instanceof Error ? err.message : String(err);
+  } finally {
+    els.btnWake.textContent = label;
+    fetchStatus().catch(() => {});
+  }
+}
+
 async function runAction(action) {
   const btn = action === "start" ? els.btnStart : els.btnStop;
   const label = btn.textContent;
@@ -618,6 +652,7 @@ function resetAutoTimer() {
 els.btnRefresh.addEventListener("click", () => fetchStatus().catch(() => {}));
 els.btnStart.addEventListener("click", () => runAction("start"));
 els.btnStop.addEventListener("click", () => runAction("stop"));
+els.btnWake.addEventListener("click", () => wakeLoop());
 els.btnTail.addEventListener("click", () => fetchStatus().catch(() => {}));
 els.btnRaw.addEventListener("click", () => {
   rawVisible = !rawVisible;

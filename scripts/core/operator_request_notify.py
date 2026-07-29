@@ -550,15 +550,36 @@ def verify_credential(fields: dict, app: Path) -> tuple[bool, str]:
     )
 
 
+# Where one answer block ends and the next begins. Anchored on structure — a new
+# `## ` heading, or the start of another Decision/Authorization block — NOT on a bare
+# "OPREQ-" occurrence.
+#
+# Both of the old bounds silently discarded valid authorizations on 2026-07-29. A
+# four-field authorization runs well past 1000 characters when the operator writes
+# real limits, so `Limit:` fell outside the window and the verifier reported it
+# "missing" — the field was present, the window was short. And `rest.find("OPREQ-")`
+# truncated at the first mention of ANY request id, so an authorization that
+# legitimately cross-references another request ("the first send stays gated under
+# OPREQ-215TFB-WTP-001") cut its own block short. Both failures are invisible to the
+# operator: the cockpit shows the decision submitted, the ledger stays OPEN, and the
+# company never acts on it.
+BLOCK_BOUNDARY_RE = re.compile(
+    r"\n##[ \t]|\n(?:Authorization|Decision) for OPREQ-|\nResolves:[ \t]"
+)
+# A sanity bound, not a semantic one: far above any real authorization, low enough
+# that a malformed file cannot make the verifier scan megabytes.
+MAX_WINDOW_CHARS = 20000
+
+
 def _directive_window_after(directive_text: str, anchor_label: str, req_id: str):
     pat = re.compile(rf"{anchor_label} for {re.escape(req_id)}:")
     m = pat.search(directive_text)
     if not m:
         return None
     rest = directive_text[m.end() :]
-    cutoff = rest.find("OPREQ-")
-    window = rest[:cutoff] if cutoff != -1 else rest
-    return window[:1000]
+    boundary = BLOCK_BOUNDARY_RE.search(rest)
+    window = rest[: boundary.start()] if boundary else rest
+    return window[:MAX_WINDOW_CHARS]
 
 
 DECISION_RE = re.compile(r"\s*([A-Za-z][A-Za-z -]{2,30}?)\s*[—-]\s*(.{10,})")
