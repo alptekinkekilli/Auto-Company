@@ -268,12 +268,25 @@ REQUIRED_FRAMEWORK_ANCHORS=(
 # gates delegated to the framework file are still really there.
 # Sets MISSING_GUARDRAILS to whatever did not.
 prompt_guardrails_intact() {
-    local assembled="$1" g fw
+    local assembled="$1" g fw pf
     MISSING_GUARDRAILS=""
+    pf="$PROJECT_DIR/PROMPT.md"
     for g in "${REQUIRED_PROMPT_GUARDRAILS[@]}"; do
+        # TWO checks, and the first is the one that matters. $assembled embeds
+        # $CONSENSUS verbatim, and memories/consensus.md is rewritten by the model
+        # every cycle — so a cycle that happened to write "TENDER TRACK STANDING
+        # RULES" into its own consensus would satisfy an assembled-text-only check
+        # even with the section deleted from PROMPT.md. The law has to be checked
+        # where the law lives. (Caught by an independent adjudicator on 2026-07-29,
+        # hours after the assembled-only version shipped; it was latent, not live.)
+        if [ ! -s "$pf" ] || ! grep -qF -- "$g" "$pf"; then
+            MISSING_GUARDRAILS="${MISSING_GUARDRAILS:+$MISSING_GUARDRAILS; }PROMPT.md: $g"
+            continue
+        fi
+        # Still verify assembly did not drop it on the way into the prompt.
         case "$assembled" in
             *"$g"*) ;;
-            *) MISSING_GUARDRAILS="${MISSING_GUARDRAILS:+$MISSING_GUARDRAILS; }$g" ;;
+            *) MISSING_GUARDRAILS="${MISSING_GUARDRAILS:+$MISSING_GUARDRAILS; }assembly dropped: $g" ;;
         esac
     done
     fw="$PROJECT_DIR/PROJECT_EVALUATION_FRAMEWORK.md"

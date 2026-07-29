@@ -643,6 +643,9 @@ not silently drop them.
    whether those two firms want this, not whether tender consultancy has demand. The pool must
    contain at least one qualified firm from a **different procurement AND a different sector**
    before a first send is proposed — and on meeting that condition, REPORT it, do not send.
+   **Do NOT relax a gate to achieve that spread.** This condition is a reason to keep looking,
+   never a reason to loosen G1–G4; a wide pool bought by a lowered gate measures nothing. If the
+   gates will not yield spread, report the narrow pool honestly and leave it narrow.
 5. **Mirrors are a `KararNo` discovery source and nothing else.** That includes the named
    competitor mirrors (`asiridusuk`, `ihaledanismani`, `ihalehatti`, `herpoz` and their like):
    fine for locating a decision number, **never** evidence of G1, of a firm's role, of a
