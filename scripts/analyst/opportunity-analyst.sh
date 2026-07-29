@@ -141,18 +141,13 @@ REG_EFFORT="${ANALYST_REGISTRY_EFFORT:-medium}"   # mechanical transform; stays 
 REG_MSG="$WORK/reg.txt"; REG_PROMPT="$WORK/reg_prompt.txt"
 LIVE_SPAN_FILE="$WORK/registry-live-span.md"
 
-python3 - "$REGISTRY" > "$LIVE_SPAN_FILE" 2>"$WORK/extract_err" <<'PY'
-import sys
-t = open(sys.argv[1], encoding="utf-8").read()
-START = "\n\n## Selected\n"; END = "\n\n## Exhausted patterns / lessons\n"
-if START not in t or END not in t:
-    print(f"marker not found (START={START in t}, END={END in t})", file=sys.stderr)
-    sys.exit(1)
-before, rest = t.split(START, 1)
-live_and_after = START + rest
-live, _after = live_and_after.split(END, 1)
-sys.stdout.write(live)
-PY
+# Extraction delegates to merge_registry.py so the live-span boundary is defined in
+# exactly ONE place. It used to be duplicated here as an inline literal split, and on
+# 2026-07-29 a company cycle inserted a "---" rule before each heading — breaking both
+# copies at once with "marker not found". Two definitions of the same boundary is the
+# bug; the heading-based parser in merge_registry.py is the fix.
+python3 "$APP/scripts/analyst/merge_registry.py" --extract-live-span "$REGISTRY" \
+  > "$LIVE_SPAN_FILE" 2>"$WORK/extract_err"
 extract_rc=$?
 if [ "$extract_rc" -ne 0 ]; then
     reg_written="skipped (could not isolate live span: $(cat "$WORK/extract_err" 2>/dev/null | tr '\n' ' '))"

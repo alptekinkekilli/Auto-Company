@@ -31,8 +31,14 @@ from pathlib import Path
 APP = Path(__file__).resolve().parents[2]
 AUDIT_LOG = APP / "memories" / "registry-merge-audit.log"
 
-LIVE_SPAN_START = "\n\n## Selected\n"
-LIVE_SPAN_END = "\n\n## Exhausted patterns / lessons\n"
+# Section boundaries are matched as HEADINGS, not as exact surrounding-whitespace
+# literals. The literals used to be "\n\n## Selected\n" / "\n\n## Exhausted patterns
+# / lessons\n"; on 2026-07-29 a company cycle reformatted the registry and inserted a
+# "---" rule before each heading, so both literals stopped matching and pass-2 died
+# with "marker not found (START=False, END=False)". A cosmetic markdown edit must not
+# be able to break the merge — the heading text is the contract, its decoration is not.
+HEADING_LIVE_START = re.compile(r"(?m)^## Selected[ \t]*$")
+HEADING_LIVE_END = re.compile(r"(?m)^## Exhausted patterns / lessons[ \t]*$")
 
 # Candidate-ID token shapes actually observed in this registry: "176-R",
 # "266-A", "192-REM", "216-C12-P", "215-TF-B", "Candidate #25". Deliberately
@@ -118,19 +124,61 @@ def resolve_span(value: str) -> str:
     return content
 
 
+def _rewind_over_separators(text: str, idx: int) -> int:
+    """Walk `idx` (start of a heading line) back over the run of blank and `---`
+    lines that immediately precedes it, so those decorations stay in the UNTOUCHED
+    suffix rather than becoming trailing junk the model has to reproduce."""
+    while idx > 0 and text[idx - 1] == "\n":
+        line_start = text.rfind("\n", 0, idx - 1) + 1
+        line = text[line_start : idx - 1].strip()
+        if line == "" or (len(line) >= 3 and set(line) == {"-"}):
+            idx = line_start
+        else:
+            break
+    return idx
+
+
 def split_registry(text: str) -> tuple[str, str, str]:
-    if LIVE_SPAN_START not in text:
-        raise ValueError(f"marker not found: {LIVE_SPAN_START!r}")
-    before, rest = text.split(LIVE_SPAN_START, 1)
-    live_and_after = LIVE_SPAN_START + rest
-    if LIVE_SPAN_END not in live_and_after:
-        raise ValueError(f"marker not found: {LIVE_SPAN_END!r}")
-    live, after = live_and_after.split(LIVE_SPAN_END, 1)
-    after = LIVE_SPAN_END + after
-    return before, live, after
+    """Split into (before, live, after) at the two section headings.
+
+    `before` and `after` are returned as exact slices of `text` and are never
+    modified — that byte-identity, not instruction-following, is what protects the
+    ~180KB append-only historical journal in `after`.
+    """
+    starts = HEADING_LIVE_START.findall(text)
+    ends = HEADING_LIVE_END.findall(text)
+    if len(starts) != 1:
+        raise ValueError(f"expected exactly one '## Selected' heading, found {len(starts)}")
+    if len(ends) != 1:
+        raise ValueError(
+            f"expected exactly one '## Exhausted patterns / lessons' heading, found {len(ends)}"
+        )
+
+    m_start = HEADING_LIVE_START.search(text)
+    m_end = HEADING_LIVE_END.search(text)
+    i_start = m_start.start()
+    i_end = _rewind_over_separators(text, m_end.start())
+    if i_end <= i_start:
+        raise ValueError("'## Exhausted patterns / lessons' precedes '## Selected'")
+
+    return text[:i_start], text[i_start:i_end], text[i_end:]
 
 
 def main() -> None:
+    # Extraction mode. The orchestrator used to carry its OWN inline copy of the
+    # splitting logic, so the boundary was defined in two places and the 2026-07-29
+    # "---" reformat broke both. One definition now; the shell calls this.
+    if len(sys.argv) == 3 and sys.argv[1] == "--extract-live-span":
+        try:
+            _before, live, _after = split_registry(
+                Path(sys.argv[2]).read_text(encoding="utf-8")
+            )
+        except Exception as exc:
+            print(f"{exc}", file=sys.stderr)
+            sys.exit(1)
+        sys.stdout.write(live)
+        sys.exit(0)
+
     if len(sys.argv) != 4:
         blocked(
             "usage: merge_registry.py <registry.md path> "
@@ -200,11 +248,12 @@ def main() -> None:
         )
 
     # --- assemble, write, read back, verify ---
-    if not new_live.startswith("\n"):
-        new_live = "\n" + new_live
-    if not new_live.endswith("\n"):
-        new_live += "\n"
-    new_full = before + new_live.rstrip("\n") + "\n" + after.lstrip("\n")
+    # `before` ends with the newline that closes the line above the heading, and
+    # `after` begins with the blank line that precedes the next heading's rule —
+    # so the span must start exactly at "## Selected" and end with exactly one
+    # newline. Do not pad either side; that is what keeps reassembly lossless.
+    new_live = new_live.lstrip("\n").rstrip("\n") + "\n"
+    new_full = before + new_live + after
     # before/after are byte-identical to the original by construction — only
     # new_live differs. Confirm that explicitly before writing anything.
     if before not in original or after not in original:
