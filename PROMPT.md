@@ -709,16 +709,26 @@ Neither is a reason to relax a gate: an out-of-window firm stays held, `Email qu
 **Classify every resolved decision BEFORE you treat anyone as a candidate** (operator decision,
 2026-07-29 — G1 Integrity-Risk Classification). Read the authority text, then pick exactly one:
 
-1. **`OUT_OF_SCOPE / INTEGRITY-RISK QUARANTINE`** — the exclusion or proceeding concerns
-   collusion or coordinated bidding, a shared IP/device/account treated as evidence of prohibited
-   coordination, bid rigging, forged or deliberately false documents, fraud, corruption,
-   prohibited conduct (4734 m.17), debarment, or an equivalent integrity allegation. **This keys
-   on what the proceeding CONCERNS, not on how it came out** — a firm the Kurul vindicated is
-   still quarantined. Do NOT run G4, do NOT create an `Email queue` entry, do NOT contact.
-   Record the literal finding or allegation, and **never write that misconduct was proven unless
-   the competent authority expressly made that final determination** — usually it did not.
-2. **Normal G1–G4** — the text shows the mirror was wrong and the real ground is an ordinary,
-   remediable documentary or financial-qualification deficiency.
+1. **A decision that TOUCHES a prohibited-conduct allegation** — collusion or coordinated
+   bidding, a shared IP/device/account offered as evidence of coordination, bid rigging, forged
+   or deliberately false documents, fraud, corruption, 4734 m.17, debarment. **Subject matter
+   alone decides nothing. The authority's OUTCOME governs:**
+   - authority **confirms** the violation → **`INTEGRITY-RISK QUARANTINE`**
+   - authority **rejects** the allegation or **reverses** the elimination →
+     **`OUT_OF_SCOPE / ELIMINATION-REVERSED`**
+   - outcome sits in a **separate official process** you cannot see →
+     **`STATUS-UNKNOWN / NO INFERENCE`**
+
+   In every one of the three: no G4, no `Email queue`, no contact. But they assert very different
+   things about real companies, and only the first is adverse. **Never write that misconduct was
+   proven unless the competent authority expressly made that final determination** — and an
+   unknown external status is not an adverse finding, it is an absence of one.
+
+   **Quarantine is CASE-SCOPED, never a permanent mark on a legal person.** It attaches to that
+   procurement and that decision. The same firm surfacing in another decision with a verified
+   documentary defect is assessed there on its own merits.
+2. **Normal G1–G4** — the real ground is an ordinary, remediable documentary or
+   financial-qualification deficiency.
 3. **`G1 NON-SERVICEABLE / NO CANDIDATE`** — tender cancellation, the complainant rather than an
    excluded bidder, an authority-side defect, or no bidder-remediable ground.
 4. **`HELD / AUTHORITY MEANING UNRESOLVED`** — the text stays ambiguous. Ambiguity is a verdict
@@ -727,12 +737,14 @@ Neither is a reason to relax a gate: an out-of-window firm stays held, `Email qu
 This is a classification-safety rule only. It authorizes no outreach, no contact-tier relaxation,
 no email, no payment, no fulfilment, no build.
 
-**Expect the mirror to be wrong about the holding.** Five of five resolved decisions diverged
-from what the discovery mirror implied: 2026/UH.II-1924 the complainant won outright;
-2025/UY.II-1098 the complainant was not among the excluded; 2026/UY.II-1318 the complainant was
-reinstated; 2026/UH.II-451 was a tender CANCELLATION, not an exclusion; 2025/UM.II-1860's
-exclusion was overturned. A mirror is good for LOCATING a KararNo and worthless for what the
-decision held. Never let a mirror's framing survive into a candidate row.
+**A mirror is a `KararNo` discovery source and nothing else.** It is never evidence of G1, of a
+firm's role, of a violation, of an elimination, or of an outcome — all of those come from the
+canonical Kurul text and only from there. This is not caution, it is measurement: five of five
+resolved decisions diverged from what the mirror implied. 2026/UH.II-1924 the complainant won
+outright; 2025/UY.II-1098 the complainant was not among the excluded; 2026/UY.II-1318 the
+complainant was reinstated; 2026/UH.II-451 was a tender CANCELLATION, not an exclusion;
+2025/UM.II-1860's elimination was reversed. Never let a mirror's framing survive into a
+candidate row.
 
 **The evidence discipline still binds every row you write from this:** the `Başvuru Sahibi` is
 the COMPLAINANT, NOT necessarily the excluded firm — read the decision TEXT to separate
