@@ -15,11 +15,52 @@ At the very start of every cycle, read `memories/human-directive.md`.
   a direction. Its `## Directive` text **overrides your own Next Action for this
   cycle** — make it the top priority and act on it (still respecting all
   guardrails in `CLAUDE.md`).
-- After you have acted on it, edit `memories/human-directive.md` and change
-  `## Status` from `PENDING` to `DONE` so it is not re-applied next cycle.
+- After you have acted on it, **do NOT edit the file.** Run the deterministic
+  status-transition mechanism, which compare-and-swaps on the body hash:
+
+  ```
+  python3 scripts/core/directive_writer.py show          # read body_sha256
+  python3 scripts/core/directive_writer.py status \
+      --expect-status PENDING --to DONE \
+      --expect-body-sha256 <body_sha256> --receipt <your receipt path>
+  ```
+
+  It refuses (exit 2) if the status already moved or the body changed under you,
+  and writes nothing in that case — report the refusal, do not work around it.
+  Your execution evidence goes in the receipt or `memories/consensus.md`, never
+  into the directive body.
 - If the file is missing, empty, or `Status` is `DONE`, proceed autonomously as
   usual. This is the only channel through which a human steers the company;
   everything else remains fully autonomous.
+
+### DIRECTIVE AUTHORITY AND PERSISTENCE
+
+A PENDING directive is binding for its own execution.
+
+A directive may add, amend, or retire a standing rule. However,
+`memories/human-directive.md` is not canonical storage for standing rules.
+
+Any directive that specifies persistent behavior MUST, in the same execution:
+
+1. update the applicable canonical standing file (`PROMPT.md`, `CLAUDE.md`, or
+   another explicitly named canonical policy file);
+2. read back and verify the resulting content;
+3. record the canonical target, rule identifier, and resulting file hash in a
+   separate execution receipt.
+
+If any canonical write or verification fails, the directive MUST remain PENDING
+or become BLOCKED. It MUST NOT be marked DONE.
+
+No behavior is considered a standing rule solely because it appears in a
+directive.
+
+The directive body is immutable after acceptance. The executor may transition
+only the exact `## Status` value through the deterministic status-transition
+mechanism. Execution evidence belongs in a separate receipt or audit log.
+
+Any `Standing rules (unchanged)` section inside a directive is a
+non-authoritative context snapshot. The canonical standing files prevail, and a
+conflict is a compliance failure rather than permission to choose either text.
 
 ## PROJECT SELECTION & EVALUATION (MANDATORY — use the framework)
 

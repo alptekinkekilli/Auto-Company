@@ -19,11 +19,19 @@ standing = "\n".join((REPO / f).read_text(encoding="utf-8")
 standing_l = standing.lower()
 
 # Live directive from the container.
-live = subprocess.run(
+_live = subprocess.run(
     ["ssh", "powerupp-ts",
      "docker exec $(docker ps --format '{{.Names}}' | grep z12a992 | head -1) "
      "sh -lc 'cat /app/memories/human-directive.md'"],
-    capture_output=True, text=True).stdout
+    capture_output=True, text=True)
+# A failed ssh used to leave `live` empty, and an empty live directive is
+# indistinguishable from a skipped one — partial coverage reported as complete.
+# Coverage you could not measure is UNKNOWN, never zero.
+if _live.returncode != 0 or not _live.stdout.strip():
+    print("SCAN FAILED / COVERAGE UNKNOWN — could not read the live directive "
+          f"(rc={_live.returncode}): {(_live.stderr or '').strip()[:160]}", file=sys.stderr)
+    sys.exit(3)
+live = _live.stdout
 
 # A line is rule-shaped if it asserts permanence or prohibition.
 RULE = re.compile(
@@ -45,6 +53,14 @@ def key_phrases(line):
 
 
 def covered(line):
+    """Token overlap is a SCREEN, not a verdict.
+
+    It is trusted only in the negative direction: a low score means "a human must
+    look at this". A high score means "probably fine", never "certified covered" —
+    a rule whose words are individually common in standing text (WTP, EKAP, G1)
+    can score high while the rule itself is absent. Never report a clean run as
+    proof that nothing is missing.
+    """
     ph = key_phrases(line)
     if not ph:
         return True, 0.0
@@ -52,7 +68,14 @@ def covered(line):
     return (hits / len(ph)) >= 0.6, hits / len(ph)
 
 
+CANARY = REPO / "tests" / "fixtures" / "intentionally-uncovered-standing-rule.md"
+CANARY_MARK = "zibberflux"
+
 sources = [(p.name, p.read_text(encoding="utf-8")) for p in sorted(OPS.glob("*.md"))]
+if not CANARY.exists():
+    print(f"INVALID SCAN — canary fixture missing: {CANARY}", file=sys.stderr)
+    sys.exit(3)
+sources.append((CANARY.name, CANARY.read_text(encoding="utf-8")))
 if live.strip():
     sources.append(("LIVE human-directive.md", live))
 
@@ -71,7 +94,14 @@ for name, text in sources:
             findings.append((ratio, name, line))
 
 findings.sort()
+if not any(CANARY_MARK in line for _, _, line in findings):
+    print("INVALID SCAN — the canary rule was NOT flagged. The token heuristic has "
+          "gone blind; treat this run as no coverage information at all, not as a "
+          "clean result.", file=sys.stderr)
+    sys.exit(3)
+
 print(f"scanned {len(sources)} directive bodies, {len(seen)} distinct rule-shaped lines")
+print("canary: FLAGGED (heuristic still discriminating)")
 print(f"NOT clearly covered by PROMPT.md / CLAUDE.md / framework: {len(findings)}\n")
 for ratio, name, line in findings[:40]:
     print(f"[{ratio:.0%} covered] {name}")

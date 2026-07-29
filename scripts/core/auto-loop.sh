@@ -251,6 +251,8 @@ REQUIRED_PROMPT_GUARDRAILS=(
     # directive remembered to retype them; a 2026-07-29 check found seven of them in
     # no standing file at all. Anchored here so their disappearance is loud.
     "TENDER TRACK STANDING RULES"
+    # The rule that stops a directive from becoming the only home of a rule.
+    "DIRECTIVE AUTHORITY AND PERSISTENCE"
 )
 
 # Gates that were MOVED OUT of the every-cycle prompt (2026-07-29) and now live in

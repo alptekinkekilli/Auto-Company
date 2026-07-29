@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import signal
+import sys
 import platform
 import re
 import shlex
@@ -331,8 +332,12 @@ def read_directive() -> dict[str, Any]:
     }
 
 
-def write_directive(text: str) -> dict[str, Any]:
-    """Write a new PENDING human directive. Overwrites any previous one."""
+class DirectiveRefused(Exception):
+    """A gate refused the write — most often: the live directive is still PENDING."""
+
+
+def write_directive(text: str, allow_pending: bool = False) -> dict[str, Any]:
+    """Write a new PENDING human directive through scripts/core/directive_writer.py."""
     clean = text.strip()
     if not clean:
         raise ValueError("directive text is empty")
@@ -349,8 +354,31 @@ def write_directive(text: str) -> dict[str, Any]:
         f"## Updated\n{updated}\n\n"
         f"## Directive\n{clean}\n"
     )
-    DIRECTIVE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    DIRECTIVE_FILE.write_text(body, encoding="utf-8")
+    # Route through the single deterministic writer rather than writing here.
+    # Five writers used to touch this slot their own way; only one of them
+    # refused to clobber in-flight work, and none locked. The writer does
+    # lock -> in-flight gate -> backup -> atomic rename -> read-back -> audit
+    # -> notify, and refuses to overwrite a PENDING directive unless the caller
+    # says so explicitly. `allow_pending` is what the panel's confirm maps to;
+    # default False means a click cannot silently destroy a live instruction.
+    import subprocess
+    import tempfile as _tf
+    with _tf.NamedTemporaryFile("w", suffix=".md", delete=False, encoding="utf-8") as fh:
+        fh.write(clean + "\n")
+        body_path = fh.name
+    try:
+        cmd = [sys.executable, str(REPO_ROOT / "scripts" / "core" / "directive_writer.py"),
+               "--actor", "cockpit-director-panel", "write", "--body-file", body_path]
+        if allow_pending:
+            cmd.append("--allow-pending")
+        env = {**os.environ, "AC_APP_DIR": str(REPO_ROOT)}
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30, env=env)
+    finally:
+        Path(body_path).unlink(missing_ok=True)
+    if proc.returncode == 2:
+        raise DirectiveRefused(proc.stderr.strip() or "refused by the directive writer")
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr.strip() or "directive writer failed")
     return read_directive()
 
 
@@ -1564,15 +1592,32 @@ class DashboardHandler(BaseHTTPRequestHandler):
     def _handle_directive(self) -> None:
         body = self._read_body()
         text = ""
+        allow_pending = False
         try:
             data = json.loads(body.decode("utf-8")) if body else {}
             if isinstance(data, dict):
                 text = str(data.get("directive", ""))
+                allow_pending = bool(data.get("allowPending", False))
         except (ValueError, UnicodeDecodeError):
             text = ""
 
         try:
-            directive = write_directive(text)
+            directive = write_directive(text, allow_pending=allow_pending)
+        except DirectiveRefused as exc:
+            # 409, not 400: the request was well-formed and the slot is busy. The
+            # panel shows the reason and offers to retry with allowPending, so
+            # destroying a live instruction stays a decision someone makes.
+            self._json(
+                {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "ok": False,
+                    "refused": True,
+                    "needsAllowPending": True,
+                    "error": str(exc),
+                },
+                code=HTTPStatus.CONFLICT,
+            )
+            return
         except ValueError as exc:
             self._json(
                 {

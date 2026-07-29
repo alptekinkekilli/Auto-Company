@@ -88,9 +88,27 @@ run_codex() { # $1=effort
 DIRECTIVE_LIVE="$APP/memories/human-directive.md"
 DIRECTIVE_BAK=""
 if [ -f "$DIRECTIVE_LIVE" ]; then DIRECTIVE_BAK="$WORK/human-directive.bak"; cp "$DIRECTIVE_LIVE" "$DIRECTIVE_BAK"; fi
+DIRECTIVE_SHA=""
+[ -n "$DIRECTIVE_BAK" ] && DIRECTIVE_SHA=$(sha256sum "$DIRECTIVE_LIVE" 2>/dev/null | cut -d' ' -f1)
+
+# Put the snapshot back ONLY if nothing else wrote the slot meanwhile.
+#
+# The old version copied the snapshot back whenever the live file differed, and
+# logged "analyst must not write it" — which describes the opposite of what it
+# did: it destroyed somebody ELSE'S write. The run can last ~50 minutes
+# (TIMEOUT×2), so an operator directive applied in that window was silently
+# reverted. It never fired, but it was armed on every cron run.
+#
+# Backing the file up first would only have made that loss recoverable. The
+# writer refuses it instead: hash mismatch => live file untouched, restore
+# candidate parked in memories/human-directive-recovery/, audit + Telegram.
 restore_directive() {
-  [ -n "$DIRECTIVE_BAK" ] && ! cmp -s "$DIRECTIVE_BAK" "$DIRECTIVE_LIVE" 2>/dev/null && {
-    cp "$DIRECTIVE_BAK" "$DIRECTIVE_LIVE"; log "[$STAMP] NOTE: restored human-directive.md (analyst must not write it)"; }
+  [ -n "$DIRECTIVE_BAK" ] || return 0
+  AC_APP_DIR="$APP" AC_ACTOR="opportunity-analyst" \
+  python3 "$APP/scripts/core/directive_writer.py" restore \
+      --from-file "$DIRECTIVE_BAK" --expect-sha256 "${DIRECTIVE_SHA:-none}" \
+      >>"$PROGRESS" 2>&1 \
+    || log "[$STAMP] NOTE: directive restore refused (the slot was written during the analyst run) — live file left alone, candidate kept in memories/human-directive-recovery/"
 }
 
 USED_EFFORT="$EFFORT"
