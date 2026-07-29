@@ -300,6 +300,24 @@ def main(argv: list[str]) -> int:
 
     sub.add_parser("show").set_defaults(fn=cmd_show)
 
+    # baseline / reconcile are NOT operations of this protocol, by design
+    # (operator mandate, 2026-07-29): the agent must never be able to bless a
+    # hash mismatch it may itself have caused. Reconciliation and baselining
+    # happen ONLY through the operator's host-side channel
+    # (autocompany-deploy/scripts/directive-baseline.sh), outside the container.
+    # Registering them here as hard refusals makes the boundary explicit instead
+    # of an argparse "invalid choice" that reads like a missing feature.
+    def _refuse_forbidden(name: str):
+        def fn(_args) -> int:
+            raise Refused(
+                f"'{name}' is not an operation of this writer and never will be: "
+                "baselining/reconciling the audit ledger is operator-only, via the "
+                "host-side directive-baseline.sh channel outside the container")
+        return fn
+
+    for _forbidden in ("baseline", "reconcile"):
+        sub.add_parser(_forbidden).set_defaults(fn=_refuse_forbidden(_forbidden))
+
     args = ap.parse_args(argv)
     try:
         return args.fn(args)

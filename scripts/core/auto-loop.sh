@@ -305,44 +305,52 @@ prompt_guardrails_intact() {
 
 # Did human-directive.md change without the writer? Fail closed if so.
 #
-# This is an INTERIM control and it is important to be honest about what it is
-# not. The real fix is ownership: the file writable only by a separate UID, with
-# the agent reaching the writer through a narrow socket that has no override
-# operation at all. Today the loop, the dashboard and the writer all run as `app`
-# and the file is `app:app 0644`, so the autonomous model can simply redirect
-# into it — measured 2026-07-29, and it succeeded. Flag-gating `--allow-pending`
-# against a process that can bypass the writer entirely would be theatre.
+# NAMING RULE (operator-mandated, 2026-07-29): this is an ACCIDENTAL/DIRECT-WRITE
+# TRIPWIRE, never a "fail-closed security boundary". The loop, the dashboard and
+# the writer all run as `app` and the file, this ledger and this very script are
+# `app`-writable, so the autonomous model can bypass or forge all of it — measured,
+# and it succeeded. A Telegram notification is not a privilege separation. The real
+# fix is ownership (separate UID / narrow socket with no override operation) and it
+# is NOT built. What this tripwire does do: catch accidental or unaudited direct
+# writes and refuse to run a cycle on top of them until a human looks.
 #
-# So instead of pretending to prevent it, DETECT it: every writer action records
-# its resulting hash in memories/directive-audit.log. A live hash that matches no
-# audit entry means something wrote the slot outside the writer. That is not a
-# cycle we run — it is a cycle we refuse, loudly, until a human looks.
+# Mandated semantics, all fail-closed with NO self-repair:
+#   - audit ledger absent/empty  -> BLOCKED. Never seed a baseline from live
+#     content: an agent (or an accident) that deletes the ledger must not be able
+#     to bless whatever the file happens to contain. Baseline creation is
+#     operator-only, via the HOST-side channel (autocompany-deploy/scripts/
+#     directive-baseline.sh), against a previously known trusted hash.
+#   - live file absent/unreadable -> BLOCKED (a vanished directive is an
+#     unaudited change, not a pass).
+#   - live hash != the LAST writer-recorded resulting hash -> BLOCKED. Matching
+#     against *any* historical entry would let a silent rollback to an old
+#     audited content pass; only the most recent resulting state counts.
+#     Refused actions log after_sha=- and are skipped when finding that state.
 directive_unaudited() {
     local f="$PROJECT_DIR/memories/human-directive.md"
     local audit="$PROJECT_DIR/memories/directive-audit.log"
     DIRECTIVE_AUDIT_DETAIL=""
-    [ -f "$f" ] || return 1
-    local live
-    live=$(sha256sum "$f" 2>/dev/null | cut -c1-16)
-    [ -n "$live" ] || return 1
     if [ ! -s "$audit" ]; then
-        # First run after the writer shipped: record a baseline rather than block
-        # forever. Deleting the audit log to escape this check therefore does not
-        # buy silence — it produces a fresh, timestamped, notified baseline line,
-        # which is itself the signal.
-        mkdir -p "$(dirname "$audit")"
-        printf '%s\taction=baseline\tactor=auto-loop\tbefore_sha=-\tafter_sha=%s\tseeded because the audit log was absent\n' \
-            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$live" >> "$audit"
-        log "[DIRECTIVE-AUDIT] no audit log — seeded a baseline for live hash $live"
-        if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
-            bash "$SCRIPT_DIR/telegram-notify.sh" \
-                "ℹ️ Directive audit log was absent; baseline seeded for hash ${live}. If you did not clear it, investigate." \
-                >/dev/null 2>&1 || true
-        fi
-        return 1
+        DIRECTIVE_AUDIT_DETAIL="audit ledger absent or empty — operator must baseline via the host-side channel (directive-baseline.sh); the loop never seeds one"
+        return 0
     fi
-    grep -qF "after_sha=$live" "$audit" && return 1
-    DIRECTIVE_AUDIT_DETAIL="live=$live has no matching after_sha in directive-audit.log"
+    if [ ! -f "$f" ]; then
+        DIRECTIVE_AUDIT_DETAIL="human-directive.md is MISSING while the audit ledger exists — a vanished directive is an unaudited change"
+        return 0
+    fi
+    local live last
+    live=$(sha256sum "$f" 2>/dev/null | cut -c1-16)
+    if [ -z "$live" ]; then
+        DIRECTIVE_AUDIT_DETAIL="could not hash human-directive.md — refusing on an unreadable state"
+        return 0
+    fi
+    last=$(grep -o 'after_sha=[0-9a-f]\{16\}' "$audit" | tail -1 | cut -d= -f2)
+    if [ -z "$last" ]; then
+        DIRECTIVE_AUDIT_DETAIL="audit ledger holds no resulting-state entry — operator baseline required"
+        return 0
+    fi
+    [ "$live" = "$last" ] && return 1
+    DIRECTIVE_AUDIT_DETAIL="live=$live != last writer-recorded state $last in directive-audit.log"
     return 0
 }
 
@@ -1708,11 +1716,11 @@ This is Cycle #$loop_count. Act decisively."
     # BY DEFAULT, since DISCOVERY_ENABLED defaults to 0, and nothing would have
     # errored. This check is what makes that class of edit fail loudly instead.
     if directive_unaudited; then
-        log "[DIRECTIVE-UNAUDITED] Refusing to run Cycle #$loop_count — human-directive.md changed outside the writer ($DIRECTIVE_AUDIT_DETAIL)"
-        log "[DIRECTIVE-UNAUDITED] Something wrote the slot without going through scripts/core/directive_writer.py. Inspect memories/directive-audit.log and the backups, then re-apply through the writer."
+        log "[DIRECTIVE-UNAUDITED] Refusing to run Cycle #$loop_count — directive tripwire fired ($DIRECTIVE_AUDIT_DETAIL)"
+        log "[DIRECTIVE-UNAUDITED] This is the accidental/direct-write tripwire, not a security boundary. Reconciliation and baselining are OPERATOR-ONLY via the host-side channel (autocompany-deploy/scripts/directive-baseline.sh) — the loop and the model never self-repair this state."
         if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
             bash "$SCRIPT_DIR/telegram-notify.sh" \
-                "🛑 Cycle #${loop_count} BLOCKED — human-directive.md was written OUTSIDE the deterministic writer. No cycle ran. ${DIRECTIVE_AUDIT_DETAIL}" \
+                "🛑 Cycle #${loop_count} BLOCKED — directive tripwire: ${DIRECTIVE_AUDIT_DETAIL}. No cycle ran. Reconcile via host-side directive-baseline.sh only." \
                 >/dev/null 2>&1 || true
         fi
         save_state "idle"

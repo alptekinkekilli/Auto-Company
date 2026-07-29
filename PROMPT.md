@@ -32,6 +32,13 @@ At the very start of every cycle, read `memories/human-directive.md`.
 - If the file is missing, empty, or `Status` is `DONE`, proceed autonomously as
   usual. This is the only channel through which a human steers the company;
   everything else remains fully autonomous.
+- **Never touch `memories/directive-audit.log`.** The loop refuses to start a
+  cycle when the live directive's hash does not match that ledger's last recorded
+  state. That refusal is reconciled ONLY by the operator, from outside the
+  container; there is no `baseline` or `reconcile` operation available to you
+  (the writer refuses both by name), and appending to the ledger, editing it, or
+  re-hashing your way out of a mismatch is forbidden. If you ever find yourself
+  blocked on it, that state is the signal — leave it for the operator.
 
 ### DIRECTIVE AUTHORITY AND PERSISTENCE
 
