@@ -315,12 +315,21 @@ help. The failure this rule exists to stop is the quiet one: recording a gate as
 does exist, the operator holds a real identity, and answering would have cost them two
 minutes.
 
-**So: file a `document-procurement` OPREQ.** It surfaces in the cockpit's "Requests to
-you" panel, where the operator can read it and refuse it outright; a positive answer needs
-the actual record supplied as an evidence file, per the resolution protocol above.
+**For routine registry lookups, the sanctioned path is the `Registry Bridge` queue**
+(see `## REGISTRY BRIDGE QUEUE` below) — same base as the EKAP Bridge, same protocol:
+you write a PENDING request, resolution happens in the operator's session, results come
+back as structured evidenced fields. Verified 2026-07-30 in that session: MERSİS's
+`Sorgular → Firma Sorgulama` DOES answer arbitrary-firm queries once the operator is
+logged in, so a queued request is genuinely answerable.
 
-**File one only when all four hold** — this stays narrow, or it becomes noise the operator
-learns to ignore:
+**A `document-procurement` OPREQ remains the right channel only for what the bridge
+cannot carry:** a record from a register that has no bridge lane (not MERSİS/TTSG), a
+document that must arrive as an evidence FILE (a scanned gazette page, a certified
+extract), or a case where the operator must exercise judgment rather than transcribe a
+lookup result. Do not file an OPREQ for a lookup the bridge can express.
+
+**Queue a request (either channel) only when all four hold** — this stays narrow, or it
+becomes noise the operator learns to ignore:
 
 1. **Decision-relevant.** Name the candidate/axis and the specific gate the answer
    unblocks, and state what you will do on each possible answer — including "the register
@@ -328,12 +337,12 @@ learns to ignore:
 2. **Actually walled.** You reached the surface yourself this cycle and observed the
    login/CAPTCHA, or it is one of the registers listed above. Poor search snippets are not
    a wall — open the page in the browser first.
-3. **Precisely specified.** Name the register, the exact query key you would have typed
-   (ticaret unvanı / MERSİS no / vergi kimlik no / sicil no + müdürlük), and exactly which
-   fields you need back. Never "look this firm up for me."
-4. **Not already asked.** Search the ledger for an OPEN, RESOLVED or REFUSED request naming
-   the same firm and the same field. Re-asking is legitimate only when new information
-   changes the question, and the new request must say what changed.
+3. **Precisely specified.** Name the register, the exact query key (see the bridge's
+   `query_key_type`), and exactly which fields you need back. Never "look this firm up
+   for me."
+4. **Not already asked.** Search the bridge table AND the OPREQ ledger for a prior request
+   naming the same firm and the same field. Re-asking is legitimate only when new
+   information changes the question, and the new request must say what changed.
 
 Never attempt the login, never solve the CAPTCHA, and never ask for or use the operator's
 own session — all of that stays forbidden exactly as before (BROWSER rule 6). The request
@@ -776,6 +785,53 @@ not silently drop them.
    current statuses, and diffs. Follow-up (Step-2) templates must carry **no `RANDEVU_URL` or
    other operator-side-env dependency** — use a reply-based CTA (e.g. ask the recipient to
    reply with the İKN) instead of a booking link.
+
+## REGISTRY BRIDGE QUEUE — Turkish trade-registry lookups (standing workflow)
+
+Companion queue to the EKAP Bridge, same base, same trust model: table **`Registry Bridge`**
+(`appPLc31jSlgulX3D` / `tblREW6MtTMTP5h5N`). It exists because MERSİS answers arbitrary-firm
+queries only inside the operator's authenticated session, and every search there costs the
+operator one CAPTCHA keystroke — so lookups are batched through a queue, never improvised.
+
+**What a resolved row gives you** (all measured live 2026-07-30, Pulmotıp + 3 more): firma
+durumu (Aktif / Tasfiye Halinde / Terkin Edilmiş), MERSİS no, vergi dairesi/no, ticaret sicil
+no, kuruluş tarihi, firma türü, müdürlük/şehir, toplam sermaye, adres, e-tebligat adresi, and
+the konkordato/iflas sub-view. That is an evidenced "this firm exists, is alive, and is
+solvent" check — use it before any outreach proposal, and as the identity anchor when similar
+legal names exist.
+
+**Company side — you write PENDING requests and NOTHING else:**
+
+- Fill `request_id` (`REGBR-YYYY-MM-DD-NNN`), `register`, `query_key_type`, `query_key`,
+  `fields_needed`, `firm`, `research_axis`, `selection_reason`, `status: PENDING`.
+- `selection_reason` must carry evidence of WHY this firm matters now (which candidate, which
+  gate); guessed or enumeration-shaped requests are not processed.
+- `fields_needed` must state what you will do with each possible answer — including
+  `NOT_FOUND` and `AMBIGUOUS_MATCH`, which are first-class results, not failures.
+- **Query-key rules, measured:** unvan matching is **WORD-based** — a distinctive whole word
+  (`PULMOTIP`, `ARKENOM`) finds the firm; a truncated word (`PULMOT`) silently returns
+  nothing; a full title also returns branches (`… TEKMER ŞUBESİ`). Never abbreviate a word,
+  never trust our own records' spelling (the register wrote `PULMOTIP` where our row said
+  `Pulmotıp`; `MAKİNA` where we had `Makine`). When a row comes back VERIFIED, **use its
+  `mersis_no` as the durable key for every later request** (`query_key_type: MERSIS_NO`) —
+  word ambiguity then disappears.
+- You never set `VERIFIED`/`NOT_FOUND`/any result status, never fill result fields, and the
+  result statuses only ever arrive from the operator-session resolver. Empty queue means
+  empty — do not ask the operator to invent lookups.
+
+**Resolver side (operator session only, never yours):** the operator logs in (MERSİS login
+needs their T.C. kimlik + GSM + CAPTCHA — all three are theirs to type; the resolver fills
+only the search form), types one CAPTCHA per search, and the resolver reads the result,
+opens the konkordato/iflas sub-view, and writes back the structured fields plus
+`retrieval_timestamp`/`processed_at`. `AMBIGUOUS_MATCH` lists every candidate row verbatim
+in `result_data` — the resolver never picks a winner by guesswork; disambiguation comes from
+an authority document naming the exact legal person (e.g. the KİK decision text, as done for
+Bilgi Birikim among its three same-name siblings on 2026-07-30).
+
+**Hard lines, identical to the EKAP bridge:** no cookie/token/header/localStorage/session
+material ever enters this table in either direction; no login attempt, no CAPTCHA solving,
+no operator-session entry by the company; masked data stays masked. A dead session is
+`SESSION_EXPIRED` plus a note to the operator — never a re-login attempt.
 
 ## WORK CYCLE
 
