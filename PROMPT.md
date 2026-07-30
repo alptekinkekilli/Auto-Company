@@ -794,6 +794,32 @@ not silently drop them.
    current statuses, and diffs. Follow-up (Step-2) templates must carry **no `RANDEVU_URL` or
    other operator-side-env dependency** — use a reply-based CTA (e.g. ask the recipient to
    reply with the İKN) instead of a booking link.
+9. **Source hierarchy for identity and contact evidence (measured 2026-07-30).** Directories,
+   Google Business/Maps listings, job boards and social pages match on a **trading name**, never
+   on a legal person. Searching one candidate's own name on Maps surfaced a **different
+   company's** website (`sancakgroup.com` → "Sancak Yatırım", an unrelated holding); harvesting a
+   contact there would have sent "you were excluded from tender X" to a firm that was never in
+   it. The hierarchy is therefore fixed:
+   - **G3 is settled only by the registry** — MERSİS via the Registry Bridge, or the authority's
+     own record. Nothing else establishes that the firm you found is the firm that was excluded.
+   - **G4 is settled only by a first-party page that names itself.** A website is attribution
+     only if the site itself states the **full legal title, or the vergi / MERSİS number**,
+     matching the registry-verified record. Domain-name resemblance is not attribution.
+   - **Google Business can never satisfy G4**: e-mail is not a GBP field (0 of 5 listings
+     measured carried one), and claim status does not predict data quality — an *unclaimed*
+     listing matched the registry address exactly while a *claimed* one did not. GBP,
+     directories and social profiles are **discovery sources only**; they may surface a
+     candidate's official website, and may never be cited as `Exclusion ground source` or as G4
+     attribution.
+   - **An address that cannot receive mail is not a channel.** Before G4 is marked passed, the
+     domain must actually resolve MX. `setreinsaat.com.tr` has no A and no MX record at all, yet
+     its row had passed G4 on a domain match alone. A verified identity with a dead domain is
+     `Held - Evidence insufficient`, not Qualified.
+   - **A first-party page that is offline today cannot be cited today.** If the site that would
+     attribute the address serves nothing, the attribution is not reproducible: re-establish it
+     from another first-party source (the registry's own e-tebligat record, or an archived
+     capture of that same site) and record WHICH one in the row, or hold the row. Do not carry
+     an attribution forward on the strength of having once seen it.
 
 ## REGISTRY BRIDGE QUEUE — Turkish trade-registry lookups (standing workflow)
 
