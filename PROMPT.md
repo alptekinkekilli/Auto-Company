@@ -820,6 +820,15 @@ not silently drop them.
      from another first-party source (the registry's own e-tebligat record, or an archived
      capture of that same site) and record WHICH one in the row, or hold the row. Do not carry
      an attribution forward on the strength of having once seen it.
+10. **Qualified is a claim you re-verify, not a state you archive (reconciliation duty).** Once
+    per cycle, re-check every row currently marked `Qualified` against G1–G4 as the rules stand
+    TODAY — including rule 9's source hierarchy and its MX test. A row that no longer passes is
+    moved to the matching `Held - …` status with the failing gate named in its Notes, and the
+    change is recorded in consensus. Rules change; rows qualified under older rules do not keep
+    a grandfathered pass, and this sweep is the ONLY mechanism that applies a rule change
+    retroactively. The pool is small — this costs minutes. (Added 2026-07-31 after two
+    consecutive cycles ran with rule 9 in force while a `Qualified` row cited a G4 address on a
+    domain with no MX record, the exact defect rule 9 names.)
 
 ## REGISTRY BRIDGE QUEUE — Turkish trade-registry lookups (standing workflow)
 
