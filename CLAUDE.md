@@ -59,8 +59,26 @@ the tailnet → the BrowserOS MCP endpoint on `browseros-vm` → the form field.
 > The TCKN is never given to the model or to an AutoCompany cycle. An operator-initiated
 > helper reads it from the Keychain and carries it over the encrypted tailnet into the
 > operator's own isolated BrowserOS instance. That request body is only as private as the
-> remote side's logging configuration, which must be verified by a canary test proving
-> request-body logging is off before the helper is run with a real value.
+> remote side's logging configuration.
+
+**Canary audit — PASSED 2026-07-30**, run before any real value was used. Canary
+`CANARYZQ7X3M9F2KV8TCKN` was pushed through the helper's exact transport, then searched for
+by the **operator on the VM itself** (they deliberately did not grant shell access to a
+model, which is the right call): all three BrowserOS containers' `docker logs`, in-container
+`/tmp/mcp-bridge.log` and `/tmp/x11vnc.log`, system-wide `journalctl`, `journalctl -u
+tailscaled` (Serve/connection logs), everything under `/var/log/`, and
+`/var/lib/docker/containers/*.log` — **0 matches**. The only hits were in `auth.log` and the
+user journal, and they were the audit's own `sudo grep` command lines, timestamps matching
+the search itself: self-reference, not leakage.
+
+One surface the log scan did not name was `/home/browseros/.browseros/tool-output/`, where
+the MCP server persists oversized tool results. Closed behaviourally instead of by reading
+the VM: a call carrying a canary in its INPUT with a small return value produces **no file
+at all**, while a 9000-char return value does produce one. That directory stores outputs
+past a truncation threshold, never inputs — and every helper call returns a few characters
+(`T1G1`, `VALUE:Turkcell`, `CLICKED`), so none is ever written on its behalf.
+
+Re-run this audit if the BrowserOS image, the MCP server, or the transport changes.
 
 Genuinely avoided on the local side: no shell, no argv, no environment variable, no temp
 file, no stdout/stderr echo, no screenshot, no audit/memory/Airtable record.
