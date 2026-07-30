@@ -50,11 +50,25 @@ security add-generic-password -U -a operator -s com.appricode.autocompany.mersis
 
 **Why a helper rather than the model.** Typing a government ID into a field is outside what
 the model may do — a platform-level limit, not a repo rule, so it is not lifted by editing
-this file or by operator authorization. The helper resolves that without weakening anything:
-the operator runs one command, the values go Keychain → process memory → form, and no
-value ever reaches stdout, a tool result, chat, argv, an env var, a screenshot, or any
-audit/memory/Airtable record. The model may run `mersis-login.py --check` (page gate and
-Keychain presence only, fills nothing); it must not run the filling modes.
+this file or by operator authorization.
+
+**State the guarantee precisely — the earlier wording overclaimed.** The values do NOT stay
+in local process memory: the path is Keychain → helper process → JSON request body → TLS over
+the tailnet → the BrowserOS MCP endpoint on `browseros-vm` → the form field. So:
+
+> The TCKN is never given to the model or to an AutoCompany cycle. An operator-initiated
+> helper reads it from the Keychain and carries it over the encrypted tailnet into the
+> operator's own isolated BrowserOS instance. That request body is only as private as the
+> remote side's logging configuration, which must be verified by a canary test proving
+> request-body logging is off before the helper is run with a real value.
+
+Genuinely avoided on the local side: no shell, no argv, no environment variable, no temp
+file, no stdout/stderr echo, no screenshot, no audit/memory/Airtable record.
+
+`mersis-login.py` with no flags is a dry run (page gate, Keychain presence, TCKN shape,
+operator-select gate; fills nothing) and a model may run it. `--submit` fills both fields,
+selects `Turkcell` with readback, presses Giriş exactly once and stops; only the operator
+runs that.
 
 Standing handling rules for the GSM value: never echoed to stdout, chat, logs or a
 tool-call argument that gets transcribed; read in process and written only into the visible
