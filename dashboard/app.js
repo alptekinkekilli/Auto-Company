@@ -449,6 +449,7 @@ async function loadIdeas() {
   try {
     const res = await fetch("/api/ideas", { cache: "no-store" });
     const data = await res.json();
+    ideasLoaded = true;
     if (data && data.present) {
       els.ideasText.innerHTML = renderMarkdown(data.markdown || "");
       els.ideasBadge.textContent = "LOADED";
@@ -457,7 +458,8 @@ async function loadIdeas() {
       els.ideasText.textContent = "(no opportunity-scan.md yet)";
     }
   } catch (err) {
-    els.ideasText.textContent = "Failed to load ideas.";
+    ideasLoaded = false;
+    els.ideasText.textContent = "Failed to load ideas — will retry when you close and reopen this panel.";
   }
 }
 
@@ -467,6 +469,11 @@ async function loadAnalysis() {
   try {
     const res = await fetch("/api/analysis", { cache: "no-store" });
     const data = await res.json();
+    // Only latch the loaded flag on SUCCESS: it used to be set at the call
+    // site before the fetch resolved, so one transient failure (e.g. the panel
+    // expanded during a container swap) stuck as "Failed to load analysis."
+    // until a full page reload, even though the backend was healthy.
+    analystLoaded = true;
     if (data && data.present) {
       analystRaw = data.markdown || "";
       els.analystText.innerHTML = renderMarkdown(analystRaw);
@@ -476,7 +483,8 @@ async function loadAnalysis() {
       els.analystText.textContent = "(no analysis yet — the Codex analyst cron has not run)";
     }
   } catch (err) {
-    els.analystText.textContent = "Failed to load analysis.";
+    analystLoaded = false;
+    els.analystText.textContent = "Failed to load analysis — will retry when you close and reopen this panel.";
   }
 }
 
@@ -670,11 +678,9 @@ document.querySelectorAll(".collapse-toggle").forEach((btn) => {
     const collapsed = target.classList.toggle("collapsed");
     btn.setAttribute("aria-expanded", String(!collapsed));
     if (btn.getAttribute("data-target") === "ideasBody" && !collapsed && !ideasLoaded) {
-      ideasLoaded = true;
       loadIdeas().catch(() => {});
     }
     if (btn.getAttribute("data-target") === "analystBody" && !collapsed && !analystLoaded) {
-      analystLoaded = true;
       loadAnalysis().catch(() => {});
     }
   });
