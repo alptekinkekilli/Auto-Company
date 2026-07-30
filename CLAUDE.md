@@ -27,30 +27,34 @@ Humans guide direction only by editing `memories/consensus.md` under "Next Actio
 | Leak credentials | Never commit keys/tokens/passwords to public repos/logs |
 | Force-push protected branches | No `git push --force` to main/master |
 | Destructive git reset on shared branches | `git reset --hard` only on disposable temporary branches |
-| Enter the operator's government ID anywhere | T.C. kimlik no (and passport/ID equivalents) is never typed, pasted, piped or scripted into any field by the model — no transport makes it acceptable |
+| Enter the operator's government ID anywhere | T.C. kimlik no (and passport/ID equivalents) is never typed, pasted, piped or scripted into any field BY THE MODEL — no transport makes it acceptable. The operator's own `scripts/mersis-login.py` does it instead; see below |
 | Solve a CAPTCHA | Any "Güvenlik Kodu" / arithmetic image / bot check is the operator's keystroke, however trivial |
 
 ### MERSİS identity boundary (operator protocol, 2026-07-30)
 
 Registry login secrets are split by category, and the split is the point:
 
-| Item | Where it lives | Who supplies it |
+| Item | Where it lives | Who puts it in the form |
 |---|---|---|
-| T.C. kimlik no | **NOT stored anywhere** | operator types it, every time |
-| MERSİS/EKAP GSM no | Keychain `com.appricode.autocompany.mersis.gsm`, account `operator` | model may read and fill it |
+| T.C. kimlik no | Keychain `com.appricode.autocompany.mersis.tckn`, account `operator` | **`scripts/mersis-login.py`, run by the operator** — never the model, under any transport |
+| MERSİS/EKAP GSM no | Keychain `com.appricode.autocompany.mersis.gsm`, account `operator` | the same helper, or the model directly |
 | Mobil imza PIN / OTP / any signature secret | **never** Keychain, never anywhere | operator, on their own phone |
 
 Provisioning is operator-run, interactively, so the value never appears in a chat message,
 a command argument, an env var or a shell history entry:
 
 ```
-security add-generic-password -U -a operator \
-  -s com.appricode.autocompany.mersis.gsm \
-  -l "Auto Company — MERSIS GSM" -w
+security add-generic-password -U -a operator -s com.appricode.autocompany.mersis.tckn -l "Auto Company — MERSIS TCKN" -w
+security add-generic-password -U -a operator -s com.appricode.autocompany.mersis.gsm  -l "Auto Company — MERSIS GSM"  -w
 ```
 
-There is deliberately **no TCKN entry**. Storing it would only serve a flow the model is
-not permitted to perform, and an unused secret at rest is pure downside.
+**Why a helper rather than the model.** Typing a government ID into a field is outside what
+the model may do — a platform-level limit, not a repo rule, so it is not lifted by editing
+this file or by operator authorization. The helper resolves that without weakening anything:
+the operator runs one command, the values go Keychain → process memory → form, and no
+value ever reaches stdout, a tool result, chat, argv, an env var, a screenshot, or any
+audit/memory/Airtable record. The model may run `mersis-login.py --check` (page gate and
+Keychain presence only, fills nothing); it must not run the filling modes.
 
 Standing handling rules for the GSM value: never echoed to stdout, chat, logs or a
 tool-call argument that gets transcribed; read in process and written only into the visible

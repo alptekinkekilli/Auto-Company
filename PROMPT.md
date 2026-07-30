@@ -832,17 +832,17 @@ security property, not a formality):**
 
 | Item | Supplied by |
 |---|---|
-| T.C. kimlik no | **operator only**, every time — never stored, never typed by the model, no transport makes it acceptable |
-| GSM no | model may fill it (Keychain `com.appricode.autocompany.mersis.gsm`, account `operator`) |
-| Güvenlik kodu / CAPTCHA | **operator only** |
-| Mobil imza PIN + phone approval | **operator only**, on their own device |
+| T.C. kimlik no | the operator's own local helper `mersis-login.py` (Keychain → form, no output) — **never the model**, under any transport |
+| GSM no | the same helper, or the model directly (Keychain `com.appricode.autocompany.mersis.gsm`, account `operator`) |
+| Mobil imza PIN + reading the phone challenge + approve/reject | **operator only**, on their own device |
+| Güvenlik kodu / CAPTCHA on `Firma Sorgulama` | **operator only** — note this is the SEARCH form; the mobil-imza login screen has no CAPTCHA (its captcha field belongs to the username/password panel and is hidden) |
 | Everything after login | model drives the search form and reads results |
 
-So an unattended registry login does not exist and must never be claimed. Two of the three
-login inputs are permanently outside the model's reach, and that is by design: it keeps every
-session traceable to a deliberate human act of identity. The cost is small because the
-per-search CAPTCHA already requires the operator at the keyboard — batch the queue and spend
-one sitting, rather than trying to remove the human from the loop.
+So an unattended registry login does not exist and must never be claimed: the signature step
+is a human act on a separate device by design, which is what keeps every session traceable to
+a deliberate act of identity. The per-search CAPTCHA keeps the operator at the keyboard during
+searching too — so batch the queue and spend one sitting, rather than trying to engineer the
+human out of the loop.
 
 Handling rules for the GSM value, and for any future registry secret: never echo it to
 stdout, chat, a log, or a tool-call argument that gets transcribed; read it in process and
