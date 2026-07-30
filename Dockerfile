@@ -3,7 +3,13 @@
 #
 # Build:  docker build -t auto-company .
 # Run:    see deploy/README.md (Coolify) — requires CLAUDE_CODE_OAUTH_TOKEN.
-FROM node:22-bookworm-slim
+#
+# jcode-pilot branch: base bumped bookworm→trixie because the jcode binary
+# needs GLIBC >= 2.39 (bookworm ships 2.36 — the hard blocker found in
+# on-arastirma-sonuclari.md). Everything else is additive: claude/codex CLIs
+# stay installed in parallel so a jcode failure is a one-line engine revert,
+# not an image rollback.
+FROM node:22-trixie-slim
 
 # System deps:
 #  - python3: stdlib-only dashboard server (no pip deps)
@@ -55,6 +61,27 @@ RUN npm install -g @openai/codex@0.144.6 && npm cache clean --force
 # Wrangler — the company deploys its products to Cloudflare (Pages/Workers).
 # Authenticates via CLOUDFLARE_API_TOKEN (deploy-scoped Coolify secret).
 RUN npm install -g wrangler && npm cache clean --force
+
+# jcode CLI (https://github.com/1jehuang/jcode) — candidate single harness for
+# both engines (RUNBOOK-jcode-gecis.md). Checksum-verified, version-pinned.
+# The Linux tarball is a launcher script + `.bin` pair: BOTH must be kept
+# side by side and the symlink must point at the launcher (runbook §1.1).
+ARG JCODE_VERSION=v0.64.2
+RUN set -eu; \
+    cd /tmp; \
+    curl -fsSLO "https://github.com/1jehuang/jcode/releases/download/${JCODE_VERSION}/jcode-linux-x86_64.tar.gz"; \
+    curl -fsSLO "https://github.com/1jehuang/jcode/releases/download/${JCODE_VERSION}/SHA256SUMS"; \
+    grep "jcode-linux-x86_64.tar.gz" SHA256SUMS | sha256sum -c -; \
+    mkdir -p /opt/jcode; \
+    tar xzf jcode-linux-x86_64.tar.gz -C /opt/jcode; \
+    chmod +x /opt/jcode/*; \
+    ln -s /opt/jcode/jcode-linux-x86_64 /usr/local/bin/jcode; \
+    rm -f /tmp/jcode-linux-* /tmp/SHA256SUMS
+
+# jcode runtime posture for loops (runbook §0.3): no telemetry, no auto-update
+# (each call also passes --no-update), and trust for the existing Claude Code
+# OAuth blob is written per-user by the entrypoint/pilot script, not baked here.
+ENV JCODE_NO_TELEMETRY=1
 
 # ccusage — cross-agent token-cost ESTIMATE (Claude + Codex) for the cockpit Cost panel.
 # Reads local transcripts only; the dashboard shells out to it (cached, background).
