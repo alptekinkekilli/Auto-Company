@@ -27,6 +27,41 @@ Humans guide direction only by editing `memories/consensus.md` under "Next Actio
 | Leak credentials | Never commit keys/tokens/passwords to public repos/logs |
 | Force-push protected branches | No `git push --force` to main/master |
 | Destructive git reset on shared branches | `git reset --hard` only on disposable temporary branches |
+| Enter the operator's government ID anywhere | T.C. kimlik no (and passport/ID equivalents) is never typed, pasted, piped or scripted into any field by the model — no transport makes it acceptable |
+| Solve a CAPTCHA | Any "Güvenlik Kodu" / arithmetic image / bot check is the operator's keystroke, however trivial |
+
+### MERSİS identity boundary (operator protocol, 2026-07-30)
+
+Registry login secrets are split by category, and the split is the point:
+
+| Item | Where it lives | Who supplies it |
+|---|---|---|
+| T.C. kimlik no | **NOT stored anywhere** | operator types it, every time |
+| MERSİS/EKAP GSM no | Keychain `com.appricode.autocompany.mersis.gsm`, account `operator` | model may read and fill it |
+| Mobil imza PIN / OTP / any signature secret | **never** Keychain, never anywhere | operator, on their own phone |
+
+Provisioning is operator-run, interactively, so the value never appears in a chat message,
+a command argument, an env var or a shell history entry:
+
+```
+security add-generic-password -U -a operator \
+  -s com.appricode.autocompany.mersis.gsm \
+  -l "Auto Company — MERSIS GSM" -w
+```
+
+There is deliberately **no TCKN entry**. Storing it would only serve a flow the model is
+not permitted to perform, and an unused secret at rest is pure downside.
+
+Standing handling rules for the GSM value: never echoed to stdout, chat, logs or a
+tool-call argument that gets transcribed; read in process and written only into the visible
+GSM field of the exact page
+`https://mersis.ticaret.gov.tr/Portal/KullaniciIslemleri/GirisIslemleri` (or the EKAP mobil
+imza page) after checking the exact URL and HTTPS origin; **stop and fill nothing** if the
+URL, the fields or the page structure differ from expectation. Never copy it into the
+container, a `.env`, or any remote host. Never persist a screenshot showing the ID or GSM
+fields. Never extract cookies, tokens, headers, localStorage or session material. Anything
+after login — başvuru, değişiklik, beyan, imza — needs its own explicit authorization and is
+not covered by "you may log in".
 
 **Allowed:** create repos, deploy projects, create branches, commit code, install dependencies.
 

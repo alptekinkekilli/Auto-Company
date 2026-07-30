@@ -819,14 +819,39 @@ legal names exist.
   result statuses only ever arrive from the operator-session resolver. Empty queue means
   empty — do not ask the operator to invent lookups.
 
-**Resolver side (operator session only, never yours):** the operator logs in (MERSİS login
-needs their T.C. kimlik + GSM + CAPTCHA — all three are theirs to type; the resolver fills
-only the search form), types one CAPTCHA per search, and the resolver reads the result,
-opens the konkordato/iflas sub-view, and writes back the structured fields plus
-`retrieval_timestamp`/`processed_at`. `AMBIGUOUS_MATCH` lists every candidate row verbatim
-in `result_data` — the resolver never picks a winner by guesswork; disambiguation comes from
-an authority document naming the exact legal person (e.g. the KİK decision text, as done for
-Bilgi Birikim among its three same-name siblings on 2026-07-30).
+**Resolver side (operator session only, never yours):** the operator logs in, types one
+CAPTCHA per search, and the resolver reads the result, opens the konkordato/iflas sub-view,
+and writes back the structured fields plus `retrieval_timestamp`/`processed_at`.
+`AMBIGUOUS_MATCH` lists every candidate row verbatim in `result_data` — the resolver never
+picks a winner by guesswork; disambiguation comes from an authority document naming the exact
+legal person (e.g. the KİK decision text, as done for Bilgi Birikim among its three same-name
+siblings on 2026-07-30).
+
+**Who supplies what at the login screen (operator protocol, 2026-07-30 — the split is the
+security property, not a formality):**
+
+| Item | Supplied by |
+|---|---|
+| T.C. kimlik no | **operator only**, every time — never stored, never typed by the model, no transport makes it acceptable |
+| GSM no | model may fill it (Keychain `com.appricode.autocompany.mersis.gsm`, account `operator`) |
+| Güvenlik kodu / CAPTCHA | **operator only** |
+| Mobil imza PIN + phone approval | **operator only**, on their own device |
+| Everything after login | model drives the search form and reads results |
+
+So an unattended registry login does not exist and must never be claimed. Two of the three
+login inputs are permanently outside the model's reach, and that is by design: it keeps every
+session traceable to a deliberate human act of identity. The cost is small because the
+per-search CAPTCHA already requires the operator at the keyboard — batch the queue and spend
+one sitting, rather than trying to remove the human from the loop.
+
+Handling rules for the GSM value, and for any future registry secret: never echo it to
+stdout, chat, a log, or a tool-call argument that gets transcribed; read it in process and
+write it only into the visible field of the exact expected page after verifying URL and
+HTTPS origin; **stop and fill nothing** if the URL, the fields, or the page structure differ
+from expectation; never copy it into the container, a `.env`, or a remote host; never persist
+a screenshot showing the ID or GSM fields; never extract cookies, tokens, headers,
+localStorage or session material. Anything after login — başvuru, değişiklik, beyan, imza —
+requires its own explicit authorization; "you may log in" authorizes reading, nothing else.
 
 **Hard lines, identical to the EKAP bridge:** no cookie/token/header/localStorage/session
 material ever enters this table in either direction; no login attempt, no CAPTCHA solving,
