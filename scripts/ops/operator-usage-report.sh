@@ -2,11 +2,11 @@
 # Runs on the OPERATOR's machine (not the server, not the container).
 #
 # The loop and the operator share one Claude plan, but the container can only see
-# the loop's own spend — so a fixed budget is wrong whenever the operator is
-# working. This pushes the operator's current 5h block spend (from ccusage) into
-# the container, where refresh_dynamic_budget() sizes the loop's cap around it:
-#
-#   loop_cap = PLAN_CEILING_USD - max(operator_spend, reserve% x ceiling)
+# the loop's own spend. This pushes the operator's current 5h block spend (from
+# ccusage) into the container. Since APP-263 the dynamic reserve cap is retired —
+# the loop now reads only operator-usage.json's blockStart (to anchor both 5h
+# gates to the real plan window); the spend figure feeds the 14-day calibration
+# report's operator-impact section rather than any gate.
 #
 # Safe to run on a schedule. Every failure path is a no-op: if ccusage is missing,
 # the Mac is offline, or the container is down, nothing is written and the loop

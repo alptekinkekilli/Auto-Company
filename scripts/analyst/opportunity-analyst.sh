@@ -78,10 +78,50 @@ EOF
 # read-only fails under nested namespaces (bwrap). The skill is instructed not to write,
 # and we snapshot/restore human-directive.md so the analyst can never auto-apply a directive.
 SANDBOX="${CODEX_SANDBOX_MODE:-danger-full-access}"
+# Record this run's codex thread_id so company budget gates can EXCLUDE analyst
+# sessions (APP-263). The id comes from the structured `--json` event stream
+# ({"type":"thread.started","thread_id":"<uuid>"}), never from prose; it matches
+# the rollout filename that ccusage reports as sessionFile. Deduped + persisted.
+# Any failure here records nothing — an uncaptured analyst session simply counts
+# toward the company totals, which is the mandated fail-closed direction.
+ANALYST_SESSIONS_FILE="$APP/logs/analyst-codex-sessions.log"
+record_analyst_session() { # $1=events file (codex --json stdout)
+  python3 - "$1" "$ANALYST_SESSIONS_FILE" <<'PY' 2>/dev/null || true
+import json, re, sys, time
+events_p, ledger_p = sys.argv[1], sys.argv[2]
+tid = None
+with open(events_p, encoding="utf-8", errors="replace") as fh:
+    for line in fh:
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            ev = json.loads(line)
+        except Exception:
+            continue
+        if ev.get("type") == "thread.started" and ev.get("thread_id"):
+            tid = str(ev["thread_id"]).lower()
+            break
+if not tid or not re.fullmatch(r"[0-9a-f-]{36}", tid):
+    sys.exit(0)  # absent/ambiguous -> record nothing (counts toward company)
+try:
+    existing = open(ledger_p, encoding="utf-8").read()
+except FileNotFoundError:
+    existing = ""
+if tid in existing:
+    sys.exit(0)
+with open(ledger_p, "a", encoding="utf-8") as fh:
+    fh.write(f"{int(time.time())} {tid}\n")
+PY
+}
+
 run_codex() { # $1=effort
-  ( cd "$APP" && timeout "$TIMEOUT" "$CODEX_BIN" exec --skip-git-repo-check \
+  ( cd "$APP" && timeout "$TIMEOUT" "$CODEX_BIN" exec --skip-git-repo-check --json \
       -c sandbox_mode="$SANDBOX" -m "$MODEL" -c model_reasoning_effort="$1" \
       -o "$MSG" "$PROMPT" ) >"$WORK/out" 2>&1
+  local rc=$?
+  record_analyst_session "$WORK/out"
+  return $rc
 }
 
 # draft-only guardrail: the analyst must never modify the live directive
@@ -193,10 +233,11 @@ print("You are updating the LIVE portion of Auto Company's candidate registry fr
       "Valid JSON, newlines escaped as \\n.")
 PY
 
-    ( cd "$APP" && timeout "$TIMEOUT" "$CODEX_BIN" exec --skip-git-repo-check \
+    ( cd "$APP" && timeout "$TIMEOUT" "$CODEX_BIN" exec --skip-git-repo-check --json \
         -c sandbox_mode="$SANDBOX" -m "$MODEL" -c model_reasoning_effort="$REG_EFFORT" \
         -o "$REG_MSG" "$(cat "$REG_PROMPT")" ) >"$WORK/reg_out" 2>&1
     REG_RC=$?
+    record_analyst_session "$WORK/reg_out"
     # preserve diagnostics past the WORK dir's EXIT trap so a silent pass-2 failure is
     # diagnosable next time (bare "skipped (pass-2 no output)" gave no root cause)
     REG_DEBUG="$APP/logs/analyst-reg-debug.log"

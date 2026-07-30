@@ -61,13 +61,18 @@ SETTINGS_SPEC: list[dict[str, str]] = [
      "label": "Opportunity Discovery — scan brand-new candidate axes (off = tender-track + 176-R focus only; auto-loop.sh default is OFF when unset)"},
     {"key": "ROUTER_ALTERNATE", "type": "bool",
      "label": "Router alternation (Claude↔Codex when both have headroom)"},
-    {"key": "WINDOW_BUDGET_USD", "type": "number",
-     "label": "Claude 5h window budget (USD, blank = no cap) — protects YOUR Claude plan; the "
-              "dynamic reserve can lower it below this value"},
-    {"key": "TOTAL_BUDGET_USD", "type": "number",
-     "label": "TOTAL spend cap per window (USD) — Claude + Codex together, both priced by "
-              "ccusage. Blank = Codex spend is unbounded. Pausing here stops the company "
-              "entirely (no engine left to offload to) until the window rolls."},
+    {"key": "CLAUDE_5H_BUDGET_USD", "type": "number",
+     "label": "Claude 5h gate (notional USD per plan window; blank = no gate) — APP-263 hard "
+              "gate; blocked Claude is skipped by Alternate until its window resets"},
+    {"key": "CODEX_5H_BUDGET_USD", "type": "number",
+     "label": "Codex 5h gate (notional USD per plan window; blank = no gate) — APP-263 hard "
+              "gate, analyst sessions excluded when verified"},
+    {"key": "TOTAL_DAILY_BUDGET_USD", "type": "number",
+     "label": "Daily TOTAL gate (notional USD per UTC calendar day; blank = no gate) — "
+              "reaching it pauses BOTH engines until the next UTC midnight"},
+    {"key": "TOTAL_WEEKLY_BUDGET_USD", "type": "number",
+     "label": "Weekly TOTAL gate (notional USD, rolling 7×24h; blank = no gate) — reaching "
+              "it pauses BOTH engines until enough spend ages out"},
     {"key": "CODEX_WINDOW_LIMIT", "type": "number",
      "label": "Codex cycles per window (blank = unmetered)"},
     {"key": "MODEL", "type": "text",
@@ -1125,7 +1130,9 @@ def read_cost_summary() -> dict[str, Any]:
         "creditReason": credit_reason,
         "limitHits": text.count("[LIMIT]"),
         "windowUsd": round(window_usd, 4),
-        "windowBudget": os.environ.get("WINDOW_BUDGET_USD", "") or "",
+        # key name kept for frontend compatibility; the value is the APP-263
+        # Claude 5h gate (WINDOW_BUDGET_USD is deprecated and ignored)
+        "windowBudget": os.environ.get("CLAUDE_5H_BUDGET_USD", "") or "",
         "fallbackHits": text.count("[FALLBACK]"),
         "budgetPauses": text.count("[BUDGET]"),
         "budgetOffloads": budget_offloads,

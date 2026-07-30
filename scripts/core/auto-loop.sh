@@ -97,23 +97,21 @@ CYCLE_ENGINE_OVERRIDE=""
 # refresh token). Codex is then treated as unavailable for the rest of this
 # process so alternation/fallback don't burn every other cycle on a dead engine.
 CODEX_DISABLED=0
-# Rolling-window spend cap: pause the loop when spend in the last WINDOW_SECONDS
-# reaches WINDOW_BUDGET_USD (empty = disabled). Reserves quota for the operator.
+# DEPRECATED (APP-263, 2026-07-30): WINDOW_BUDGET_USD and the APP-237 dynamic
+# reserve cap (PLAN_CEILING_USD / OPERATOR_RESERVE_PCT / WINDOW_BUDGET_FLOOR_USD)
+# are parsed ONLY to emit startup warnings — no gate reads them and they cannot
+# override the four explicit APP-263 limits. The Claude gate is
+# CLAUDE_5H_BUDGET_USD; operator interactive capacity is preserved by the
+# Alternate routing policy and measured in the 14-day calibration report.
+# Remove these variables from runtime.env after the migration period.
 WINDOW_BUDGET_USD="${WINDOW_BUDGET_USD:-}"
-# Captured BEFORE refresh_dynamic_budget() starts overwriting WINDOW_BUDGET_USD
-# in place — this is the operator's own configured cap (cockpit Settings), and
-# it must survive as a ceiling on the dynamic formula below. Previously the
-# dynamic cap silently replaced a lower manual value every single cycle, so an
-# operator lowering the budget mid-window had no effect (2026-07-25).
-WINDOW_BUDGET_USD_MANUAL="$WINDOW_BUDGET_USD"
-# Reserve-% dynamic budget (APP-237). Inert unless PLAN_CEILING_USD is set, in
-# which case WINDOW_BUDGET_USD is recomputed each cycle from the operator's own
-# measured spend — see refresh_dynamic_budget().
 PLAN_CEILING_USD="${PLAN_CEILING_USD:-}"
-OPERATOR_RESERVE_PCT="${OPERATOR_RESERVE_PCT:-40}"
+OPERATOR_RESERVE_PCT="${OPERATOR_RESERVE_PCT:-}"
+WINDOW_BUDGET_FLOOR_USD="${WINDOW_BUDGET_FLOOR_USD:-}"
+# operator-usage.json remains load-bearing: _window_anchor_epoch reads its
+# blockStart to align both 5h gates to the real plan window.
 OPERATOR_USAGE_FILE="${OPERATOR_USAGE_FILE:-$LOG_DIR/operator-usage.json}"
 OPERATOR_USAGE_STALE_SECS="${OPERATOR_USAGE_STALE_SECS:-900}"
-WINDOW_BUDGET_FLOOR_USD="${WINDOW_BUDGET_FLOOR_USD:-5}"
 WINDOW_SECONDS="${WINDOW_SECONDS:-18000}"
 BUDGET_PAUSE_SECONDS="${BUDGET_PAUSE_SECONDS:-1800}"
 SPEND_LEDGER="$LOG_DIR/spend-window.log"
@@ -142,10 +140,41 @@ LOOP_INTERVAL="${LOOP_INTERVAL:-30}"
 # to the wall is the single biggest cost driver. The one cycle that actually reached the
 # old 1800s wall did 145 turns / 19.2M cache-read tokens and cost $32.22, 88% of a whole
 # $40 5h window; normal cycles finish in ~4 min, so 900s still leaves 3-4x headroom.
-# Money ceiling across BOTH engines (Claude USD + Codex USD, priced by ccusage).
-# Separate from WINDOW_BUDGET_USD on purpose -- see the gate in
-# select_cycle_engine(). Blank = no total ceiling (prior behaviour).
+# DEPRECATED (APP-263, 2026-07-30): parsed ONLY to emit a startup warning; never
+# read by any gate. Replaced by the four explicit gates below.
 TOTAL_BUDGET_USD="${TOTAL_BUDGET_USD:-}"
+
+# ── Four-gate budget model (APP-263 operator decision, 2026-07-30) ──────────────
+# All four are HARD gates over API-equivalent/NOTIONAL usage (both engines are
+# flat subscriptions; ccusage prices what the tokens would have cost — nothing
+# here is billed cash). Empty = that gate disabled.
+#  - per-engine 5h gates use each engine's existing plan-window anchor semantics
+#    (_window_anchor_epoch — Claude's blockStart, shared, as before)
+#  - DAILY is the UTC calendar day; WEEKLY is a rolling 7×24h period (no
+#    calendar-week reset); a 5h rollover never resets either TOTAL
+#  - one engine's rollover never alters the other engine's counter
+CLAUDE_5H_BUDGET_USD="${CLAUDE_5H_BUDGET_USD:-}"
+CODEX_5H_BUDGET_USD="${CODEX_5H_BUDGET_USD:-}"
+TOTAL_DAILY_BUDGET_USD="${TOTAL_DAILY_BUDGET_USD:-}"
+TOTAL_WEEKLY_BUDGET_USD="${TOTAL_WEEKLY_BUDGET_USD:-}"
+# Cumulative ledger feeding DAILY/WEEKLY for Claude: `epoch engine run_id usd`,
+# idempotent on run_id (a retry or crash-replay cannot charge a cycle twice),
+# NEVER window-pruned — only 90-day retention. Codex DAILY/WEEKLY come from
+# ccusage period totals instead (see _codex_spend_since), so codex rows are not
+# appended here.
+TOTAL_SPEND_LEDGER="$LOG_DIR/spend-total.log"
+TOTAL_LEDGER_RETENTION_DAYS="${TOTAL_LEDGER_RETENTION_DAYS:-90}"
+# Verified Opportunity-Analyst codex thread ids (`epoch thread_id` rows, deduped,
+# persisted): excluded from company Codex 5h/DAILY/WEEKLY figures. Absent or
+# unparseable ids are simply not excluded — fail closed in the budget-TIGHTENING
+# direction (analyst counts toward the company when in doubt).
+ANALYST_SESSIONS_FILE="$LOG_DIR/analyst-codex-sessions.log"
+# Stable per-boot component of Claude run_ids (loop_count restarts at 1 on every
+# container boot; this keeps run_ids unique across boots while staying identical
+# across retries within one cycle).
+LOOP_BOOT_ID="$(date +%s)-$$"
+# Test hook: lets the gate tests pin "now" without faketime. NEVER set in prod.
+BUDGET_NOW_OVERRIDE="${BUDGET_NOW_OVERRIDE:-}"
 CYCLE_TIMEOUT_SECONDS="${CYCLE_TIMEOUT_SECONDS:-900}"
 # An operator-escalated cycle (see apply_cycle_escalation) is deliberately allowed the
 # old, longer wall: it is a human-approved, one-shot, expensive-on-purpose run.
@@ -354,11 +383,53 @@ directive_unaudited() {
     return 0
 }
 
-# Append a cycle's cost to the rolling-window ledger (skips 0 / N/A).
+_budget_now() { echo "${BUDGET_NOW_OVERRIDE:-$(date +%s)}"; }
+
+# Start of the current UTC calendar day (DAILY gate anchor).
+_utc_day_start() {
+    local now
+    now="$(_budget_now)"
+    echo $(( now - (now % 86400) ))
+}
+
+_fmt_utc() {
+    date -u -d "@$1" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null \
+        || date -u -r "$1" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null \
+        || echo "epoch $1"
+}
+
+# Append a cycle's cost to the rolling-window ledger (skips 0 / N/A) AND to the
+# cumulative TOTAL ledger, idempotently.
 record_spend() {
     local cost="$1"
     case "$cost" in ''|N/A|0|0.0) return 0 ;; esac
     printf '%s %s\n' "$(date +%s)" "$cost" >> "$SPEND_LEDGER" 2>/dev/null || true
+    record_total_spend "claude" "${LOOP_BOOT_ID}-c${loop_count:-0}" "$cost"
+}
+
+# `epoch engine run_id usd` — refuses a duplicate run_id, so a retry, crash
+# recovery or repeated record_spend() call charges each cycle exactly once
+# across every period the ledger feeds (DAILY and WEEKLY alike).
+record_total_spend() {
+    local engine="$1" run_id="$2" usd="$3"
+    if [ -f "$TOTAL_SPEND_LEDGER" ] \
+       && awk -v r="$run_id" '$3 == r { found=1; exit } END { exit !found }' "$TOTAL_SPEND_LEDGER" 2>/dev/null; then
+        return 0
+    fi
+    printf '%s %s %s %s\n' "$(_budget_now)" "$engine" "$run_id" "$usd" >> "$TOTAL_SPEND_LEDGER" 2>/dev/null || true
+    # Retention prune (90d default) — enough history for the rolling 7-day gate
+    # and for auditing previous periods, per APP-263.
+    local cutoff
+    cutoff=$(( $(_budget_now) - TOTAL_LEDGER_RETENTION_DAYS * 86400 ))
+    awk -v c="$cutoff" '$1 >= c' "$TOTAL_SPEND_LEDGER" > "$TOTAL_SPEND_LEDGER.tmp" 2>/dev/null \
+        && mv "$TOTAL_SPEND_LEDGER.tmp" "$TOTAL_SPEND_LEDGER" 2>/dev/null || true
+}
+
+# Claude notional spend since an epoch, from the cumulative ledger.
+claude_spend_since() {
+    [ -f "$TOTAL_SPEND_LEDGER" ] || { echo "0.0000"; return; }
+    awk -v c="$1" '$1 >= c && $2 == "claude" { s += $4 } END { printf "%.4f", s + 0 }' \
+        "$TOTAL_SPEND_LEDGER" 2>/dev/null || echo "0.0000"
 }
 
 # Sum spend within the last WINDOW_SECONDS, pruning older entries. Echoes USD.
@@ -368,7 +439,7 @@ record_spend() {
 # makes a budget guard silently wrong.
 _window_anchor_epoch() {
     local now cutoff anchor
-    now=$(date +%s)
+    now=$(_budget_now)
     cutoff=$((now - WINDOW_SECONDS))
     if [ -f "$OPERATOR_USAGE_FILE" ] \
        && [ $(( now - $(stat -c %Y "$OPERATOR_USAGE_FILE" 2>/dev/null || echo 0) )) -le "$OPERATOR_USAGE_STALE_SECS" ]; then
@@ -386,24 +457,46 @@ _window_anchor_epoch() {
 # Codex USD inside the CURRENT plan window, priced by ccusage — the same tool that
 # already prices Claude, so the two figures are in the same currency and can be
 # added. Codex bills against a ChatGPT subscription rather than per token, so this
-# is API-equivalent cost, which is exactly what WINDOW_BUDGET_USD already measures.
+# is API-equivalent/NOTIONAL cost — the currency every APP-263 gate speaks.
 # ~380ms over 794 sessions, i.e. cheap enough for once per cycle.
 # Prints TWO fields: "<usd> <stale 0|1>". Deliberately not a global flag --
 # callers use this inside $( ), which is a subshell, so a global set in here would
 # never reach the caller and the STALE warning would silently never fire. Caught
 # by tests/test_total_budget.sh before it shipped.
 CODEX_SPEND_CACHE="$LOG_DIR/.codex-spend-cache"
-codex_window_spend() {
-    local anchor out
-    anchor="$(_window_anchor_epoch)"
+
+# Codex notional USD since an anchor epoch, from ccusage period totals (never
+# per-cycle appended estimates — APP-263). Analyst sessions whose VERIFIED
+# thread_id (from ANALYST_SESSIONS_FILE) appears in the ccusage sessionFile are
+# excluded; a session with missing/ambiguous metadata is INCLUDED — the
+# exclusion fails closed in the budget-tightening direction.
+#
+# $2 is a per-gate cache key (5h|daily|weekly): a STALE/failed refresh falls
+# back to that gate's LAST SUCCESSFUL measurement, so a failure can never
+# reduce an already-observed total. (A fresh SUCCESSFUL read may legitimately
+# be lower — a 5h window roll, or weekly spend aging out — that is a real
+# period change, not a stale reduction.)
+# Prints "<usd> <stale 0|1>". Subshell-safe, same as before.
+_codex_spend_since() {
+    local anchor="$1" key="${2:-5h}" out cache
+    cache="$CODEX_SPEND_CACHE-$key"
     out="$(CODEX_HOME="${CODEX_HOME:-$LOG_DIR/.codex}" ccusage codex session --json 2>/dev/null \
         | python3 -c '
-import json, sys, datetime
+import json, sys, datetime, os, re
 try:
     d = json.load(sys.stdin)
 except Exception:
     sys.exit(1)
 anchor = int(sys.argv[1])
+excl = set()
+try:
+    with open(sys.argv[2], encoding="utf-8") as fh:
+        for line in fh:
+            parts = line.split()
+            if len(parts) >= 2 and re.fullmatch(r"[0-9a-fA-F-]{36}", parts[1]):
+                excl.add(parts[1].lower())
+except Exception:
+    excl = set()  # unreadable exclusion file -> exclude nothing (tightening)
 total = 0.0
 for s in d.get("sessions", []):
     la = s.get("lastActivity")
@@ -415,20 +508,85 @@ for s in d.get("sessions", []):
         continue
     # lastActivity is the sessions END, so a session straddling the anchor is
     # counted in full. That over-counts, which is the safe direction for a cap.
-    if e >= anchor:
-        total += float(s.get("costUSD") or 0)
+    if e < anchor:
+        continue
+    sf = (s.get("sessionFile") or "").lower()
+    if sf and any(t in sf for t in excl):
+        continue  # verified analyst session
+    total += float(s.get("costUSD") or 0)
 print("%.4f" % total)
-' "$anchor" 2>/dev/null || true)"
+' "$anchor" "$ANALYST_SESSIONS_FILE" 2>/dev/null || true)"
     if [ -n "$out" ]; then
-        printf '%s' "$out" > "$CODEX_SPEND_CACHE" 2>/dev/null || true
+        printf '%s' "$out" > "$cache" 2>/dev/null || true
         printf '%s 0' "$out"
         return 0
     fi
-    # Measurement failed. Fall back to the last known value rather than printing
-    # 0 — reporting zero would quietly switch the ceiling off, which is the one
-    # failure mode a budget guard must never have.
-    printf '%s 1' "$(cat "$CODEX_SPEND_CACHE" 2>/dev/null || echo "0")"
+    # Measurement failed. Fall back to this gate's last known value rather than
+    # printing 0 — reporting zero would quietly switch the gate off, which is
+    # the one failure mode a budget guard must never have.
+    printf '%s 1' "$(cat "$cache" 2>/dev/null || echo "0")"
     return 0
+}
+
+# Per-session "epoch usd" pairs since an anchor (analyst-excluded) — used to
+# compute the WEEKLY gate's exact spend-expiry resume time. Prints nothing on
+# ccusage failure (callers then fall back to a conservative estimate).
+_codex_spend_entries_since() {
+    local anchor="$1"
+    CODEX_HOME="${CODEX_HOME:-$LOG_DIR/.codex}" ccusage codex session --json 2>/dev/null \
+        | python3 -c '
+import json, sys, datetime, re
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+anchor = int(sys.argv[1])
+excl = set()
+try:
+    with open(sys.argv[2], encoding="utf-8") as fh:
+        for line in fh:
+            parts = line.split()
+            if len(parts) >= 2 and re.fullmatch(r"[0-9a-fA-F-]{36}", parts[1]):
+                excl.add(parts[1].lower())
+except Exception:
+    excl = set()
+for s in d.get("sessions", []):
+    la = s.get("lastActivity")
+    if not la:
+        continue
+    try:
+        e = int(datetime.datetime.fromisoformat(la.replace("Z", "+00:00")).timestamp())
+    except Exception:
+        continue
+    if e < anchor:
+        continue
+    sf = (s.get("sessionFile") or "").lower()
+    if sf and any(t in sf for t in excl):
+        continue
+    print("%d %.6f" % (e, float(s.get("costUSD") or 0)))
+' "$anchor" "$ANALYST_SESSIONS_FILE" 2>/dev/null || true
+}
+
+# Earliest UTC epoch at which the rolling 7-day total drops below the WEEKLY
+# limit: walk contributing entries (Claude ledger rows + Codex sessions) oldest
+# first; each expires 7×24h after its own timestamp — entry-by-entry, never at a
+# calendar-week boundary.
+_weekly_resume_epoch() {
+    local week_anchor="$1" limit="$2"
+    {
+        [ -f "$TOTAL_SPEND_LEDGER" ] \
+            && awk -v c="$week_anchor" '$1 >= c && $2 == "claude" { print $1, $4 }' "$TOTAL_SPEND_LEDGER" 2>/dev/null
+        _codex_spend_entries_since "$week_anchor"
+    } | sort -n | awk -v limit="$limit" '
+        { epoch[NR] = $1; cost[NR] = $2; total += $2 }
+        END {
+            if (NR == 0 || total < limit) { print 0; exit }
+            for (i = 1; i <= NR; i++) {
+                total -= cost[i]
+                if (total < limit) { print epoch[i] + 604800; exit }
+            }
+            print epoch[NR] + 604800
+        }'
 }
 
 window_spend() {
@@ -515,7 +673,7 @@ _router_persist() {
 # CHEAPEST-FIRST ladders by how full each rolling window is — the most-capable tier while
 # the window is fresh, downgrading toward the cheapest tier as it fills (this is the
 # quota-weighted design; it replaces the earlier plain round-robin). Claude fill = 5h USD
-# spend / WINDOW_BUDGET_USD; Codex fill = window count / CODEX_WINDOW_LIMIT. When a provider
+# spend / CLAUDE_5H_BUDGET_USD; Codex fill = window count / CODEX_WINDOW_LIMIT. When a provider
 # has NO cap set, there is no fill signal → stay at the cheapest tier (conservative). When
 # the ladder is off, restore the base config. The chosen engine reads MODEL / CODEX_EFFORT.
 apply_tier_ladder() {
@@ -548,7 +706,7 @@ apply_tier_ladder() {
     }
 
     local c_num c_den x_num x_den m e
-    c_num="$(window_spend)";       c_den="${WINDOW_BUDGET_USD:-0}"
+    c_num="$(window_spend)";       c_den="${CLAUDE_5H_BUDGET_USD:-0}"
     x_num="$(codex_window_count)"; x_den="${CODEX_WINDOW_LIMIT:-0}"
     # A ladder rung may carry its own reasoning effort as `model:effort` (APP-241).
     # Without it the ladder only ever moved the MODEL while CLAUDE_EFFORT stayed
@@ -573,7 +731,7 @@ apply_tier_ladder() {
         MODEL_LABEL="${MODEL:-config-default}"
     fi
     [ -n "$e" ] && CODEX_EFFORT="$e"
-    log "[TIER] fill-weighted → Claude=$MODEL effort=${CLAUDE_EFFORT:-default} [claude \$$c_num/${WINDOW_BUDGET_USD:-∞}], Codex effort=$CODEX_EFFORT [codex $x_num/${CODEX_WINDOW_LIMIT:-∞}]"
+    log "[TIER] fill-weighted → Claude=$MODEL effort=${CLAUDE_EFFORT:-default} [claude \$$c_num/${CLAUDE_5H_BUDGET_USD:-∞}], Codex effort=$CODEX_EFFORT [codex $x_num/${CODEX_WINDOW_LIMIT:-∞}]"
     # The block above always computes the CLAUDE-ladder pick, even when this cycle
     # will actually run on Codex — MODEL_LABEL otherwise shows e.g. "claude-opus-4-8"
     # in the cockpit/state file for a cycle that never touched Claude at all
@@ -764,68 +922,77 @@ _write_stall_draft() {
     } > "$STALL_DRAFT_FILE" 2>/dev/null || true
 }
 
-# --- reserve-% dynamic budget (APP-237) ---------------------------------------
-# The loop and the operator draw on the SAME Claude plan, so a fixed
-# WINDOW_BUDGET_USD is wrong in both directions: too small when the operator is
-# idle, too large when they are working (measured 2026-07-25: of a ~$101 5h
-# ceiling, an active operator session took $38 while the loop took $15).
-#
-#   cap = ceiling - max(operator_spend, reserve% x ceiling)
-#
-# so the operator always keeps their reserve, and anything they do not use goes
-# to the loop. operator_spend is pushed in by scripts/ops/operator-usage-report.sh
-# (ccusage on the operator's machine). Disabled unless PLAN_CEILING_USD is set;
-# stale or missing data is treated as "operator idle", which is the safe
-# direction — it yields exactly the reserve-only cap we ran before this existed.
-refresh_dynamic_budget() {
-    [ -n "$PLAN_CEILING_USD" ] || return 0
+# refresh_dynamic_budget (APP-237 reserve-% cap) was removed by APP-263: the four
+# explicit gates replace it, and Alternate routing is the operator-capacity
+# mechanism. See git history for the formula.
 
-    local spend=0 age=-1 src="no-data"
-    if [ -f "$OPERATOR_USAGE_FILE" ]; then
-        age=$(( $(date +%s) - $(stat -c %Y "$OPERATOR_USAGE_FILE" 2>/dev/null || echo 0) ))
-        if [ "$age" -le "$OPERATOR_USAGE_STALE_SECS" ]; then
-            spend=$(jq -r '.costUSD // 0' "$OPERATOR_USAGE_FILE" 2>/dev/null || echo 0)
-            src="fresh(${age}s)"
-        else
-            src="stale(${age}s)"
-        fi
-    fi
-
-    local newcap
-    newcap=$(awk -v ceil="$PLAN_CEILING_USD" -v pct="$OPERATOR_RESERVE_PCT" \
-                 -v spent="$spend" -v floor="$WINDOW_BUDGET_FLOOR_USD" \
-                 -v manual="$WINDOW_BUDGET_USD_MANUAL" 'BEGIN {
-        reserve = ceil * pct / 100
-        keep    = (spent > reserve ? spent : reserve)
-        cap     = ceil - keep
-        if (cap < floor) cap = floor
-        if (manual != "" && manual + 0 < cap) cap = manual + 0
-        printf "%.2f", cap
-    }')
-
-    if [ "$newcap" != "$WINDOW_BUDGET_USD" ]; then
-        log "[BUDGET] cap \$$WINDOW_BUDGET_USD → \$$newcap (ceiling \$$PLAN_CEILING_USD, reserve ${OPERATOR_RESERVE_PCT}%, operator \$$spend [$src], manual cap \$${WINDOW_BUDGET_USD_MANUAL:-none})"
-        WINDOW_BUDGET_USD="$newcap"
-    fi
-}
-
-# Fire the total-cap Telegram once per plan window, not once per paused cycle.
-# Keyed on the window anchor, so the next window notifies again on its own.
-_notify_total_cap_once() {
-    local total="$1" claude_part="$2" codex_part="$3" anchor marker
-    anchor="$(_window_anchor_epoch)"
-    marker="$LOG_DIR/.total-cap-notified-$anchor"
+# Fire a gate-block Telegram once per (gate, period), not once per paused cycle.
+# Keyed on the gate name + a period identity, so the next period notifies again.
+_notify_gate_block_once() {
+    local gate="$1" period_key="$2" message="$3" marker
+    marker="$LOG_DIR/.gate-notified-$gate-$period_key"
     if [ -f "$marker" ]; then
         return 0
     fi
     : > "$marker" 2>/dev/null || true
-    find "$LOG_DIR" -maxdepth 1 -name '.total-cap-notified-*' ! -name "*-$anchor" -delete 2>/dev/null || true
+    find "$LOG_DIR" -maxdepth 1 -name ".gate-notified-$gate-*" ! -name "*-$period_key" -delete 2>/dev/null || true
     if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
-        bash "$SCRIPT_DIR/telegram-notify.sh" "💸 Total spend cap reached — company paused.
-Claude \$$claude_part + Codex \$$codex_part = \$$total of \$$TOTAL_BUDGET_USD.
-Pausing ${BUDGET_PAUSE_SECONDS}s at a time; it resumes on its own when the 5h window rolls." \
-            >/dev/null 2>&1 || true
+        bash "$SCRIPT_DIR/telegram-notify.sh" "$message" >/dev/null 2>&1 || true
     fi
+}
+
+# ── Four-gate evaluation (APP-263) ─────────────────────────────────────────────
+# Sets globals; emits the single unambiguous [BUDGET] status line. All figures
+# are API-equivalent/NOTIONAL usage, never billed cash.
+#   BG_CLAUDE5 BG_CODEX5 BG_DAILY BG_WEEKLY    — current notional spend
+#   BG_CLAUDE_OK BG_CODEX_OK                   — per-engine 5h eligibility (1/0)
+#   BG_TOTAL_GATE ("" | DAILY_TOTAL | WEEKLY_TOTAL)
+#   BG_TOTAL_RESUME_EPOCH BG_5H_RESUME_EPOCH
+evaluate_budget_gates() {
+    local now anchor day_start week_start x5_raw xd_raw xw_raw x5_stale
+    now="$(_budget_now)"
+    anchor="$(_window_anchor_epoch)"
+    day_start="$(_utc_day_start)"
+    week_start=$(( now - 604800 ))
+
+    BG_CLAUDE5="$(window_spend)"
+    x5_raw="$(_codex_spend_since "$anchor" 5h)"
+    BG_CODEX5="${x5_raw%% *}"; x5_stale="${x5_raw##* }"
+    xd_raw="$(_codex_spend_since "$day_start" daily)"
+    xw_raw="$(_codex_spend_since "$week_start" weekly)"
+    BG_DAILY="$(awk -v a="$(claude_spend_since "$day_start")" -v b="${xd_raw%% *}" 'BEGIN { printf "%.4f", a + b }')"
+    BG_WEEKLY="$(awk -v a="$(claude_spend_since "$week_start")" -v b="${xw_raw%% *}" 'BEGIN { printf "%.4f", a + b }')"
+
+    local stale_note=""
+    [ "$x5_stale" = "1" ] && stale_note=" (codex figures STALE — ccusage failed, last known values reused; a stale read never lowers an observed total)"
+    log "[BUDGET] Claude 5h \$$BG_CLAUDE5/\$${CLAUDE_5H_BUDGET_USD:-∞} | Codex 5h \$$BG_CODEX5/\$${CODEX_5H_BUDGET_USD:-∞} | Daily TOTAL \$$BG_DAILY/\$${TOTAL_DAILY_BUDGET_USD:-∞} | Weekly TOTAL \$$BG_WEEKLY/\$${TOTAL_WEEKLY_BUDGET_USD:-∞}$stale_note"
+
+    _budget_ge() { awk -v s="$1" -v b="$2" 'BEGIN { exit !(s + 0 >= b + 0) }'; }
+
+    BG_TOTAL_GATE=""; BG_TOTAL_RESUME_EPOCH=0
+    if [ -n "$TOTAL_DAILY_BUDGET_USD" ] && _budget_ge "$BG_DAILY" "$TOTAL_DAILY_BUDGET_USD"; then
+        BG_TOTAL_GATE="DAILY_TOTAL"
+        BG_TOTAL_RESUME_EPOCH=$(( day_start + 86400 ))
+    elif [ -n "$TOTAL_WEEKLY_BUDGET_USD" ] && _budget_ge "$BG_WEEKLY" "$TOTAL_WEEKLY_BUDGET_USD"; then
+        BG_TOTAL_GATE="WEEKLY_TOTAL"
+        BG_TOTAL_RESUME_EPOCH="$(_weekly_resume_epoch "$week_start" "$TOTAL_WEEKLY_BUDGET_USD")"
+        # ccusage failure during the walk yields a Claude-only estimate; never
+        # report an epoch in the past for a gate that is currently closed.
+        [ "$BG_TOTAL_RESUME_EPOCH" -le "$now" ] 2>/dev/null && BG_TOTAL_RESUME_EPOCH=$(( now + BUDGET_PAUSE_SECONDS ))
+    fi
+
+    BG_CLAUDE_OK=1; BG_CODEX_OK=1
+    if [ -n "$CLAUDE_5H_BUDGET_USD" ] && _budget_ge "$BG_CLAUDE5" "$CLAUDE_5H_BUDGET_USD"; then
+        BG_CLAUDE_OK=0
+    fi
+    if [ -n "$CODEX_5H_BUDGET_USD" ] && _budget_ge "$BG_CODEX5" "$CODEX_5H_BUDGET_USD"; then
+        BG_CODEX_OK=0
+    fi
+    # Both 5h gates share the plan-window anchor today, so both reopen at the
+    # same instant; computed per-engine anyway so a future per-engine anchor
+    # cannot silently break the resume arithmetic.
+    BG_5H_RESUME_EPOCH=$(( anchor + WINDOW_SECONDS ))
+    return 0
 }
 
 select_cycle_engine() {
@@ -833,111 +1000,109 @@ select_cycle_engine() {
     CYCLE_ROUTER_ACTION="run"
     CYCLE_ROUTER_MSG=""
 
-    # --- TOTAL spend ceiling, BOTH engines (2026-07-28) ---------------------
-    # Deliberately separate from WINDOW_BUDGET_USD, which is a *Claude plan*
-    # guard: it is derived from PLAN_CEILING_USD minus the operator's own Claude
-    # spend, so it protects the human's interactive sessions from being starved.
-    # Folding Codex into that number would conflate two different quotas (Claude
-    # plan vs ChatGPT subscription) and break the reserve maths. This is the
-    # money ceiling instead, and it is checked FIRST and for EVERY engine —
-    # including ENGINE=codex primary, which the Claude routing below never sees.
-    # Codex ran ~$640 total / $44 in one day entirely unbudgeted before this.
-    if [ -n "$TOTAL_BUDGET_USD" ]; then
-        local _c_now _x_raw _x_now _x_stale _total
-        _c_now="$(window_spend)"
-        _x_raw="$(codex_window_spend)"
-        _x_now="${_x_raw%% *}"
-        _x_stale="${_x_raw##* }"
-        _total="$(awk -v a="$_c_now" -v b="$_x_now" 'BEGIN { printf "%.4f", a + b }')"
-        if [ "$_x_stale" = "1" ]; then
-            log "[TOTAL] claude \$$_c_now + codex \$$_x_now = \$$_total / cap \$$TOTAL_BUDGET_USD (codex figure STALE — ccusage failed, reusing last known)"
-        else
-            log "[TOTAL] claude \$$_c_now + codex \$$_x_now = \$$_total / cap \$$TOTAL_BUDGET_USD"
-        fi
-        if awk -v s="$_total" -v b="$TOTAL_BUDGET_USD" 'BEGIN { exit !(s + 0 >= b + 0) }'; then
-            CYCLE_ROUTER_ACTION="pause"
-            CYCLE_ROUTER_MSG="[ROUTER] TOTAL spend \$$_total >= cap \$$TOTAL_BUDGET_USD (claude \$$_c_now + codex \$$_x_now) — both engines exhausted, pausing ${BUDGET_PAUSE_SECONDS}s"
-            _notify_total_cap_once "$_total" "$_c_now" "$_x_now"
-            _router_persist "${ENGINE}"
-            return 0
-        fi
-    fi
+    evaluate_budget_gates
 
-    # This whole function only ever offloads Claude -> Codex on a Claude budget cap —
-    # every fallback path below hardcodes "claude" as the assumed primary. When the
-    # operator has configured $ENGINE=codex directly, that assumption is simply wrong:
-    # there is no Claude spend to check and nothing to "offload" (codex already IS
-    # primary; run_engine_cycle's `case "$ENGINE" in codex)` branch runs it correctly
-    # regardless of this function). Without this early return, router-state always got
-    # written as the literal "claude" and the cockpit showed Active engine=CLAUDE even
-    # on a real Codex cycle (found 2026-07-27, operator screenshot + boot-log report).
-    if [ "$ENGINE" != "claude" ]; then
-        CYCLE_ROUTER_MSG="[ROUTER] Engine=$ENGINE configured as primary — running directly (no Claude-budget routing)"
-        _router_persist "$ENGINE"
+    # ── TOTAL gates take precedence over routing: both engines pause. ──────────
+    if [ -n "$BG_TOTAL_GATE" ]; then
+        local resume spent limit period_key reason
+        resume="$(_fmt_utc "$BG_TOTAL_RESUME_EPOCH")"
+        if [ "$BG_TOTAL_GATE" = "DAILY_TOTAL" ]; then
+            spent="$BG_DAILY"; limit="$TOTAL_DAILY_BUDGET_USD"
+            period_key="$(_utc_day_start)"
+            reason="next UTC midnight"
+        else
+            spent="$BG_WEEKLY"; limit="$TOTAL_WEEKLY_BUDGET_USD"
+            period_key="$BG_TOTAL_RESUME_EPOCH"
+            reason="earliest spend-expiry returning the rolling 7×24h total below the limit"
+        fi
+        CYCLE_ROUTER_ACTION="pause"
+        CYCLE_ROUTER_MSG="[GATE] $BG_TOTAL_GATE — notional \$$spent >= limit \$$limit; affected: BOTH engines. Resume: $resume ($reason). Values are API-equivalent/notional usage, not billed cash."
+        _notify_gate_block_once "$BG_TOTAL_GATE" "$period_key" \
+            "💸 $BG_TOTAL_GATE gate closed — company paused (both engines).
+Notional \$$spent of \$$limit. Resume: $resume ($reason).
+API-equivalent/notional usage, not billed cash."
+        _router_persist "${ENGINE}"
         return 0
     fi
 
-    refresh_dynamic_budget
-
-    # Is Codex usable as an alternate this cycle?
+    # ── Per-engine availability (binary/auth) on top of the 5h gates. ──────────
     local codex_avail=0
-    if [ "$FALLBACK_ENGINE" = "codex" ] && [ "$CODEX_DISABLED" != "1" ]; then
+    if [ "$CODEX_DISABLED" != "1" ]; then
         [ -z "$RESOLVED_CODEX_BIN" ] && RESOLVED_CODEX_BIN="$(resolve_codex_bin 2>/dev/null || true)"
         [ -n "$RESOLVED_CODEX_BIN" ] && codex_avail=1
     fi
-
-    # Claude window headroom (USD ledger vs budget cap)
-    local claude_full=0 window_now="0"
-    if [ -n "$WINDOW_BUDGET_USD" ]; then
-        window_now="$(window_spend)"
-        if awk -v s="$window_now" -v b="$WINDOW_BUDGET_USD" 'BEGIN { exit !(s + 0 >= b + 0) }'; then
-            claude_full=1
-        fi
-    fi
-
-    # Codex window headroom (count ledger vs cycle limit)
-    local codex_full=0 codex_now
+    local codex_count_full=0 codex_now
     codex_now="$(codex_window_count)"
     if [ -n "$CODEX_WINDOW_LIMIT" ] && [ "$codex_now" -ge "$CODEX_WINDOW_LIMIT" ] 2>/dev/null; then
-        codex_full=1
+        codex_count_full=1
     fi
+    local claude_eligible codex_eligible
+    claude_eligible="$BG_CLAUDE_OK"
+    codex_eligible=0
+    [ "$BG_CODEX_OK" = "1" ] && [ "$codex_avail" = "1" ] && [ "$codex_count_full" = "0" ] && codex_eligible=1
 
-    # Over the Claude budget: offload to Codex if it has headroom, else pause.
-    if [ "$claude_full" -eq 1 ]; then
-        if [ "$codex_avail" -eq 1 ] && [ "$codex_full" -eq 0 ]; then
-            CYCLE_ENGINE_OVERRIDE="codex"
-            CYCLE_ROUTER_MSG="[ROUTER] Claude window \$$window_now >= cap \$$WINDOW_BUDGET_USD — offloading to Codex (codex $codex_now/${CODEX_WINDOW_LIMIT:-∞})"
+    local resume5
+    resume5="$(_fmt_utc "$BG_5H_RESUME_EPOCH")"
+
+    # ── Both engines individually blocked → pause until the earliest reopen. ───
+    if [ "$claude_eligible" = "0" ] && [ "$codex_eligible" = "0" ]; then
+        CYCLE_ROUTER_ACTION="pause"
+        if [ "$BG_CLAUDE_OK" = "0" ] && [ "$BG_CODEX_OK" = "0" ]; then
+            CYCLE_ROUTER_MSG="[GATE] CLAUDE_5H + CODEX_5H — claude notional \$$BG_CLAUDE5 >= \$$CLAUDE_5H_BUDGET_USD and codex notional \$$BG_CODEX5 >= \$$CODEX_5H_BUDGET_USD; affected: BOTH engines. Resume: $resume5 (earliest eligible 5h window end). Values are API-equivalent/notional usage, not billed cash."
+            _notify_gate_block_once "BOTH_5H" "$(_window_anchor_epoch)" \
+                "⏸️ Both 5h gates closed — company paused. Claude \$$BG_CLAUDE5/\$$CLAUDE_5H_BUDGET_USD, Codex \$$BG_CODEX5/\$$CODEX_5H_BUDGET_USD. Resume: $resume5. Notional usage, not billed cash."
+        elif [ "$BG_CLAUDE_OK" = "0" ]; then
+            CYCLE_ROUTER_MSG="[GATE] CLAUDE_5H — notional \$$BG_CLAUDE5 >= limit \$$CLAUDE_5H_BUDGET_USD; affected: claude (codex unavailable: avail=$codex_avail count_full=$codex_count_full). Resume: $resume5 (5h window end). Values are API-equivalent/notional usage, not billed cash."
         else
-            CYCLE_ROUTER_ACTION="pause"
-            CYCLE_ROUTER_MSG="[ROUTER] Claude window \$$window_now >= cap \$$WINDOW_BUDGET_USD; Codex unavailable/full — pausing ${BUDGET_PAUSE_SECONDS}s"
+            CYCLE_ROUTER_MSG="[GATE] CODEX_5H — notional \$$BG_CODEX5 >= limit \$$CODEX_5H_BUDGET_USD; affected: codex (claude ineligible/unavailable). Resume: $resume5 (5h window end). Values are API-equivalent/notional usage, not billed cash."
         fi
-        _router_persist "${CYCLE_ENGINE_OVERRIDE:-claude}"
+        _router_persist "${ENGINE}"
         return 0
     fi
 
-    # Claude has headroom. Optional alternation to spread load across both quotas.
-    if [ "$ROUTER_ALTERNATE" = "1" ] && [ "$codex_avail" -eq 1 ] && [ "$codex_full" -eq 0 ]; then
+    # ── Exactly one engine eligible → run it; report the closed gate if any. ───
+    if [ "$claude_eligible" = "1" ] && [ "$codex_eligible" = "0" ]; then
+        [ "$ENGINE" != "claude" ] && CYCLE_ENGINE_OVERRIDE="claude"
+        if [ "$BG_CODEX_OK" = "0" ]; then
+            CYCLE_ROUTER_MSG="[GATE] CODEX_5H — notional \$$BG_CODEX5 >= limit \$$CODEX_5H_BUDGET_USD; affected: codex only. Claude continues. Codex resume: $resume5 (5h window end). Values are API-equivalent/notional, not billed cash."
+        else
+            CYCLE_ROUTER_MSG="[ROUTER] Codex unavailable (avail=$codex_avail, count $codex_now/${CODEX_WINDOW_LIMIT:-∞}) — running Claude"
+        fi
+        _router_persist "claude"
+        return 0
+    fi
+    if [ "$claude_eligible" = "0" ] && [ "$codex_eligible" = "1" ]; then
+        [ "$ENGINE" != "codex" ] && CYCLE_ENGINE_OVERRIDE="codex"
+        CYCLE_ROUTER_MSG="[GATE] CLAUDE_5H — notional \$$BG_CLAUDE5 >= limit \$$CLAUDE_5H_BUDGET_USD; affected: claude only. Codex continues. Claude resume: $resume5 (5h window end). Values are API-equivalent/notional, not billed cash."
+        _router_persist "codex"
+        return 0
+    fi
+
+    # ── Both eligible → Alternate (intentional policy: distributes plan load and
+    # preserves the operator's interactive capacity across both plans; NOT a
+    # temporary fallback). Deterministic: the state file holds the last engine
+    # run; a previously-blocked engine simply rejoins the toggle when eligible.
+    if [ "$ROUTER_ALTERNATE" = "1" ]; then
         local last
         last="$(cat "$ROUTER_STATE_FILE" 2>/dev/null || echo claude)"
         if [ "$last" = "claude" ]; then
-            CYCLE_ENGINE_OVERRIDE="codex"
-            CYCLE_ROUTER_MSG="[ROUTER] Alternate → Codex (both have headroom; claude \$$window_now/${WINDOW_BUDGET_USD:-∞}, codex $codex_now/${CODEX_WINDOW_LIMIT:-∞})"
+            [ "$ENGINE" != "codex" ] && CYCLE_ENGINE_OVERRIDE="codex"
+            CYCLE_ROUTER_MSG="[ROUTER] Alternate → Codex (both eligible; claude 5h \$$BG_CLAUDE5/\$${CLAUDE_5H_BUDGET_USD:-∞}, codex 5h \$$BG_CODEX5/\$${CODEX_5H_BUDGET_USD:-∞})"
+            _router_persist "codex"
         else
-            CYCLE_ROUTER_MSG="[ROUTER] Alternate → Claude (both have headroom; claude \$$window_now/${WINDOW_BUDGET_USD:-∞}, codex $codex_now/${CODEX_WINDOW_LIMIT:-∞})"
+            [ "$ENGINE" != "claude" ] && CYCLE_ENGINE_OVERRIDE="claude"
+            CYCLE_ROUTER_MSG="[ROUTER] Alternate → Claude (both eligible; claude 5h \$$BG_CLAUDE5/\$${CLAUDE_5H_BUDGET_USD:-∞}, codex 5h \$$BG_CODEX5/\$${CODEX_5H_BUDGET_USD:-∞})"
+            _router_persist "claude"
         fi
-        _router_persist "${CYCLE_ENGINE_OVERRIDE:-claude}"
         return 0
     fi
 
-    # Default: primary Claude. Must still set CYCLE_ROUTER_MSG (even though this is the
-    # most common path) — leaving it empty means the caller never logs a [ROUTER] line,
-    # so the cockpit's "Router decision" field falls back to the LAST [ROUTER] line
-    # anywhere in log history, which can be days stale and contradict the (correct)
-    # current Active engine/model fields next to it (found 2026-07-27, operator screenshot).
-    CYCLE_ROUTER_MSG="[ROUTER] Claude has headroom (\$$window_now/${WINDOW_BUDGET_USD:-∞}) — running primary Claude"
-    _router_persist "claude"
+    # No alternation configured: run the configured primary.
+    CYCLE_ROUTER_MSG="[ROUTER] Engine=$ENGINE primary, both gates open (claude 5h \$$BG_CLAUDE5/\$${CLAUDE_5H_BUDGET_USD:-∞}, codex 5h \$$BG_CODEX5/\$${CODEX_5H_BUDGET_USD:-∞})"
+    _router_persist "$ENGINE"
     return 0
 }
+
 
 check_stop_requested() {
     if [ -f "$PROJECT_DIR/.auto-loop-stop" ]; then
@@ -1377,12 +1542,12 @@ run_engine_cycle() {
                 fi
                 if [ -n "$RESOLVED_CODEX_BIN" ]; then
                     # Record WHERE the plan's real 5h ceiling sits. The configured
-                    # WINDOW_BUDGET_USD is a self-imposed cap; the plan's actual limit
-                    # may bind first (it did: $12.28 of a $25 cap on 2026-07-24). The
-                    # reserve-% controller needs this measured ceiling, so stamp the
-                    # window spend at the exact moment the limit hits.
-                    log "[LIMIT] Claude 5h plan limit hit at window \$$(window_spend)/${WINDOW_BUDGET_USD:-∞} (model=${MODEL:-?})"
-                    printf '%s limit %s %s\n' "$(date +%s)" "$(window_spend)" "${WINDOW_BUDGET_USD:-inf}" \
+                    # CLAUDE_5H_BUDGET_USD is self-imposed; the plan's actual limit
+                    # may bind first (it did: $12.28 of a $25 cap on 2026-07-24).
+                    # Stamp the window spend at the exact moment the limit hits —
+                    # the 14-day calibration report reads these rows.
+                    log "[LIMIT] Claude 5h plan limit hit at window \$$(window_spend)/${CLAUDE_5H_BUDGET_USD:-∞} (model=${MODEL:-?})"
+                    printf '%s limit %s %s\n' "$(date +%s)" "$(window_spend)" "${CLAUDE_5H_BUDGET_USD:-inf}" \
                         >> "$LOG_DIR/ceiling-events.log" 2>/dev/null || true
                     log "Cycle #$loop_count [FALLBACK] Claude usage-limited — retrying on Codex"
                     local _saved_bin="$RESOLVED_ENGINE_BIN" _saved_model="$MODEL"
@@ -1601,16 +1766,23 @@ log "Interval: ${LOOP_INTERVAL}s | Timeout: ${CYCLE_TIMEOUT_SECONDS}s (escalated
 if [ "$ENGINE" = "claude" ] && [ -n "$FALLBACK_ENGINE" ]; then
     log "Fallback engine: $FALLBACK_ENGINE (on Claude usage limit)"
 fi
+# ── Four-gate budget summary + deprecation warnings (APP-263) ──────────────────
+log "Budget gates (all notional/API-equivalent, none billed cash): Claude 5h \$${CLAUDE_5H_BUDGET_USD:-∞} | Codex 5h \$${CODEX_5H_BUDGET_USD:-∞} | Daily TOTAL \$${TOTAL_DAILY_BUDGET_USD:-∞} (UTC day) | Weekly TOTAL \$${TOTAL_WEEKLY_BUDGET_USD:-∞} (rolling 7×24h)"
+if [ -z "$CLAUDE_5H_BUDGET_USD" ] && [ -z "$CODEX_5H_BUDGET_USD" ] \
+   && [ -z "$TOTAL_DAILY_BUDGET_USD" ] && [ -z "$TOTAL_WEEKLY_BUDGET_USD" ]; then
+    log "WARNING: NO budget gate is configured — engine spend is UNBOUNDED. Set the four APP-263 variables."
+fi
 if [ -n "$WINDOW_BUDGET_USD" ]; then
-    log "Window budget: \$$WINDOW_BUDGET_USD per ${WINDOW_SECONDS}s (pause ${BUDGET_PAUSE_SECONDS}s when reached)"
+    log "[DEPRECATED] WINDOW_BUDGET_USD=\$$WINDOW_BUDGET_USD is set but IGNORED — replaced by CLAUDE_5H_BUDGET_USD (APP-263). It cannot override the new gates; remove it from runtime.env."
 fi
 if [ -n "$TOTAL_BUDGET_USD" ]; then
-    log "Total spend cap: \$$TOTAL_BUDGET_USD per window (Claude USD + Codex USD, both priced by ccusage)"
-else
-    log "Total spend cap: none — Codex spend is UNBOUNDED (set TOTAL_BUDGET_USD to bound it)"
+    log "[DEPRECATED] TOTAL_BUDGET_USD=\$$TOTAL_BUDGET_USD is set but IGNORED — replaced by TOTAL_DAILY_BUDGET_USD/TOTAL_WEEKLY_BUDGET_USD (APP-263). It cannot override the new gates; remove it from runtime.env."
+fi
+if [ -n "$PLAN_CEILING_USD" ] || [ -n "$OPERATOR_RESERVE_PCT" ] || [ -n "$WINDOW_BUDGET_FLOOR_USD" ]; then
+    log "[DEPRECATED] PLAN_CEILING_USD/OPERATOR_RESERVE_PCT/WINDOW_BUDGET_FLOOR_USD are set but IGNORED — the APP-237 dynamic reserve cap was retired by APP-263; Alternate routing is the operator-capacity mechanism."
 fi
 if [ "$ENGINE" != "claude" ]; then
-    log "Router: n/a — \$ENGINE=$ENGINE is primary directly, no Claude-budget routing applies"
+    log "Router: \$ENGINE=$ENGINE is the configured primary; APP-263 gates apply to every engine"
 elif [ "$ROUTER_ALTERNATE" = "1" ]; then
     log "Router: quota-aware alternation ON (Claude↔Codex when both have headroom; Codex limit ${CODEX_WINDOW_LIMIT:-∞}/window)"
 else
@@ -1786,7 +1958,7 @@ This is Cycle #$loop_count. Act decisively."
     fi
     _tele_fill="$(window_spend)"
     printf '%s %s %s %s %s %s\n' "$(date +%s)" "$_tele_eng" "$_tele_model" "$_tele_eff" "${CYCLE_COST:-N/A}" "$_tele_fill" >> "$LOG_DIR/engine-telemetry.log" 2>/dev/null || true
-    log "[TELEMETRY] engine=$_tele_eng model=$_tele_model effort=$_tele_eff cost=${CYCLE_COST:-N/A} claude_window=\$$_tele_fill/${WINDOW_BUDGET_USD:-∞}"
+    log "[TELEMETRY] engine=$_tele_eng model=$_tele_model effort=$_tele_eff cost=${CYCLE_COST:-N/A} claude_window=\$$_tele_fill/${CLAUDE_5H_BUDGET_USD:-∞}"
 
     # Did this cycle actually leave anything behind? (APP-242)
     check_stall
@@ -1829,8 +2001,8 @@ This is Cycle #$loop_count. Act decisively."
             # Second usage-limit path (no Codex fallback available) — stamp the
             # ceiling here too, otherwise limits hit on this branch are invisible
             # to the reserve-% controller. See the fallback branch above.
-            log_cycle "$loop_count" "LIMIT" "API usage limit detected at window \$$(window_spend)/${WINDOW_BUDGET_USD:-∞}. Waiting ${LIMIT_WAIT_SECONDS}s..."
-            printf '%s limit %s %s\n' "$(date +%s)" "$(window_spend)" "${WINDOW_BUDGET_USD:-inf}" \
+            log_cycle "$loop_count" "LIMIT" "API usage limit detected at window \$$(window_spend)/${CLAUDE_5H_BUDGET_USD:-∞}. Waiting ${LIMIT_WAIT_SECONDS}s..."
+            printf '%s limit %s %s\n' "$(date +%s)" "$(window_spend)" "${CLAUDE_5H_BUDGET_USD:-inf}" \
                 >> "$LOG_DIR/ceiling-events.log" 2>/dev/null || true
             save_state "waiting_limit"
             sleep "$LIMIT_WAIT_SECONDS"
