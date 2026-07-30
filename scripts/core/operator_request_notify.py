@@ -100,8 +100,27 @@ BACKOFF_SECONDS = [2, 4]
 SECRET_PATTERNS = [
     re.compile(r"sk-[A-Za-z0-9]{10,}"),
     re.compile(r"Bearer\s+[A-Za-z0-9._-]{10,}", re.IGNORECASE),
-    re.compile(r"\b[A-Za-z0-9_-]{32,}\b"),
 ]
+
+# The catch-all for long opaque tokens. It used to be a bare `\b[A-Za-z0-9_-]{32,}\b`, which
+# also swallowed the request ID and every doc slug in the message — so a Telegram alert could
+# arrive reading "AUTHORIZE OR REFUSE — [REDACTED]", i.e. stripped of the one field the
+# operator needs to act on. Now a long token is redacted only if it is actually
+# secret-SHAPED, which is strictly more precise, not more permissive:
+_LONG_TOKEN = re.compile(r"\b[A-Za-z0-9_-]{32,}\b")
+_HEXISH = re.compile(r"\A[0-9a-fA-F-]+\Z")
+
+
+def _looks_secret(tok: str) -> bool:
+    if "-" not in tok:
+        return True  # one unbroken 32+ run: API keys, base64 blobs, hashes
+    if _HEXISH.match(tok):
+        return True  # uuid / hex digest wearing hyphens
+    # key-shaped: mixes upper AND lower AND digits. Our own identifiers never do —
+    # OPREQ ids are upper+digits, doc slugs are lower+digits.
+    return (any(c.islower() for c in tok)
+            and any(c.isupper() for c in tok)
+            and any(c.isdigit() for c in tok))
 
 PROJECTION_START = "\n\n## Awaiting Operator\n"
 PROJECTION_NEXT_HEADING = "\n\n## "
@@ -193,19 +212,61 @@ def scrub_secrets(text: str) -> str:
     out = text
     for pat in SECRET_PATTERNS:
         out = pat.sub("[REDACTED]", out)
-    return out
+    return _LONG_TOKEN.sub(
+        lambda m: "[REDACTED]" if _looks_secret(m.group(0)) else m.group(0), out)
+
+
+# What the operator is actually being asked FOR, per type. The old message opened with the
+# same "OPERATOR INPUT NEEDED" for all seven, so a request needing one authorization decision
+# looked identical to one needing a scanned document, and the operator had to open the cockpit
+# just to learn which kind it was. The ask belongs in the first line.
+ASK_HEADLINE = {
+    "external-action-authorization": "\U0001f510 AUTHORIZE OR REFUSE",
+    "expenditure-approval": "\U0001f4b3 SPEND APPROVAL — AUTHORIZE OR REFUSE",
+    "legal-decision": "⚖️ LEGAL DECISION NEEDED",
+    "financial-decision": "⚖️ FINANCIAL DECISION NEEDED",
+    "adjudication-pending": "\U0001f9d1‍⚖️ OUTSIDE ADJUDICATION NEEDED",
+    "document-procurement": "\U0001f4c4 DOCUMENT NEEDED FROM YOU",
+    "credential": "\U0001f511 CREDENTIAL NEEDED FROM YOU",
+}
+
+# These two are answerable with one click in the cockpit's "Requests to you" panel
+# (dashboard/server.py AUTHORIZATION_TYPES). Everything else needs a directive, and for
+# document-procurement an evidence file as well. Saying so in the notification is the point:
+# the message used to quote only the hand-written-directive path, which is the harder one.
+COCKPIT_ANSWERABLE = {"expenditure-approval", "external-action-authorization"}
+COCKPIT_URL = os.environ.get("COCKPIT_URL", "https://cockpit.appricode.tr")
 
 
 def compose_message(req_id: str, fields: dict) -> str:
+    req_type = (fields.get("Type", "") or "").strip().lower()
+    headline = ASK_HEADLINE.get(req_type, "OPERATOR INPUT NEEDED")
+
+    # Keep the body scannable on a phone. The full text is always one tap away in the
+    # cockpit; a wall of text in Telegram gets skimmed, which is how an authorization
+    # request came to look like a status update.
+    required = " ".join((fields.get("Required input", "") or "").split())
+    if len(required) > 600:
+        required = required[:600].rstrip() + " …(full text in the cockpit)"
+
     lines = [
-        f"\U0001f9d1‍\U0001f4bc OPERATOR INPUT NEEDED — {req_id}",
+        f"{headline} — {req_id}",
         f"Type: {fields.get('Type', '?')} | Blocks: {fields.get('Blocked scope', '?')}",
         "",
-        f"Required: {fields.get('Required input', '')}",
+        f"Required: {required}",
         "",
-        f"Reply via: {fields.get('Acceptable response format', '')}",
-        f"Source: {fields.get('Source brief', '')}",
     ]
+    if req_type in COCKPIT_ANSWERABLE:
+        lines.append(f"Answer here: {COCKPIT_URL} → “Requests to you” (one click, or Refuse)")
+        lines.append("Or reply via a human-directive.md entry — see the cockpit for the exact block.")
+    else:
+        reply = " ".join((fields.get("Acceptable response format", "") or "").split())
+        if len(reply) > 400:
+            reply = reply[:400].rstrip() + " …(full text in the cockpit)"
+        lines.append(f"Reply via: {reply}")
+        lines.append(f"Seen in the cockpit too: {COCKPIT_URL} → “Requests to you”")
+    lines.append(f"Source: {fields.get('Source brief', '')}")
+
     msg = "\n".join(lines)
     return scrub_secrets(msg)[:3900]
 
