@@ -192,6 +192,15 @@ uses it to require that many evidence files, not just one.
 Do not write a `Content fingerprint` field — the script computes and rewrites it. Pick a
 stable, descriptive ID (e.g. `OPREQ-208A-001`) and never reuse an ID.
 
+**For `expenditure-approval` / `external-action-authorization` requests, also include a
+`Proposed authorization` field** carrying draft `System:` / `Action:` / `Target:` / `Limit:`
+lines (semicolon- or newline-separated). The cockpit's "Requests to you" panel pre-fills its
+authorization form from this field; without it the operator faces four empty mandatory boxes
+and a "'System' is required" error — which is how a one-click approval turned into a
+copy-editing task on 2026-07-30 (`OPREQ-215TFB-TEMPLATE-PROMOTION-001`). You are drafting a
+proposal for the operator to read, edit and sign — not granting anything: the fields bind
+only when the operator submits them.
+
 **Refusal is a first-class answer, for every request type.** The operator declines by
 putting `REFUSE` at the start of its own line in the same directive that carries
 `Resolves: OPREQ-<id>` — optionally as `REFUSE: <reason>` or `REFUSE OPREQ-<id> — <reason>`.
