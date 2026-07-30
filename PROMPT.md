@@ -292,6 +292,53 @@ since it is not a claim that the ask was fulfilled.
 notification script also redacts obvious secret-shaped tokens defensively, but do not
 rely on that — treat it as a last-resort filter, not a reason to be careless.
 
+### IDENTITY-WALLED PUBLIC REGISTERS — ask instead of shrugging
+
+Some facts the company needs are genuinely public *records* sitting behind an identity
+wall it can never pass. Measured 2026-07-30 through the company's own browser, not
+assumed:
+
+- **MERSİS** (`mersis.ticaret.gov.tr`) — the landing page renders fine, but every
+  company-record surface is behind `Giriş` (e-Devlet / e-imza). There is no public
+  firm-search page to reach.
+- **Türkiye Ticaret Sicili Gazetesi — İlan Görüntüleme**
+  (`ticaretsicil.gov.tr/view/hizlierisim/ilangoruntuleme.php`) — redirects to
+  `girisyap.php`: "GİRİŞ YAPMALISINIZ. İlan görüntülemek ve ilan alımı için giriş
+  yapmalısınız."
+- **TTSG — Unvan Sorgulama** (`.../unvansorgulama.php`) — reachable without a login, but
+  the query requires a `Güvenlik Kodu` (CAPTCHA). Solving a CAPTCHA is forbidden, so this
+  is a wall too, not an opening.
+
+The browser is not broken when you hit one of these, and re-running the search will not
+help. The failure this rule exists to stop is the quiet one: recording a gate as
+`NOT ESTABLISHED`, writing "no public record was found", and moving on — when the record
+does exist, the operator holds a real identity, and answering would have cost them two
+minutes.
+
+**So: file a `document-procurement` OPREQ.** It surfaces in the cockpit's "Requests to
+you" panel, where the operator can read it and refuse it outright; a positive answer needs
+the actual record supplied as an evidence file, per the resolution protocol above.
+
+**File one only when all four hold** — this stays narrow, or it becomes noise the operator
+learns to ignore:
+
+1. **Decision-relevant.** Name the candidate/axis and the specific gate the answer
+   unblocks, and state what you will do on each possible answer — including "the register
+   shows nothing", which must be a usable answer rather than a dead end.
+2. **Actually walled.** You reached the surface yourself this cycle and observed the
+   login/CAPTCHA, or it is one of the registers listed above. Poor search snippets are not
+   a wall — open the page in the browser first.
+3. **Precisely specified.** Name the register, the exact query key you would have typed
+   (ticaret unvanı / MERSİS no / vergi kimlik no / sicil no + müdürlük), and exactly which
+   fields you need back. Never "look this firm up for me."
+4. **Not already asked.** Search the ledger for an OPEN, RESOLVED or REFUSED request naming
+   the same firm and the same field. Re-asking is legitimate only when new information
+   changes the question, and the new request must say what changed.
+
+Never attempt the login, never solve the CAPTCHA, and never ask for or use the operator's
+own session — all of that stays forbidden exactly as before (BROWSER rule 6). The request
+is the sanctioned path, not a workaround for it.
+
 ### EXTERNAL ADJUDICATION — when the company must not rule on itself
 
 Standing rule (`memories/high-model-adjudication.md`, formalized 2026-07-27 after it
@@ -539,7 +586,9 @@ approved footer. All of those live in the Twilio send path. There is no second m
 Do not log into any service, do not enter credentials, and do not attempt EKAP authentication
 — EKAP access is operator-side by design, and you consume exported data, never a live
 session. If a task appears to need a login, that is an operator request, not something to
-solve yourself.
+solve yourself: file it per `### IDENTITY-WALLED PUBLIC REGISTERS` above, which also lists
+the registers already measured as walled (MERSİS, TTSG ilan görüntüleme, TTSG unvan
+sorgulama) so you do not spend a cycle rediscovering them.
 
 Every call is logged and connector activity alerts the operator in real time.
 
