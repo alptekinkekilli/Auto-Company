@@ -718,6 +718,15 @@ not silently drop them.
 7. **`Email queue` is never yours to set, and WTP is unchanged.** Every send is
    operator-triggered. Only a real, settled payment from a real, unrelated buyer is WTP
    evidence — a test-mode transaction never is, whatever the processor.
+8. **Template/asset lifecycle (operator correction, 2026-07-30).** New or revised outreach
+   templates and supporting assets are created as **Draft/Pending Operator Review and stay
+   there**. An operator approving a rendered PREVIEW never implicitly promotes an Airtable
+   record: promotion of a new template to `Approved` — and any demotion of the template it
+   supersedes — happens only on a **separate, explicit operator statement authorizing both
+   actions by name**. Before asking for that statement, report the exact renders, record IDs,
+   current statuses, and diffs. Follow-up (Step-2) templates must carry **no `RANDEVU_URL` or
+   other operator-side-env dependency** — use a reply-based CTA (e.g. ask the recipient to
+   reply with the İKN) instead of a booking link.
 
 ## WORK CYCLE
 
