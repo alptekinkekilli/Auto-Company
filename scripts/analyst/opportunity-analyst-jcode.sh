@@ -150,26 +150,14 @@ PY
 # Extract the final assistant text from an ndjson stream into a file.
 # The `done` event's .text is the whole final message; `-o`-style output files
 # do not exist in jcode. Exit 1 (leaving the output empty) if no done event.
+# Delegates to the ONE extractor (scripts/core/jcode-final-text.py). This used to read
+# `done.text` directly, which is the last text BLOCK rather than the answer — measured
+# 2026-07-31. It never bit the analyst (its 42k-char reports came through done.text
+# whole, and the <200-char guard would not have caught a half-lost 42k report either),
+# but the failure is silent by construction, so both callers now share one reading.
 extract_final_text() { # $1=ndjson file  $2=out file
-  python3 - "$1" "$2" <<'PY'
-import json, sys
-src, dst = sys.argv[1], sys.argv[2]
-done = None
-with open(src, encoding="utf-8", errors="replace") as fh:
-    for line in fh:
-        line = line.strip()
-        if not line.startswith("{"):
-            continue
-        try:
-            ev = json.loads(line)
-        except Exception:
-            continue
-        if ev.get("type") == "done":
-            done = ev
-text = (done or {}).get("text") or ""
-open(dst, "w", encoding="utf-8").write(text)
-sys.exit(0 if text.strip() else 1)
-PY
+  python3 "$APP/scripts/core/jcode-final-text.py" "$1" > "$2" 2>/dev/null
+  [ -s "$2" ]
 }
 
 log_run_cost() { # $1=ndjson file $2=label — visibility only, never gating

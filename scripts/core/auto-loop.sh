@@ -1490,14 +1490,12 @@ run_jcode_cycle() {
 
     OUTPUT=$(tail -c 4000 "$output_file" 2>/dev/null || true)
 
-    # Final assistant text from the `done` event; fall back to the last agent message.
+    # Final assistant text. NOT `done.text` alone — that is the last text BLOCK, not the
+    # answer (measured: a two-line reply came back as its second line only). The shared
+    # extractor keeps the longer of done.text and the concatenated deltas.
     RESULT_MESSAGE=""
-    if command -v jq >/dev/null 2>&1; then
-        RESULT_MESSAGE=$(jq -r 'select(.type=="done") | .message // .text // empty' \
-            "$events_file" 2>/dev/null | tail -1 || true)
-        [ -z "$RESULT_MESSAGE" ] && RESULT_MESSAGE=$(jq -r \
-            'select(.type=="agent_message") | .message // .text // empty' \
-            "$events_file" 2>/dev/null | tail -1 || true)
+    if [ -x "$PROJECT_DIR/scripts/core/jcode-final-text.py" ]; then
+        RESULT_MESSAGE=$(python3 "$PROJECT_DIR/scripts/core/jcode-final-text.py" "$events_file" 2>/dev/null || true)
     fi
 
     # Cost: never silently zero. The adapter prices unknown models conservatively and
