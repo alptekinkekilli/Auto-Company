@@ -61,6 +61,18 @@ OVERRIDES: dict[str, dict] = {
         "headers": {"Authorization": "Bearer ${LINEAR_API_KEY}"},
         "_why": "community server's schema is rejected by the OpenAI API",
     },
+    # The community `airtable-mcp-server` package does not start at all in the trixie
+    # image: `Cannot find module 'hono/ws'` from its own dependency tree (measured
+    # 2026-07-31). jcode reports no error for a server that fails to launch — the model
+    # simply has no Airtable tools, which for this company is the single most-used write
+    # surface. Airtable's hosted endpoint (already used by the Codex CLI in production)
+    # starts cleanly through the same mcp-remote bridge; verified by listing bases from
+    # inside a cycle and getting the real base name back.
+    "airtable": {
+        "url": "https://mcp.airtable.com/mcp",
+        "headers": {"Authorization": "Bearer ${AIRTABLE_API_KEY}"},
+        "_why": "community npx package fails to start (broken dep) and jcode reports no error",
+    },
 }
 
 

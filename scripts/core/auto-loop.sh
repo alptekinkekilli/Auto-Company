@@ -2200,7 +2200,29 @@ print(",".join(sorted(k for k,v in srv.items() if isinstance(v,dict) and v.get("
         echo "       Regenerate with scripts/core/jcode-mcp-config.py, or set LOOP_HARNESS=cli." >&2
         exit 1
     fi
-    log "Harness MCP: $_mcp_have (all required present)"
+    log "Harness MCP config: $_mcp_have (all required present in the file)"
+
+    # …and a config is not a capability. Ask jcode itself, once, whether those servers
+    # are actually reachable — a server that fails to launch produces NO error from
+    # jcode, just a model with fewer tools (measured: the community airtable package
+    # died on a broken dependency while every file-level check passed).
+    # JCODE_MCP_PROBE=0 skips it; that is for a deliberate offline boot, and it logs.
+    if [ "${JCODE_MCP_PROBE:-1}" = "1" ] && [ -x "$PROJECT_DIR/scripts/core/jcode-mcp-probe.sh" ]; then
+        _probe_out="$(PROJECT_DIR="$PROJECT_DIR" JCODE_BIN="$JCODE_BIN" \
+            JCODE_MCP_REQUIRED="$_mcp_required" \
+            bash "$PROJECT_DIR/scripts/core/jcode-mcp-probe.sh" 2>&1)"
+        _probe_rc=$?
+        if [ "$_probe_rc" -ne 0 ]; then
+            echo "Error: jcode MCP RUNTIME probe failed (rc=$_probe_rc)" >&2
+            printf '%s\n' "$_probe_out" >&2
+            echo "       The config lists the servers; jcode cannot actually reach them." >&2
+            echo "       A cycle would run with fewer tools and no error. Refusing to start." >&2
+            exit 1
+        fi
+        log "Harness MCP runtime: ${_probe_out#MCP_PROBE_OK: }"
+    else
+        log "WARNING: jcode MCP runtime probe SKIPPED — server reachability is unproven"
+    fi
 fi
 engine_version=$("$RESOLVED_ENGINE_BIN" --version 2>/dev/null | head -n1 || true)
 case "$RESOLVED_ENGINE_BIN" in
