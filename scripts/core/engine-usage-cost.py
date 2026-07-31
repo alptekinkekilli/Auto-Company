@@ -1,0 +1,158 @@
+#!/usr/bin/env python3
+"""engine-usage-cost — token usage -> notional USD at Anthropic list prices.
+
+Why this exists (jcode migration, gate 3): `claude -p --output-format json`
+reports `total_cost_usd` and the APP-263 four-gate budget ledger is fed from
+it. jcode reports token counts only (`done.usage` in --ndjson), so the ledger
+needs this adapter to keep the gates seeing real numbers. A budget gate that
+silently reads zero is not a brake — hence the conservative-unknown design:
+an unknown model is priced at the most expensive known row times a safety
+factor, loudly flagged, never zero. Set STRICT=1 to hard-fail instead.
+
+Input (choose one):
+  --usage-json '<json>'   usage object (Claude API field names)
+  --ndjson-file PATH      jcode --ndjson event stream. ALL `tokens` events are
+                          SUMMED — measured 2026-07-31: `done.usage` carries
+                          the LAST request only, so trusting it on a
+                          multi-tool cycle undercounts by the whole agentic
+                          loop. The `done` event is used only for the model
+                          name (it records what ACTUALLY ran, including
+                          jcode's silent fallback on an unknown -m).
+Output: one JSON line:
+  {"model":..., "cost_usd":..., "estimated":false, "basis":"..."}
+Exit codes: 0 ok; 2 bad input; 3 unknown model under STRICT=1.
+
+Verified 2026-07-31 against claude CLI's own total_cost_usd / modelUsage on
+live haiku-4-5 and sonnet-5 calls (see jcode-pilot acceptance log).
+"""
+
+import argparse
+import json
+import os
+import sys
+
+# USD per MTok: (input, output). Cache multipliers are Anthropic-standard and
+# uniform across models: write(5m)=1.25x input, write(1h)=2x input,
+# read=0.1x input. Keep this table SHORT and verified — an entry here is a
+# claim the validator has checked against claude CLI's own accounting.
+PRICES = {
+    "claude-sonnet-5":            (3.00, 15.00),
+    "claude-sonnet-5-20250929":   (3.00, 15.00),
+    "claude-haiku-4-5":           (1.00, 5.00),
+    "claude-haiku-4-5-20251001":  (1.00, 5.00),
+}
+CACHE_W_5M, CACHE_W_1H, CACHE_R = 1.25, 2.00, 0.10
+# Aggregate cache_creation with no TTL breakdown (jcode's shape) is priced at
+# the 1h rate: measured 2026-07-31 — claude CLI writes ephemeral_1h and its
+# own costUSD matches 2.0x exactly (1.25x was off by the full write volume).
+# Correct for this stack AND conservative if a 5m write ever slips through.
+CACHE_W_DEFAULT = CACHE_W_1H
+# Unknown-model fallback: max known input/output row times this factor.
+CONSERVATIVE_FACTOR = 5.0
+
+
+def cost_for(model: str, u: dict) -> dict:
+    inp = int(u.get("input_tokens", 0))
+    out = int(u.get("output_tokens", 0))
+    c_r = int(u.get("cache_read_input_tokens", 0))
+    c_w = int(u.get("cache_creation_input_tokens", 0))
+    # claude CLI sometimes breaks cache_creation down by TTL; honor it.
+    cc = u.get("cache_creation") or {}
+    w5 = int(cc.get("ephemeral_5m_input_tokens", 0))
+    w1 = int(cc.get("ephemeral_1h_input_tokens", 0))
+    if w5 or w1:
+        c_w = 0  # priced via the breakdown instead
+
+    known = model in PRICES
+    if known:
+        p_in, p_out = PRICES[model]
+        estimated = False
+    else:
+        if os.environ.get("STRICT") == "1":
+            print(f"unknown model {model!r} and STRICT=1", file=sys.stderr)
+            sys.exit(3)
+        p_in = max(p[0] for p in PRICES.values()) * CONSERVATIVE_FACTOR
+        p_out = max(p[1] for p in PRICES.values()) * CONSERVATIVE_FACTOR
+        estimated = True
+
+    usd = (
+        inp * p_in
+        + out * p_out
+        + c_r * p_in * CACHE_R
+        + c_w * p_in * CACHE_W_DEFAULT
+        + w5 * p_in * CACHE_W_5M
+        + w1 * p_in * CACHE_W_1H
+    ) / 1_000_000
+    return {
+        "model": model,
+        "cost_usd": round(usd, 8),
+        "estimated": estimated,
+        "basis": "list-price table v1"
+        + ("" if known else f" (UNKNOWN MODEL — max row x{CONSERVATIVE_FACTOR})"),
+    }
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--model", default=None)
+    src = ap.add_mutually_exclusive_group(required=True)
+    src.add_argument("--usage-json")
+    src.add_argument("--ndjson-file")
+    args = ap.parse_args()
+
+    if args.usage_json:
+        if not args.model:
+            print("--model is required with --usage-json", file=sys.stderr)
+            return 2
+        try:
+            usage = json.loads(args.usage_json)
+        except json.JSONDecodeError as e:
+            print(f"bad usage json: {e}", file=sys.stderr)
+            return 2
+        model = args.model
+    else:
+        done = None
+        totals = {"input_tokens": 0, "output_tokens": 0,
+                  "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0}
+        tokens_events = 0
+        try:
+            with open(args.ndjson_file, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        ev = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if ev.get("type") == "tokens":
+                        tokens_events += 1
+                        totals["input_tokens"] += int(ev.get("input", 0))
+                        totals["output_tokens"] += int(ev.get("output", 0))
+                        totals["cache_read_input_tokens"] += int(ev.get("cache_read_input", 0))
+                        totals["cache_creation_input_tokens"] += int(ev.get("cache_creation_input", 0))
+                    elif ev.get("type") == "done":
+                        done = ev
+        except OSError as e:
+            print(f"cannot read ndjson: {e}", file=sys.stderr)
+            return 2
+        if tokens_events == 0:
+            # Fall back to done.usage (single-request runs emit it too), but
+            # never silently produce a zero-cost result.
+            if done and isinstance(done.get("usage"), dict):
+                usage = done["usage"]
+            else:
+                print("no tokens events and no done.usage in ndjson", file=sys.stderr)
+                return 2
+        else:
+            usage = totals
+        # The done event records what ACTUALLY ran (jcode silently falls back
+        # to its default model on an unknown -m). Trust it unless overridden.
+        model = args.model or (done or {}).get("model") or "unknown"
+
+    print(json.dumps(cost_for(model, usage)))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
