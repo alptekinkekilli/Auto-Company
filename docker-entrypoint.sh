@@ -305,8 +305,48 @@ echo "[entrypoint] starting dashboard on 0.0.0.0:${DASHBOARD_PORT}"
 python3 dashboard/server.py --host 0.0.0.0 --port "$DASHBOARD_PORT" &
 DASH_PID=$!
 
+# --- jcode harness provisioning (only when the loop will actually use it) ---------
+# Three things jcode needs that the CLIs do not, each one a SILENT capability loss if
+# missing rather than an error:
+#   1. MCP config. jcode reads only its own global ~/.jcode/mcp.json (it does not read
+#      the repo's .mcp.json in v0.64.2) and speaks stdio only. Without this the cycles
+#      still run — with no Airtable, Linear, Context7 or browser tools at all.
+#   2. Claude credentials in jcode's shape: the sk-ant-oat token wrapped in the
+#      claudeAiOauth JSON blob, plus the one-time consent that lets jcode use Claude
+#      Code's native credentials.
+#   3. features off. jcode's local embedding/memory subsystem costs ~270MB of peak RSS
+#      and carries context between runs; the loop's only cross-cycle memory must stay
+#      consensus.md.
+if [ "${LOOP_HARNESS:-cli}" = "jcode" ]; then
+    export JCODE_NO_TELEMETRY=1
+    JHOME="${JCODE_HOME:-$HOME/.jcode}"
+    mkdir -p "$JHOME" && chmod 700 "$JHOME"
+
+    if python3 /app/scripts/core/jcode-mcp-config.py --src /app/.mcp.json --dest "$JHOME/mcp.json"; then
+        echo "[entrypoint] jcode MCP config written"
+    else
+        echo "[entrypoint] WARNING: jcode MCP config generation failed — cycles would run without external tools" >&2
+    fi
+
+    case "${CLAUDE_CODE_OAUTH_TOKEN:-}" in
+        sk-ant-oat*)
+            _exp=$(( ($(date +%s) + 86400*300) * 1000 ))
+            CLAUDE_CODE_OAUTH_TOKEN=$(python3 -c 'import json,os,sys; print(json.dumps({"claudeAiOauth":{"accessToken":os.environ["CLAUDE_CODE_OAUTH_TOKEN"],"refreshToken":"","expiresAt":int(sys.argv[1]),"scopes":["user:inference"],"subscriptionType":"max"}}))' "$_exp")
+            export CLAUDE_CODE_OAUTH_TOKEN
+            echo "[entrypoint] jcode: wrapped Claude oat token"
+            ;;
+    esac
+
+    # Idempotent: only append what is absent, never rewrite a config the operator or a
+    # login flow has already shaped.
+    grep -q claude_code_native_credentials "$JHOME/config.toml" 2>/dev/null || \
+        printf '[auth]\ntrusted_external_sources = ["claude_code_native_credentials"]\n' >> "$JHOME/config.toml"
+    grep -q '^\[features\]' "$JHOME/config.toml" 2>/dev/null || \
+        printf '\n[features]\nmemory = false\nswarm = false\nmermaid = false\n\n[agents]\nmemory_sidecar_enabled = false\n' >> "$JHOME/config.toml"
+fi
+
 # --- autonomous loop (background so we can wait on both) ---
-echo "[entrypoint] starting auto-loop (engine=${ENGINE:-claude})"
+echo "[entrypoint] starting auto-loop (engine=${ENGINE:-claude} harness=${LOOP_HARNESS:-cli})"
 export ENGINE="${ENGINE:-claude}"
 export CLAUDE_PERMISSION_MODE="${CLAUDE_PERMISSION_MODE:-bypassPermissions}"
 ./scripts/core/auto-loop.sh &
