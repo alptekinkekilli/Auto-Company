@@ -63,7 +63,10 @@ fail() { log "[$STAMP] ANALYST_FAILED: $1"; echo "ANALYST_FAILED: $1" >&2; exit 
 # --- preconditions ---
 for f in "$REGISTRY" "$CONSENSUS" "$SKILL_MD"; do [ -f "$f" ] || fail "missing input: $f"; done
 [ -x "$JCODE_BIN" ] || fail "jcode not found"
-[ -s "$HOME/.jcode/auth.json" ] || fail "jcode auth.json missing (run: jcode login --provider $PROVIDER — operator step, gate 4)"
+# Provider auth lands in a PROVIDER-NAMED file (measured gate 4, 2026-07-31:
+# `jcode login openai` writes ~/.jcode/openai-auth.json — there is no auth.json).
+[ -s "$HOME/.jcode/${PROVIDER}-auth.json" ] \
+  || fail "jcode ${PROVIDER}-auth.json missing (run: jcode login --provider $PROVIDER — operator step, gate 4)"
 grep -q claude_code_native_credentials "$HOME/.jcode/config.toml" 2>/dev/null || {
   mkdir -p "$HOME/.jcode"
   printf '[auth]\ntrusted_external_sources = ["claude_code_native_credentials"]\n' >> "$HOME/.jcode/config.toml"

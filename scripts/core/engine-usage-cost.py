@@ -51,15 +51,21 @@ CACHE_W_DEFAULT = CACHE_W_1H
 CONSERVATIVE_FACTOR = 5.0
 
 
+def _n(v) -> int:
+    """None-safe int. OpenAI-provider tokens events carry cache_creation_input:
+    null (no cache-write concept there) — measured 2026-07-31; int(None) raises."""
+    return int(v or 0)
+
+
 def cost_for(model: str, u: dict) -> dict:
-    inp = int(u.get("input_tokens", 0))
-    out = int(u.get("output_tokens", 0))
-    c_r = int(u.get("cache_read_input_tokens", 0))
-    c_w = int(u.get("cache_creation_input_tokens", 0))
+    inp = _n(u.get("input_tokens"))
+    out = _n(u.get("output_tokens"))
+    c_r = _n(u.get("cache_read_input_tokens"))
+    c_w = _n(u.get("cache_creation_input_tokens"))
     # claude CLI sometimes breaks cache_creation down by TTL; honor it.
     cc = u.get("cache_creation") or {}
-    w5 = int(cc.get("ephemeral_5m_input_tokens", 0))
-    w1 = int(cc.get("ephemeral_1h_input_tokens", 0))
+    w5 = _n(cc.get("ephemeral_5m_input_tokens"))
+    w1 = _n(cc.get("ephemeral_1h_input_tokens"))
     if w5 or w1:
         c_w = 0  # priced via the breakdown instead
 
@@ -127,10 +133,10 @@ def main() -> int:
                         continue
                     if ev.get("type") == "tokens":
                         tokens_events += 1
-                        totals["input_tokens"] += int(ev.get("input", 0))
-                        totals["output_tokens"] += int(ev.get("output", 0))
-                        totals["cache_read_input_tokens"] += int(ev.get("cache_read_input", 0))
-                        totals["cache_creation_input_tokens"] += int(ev.get("cache_creation_input", 0))
+                        totals["input_tokens"] += _n(ev.get("input"))
+                        totals["output_tokens"] += _n(ev.get("output"))
+                        totals["cache_read_input_tokens"] += _n(ev.get("cache_read_input"))
+                        totals["cache_creation_input_tokens"] += _n(ev.get("cache_creation_input"))
                     elif ev.get("type") == "done":
                         done = ev
         except OSError as e:
