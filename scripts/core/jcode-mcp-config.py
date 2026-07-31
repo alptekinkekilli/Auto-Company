@@ -41,6 +41,11 @@ VAR_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 
 # Per-server overrides applied ONLY on the jcode path, each with a measured reason.
 # These are not preference: without them a provider is simply unusable.
+# The set a cycle cannot work without. Writing a config that lacks any of these is a
+# failure, not a degraded success: the loop would keep running and quietly stop being
+# able to read or write the company's own state.
+REQUIRED = ("airtable", "linear", "context7", "browseros")
+
 OVERRIDES: dict[str, dict] = {
     # The community `@tacticlaunch/mcp-linear` package publishes a tool whose JSON
     # schema uses `contains` (linear_createManagedOAuthApplication.grantTypes). The
@@ -157,13 +162,37 @@ def main() -> int:
         print(json.dumps(masked, indent=2))
         return 0
 
+    missing = [n for n in REQUIRED if n not in out]
+    if missing:
+        print(f"[jcode-mcp] REQUIRED server(s) missing from the result: {','.join(missing)} — "
+              "refusing to write a partial config", file=sys.stderr)
+        return 3
+
     dest = Path(args.dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
-    # 0600: the file holds API keys in cleartext, same as CODEX_HOME/auth.json.
-    fd = os.open(dest, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8") as fh:
-        json.dump(payload, fh, indent=2)
-    print(f"[jcode-mcp] wrote {len(out)} servers -> {dest}", file=sys.stderr)
+    # Write to a temp file in the SAME directory, then rename. rename(2) is atomic, so a
+    # reader (jcode starting a cycle) sees either the previous complete config or the
+    # new complete one — never a half-written file that would parse as "fewer servers"
+    # and silently produce a tool-less cycle. O_TRUNC on the real path could do exactly
+    # that if the process died mid-write.
+    tmp = dest.with_name(dest.name + f".tmp.{os.getpid()}")
+    try:
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, indent=2)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.chmod(tmp, 0o600)   # explicit: O_CREAT honours umask, and a pre-existing
+                               # file's looser mode would otherwise survive
+        os.replace(tmp, dest)
+    except OSError as e:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        print(f"[jcode-mcp] cannot write {dest}: {e}", file=sys.stderr)
+        return 3
+    print(f"[jcode-mcp] wrote {len(out)} servers -> {dest} (atomic)", file=sys.stderr)
     return 0
 
 

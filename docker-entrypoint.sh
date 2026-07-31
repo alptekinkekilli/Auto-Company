@@ -338,28 +338,11 @@ if [ "${LOOP_HARNESS:-cli}" = "jcode" ] || [ "${LOOP_HARNESS_CODEX:-cli}" = "jco
         echo "[entrypoint] WARNING: jcode MCP config generation failed — cycles would run without external tools" >&2
     fi
 
-    case "${CLAUDE_CODE_OAUTH_TOKEN:-}" in
-        sk-ant-oat*)
-            _exp=$(( ($(date +%s) + 86400*300) * 1000 ))
-            # `|| true` keeps a python failure from exiting the entrypoint; the empty
-            # value is then caught below and left unwrapped rather than crash-looping.
-            _wrapped=$(python3 -c 'import json,os,sys; print(json.dumps({"claudeAiOauth":{"accessToken":os.environ["CLAUDE_CODE_OAUTH_TOKEN"],"refreshToken":"","expiresAt":int(sys.argv[1]),"scopes":["user:inference"],"subscriptionType":"max"}}))' "$_exp" 2>/dev/null || true)
-            if [ -n "$_wrapped" ]; then
-                CLAUDE_CODE_OAUTH_TOKEN="$_wrapped"
-                export CLAUDE_CODE_OAUTH_TOKEN
-                echo "[entrypoint] jcode: wrapped Claude oat token"
-            else
-                echo "[entrypoint] WARNING: could not wrap the Claude token for jcode — claude cycles will fail auth" >&2
-            fi
-            unset _wrapped
-            ;;
-        *)
-            # Not an oat token (a JSON blob already, or something else). Say so: jcode
-            # gets the raw value and any failure would otherwise appear only as
-            # per-cycle 401s with no boot-time signal.
-            echo "[entrypoint] NOTE: CLAUDE_CODE_OAUTH_TOKEN is not an sk-ant-oat value — passing it through unwrapped" >&2
-            ;;
-    esac
+    # NOTE: the loop no longer wraps the token here. The claudeAiOauth blob is built
+    # inside each jcode subprocess (run_jcode_cycle) so the loop's own environment keeps
+    # the RAW sk-ant-oat value. That is what makes the LOOP_HARNESS=cli rollback work
+    # without a redeploy: the CLI needs the raw token, and a globally-wrapped blob would
+    # have turned the rollback path into per-cycle 401s.
 
     # Idempotent: only append what is absent, never rewrite a config the operator or a
     # login flow has already shaped.

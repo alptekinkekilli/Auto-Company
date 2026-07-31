@@ -48,11 +48,13 @@ HARNESS="$SB/harness.sh"
     echo "TOTAL_DAILY_BUDGET_USD=\"\${TOTAL_DAILY_BUDGET_USD:-}\"; TOTAL_WEEKLY_BUDGET_USD=\"\${TOTAL_WEEKLY_BUDGET_USD:-}\""
     echo "WINDOW_BUDGET_USD=\"\${WINDOW_BUDGET_USD:-}\"; TOTAL_BUDGET_USD=\"\${TOTAL_BUDGET_USD:-}\""
     echo 'log() { echo "$@"; }'
+    echo "LOOP_HOLD_FILE=\"$SB/LOOP_HOLD\""
+    echo 'latch_budget_hold() { echo "LATCHED: $1" > "$LOOP_HOLD_FILE"; }'
     echo 'resolve_codex_bin() { echo /bin/true; }'
     echo 'codex_window_count() { echo 0; }'
     echo '_router_persist() { echo "$1" > "$ROUTER_STATE_FILE"; }'
     for f in _budget_now _utc_day_start _fmt_utc _window_anchor_epoch window_spend \
-             record_total_spend claude_spend_since codex_ledger_spend_since _max_usd \
+             record_total_spend claude_spend_since codex_ledger_spend_since _max_usd _sum_usd \
              _codex_spend_since \
              _codex_spend_entries_since _weekly_resume_epoch _notify_gate_block_once \
              evaluate_budget_gates select_cycle_engine; do

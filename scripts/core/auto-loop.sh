@@ -195,6 +195,25 @@ RESOLVED_ENGINE_BIN=""
 # so the router, tier ladder, budget gates and fallback logic keep working unchanged.
 # Rolling back is one variable — set LOOP_HARNESS=cli and restart; the CLIs stay in
 # the image on purpose until jcode has a clean observation window.
+# --- jcode tool surface (mechanical, not policy) -------------------------------
+# CORRECTION: an earlier revision of this file claimed jcode has no allowlist
+# mechanism. It does — measured 2026-07-31: `--tools` (explicit allow-list),
+# `--disable-base-tools`, `--disabled-tools`, `--tool-profile`. `--disabled-tools`
+# filters NAMESPACED MCP tools too, verified by running a cycle with
+# mcp__airtable__delete_records disabled and having the model report it absent from
+# its own tool list. So the Codex CLI's `enabled_tools` control has a real equivalent
+# here and the migration does not have to downgrade it to policy.
+#
+# Base tools are an explicit ALLOW list: everything not named is gone. Dropped on
+# purpose — `gmail` (a mail path outside the audited Twilio/ForwardEmail send rail),
+# `browser` (the company reaches the browser only through the gateway-locked browseros
+# MCP), `swarm`/`selfdev`/`memory`/`side_panel`/`bg`/`initiative`/`open` (no cycle uses
+# them; `memory` would also give cross-cycle state that must live only in consensus.md).
+JCODE_TOOLS_ALLOW="${JCODE_TOOLS_ALLOW:-Bash,Read,Write,Edit,multiedit,apply_patch,patch,ls,agentgrep,todo,batch,webfetch,websearch,Skill,mcp,discover_tools}"
+# Destructive MCP tools are named individually, mirroring what the Codex CLI's
+# enabled_tools allowlist already excludes for the same servers.
+JCODE_TOOLS_DENY="${JCODE_TOOLS_DENY:-mcp__airtable__delete_records,mcp__airtable__delete_table,mcp__linear__delete_attachment,mcp__linear__delete_comment,mcp__linear__delete_diff_comment,mcp__linear__delete_status_update}"
+
 CURRENT_ENGINE_PID=""
 LOOP_HARNESS="$(printf '%s' "${LOOP_HARNESS:-cli}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
 [ -z "$LOOP_HARNESS" ] && LOOP_HARNESS="cli"
@@ -434,7 +453,15 @@ record_total_spend() {
        && awk -v r="$run_id" '$3 == r { found=1; exit } END { exit !found }' "$TOTAL_SPEND_LEDGER" 2>/dev/null; then
         return 0
     fi
-    printf '%s %s %s %s\n' "$(_budget_now)" "$engine" "$run_id" "$usd" >> "$TOTAL_SPEND_LEDGER" 2>/dev/null || true
+    # An unwritable ledger is a LOST CHARGE: the money was spent, the gates will never
+    # see it, and every later period reads low. `|| true` used to swallow exactly that.
+    # Latch the loop instead — a company that cannot account for its spend must stop
+    # spending, not keep going quietly.
+    if ! printf '%s %s %s %s\n' "$(_budget_now)" "$engine" "$run_id" "$usd" >> "$TOTAL_SPEND_LEDGER" 2>/dev/null; then
+        log "[BUDGET-FAIL-CLOSED] cannot write $TOTAL_SPEND_LEDGER — \$$usd on $engine is unaccounted; latching the loop"
+        latch_budget_hold "spend ledger unwritable (\$$usd on $engine lost from every period total)"
+        return 1
+    fi
     # Retention prune (90d default) — enough history for the rolling 7-day gate
     # and for auditing previous periods, per APP-263.
     local cutoff
@@ -443,17 +470,21 @@ record_total_spend() {
         && mv "$TOTAL_SPEND_LEDGER.tmp" "$TOTAL_SPEND_LEDGER" 2>/dev/null || true
 }
 
-# Codex notional spend since an epoch, from the cumulative ledger. Only the jcode
-# harness writes codex rows here; on the CLI path this is legitimately 0 and the
-# ccusage figure is the real one. Callers take the MAX of the two so a mixed window
-# (some CLI cycles, some jcode cycles) can never read lower than either source alone —
-# a budget reader that under-counts is not a brake.
+# Codex notional spend since an epoch, from the cumulative ledger. ONLY jcode-harness
+# codex cycles are written here; CLI-harness codex cycles are accounted for by ccusage
+# reading CODEX_HOME session files, which jcode never writes. The two sources are
+# therefore DISJOINT — each sees exactly the cycles the other cannot — so callers must
+# ADD them. An earlier revision took max(), which silently discarded the smaller
+# source: under the mixed configuration (the shipping default) that means every
+# CLI-codex cycle in a window where jcode-codex spend was higher, and vice versa,
+# simply vanished from the gate.
 codex_ledger_spend_since() {
     [ -f "$TOTAL_SPEND_LEDGER" ] || { echo "0.0000"; return; }
     awk -v c="$1" '$1 >= c && $2 == "codex" { s += $4 } END { printf "%.4f", s + 0 }' \
         "$TOTAL_SPEND_LEDGER" 2>/dev/null || echo "0.0000"
 }
 
+_sum_usd() { awk -v a="$1" -v b="$2" 'BEGIN { printf "%.4f", a + 0 + b + 0 }'; }
 _max_usd() { awk -v a="$1" -v b="$2" 'BEGIN { printf "%.4f", (a+0 > b+0 ? a+0 : b+0) }'; }
 
 # Claude notional spend since an epoch, from the cumulative ledger.
@@ -991,15 +1022,34 @@ evaluate_budget_gates() {
     BG_CODEX5="${x5_raw%% *}"; x5_stale="${x5_raw##* }"
     xd_raw="$(_codex_spend_since "$day_start" daily)"
     xw_raw="$(_codex_spend_since "$week_start" weekly)"
-    # Take the higher of ccusage (CLI cycles) and the ledger (jcode cycles) for every
-    # codex figure. Neither source sees the other's cycles, and a window can legally
-    # contain both across a cutover or a rollback.
+    # SUM the two disjoint codex sources: ccusage (CLI-harness cycles, via CODEX_HOME)
+    # + the total ledger (jcode-harness cycles). A window legitimately contains both
+    # under the mixed configuration, and neither source can see the other's cycles.
     local xd_usd xw_usd
-    BG_CODEX5="$(_max_usd "$BG_CODEX5" "$(codex_ledger_spend_since "$anchor")")"
-    xd_usd="$(_max_usd "${xd_raw%% *}" "$(codex_ledger_spend_since "$day_start")")"
-    xw_usd="$(_max_usd "${xw_raw%% *}" "$(codex_ledger_spend_since "$week_start")")"
+    BG_CODEX5="$(_sum_usd "$BG_CODEX5" "$(codex_ledger_spend_since "$anchor")")"
+    xd_usd="$(_sum_usd "${xd_raw%% *}" "$(codex_ledger_spend_since "$day_start")")"
+    xw_usd="$(_sum_usd "${xw_raw%% *}" "$(codex_ledger_spend_since "$week_start")")"
     BG_DAILY="$(awk -v a="$(claude_spend_since "$day_start")" -v b="$xd_usd" 'BEGIN { printf "%.4f", a + b }')"
     BG_WEEKLY="$(awk -v a="$(claude_spend_since "$week_start")" -v b="$xw_usd" 'BEGIN { printf "%.4f", a + b }')"
+
+    # Every figure the gates compare MUST be a number. An empty or non-numeric value
+    # renders as `$/$100` and compares as 0 — a gate that reads blank is a gate that is
+    # open. Causes seen: a missing helper function, ccusage emitting nothing, a partial
+    # read. Latch rather than guess: the loop cannot know whether blank means "nothing
+    # spent" or "we lost the record of what was spent".
+    local _bg _bad_bg=""
+    for _bg in BG_CLAUDE5 BG_CODEX5 BG_DAILY BG_WEEKLY; do
+        case "${!_bg}" in
+            ''|*[!0-9.]*) _bad_bg="$_bad_bg $_bg=<${!_bg}>" ;;
+        esac
+    done
+    if [ -n "$_bad_bg" ]; then
+        log "[BUDGET-FAIL-CLOSED] non-numeric budget figure(s):$_bad_bg — cannot evaluate the gates; latching"
+        latch_budget_hold "budget figure unreadable:$_bad_bg"
+        BG_CLAUDE_OK=0; BG_CODEX_OK=0
+        BG_TOTAL_GATE="${BG_TOTAL_GATE:-UNREADABLE}"
+        return 0
+    fi
 
     local stale_note=""
     [ "$x5_stale" = "1" ] && stale_note=" (codex figures STALE — ccusage failed, last known values reused; a stale read never lowers an observed total)"
@@ -1512,12 +1562,32 @@ run_jcode_cycle() {
     set -m
     (
         cd "$PROJECT_DIR" || exit 1
+        # The claudeAiOauth wrapper is built HERE, inside the subprocess, and never in
+        # the loop's own environment. Wrapping it globally (the entrypoint's first
+        # design) leaves every other consumer — the CLI on a fallback or rollback, ops
+        # scripts, a cycle shelling `claude` — holding a JSON blob where an
+        # `sk-ant-oat…` string is expected, which fails as an opaque 401 much later.
+        case "${CLAUDE_CODE_OAUTH_TOKEN:-}" in
+            sk-ant-oat*)
+                _jc_exp=$(( ($(date +%s) + 86400*300) * 1000 ))
+                _jc_tok=$(python3 -c 'import json,os,sys; print(json.dumps({"claudeAiOauth":{"accessToken":os.environ["CLAUDE_CODE_OAUTH_TOKEN"],"refreshToken":"","expiresAt":int(sys.argv[1]),"scopes":["user:inference"],"subscriptionType":"max"}}))' "$_jc_exp" 2>/dev/null || true)
+                [ -n "$_jc_tok" ] && export CLAUDE_CODE_OAUTH_TOKEN="$_jc_tok"
+                unset _jc_tok _jc_exp
+                ;;
+        esac
         [ -n "$effort" ] && case "$provider" in
             openai) export JCODE_OPENAI_REASONING_EFFORT="$effort" ;;
             *)      export JCODE_ANTHROPIC_REASONING_EFFORT="$effort" ;;
         esac
         local cmd=("$JCODE_BIN" "-p" "$provider" "-C" "$PROJECT_DIR")
         [ -n "$MODEL" ] && cmd+=("-m" "$MODEL")
+        # Mechanical tool surface. --disable-base-tools makes the allow list total:
+        # a tool added by a future jcode version is absent until someone names it,
+        # which is the safe direction for an unattended loop.
+        if [ -n "$JCODE_TOOLS_ALLOW" ]; then
+            cmd+=("--disable-base-tools" "--tools" "$JCODE_TOOLS_ALLOW")
+        fi
+        [ -n "$JCODE_TOOLS_DENY" ] && cmd+=("--disabled-tools" "$JCODE_TOOLS_DENY")
         cmd+=("run" "$prompt" "--quiet" "--no-update" "--no-selfdev" "--ndjson")
         "${cmd[@]}"
     ) > "$events_file" 2> "$output_file" &
@@ -1715,19 +1785,44 @@ run_claude_cycle_cli() {
 LOOP_HARNESS_CODEX="$(printf '%s' "${LOOP_HARNESS_CODEX:-cli}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
 [ -z "$LOOP_HARNESS_CODEX" ] && LOOP_HARNESS_CODEX="cli"
 
+# CYCLE_HARNESS_USED / CYCLE_PROVIDER_USED record what THIS cycle actually ran on.
+# Everything downstream — metadata parsing, cost extraction, ledger writes, telemetry —
+# must read these, never the configured LOOP_HARNESS/LOOP_HARNESS_CODEX globals. Under
+# the mixed configuration those globals do not describe any single cycle: a
+# claude=jcode + codex=cli boot produces both kinds, and a fallback produces one of
+# each WITHIN one loop iteration. Reading the global there would parse a CLI result
+# with the jcode branch (or vice versa) and mis-charge the ledger.
+CYCLE_HARNESS_USED=""
+CYCLE_PROVIDER_USED=""
+
 run_codex_cycle() {
-    if [ "$LOOP_HARNESS_CODEX" = "jcode" ]; then run_jcode_cycle "$1" openai
-    else run_codex_cycle_cli "$1"; fi
+    CYCLE_PROVIDER_USED="openai"
+    if [ "$LOOP_HARNESS_CODEX" = "jcode" ]; then
+        CYCLE_HARNESS_USED="jcode"; run_jcode_cycle "$1" openai
+    else
+        CYCLE_HARNESS_USED="cli"; run_codex_cycle_cli "$1"
+    fi
 }
 
 run_claude_cycle() {
-    if [ "$LOOP_HARNESS" = "jcode" ]; then run_jcode_cycle "$1" claude
-    else run_claude_cycle_cli "$1"; fi
+    CYCLE_PROVIDER_USED="claude"
+    if [ "$LOOP_HARNESS" = "jcode" ]; then
+        CYCLE_HARNESS_USED="jcode"; run_jcode_cycle "$1" claude
+    else
+        CYCLE_HARNESS_USED="cli"; run_claude_cycle_cli "$1"
+    fi
 }
 
 run_engine_cycle() {
     local prompt="$1"
     FALLBACK_USED=0
+    # Cleared every cycle. A stale JCODE_COST_JSON from the previous iteration would
+    # otherwise be charged to this one — and on a mixed boot the previous cycle may
+    # have been a different provider entirely, so the amount would be wrong AND
+    # attributed to the wrong engine.
+    JCODE_COST_JSON=""
+    CYCLE_HARNESS_USED=""
+    CYCLE_PROVIDER_USED=""
     # Budget-forced Codex override: at the Claude window cap, run this cycle on
     # Codex (a separate quota) instead of Claude so the company keeps working.
     if [ "$CYCLE_ENGINE_OVERRIDE" = "codex" ] && [ -n "$RESOLVED_CODEX_BIN" ]; then
@@ -1788,6 +1883,33 @@ run_engine_cycle() {
     esac
 }
 
+# --- mechanical hold ----------------------------------------------------------
+# A HOLD DIRECTIVE IS NOT A DEPLOYMENT LOCK. It is text the model is asked to honour:
+# it still runs a cycle, still spends, still writes. For a cutover — or for any state
+# where accounting is broken — the loop must be stopped by a mechanism that does not
+# depend on the model reading anything. This file is that mechanism.
+#
+# Two ways in: an operator writes it (cutover lock), or the loop latches it itself when
+# it can no longer measure what it spends (gate 4). Only an operator clears it.
+LOOP_HOLD_FILE="${LOOP_HOLD_FILE:-$LOG_DIR/LOOP_HOLD}"
+
+latch_budget_hold() { # $1=reason
+    {
+        printf 'latched %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        printf 'reason %s\n' "$1"
+        printf 'cleared_by operator only — rm %s after verifying the accounting is sound\n' "$LOOP_HOLD_FILE"
+    } > "$LOOP_HOLD_FILE" 2>/dev/null || true
+    if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+        bash "$SCRIPT_DIR/telegram-notify.sh" "🛑 Auto-Company LATCHED (mechanical hold): $1
+
+No further cycles will run. Clear only after verifying the accounting: rm $LOOP_HOLD_FILE" >/dev/null 2>&1 || true
+    fi
+}
+
+loop_hold_active() {
+    [ -f "$LOOP_HOLD_FILE" ]
+}
+
 # Did THIS cycle actually run on Codex? `$ENGINE` alone is the wrong question:
 # with router alternation (or a usage-limit fallback) the configured engine stays
 # `claude` while the cycle is routed to Codex. Three other sites below already
@@ -1822,13 +1944,24 @@ extract_cycle_metadata() {
     # through the Claude JSON parser would set CYCLE_COST to empty and silently stop
     # record_spend — the same class of failure as APP-240, where a mis-routed parser
     # took the whole loop down.
-    if [ "${LOOP_HARNESS:-cli}" = "jcode" ]; then
+    if [ "${CYCLE_HARNESS_USED:-}" = "jcode" ]; then
         RESULT_TEXT=$(printf '%s' "$RESULT_MESSAGE" | head -c 2000 || true)
         [ -z "$RESULT_TEXT" ] && RESULT_TEXT=$(printf '%s' "$OUTPUT" | head -c 2000 || true)
         if [ -n "$JCODE_COST_JSON" ] && command -v jq >/dev/null 2>&1; then
             local _c _est
             _c=$(printf '%s' "$JCODE_COST_JSON" | jq -r '.cost_usd // empty' 2>/dev/null || true)
             _est=$(printf '%s' "$JCODE_COST_JSON" | jq -r '.estimated // false' 2>/dev/null || true)
+            # A COMPLETED cycle that reports zero is not a free cycle — it is an
+            # unmetered one. Real causes seen or reachable: a token-field rename in a
+            # future jcode build (the adapter sums fields by name, so all-zero sums
+            # look like a valid $0), a stream truncated before the first tokens event,
+            # a provider that stopped reporting usage. Charging nothing would let the
+            # gates drift down forever, so treat it the same as no number at all.
+            if [ -n "$_c" ] && [ "$EXIT_CODE" -eq 0 ] \
+               && awk -v c="$_c" 'BEGIN { exit !(c + 0 == 0) }'; then
+                log "[COST] cycle completed but reports \$0 — unmetered, not free; failing it"
+                _c=""
+            fi
             if [ -n "$_c" ]; then
                 CYCLE_COST="$_c"
                 [ "$_est" = "true" ] && log "[COST] estimated (uncalibrated model) — $(printf '%s' "$JCODE_COST_JSON" | head -c 200)"
@@ -1848,7 +1981,7 @@ extract_cycle_metadata() {
             CYCLE_SUBTYPE="error"
             [ "$EXIT_CODE" -eq 0 ] && EXIT_CODE=1
         fi
-        CYCLE_TYPE="jcode_${ENGINE}"
+        CYCLE_TYPE="jcode_${CYCLE_PROVIDER_USED:-${ENGINE}}"
         if [ "$CYCLE_SUBTYPE" = "unknown" ]; then
             if [ "$EXIT_CODE" -eq 0 ]; then CYCLE_SUBTYPE="success"; else CYCLE_SUBTYPE="error"; fi
         fi
@@ -2038,14 +2171,36 @@ if [ "$LOOP_HARNESS" = "jcode" ]; then
     fi
     log "Harness preflight: all ladder models present in jcode catalog (codex harness: $LOOP_HARNESS_CODEX)"
     fi
-    # MCP is not optional for this company: cycles read and write Airtable and Linear.
-    # jcode reads only the global ~/.jcode/mcp.json, so a missing file is a silent
-    # capability loss, not an error — check it here where it is still loud.
-    if [ ! -s "${JCODE_HOME:-$HOME/.jcode}/mcp.json" ]; then
-        log "WARNING: ${JCODE_HOME:-$HOME/.jcode}/mcp.json missing — cycles will run WITHOUT Airtable/Linear/Context7/browser tools"
-    else
-        log "Harness MCP: $(python3 -c 'import json,sys;print(",".join(json.load(open(sys.argv[1]))["mcpServers"]))' "${JCODE_HOME:-$HOME/.jcode}/mcp.json" 2>/dev/null || echo unreadable)"
+    # MCP is FAIL-CLOSED. A cycle without Airtable/Linear is not a degraded cycle, it
+    # is a cycle that reads stale state and writes conclusions from it — worse than no
+    # cycle. This used to warn and continue; it now refuses to start, and the required
+    # set is exact so a partially-generated config cannot pass either.
+    _mcp_file="${JCODE_HOME:-$HOME/.jcode}/mcp.json"
+    _mcp_required="${JCODE_MCP_REQUIRED:-airtable,linear,context7,browseros}"
+    _mcp_have="$(python3 -c '
+import json,sys
+try:
+    d=json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit(1)
+srv=d.get("mcpServers") or {}
+if not isinstance(srv,dict) or not srv: sys.exit(1)
+# a server with no command is not a usable entry
+print(",".join(sorted(k for k,v in srv.items() if isinstance(v,dict) and v.get("command"))))
+' "$_mcp_file" 2>/dev/null || true)"
+    _mcp_missing=""
+    for _r in $(printf '%s' "$_mcp_required" | tr ',' ' '); do
+        printf '%s' ",$_mcp_have," | grep -q ",$_r," || _mcp_missing="$_mcp_missing $_r"
+    done
+    if [ -z "$_mcp_have" ] || [ -n "$_mcp_missing" ]; then
+        echo "Error: jcode MCP preflight FAILED — missing/unusable server(s):${_mcp_missing:- (config unreadable or empty)}" >&2
+        echo "       file: $_mcp_file" >&2
+        echo "       have: ${_mcp_have:-<none>} | required: $_mcp_required" >&2
+        echo "       A jcode cycle without these tools reads stale state and writes conclusions from it." >&2
+        echo "       Regenerate with scripts/core/jcode-mcp-config.py, or set LOOP_HARNESS=cli." >&2
+        exit 1
     fi
+    log "Harness MCP: $_mcp_have (all required present)"
 fi
 engine_version=$("$RESOLVED_ENGINE_BIN" --version 2>/dev/null | head -n1 || true)
 case "$RESOLVED_ENGINE_BIN" in
@@ -2206,6 +2361,19 @@ This is Cycle #$loop_count. Act decisively."
         continue
     fi
 
+    # Mechanical hold, checked immediately before the engine call and independent of
+    # anything the model reads. This is what a cutover locks with — a HOLD directive
+    # only asks the model to be idle, and an idle-asked cycle still starts an engine,
+    # still spends, and can still write.
+    if loop_hold_active; then
+        log "[LOOP-HOLD] Refusing to run Cycle #$loop_count — mechanical hold in place ($LOOP_HOLD_FILE):"
+        while IFS= read -r _hl; do log "[LOOP-HOLD]   $_hl"; done < "$LOOP_HOLD_FILE" 2>/dev/null || true
+        log "[LOOP-HOLD] Operator clears it by removing that file. The loop stays up and re-checks each interval."
+        save_state "held"
+        sleep "$LOOP_INTERVAL"
+        continue
+    fi
+
     if ! prompt_guardrails_intact "$FULL_PROMPT"; then
         log "[GUARDRAIL-MISSING] Refusing to run Cycle #$loop_count — the assembled prompt is missing: $MISSING_GUARDRAILS"
         log "[GUARDRAIL-MISSING] Not a crash: the loop stays up and will retry next interval. Fix PROMPT.md or the assembly, do NOT bypass this."
@@ -2258,7 +2426,10 @@ This is Cycle #$loop_count. Act decisively."
         # four APP-263 gates while the adapter's correct figure is dropped on the
         # floor: unbounded gpt-5.6-sol spend behind a [BUDGET] line reading $0.0000.
         # Found by the pre-deploy audit, not by testing — every cycle "worked".
-        if [ "$LOOP_HARNESS" = "jcode" ]; then
+        # Only a jcode-harness codex cycle needs this row; a CLI-harness one is
+        # already counted by ccusage and writing it here would DOUBLE-charge it now
+        # that the two sources are summed.
+        if [ "${CYCLE_HARNESS_USED:-}" = "jcode" ]; then
             record_total_spend "codex" "${LOOP_BOOT_ID}-c${loop_count:-0}" "$CYCLE_COST"
         fi
     else
