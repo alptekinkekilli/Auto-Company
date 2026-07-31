@@ -188,6 +188,22 @@ MAX_LOGS="${MAX_LOGS:-200}"
 AUTO_LOOP_PROTECT_GITIGNORE="${AUTO_LOOP_PROTECT_GITIGNORE:-1}"
 RESOLVED_ENGINE_BIN=""
 
+# --- Harness selection (jcode migration) ------------------------------------
+# `cli`   = the historical path: `claude -p --output-format json` / `codex exec --json`.
+# `jcode` = one Rust binary for BOTH providers: `jcode -p <provider> run --ndjson`.
+# ENGINE still names the PROVIDER (claude|codex); this names the HARNESS that runs it,
+# so the router, tier ladder, budget gates and fallback logic keep working unchanged.
+# Rolling back is one variable — set LOOP_HARNESS=cli and restart; the CLIs stay in
+# the image on purpose until jcode has a clean observation window.
+LOOP_HARNESS="${LOOP_HARNESS:-cli}"
+JCODE_BIN="${JCODE_BIN:-$(command -v jcode 2>/dev/null || echo /usr/local/bin/jcode)}"
+# jcode's provider names differ from this loop's ENGINE names.
+jcode_provider_for() { case "$1" in codex) echo openai ;; *) echo claude ;; esac; }
+if [ "$LOOP_HARNESS" != "cli" ] && [ "$LOOP_HARNESS" != "jcode" ]; then
+    echo "Error: LOOP_HARNESS must be 'cli' or 'jcode' (received: '$LOOP_HARNESS')."
+    exit 1
+fi
+
 if [ "$ENGINE" != "claude" ] && [ "$ENGINE" != "codex" ]; then
     echo "Error: ENGINE must be 'claude' or 'codex' (received: '$ENGINE')."
     exit 1
@@ -1399,7 +1415,112 @@ resolve_engine_bin() {
     esac
 }
 
-run_codex_cycle() {
+# Kill a timed-out engine and EVERYTHING IT SPAWNED (APP-272, observed in production
+# 2026-07-31). The old pattern killed only the direct child; on cycle #16 the timeout
+# fired, `wait` returned rc=143, the loop declared FAIL and moved on — while the engine
+# kept running in the background, finished its work 20 minutes later, and wrote
+# consensus.md and Airtable AT THE SAME TIME as the next cycle's engine. Two writers,
+# no lock. It resolved cleanly by luck of task ordering, not by design.
+# Job control (`set -m`) puts the background subshell in its own process group, so a
+# negative-pid signal reaches the whole tree. TERM first, then KILL for whatever
+# ignores it.
+_kill_engine_group() {
+    local pid="$1"
+    kill -TERM -"$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
+    sleep 5
+    kill -KILL -"$pid" 2>/dev/null || kill -KILL "$pid" 2>/dev/null || true
+}
+
+# jcode path for BOTH providers. Differences from the CLI path, each measured:
+#   * no `total_cost_usd` — cost comes from scripts/core/engine-usage-cost.py over the
+#     ndjson (which SUMS every `tokens` event: `done.usage` is the LAST request only,
+#     so trusting it would undercount a multi-tool cycle and slacken the budget gates).
+#   * no `--effort` flag — effort is an env var, per provider.
+#   * no `-o message_file` — the final text is the `done` event's message.
+#   * an unknown `-m` is NOT an error: jcode silently runs its default model. The model
+#     preflight at boot is what keeps a typo from quietly becoming an opus-5 bill.
+# $2 is the PROVIDER and is passed explicitly, never derived from $ENGINE or from
+# _cycle_ran_on_codex: on the usage-limit fallback path `FALLBACK_USED=1` is assigned
+# AFTER the engine call returns, so deriving it here would route the fallback cycle
+# back to the provider that just hit its limit.
+run_jcode_cycle() {
+    local prompt="$1"
+    local provider="${2:-claude}"
+    local output_file timeout_flag events_file effort
+    output_file=$(mktemp); timeout_flag=$(mktemp); events_file=$(mktemp)
+    if [ "$provider" = "openai" ]; then
+        effort="$CODEX_EFFORT"
+        # Empty MODEL means "the codex config.toml default" on the CLI path; jcode has
+        # no such file, and an empty -m would silently run ITS default model instead.
+        [ -z "$MODEL" ] && MODEL="${JCODE_OPENAI_MODEL:-gpt-5.6-sol}"
+    else
+        effort="$CLAUDE_EFFORT"
+    fi
+
+    set +e
+    set -m
+    (
+        cd "$PROJECT_DIR" || exit 1
+        [ -n "$effort" ] && case "$provider" in
+            openai) export JCODE_OPENAI_REASONING_EFFORT="$effort" ;;
+            *)      export JCODE_ANTHROPIC_REASONING_EFFORT="$effort" ;;
+        esac
+        local cmd=("$JCODE_BIN" "-p" "$provider" "-C" "$PROJECT_DIR")
+        [ -n "$MODEL" ] && cmd+=("-m" "$MODEL")
+        cmd+=("run" "$prompt" "--quiet" "--no-update" "--no-selfdev" "--ndjson")
+        "${cmd[@]}"
+    ) > "$events_file" 2> "$output_file" &
+    local engine_pid=$!
+    set +m
+
+    (
+        sleep "$CYCLE_TIMEOUT_ACTIVE"
+        if kill -0 "$engine_pid" 2>/dev/null; then
+            echo "1" > "$timeout_flag"
+            _kill_engine_group "$engine_pid"
+        fi
+    ) &
+    local watchdog_pid=$!
+
+    wait "$engine_pid"
+    EXIT_CODE=$?
+    kill "$watchdog_pid" 2>/dev/null || true
+    wait "$watchdog_pid" 2>/dev/null || true
+    set -e
+
+    OUTPUT=$(tail -c 4000 "$output_file" 2>/dev/null || true)
+
+    # Final assistant text from the `done` event; fall back to the last agent message.
+    RESULT_MESSAGE=""
+    if command -v jq >/dev/null 2>&1; then
+        RESULT_MESSAGE=$(jq -r 'select(.type=="done") | .message // .text // empty' \
+            "$events_file" 2>/dev/null | tail -1 || true)
+        [ -z "$RESULT_MESSAGE" ] && RESULT_MESSAGE=$(jq -r \
+            'select(.type=="agent_message") | .message // .text // empty' \
+            "$events_file" 2>/dev/null | tail -1 || true)
+    fi
+
+    # Cost: never silently zero. The adapter prices unknown models conservatively and
+    # flags them; a missing number here would loosen four budget gates at once.
+    JCODE_COST_JSON=""
+    if [ -s "$events_file" ] && [ -x "$PROJECT_DIR/scripts/core/engine-usage-cost.py" ]; then
+        JCODE_COST_JSON=$(python3 "$PROJECT_DIR/scripts/core/engine-usage-cost.py" \
+            --ndjson-file "$events_file" 2>/dev/null || true)
+    fi
+
+    # Keep the raw stream for cost audits / price calibration (last 20 cycles).
+    if [ -s "$events_file" ]; then
+        mkdir -p "$LOG_DIR/cycle-ndjson" 2>/dev/null || true
+        cp "$events_file" "$LOG_DIR/cycle-ndjson/cycle-$(printf '%04d' "${loop_count:-0}").ndjson" 2>/dev/null || true
+        ls -t "$LOG_DIR/cycle-ndjson"/*.ndjson 2>/dev/null | tail -n +21 | xargs -r rm -f 2>/dev/null || true
+    fi
+
+    rm -f "$output_file" "$events_file"
+    if [ -s "$timeout_flag" ]; then CYCLE_TIMED_OUT=1; EXIT_CODE=124; else CYCLE_TIMED_OUT=0; fi
+    rm -f "$timeout_flag"
+}
+
+run_codex_cycle_cli() {
     local prompt="$1"
     local output_file timeout_flag message_file
 
@@ -1408,6 +1529,7 @@ run_codex_cycle() {
     message_file=$(mktemp)
 
     set +e
+    set -m
     (
         cd "$PROJECT_DIR" || exit 1
         # --skip-git-repo-check: the container workspace /app is not a git repo, and
@@ -1428,14 +1550,13 @@ run_codex_cycle() {
         "${codex_cmd[@]}"
     ) > "$output_file" 2>&1 &
     local codex_pid=$!
+    set +m
 
     (
         sleep "$CYCLE_TIMEOUT_ACTIVE"
         if kill -0 "$codex_pid" 2>/dev/null; then
             echo "1" > "$timeout_flag"
-            kill -TERM "$codex_pid" 2>/dev/null || true
-            sleep 5
-            kill -KILL "$codex_pid" 2>/dev/null || true
+            _kill_engine_group "$codex_pid"
         fi
     ) &
     local watchdog_pid=$!
@@ -1460,7 +1581,7 @@ run_codex_cycle() {
     rm -f "$timeout_flag"
 }
 
-run_claude_cycle() {
+run_claude_cycle_cli() {
     local prompt="$1"
     local output_file timeout_flag
 
@@ -1468,6 +1589,7 @@ run_claude_cycle() {
     timeout_flag=$(mktemp)
 
     set +e
+    set -m
     (
         cd "$PROJECT_DIR" || exit 1
         local claude_cmd=("$RESOLVED_ENGINE_BIN" "-p" "$prompt" "--output-format" "json")
@@ -1483,14 +1605,13 @@ run_claude_cycle() {
         "${claude_cmd[@]}"
     ) > "$output_file" 2>&1 &
     local claude_pid=$!
+    set +m
 
     (
         sleep "$CYCLE_TIMEOUT_ACTIVE"
         if kill -0 "$claude_pid" 2>/dev/null; then
             echo "1" > "$timeout_flag"
-            kill -TERM "$claude_pid" 2>/dev/null || true
-            sleep 5
-            kill -KILL "$claude_pid" 2>/dev/null || true
+            _kill_engine_group "$claude_pid"
         fi
     ) &
     local watchdog_pid=$!
@@ -1513,6 +1634,19 @@ run_claude_cycle() {
         CYCLE_TIMED_OUT=0
     fi
     rm -f "$timeout_flag"
+}
+
+# Harness dispatch. Call sites below (router alternation, budget override, usage-limit
+# fallback) are unchanged and keep calling these two names; only the harness underneath
+# swaps. The provider is passed explicitly — see the note on run_jcode_cycle.
+run_codex_cycle() {
+    if [ "$LOOP_HARNESS" = "jcode" ]; then run_jcode_cycle "$1" openai
+    else run_codex_cycle_cli "$1"; fi
+}
+
+run_claude_cycle() {
+    if [ "$LOOP_HARNESS" = "jcode" ]; then run_jcode_cycle "$1" claude
+    else run_claude_cycle_cli "$1"; fi
 }
 
 run_engine_cycle() {
@@ -1607,6 +1741,35 @@ extract_cycle_metadata() {
     # It also explains why `ENGINE=codex` as PRIMARY was never affected: the branch
     # was skipped entirely. Located by the ERR trap at the top of this file:
     #   [FATAL] auto-loop exiting rc=1 at line 1153: RESULT_JSON=$(printf ... | tail -1)
+    # jcode carries no result JSON at all: the text came from the `done` event and the
+    # cost from the token adapter, both already set by run_jcode_cycle. Feeding this
+    # through the Claude JSON parser would set CYCLE_COST to empty and silently stop
+    # record_spend — the same class of failure as APP-240, where a mis-routed parser
+    # took the whole loop down.
+    if [ "$LOOP_HARNESS" = "jcode" ]; then
+        RESULT_TEXT=$(printf '%s' "$RESULT_MESSAGE" | head -c 2000 || true)
+        [ -z "$RESULT_TEXT" ] && RESULT_TEXT=$(printf '%s' "$OUTPUT" | head -c 2000 || true)
+        if [ -n "$JCODE_COST_JSON" ] && command -v jq >/dev/null 2>&1; then
+            local _c _est
+            _c=$(printf '%s' "$JCODE_COST_JSON" | jq -r '.cost_usd // empty' 2>/dev/null || true)
+            _est=$(printf '%s' "$JCODE_COST_JSON" | jq -r '.estimated // false' 2>/dev/null || true)
+            if [ -n "$_c" ]; then
+                CYCLE_COST="$_c"
+                [ "$_est" = "true" ] && log "[COST] estimated (uncalibrated model) — $(printf '%s' "$JCODE_COST_JSON" | head -c 200)"
+            else
+                log "[COST] adapter produced no number — budget gates would under-read; treating cycle as error"
+                CYCLE_SUBTYPE="error"
+            fi
+        else
+            log "[COST] no ndjson cost for this cycle (adapter missing or empty stream)"
+        fi
+        CYCLE_TYPE="jcode_${ENGINE}"
+        if [ "$CYCLE_SUBTYPE" = "unknown" ]; then
+            if [ "$EXIT_CODE" -eq 0 ]; then CYCLE_SUBTYPE="success"; else CYCLE_SUBTYPE="error"; fi
+        fi
+        return
+    fi
+
     if ! _cycle_ran_on_codex; then
         # `claude -p --output-format json` writes its result JSON as ONE line, but the
         # CLI may prepend warnings on stdout/stderr (e.g. the untrusted-workspace
@@ -1742,6 +1905,45 @@ else
     log "Engine: claude | Model: $MODEL_LABEL | PermissionMode: $CLAUDE_PERMISSION_MODE"
 fi
 log "Engine bin: $RESOLVED_ENGINE_BIN"
+
+# --- jcode harness preflight ------------------------------------------------
+# jcode does NOT error on an unknown `-m`: it silently runs its own default model
+# (measured 2026-07-31 — a dated `claude-haiku-4-5-20251001` ran as opus-5, which is
+# both the wrong tier and roughly an order of magnitude more expensive per cycle).
+# The tier ladder feeds MODEL from CLAUDE_TIER_LADDER, so a name jcode's catalog does
+# not carry would silently un-do the entire cost-control ladder. Refuse to start.
+if [ "$LOOP_HARNESS" = "jcode" ]; then
+    if [ ! -x "$JCODE_BIN" ]; then
+        echo "Error: LOOP_HARNESS=jcode but jcode not found at '$JCODE_BIN'." >&2
+        exit 1
+    fi
+    log "Harness: jcode ($("$JCODE_BIN" --version 2>/dev/null | head -n1 || echo unknown))"
+    _jcode_catalog() { "$JCODE_BIN" --quiet --no-update model list -p "$1" 2>/dev/null || true; }
+    _claude_catalog="$(_jcode_catalog claude)"
+    _openai_catalog="$(_jcode_catalog openai)"
+    _bad=""
+    for _m in $(printf '%s' "$CLAUDE_TIER_LADDER" | tr ',' ' ') "$MODEL"; do
+        [ -z "$_m" ] && continue
+        printf '%s\n' "$_claude_catalog" | grep -qx -- "$_m" || _bad="$_bad claude:$_m"
+    done
+    _om="${CODEX_MODEL:-${JCODE_OPENAI_MODEL:-gpt-5.6-sol}}"
+    printf '%s\n' "$_openai_catalog" | grep -qx -- "$_om" || _bad="$_bad openai:$_om"
+    if [ -n "$_bad" ]; then
+        echo "Error: model name(s) not in jcode's catalog:$_bad" >&2
+        echo "       jcode would SILENTLY run its default model instead of failing." >&2
+        echo "       Fix CLAUDE_TIER_LADDER / MODEL / CODEX_MODEL, or set LOOP_HARNESS=cli." >&2
+        exit 1
+    fi
+    log "Harness preflight: all ladder models present in jcode catalog"
+    # MCP is not optional for this company: cycles read and write Airtable and Linear.
+    # jcode reads only the global ~/.jcode/mcp.json, so a missing file is a silent
+    # capability loss, not an error — check it here where it is still loud.
+    if [ ! -s "${JCODE_HOME:-$HOME/.jcode}/mcp.json" ]; then
+        log "WARNING: ${JCODE_HOME:-$HOME/.jcode}/mcp.json missing — cycles will run WITHOUT Airtable/Linear/Context7/browser tools"
+    else
+        log "Harness MCP: $(python3 -c 'import json,sys;print(",".join(json.load(open(sys.argv[1]))["mcpServers"]))' "${JCODE_HOME:-$HOME/.jcode}/mcp.json" 2>/dev/null || echo unreadable)"
+    fi
+fi
 engine_version=$("$RESOLVED_ENGINE_BIN" --version 2>/dev/null | head -n1 || true)
 case "$RESOLVED_ENGINE_BIN" in
     /mnt/c/*)
