@@ -51,30 +51,74 @@ ev="$(mktemp)"; trap 'rm -f "$ev"' EXIT
 # --tools is NOT restricted here; the probe must see what the harness will see, and the
 # cycle-time allowlist is applied separately by auto-loop.sh.
 timeout "$TIMEOUT" "$JCODE_BIN" -p "$PROVIDER" -m "$MODEL" -C "$WORKDIR" \
-    run 'Do TWO things. (1) Call the airtable MCP tool that lists bases and note whether the CALL SUCCEEDED. (2) Then reply with one line: the comma-separated lowercase names of every MCP server you can see, and append ",airtable-call-ok" only if the call in step 1 actually returned data. Nothing else.' \
+    run 'Call the airtable MCP tool that lists bases. Then reply with ONE line: the comma-separated lowercase names of every MCP server you can see. Nothing else.' \
     --quiet --no-update --no-selfdev --ndjson > "$ev" 2>/dev/null
 rc=$?
 
-answer=""
-if [ -s "$ev" ] && [ -x "$(dirname "$0")/jcode-final-text.py" ]; then
-    answer="$(python3 "$(dirname "$0")/jcode-final-text.py" "$ev" 2>/dev/null | tr '[:upper:]' '[:lower:]')"
-fi
+# DETERMINISTIC verdict from the event stream, not from the model's prose. The stream
+# carries `tool_start`/`tool_done` events with the real tool name, an `error` field and
+# the raw `output` — facts. An earlier version graded the model's sentence, which is
+# both fuzzy and gameable by narration ("I'll call the airtable tool…" contains the
+# server name whether or not anything was called).
+vf="$(mktemp)"; trap 'rm -f "$ev" "$vf"' EXIT
+python3 - "$ev" "$REQUIRED" > "$vf" 2>/dev/null <<'PY'
+import json, sys
+ev_path, required = sys.argv[1], sys.argv[2]
+called_ok = set()      # servers with at least one SUCCESSFUL tool_done
+seen = set()           # servers that appear at all (start or done)
+text = []
+with open(ev_path, encoding="utf-8", errors="replace") as fh:
+    for line in fh:
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            e = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        t = e.get("type")
+        if t == "text_delta":
+            text.append(str(e.get("text") or ""))
+        name = str(e.get("name") or "")
+        if name.startswith("mcp__"):
+            parts = name.split("__")
+            if len(parts) >= 2:
+                seen.add(parts[1])
+                if t == "tool_done":
+                    err = e.get("error")
+                    out = str(e.get("output") or "")
+                    bad = err not in (None, "None", "") or not out
+                    if not bad:
+                        called_ok.add(parts[1])
+# Server visibility still comes from the model's line (jcode exposes no list command),
+# but a CALL is judged only by events.
+listed = "".join(text).lower()
+missing = []
+for r in required.split(","):
+    r = r.strip()
+    if not r:
+        continue
+    if r == "airtable-call-ok":
+        if "airtable" not in called_ok:
+            missing.append("airtable-call-ok(no successful mcp__airtable__* tool_done)")
+    elif r not in listed and r not in seen:
+        missing.append(r)
+print("MISSING:" + ",".join(missing) if missing else "OK")
+print("called_ok=" + ",".join(sorted(called_ok)) + " seen=" + ",".join(sorted(seen)))
+PY
+verdict="$(cat "$vf" 2>/dev/null || true)"
 
-if [ -z "$answer" ]; then
-    echo "MCP_PROBE_FAILED: no answer from jcode (rc=$rc) — cannot prove MCP reachability" >&2
+if [ -z "$verdict" ]; then
+    echo "MCP_PROBE_FAILED: could not evaluate the event stream (rc=$rc)" >&2
     exit 2
 fi
+case "$verdict" in
+    MISSING:*)
+        echo "MCP_PROBE_MISSING: $(printf '%s' "$verdict" | head -1 | cut -d: -f2-)" >&2
+        printf '%s\n' "$verdict" | tail -1 >&2
+        exit 1
+        ;;
+esac
 
-missing=""
-for r in $(printf '%s' "$REQUIRED" | tr ',' ' '); do
-    case "$answer" in *"$r"*) ;; *) missing="$missing $r" ;; esac
-done
-
-if [ -n "$missing" ]; then
-    echo "MCP_PROBE_MISSING:$missing" >&2
-    echo "  jcode answered: $(printf '%s' "$answer" | head -c 200)" >&2
-    exit 1
-fi
-
-echo "MCP_PROBE_OK: $(printf '%s' "$answer" | head -c 200)"
+echo "MCP_PROBE_OK: $(printf '%s' "$verdict" | tail -1)"
 exit 0
