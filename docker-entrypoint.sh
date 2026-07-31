@@ -317,7 +317,7 @@ DASH_PID=$!
 #   3. features off. jcode's local embedding/memory subsystem costs ~270MB of peak RSS
 #      and carries context between runs; the loop's only cross-cycle memory must stay
 #      consensus.md.
-if [ "${LOOP_HARNESS:-cli}" = "jcode" ]; then
+if [ "${LOOP_HARNESS:-cli}" = "jcode" ] || [ "${LOOP_HARNESS_CODEX:-cli}" = "jcode" ]; then
     export JCODE_NO_TELEMETRY=1
     # Default to the PERSISTENT logs volume, not $HOME: the container filesystem is
     # replaced on every redeploy, and jcode's OpenAI credential is a FILE

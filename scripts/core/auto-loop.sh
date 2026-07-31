@@ -1699,8 +1699,24 @@ run_claude_cycle_cli() {
 # Harness dispatch. Call sites below (router alternation, budget override, usage-limit
 # fallback) are unchanged and keep calling these two names; only the harness underneath
 # swaps. The provider is passed explicitly — see the note on run_jcode_cycle.
+# The harness is chosen PER PROVIDER, and codex defaults to the CLI even when the loop
+# is on jcode. Two reasons, both found by the pre-deploy audit rather than by testing:
+#   * AUTH. jcode's OpenAI credential is a FILE with its own refresh token (measured:
+#     openai-auth.json carries refresh_token + expires_at). The analyst already holds
+#     one for the same account; a second copy in the loop rotates independently and the
+#     two can invalidate each other — the exact 401 collision that shared CODEX_HOME
+#     produced before. Keeping codex on the CLI needs no second credential at all.
+#   * MECHANICAL TOOL LIMITS. The Codex CLI config carries `enabled_tools` allowlists
+#     that EXCLUDE deletes/archives (Linear get/list/save only; Airtable read+create+
+#     update, no delete_records, no delete_table). jcode has no allowlist mechanism, so
+#     routing codex through it would silently downgrade a mechanical control to a
+#     policy-only one. That is an operator decision, not a migration side effect.
+# Set LOOP_HARNESS_CODEX=jcode to opt in once both are resolved.
+LOOP_HARNESS_CODEX="$(printf '%s' "${LOOP_HARNESS_CODEX:-cli}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+[ -z "$LOOP_HARNESS_CODEX" ] && LOOP_HARNESS_CODEX="cli"
+
 run_codex_cycle() {
-    if [ "$LOOP_HARNESS" = "jcode" ]; then run_jcode_cycle "$1" openai
+    if [ "$LOOP_HARNESS_CODEX" = "jcode" ]; then run_jcode_cycle "$1" openai
     else run_codex_cycle_cli "$1"; fi
 }
 
@@ -1995,7 +2011,7 @@ if [ "$LOOP_HARNESS" = "jcode" ]; then
     # supervises this process — that is a container crash loop, the APP-235/240
     # shape. (Measured 2026-07-31: the catalog is static, answering with no auth
     # and with --network none. This guard is for the day that stops being true.)
-    if [ -z "$_claude_catalog" ] || [ -z "$_openai_catalog" ]; then
+    if [ -z "$_claude_catalog" ] || { [ "$LOOP_HARNESS_CODEX" = "jcode" ] && [ -z "$_openai_catalog" ]; }; then
         log "WARNING: jcode model catalog unavailable — cannot verify model names."
         log "         Falling back to LOOP_HARNESS=cli for this boot rather than"
         log "         running unverified (an unknown -m silently becomes jcode's default model)."
@@ -2009,16 +2025,18 @@ if [ "$LOOP_HARNESS" = "jcode" ]; then
         _m="${_m%%:*}"
         printf '%s\n' "$_claude_catalog" | grep -qx -- "$_m" || _bad="$_bad claude:$_m"
     done
-    _om="${CODEX_MODEL:-${JCODE_OPENAI_MODEL:-gpt-5.6-sol}}"
-    _om="${_om%%:*}"
-    printf '%s\n' "$_openai_catalog" | grep -qx -- "$_om" || _bad="$_bad openai:$_om"
+    if [ "$LOOP_HARNESS_CODEX" = "jcode" ]; then
+        _om="${CODEX_MODEL:-${JCODE_OPENAI_MODEL:-gpt-5.6-sol}}"
+        _om="${_om%%:*}"
+        printf '%s\n' "$_openai_catalog" | grep -qx -- "$_om" || _bad="$_bad openai:$_om"
+    fi
     if [ -n "$_bad" ]; then
         echo "Error: model name(s) not in jcode's catalog:$_bad" >&2
         echo "       jcode would SILENTLY run its default model instead of failing." >&2
         echo "       Fix CLAUDE_TIER_LADDER / MODEL / CODEX_MODEL, or set LOOP_HARNESS=cli." >&2
         exit 1
     fi
-    log "Harness preflight: all ladder models present in jcode catalog"
+    log "Harness preflight: all ladder models present in jcode catalog (codex harness: $LOOP_HARNESS_CODEX)"
     fi
     # MCP is not optional for this company: cycles read and write Airtable and Linear.
     # jcode reads only the global ~/.jcode/mcp.json, so a missing file is a silent

@@ -53,7 +53,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Claude Code CLI (the loop's engine)
-RUN npm install -g @anthropic-ai/claude-code && npm cache clean --force
+# Pinned to the version production is proven on (2.1.220). Unpinned, a rebuild for an
+# unrelated reason silently swaps the engine binary — and `LOOP_HARNESS=cli` is the
+# jcode rollback path, so an untested CLI version would be what a rollback lands on.
+RUN npm install -g @anthropic-ai/claude-code@2.1.220 && npm cache clean --force
 
 # Codex CLI (fallback engine when Claude is usage-limited) — 0.144.x supports gpt-5.6-sol
 RUN npm install -g @openai/codex@0.144.6 && npm cache clean --force
