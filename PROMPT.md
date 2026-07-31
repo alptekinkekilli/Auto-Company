@@ -811,6 +811,22 @@ not silently drop them.
      directories and social profiles are **discovery sources only**; they may surface a
      candidate's official website, and may never be cited as `Exclusion ground source` or as G4
      attribution.
+   - **OR by a registry-anchored identity bridge (operator extension, 2026-07-31).** A site that
+     never names itself can still satisfy G4 when a **registry datum of the exact legal person
+     appears on the site itself**: the MERSİS **registered address** (mahalle/cadde/number/ilçe/il
+     all matching, transliteration and abbreviation aside) or the **e-tebligat number**, published
+     on a first-party page that also publishes the e-mail being harvested, on that same domain.
+     Rationale: an address is the registry's own datum about the legal person, so matching it is
+     verification; a brand name is not. Live case that produced this rule — N.K.Y Mimarlık:
+     MERSİS `AŞAĞI ÖVEÇLER MAH. LİZBON CAD. NO: 49 ÇANKAYA/ANKARA` vs `nky.com.tr/en/contact/`
+     "Lizbon Cd. No. 49 Aşağı Öveçler Çankaya Ankara", same page carrying `info@nky.com.tr`.
+     **What this extension does NOT open:** a group/parent brand claiming a subsidiary
+     (Seçim/DETAM stays HELD — its registered address is Ankara/Sıhhiye and no site published it);
+     an award, ranking or membership, however authoritative the awarding body's own list is
+     (TİM/HİB "500 Largest Service Exporters" is an inference about a brand, not a registry datum);
+     a directory or job-board page reproducing a legal title (still discovery-only, per above); a
+     city-level or partial address match. If the bridging datum is the address, record BOTH strings
+     verbatim in the row so the next reader can re-check the match rather than trust the verdict.
    - **An address that cannot receive mail is not a channel.** Before G4 is marked passed, the
      domain must actually resolve MX. `setreinsaat.com.tr` has no A and no MX record at all, yet
      its row had passed G4 on a domain match alone. A verified identity with a dead domain is
