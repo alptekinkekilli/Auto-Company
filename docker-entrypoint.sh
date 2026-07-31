@@ -18,6 +18,14 @@ fi
 export HOME=/home/app
 cd /app
 
+# Boot-epoch stamp (REVISE-2 gate B11): the loop's MCP-config freshness gate
+# compares the generator's mcp.json.meta timestamp against THIS value, so a stale
+# config left on the persistent volume by a previous boot can never pass for a
+# generation that actually failed this boot. Written before anything else runs.
+mkdir -p logs 2>/dev/null || true
+date +%s > logs/.container-boot-epoch 2>/dev/null \
+    || echo "[entrypoint] WARNING: cannot stamp logs/.container-boot-epoch — a jcode boot will fail its config-freshness gate" >&2
+
 # --- operator runtime overrides (SSH-editable; no Coolify env UI needed) --------
 # A KEY=value file on a persistent volume lets config be tuned by editing it over
 # SSH or the cockpit Settings panel + redeploying, instead of the Coolify env UI.
@@ -335,7 +343,7 @@ if [ "${LOOP_HARNESS:-cli}" = "jcode" ] || [ "${LOOP_HARNESS_CODEX:-cli}" = "jco
     if python3 /app/scripts/core/jcode-mcp-config.py --src /app/.mcp.json --dest "$JHOME/mcp.json"; then
         echo "[entrypoint] jcode MCP config written"
     else
-        echo "[entrypoint] WARNING: jcode MCP config generation failed — cycles would run without external tools" >&2
+        echo "[entrypoint] WARNING: jcode MCP config generation FAILED — the loop's config-freshness gate will refuse this boot (a stale mcp.json cannot stand in; REVISE-2 gate B11)" >&2
     fi
 
     # NOTE: the loop no longer wraps the token here. The claudeAiOauth blob is built

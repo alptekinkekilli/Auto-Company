@@ -1,0 +1,57 @@
+{
+  "_comment": [
+    "OPERATOR-OWNED MCP manifest (REVISE-2 gate B9). The probe fails the boot when",
+    "the generated mcp.json or the live tools/list diverges from THIS file in either",
+    "direction: a missing server, an EXTRA server, a destructive tool the manifest",
+    "does not expect (new upstream capability -> must be reviewed and denied here",
+    "first), or an expected destructive tool that is absent (stale manifest, or the",
+    "wrong endpoint answered). destructive lists were enumerated from the LIVE hosted",
+    "endpoints on 2026-07-31; the pattern the probe scans live tools with is",
+    "(delete|remove|archive|revert|drop|destroy|purge). base_denied are jcode's own",
+    "built-in tools that must appear in JCODE_TOOLS_DENY, including its `mcp`",
+    "management tool (a cycle must not be able to reconfigure its own tool surface)."
+  ],
+  "readcheck": {
+    "server": "airtable",
+    "tool": "list_bases",
+    "arguments": {}
+  },
+  "base_denied": [
+    "mcp",
+    "gmail",
+    "browser",
+    "swarm",
+    "selfdev",
+    "memory",
+    "side_panel",
+    "bg",
+    "initiative",
+    "open"
+  ],
+  "servers": {
+    "airtable": {
+      "destructive": [
+        "delete_records_for_table",
+        "delete_table",
+        "delete_automation",
+        "delete_interface",
+        "delete_page",
+        "revert_action"
+      ]
+    },
+    "linear": {
+      "destructive": [
+        "delete_attachment",
+        "delete_comment",
+        "delete_diff_comment",
+        "delete_status_update"
+      ]
+    },
+    "context7": {
+      "destructive": []
+    },
+    "browseros": {
+      "destructive": []
+    }
+  }
+}

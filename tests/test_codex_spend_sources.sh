@@ -64,5 +64,61 @@ harness 0.0000
 out=$(bash -c 'source '"$SB"'/h.sh; _sum_usd "$ccusage_figure" "$(codex_ledger_spend_since '"$((NOW - 86400))"')"')
 check "empty ccusage does not erase ledger" "$out" "5.0000"
 
+# ── REVISE-2 gate A6: weekly RESUME-TIME walk includes jcode-codex ledger rows ──
+# and refuses malformed rows with a strict decimal parser.
+wharness() {
+    {
+        echo 'set -uo pipefail'
+        echo "TOTAL_SPEND_LEDGER=\"$SB/spend-total.log\""
+        echo 'ANALYST_SESSIONS_FILE=/dev/null; LOG_DIR="'"$SB"'"'
+        echo '_codex_spend_entries_since() { :; }'   # ccusage source empty for these cases
+        awk '/^_weekly_resume_epoch\(\)/,/^}/' "$SRC"
+    } > "$SB/w.sh"
+}
+
+echo "--- weekly resume walk COUNTS codex ledger rows ---"
+# claude 60 (6d23h ago) + codex 50 (3d ago): limit 100 is only exceeded WITH the
+# codex row; dropping the OLDEST contributor (claude) brings 110->50 < 100.
+OLDC=$(( NOW - 604800 + 3600 ))
+{
+    echo "$OLDC claude run-w1 60.0"
+    echo "$((NOW - 259200)) codex run-w2 50.0"
+} > "$SB/spend-total.log"
+wharness
+out=$(bash -c 'source '"$SB"'/w.sh; _weekly_resume_epoch '"$((NOW - 604800))"' 100')
+check "resume = oldest+7d, codex row counted" "$out" "$((OLDC + 604800))"
+# Without codex rows the walk would print 0 (total 60 < 100) — pin the contrast:
+echo "$OLDC claude run-w1 60.0" > "$SB/spend-total.log"
+out=$(bash -c 'source '"$SB"'/w.sh; _weekly_resume_epoch '"$((NOW - 604800))"' 100')
+check "claude alone is under the limit" "$out" "0"
+
+echo "--- a malformed ledger row ABORTS the walk (conservative 0, never early resume) ---"
+{
+    echo "$OLDC claude run-w1 60.0"
+    echo "$((NOW - 259200)) codex run-w2 fifty-dollars"
+} > "$SB/spend-total.log"
+out=$(bash -c 'source '"$SB"'/w.sh; _weekly_resume_epoch '"$((NOW - 604800))"' 100')
+check "strict parser refuses the row" "$out" "0"
+{
+    echo "$OLDC claude run-w1 60.0"
+    echo "$((NOW - 259200)) codex run-w2 1.2.3"
+} > "$SB/spend-total.log"
+out=$(bash -c 'source '"$SB"'/w.sh; _weekly_resume_epoch '"$((NOW - 604800))"' 100')
+check "double-dot amount refused" "$out" "0"
+
+echo "--- record_total_spend REFUSES a non-decimal amount and latches ---"
+{
+    echo 'set -uo pipefail'
+    echo "TOTAL_SPEND_LEDGER=\"$SB/strict.log\"; TOTAL_LEDGER_RETENTION_DAYS=90"
+    echo 'log() { echo "$@"; }; _budget_now() { date +%s; }'
+    echo 'latch_budget_hold() { echo "LATCH:$1"; }'
+    awk '/^record_total_spend\(\)/,/^}/' "$SRC"
+} > "$SB/s.sh"
+out=$(bash -c 'source '"$SB"'/s.sh; record_total_spend codex run-bad "N/A"; echo "rc=$?"')
+case "$out" in *LATCH:*) echo "  PASS non-decimal latches" ;; *) echo "  FAIL non-decimal did not latch: $out"; fail=1 ;; esac
+check "nothing written" "$(cat "$SB/strict.log" 2>/dev/null | wc -l | tr -d ' ')" "0"
+out=$(bash -c 'source '"$SB"'/s.sh; record_total_spend codex run-ok 1.25; cat "$TOTAL_SPEND_LEDGER" | wc -l | tr -d " "')
+check "valid decimal still writes" "$out" "1"
+
 echo
 if [ "$fail" -eq 0 ]; then echo "ALL CODEX-SPEND-SOURCE TESTS PASS"; else echo "FAILURES PRESENT"; exit 1; fi

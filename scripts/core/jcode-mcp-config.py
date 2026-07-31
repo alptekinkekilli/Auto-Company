@@ -31,11 +31,13 @@ usable was produced — treat as a failed boot step, not a warning).
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
 import shutil
 import sys
+import time
 from pathlib import Path
 
 VAR_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
@@ -213,7 +215,33 @@ def main() -> int:
             pass
         print(f"[jcode-mcp] cannot write {dest}: {e}", file=sys.stderr)
         return 3
-    print(f"[jcode-mcp] wrote {len(out)} servers -> {dest} (atomic)", file=sys.stderr)
+    # Freshness stamp (REVISE-2 gate B11). JCODE_HOME is a persistent volume, so a
+    # STALE mcp.json from a previous boot survives a failed generation and would
+    # pass every content check. The stamp records WHEN this exact bytes-on-disk
+    # config was produced; the loop's boot gate requires epoch >= container boot
+    # AND a matching sha256, so "generation failed this boot" is caught even when
+    # yesterday's config looks perfect. Same atomic write discipline.
+    meta = dest.with_name(dest.name + ".meta")
+    sha = hashlib.sha256(dest.read_bytes()).hexdigest()
+    mtmp = meta.with_name(meta.name + f".tmp.{os.getpid()}")
+    try:
+        fd = os.open(mtmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump({"epoch": int(time.time()), "sha256": sha,
+                       "servers": sorted(out)}, fh)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(mtmp, meta)
+    except OSError as e:
+        try:
+            os.unlink(mtmp)
+        except OSError:
+            pass
+        print(f"[jcode-mcp] cannot write freshness stamp {meta}: {e} — "
+              "the boot gate will treat this generation as FAILED", file=sys.stderr)
+        return 3
+    print(f"[jcode-mcp] wrote {len(out)} servers -> {dest} (atomic, stamped {sha[:12]})",
+          file=sys.stderr)
     return 0
 
 

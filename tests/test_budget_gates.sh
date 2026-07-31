@@ -89,7 +89,8 @@ codex_json() { # $@ = "cost:epoch[:sessionFile]" triples
 
 echo "--- 1: Claude at \$100 blocks Claude; eligible Codex is routed ---"
 reset_state
-for i in 1 2; do echo "$((NOW - 600)) 50.0"; done > "$SB/spend-window.log"
+# claude 5h derives from the TOTAL ledger now (REVISE-2 gate A3)
+printf '%s claude run-t1a 50.0\n%s claude run-t1b 50.0\n' "$((NOW - 600))" "$((NOW - 600))" > "$SB/spend-total.log"
 codex_json "1.0:$((NOW - 300))"
 out="$(run 'CLAUDE_5H_BUDGET_USD=100 CODEX_5H_BUDGET_USD=100 TOTAL_DAILY_BUDGET_USD=500 TOTAL_WEEKLY_BUDGET_USD=2500 select_cycle_engine; echo "action=$CYCLE_ROUTER_ACTION override=$CYCLE_ENGINE_OVERRIDE"; echo "$CYCLE_ROUTER_MSG"')"
 check_contains "routes codex"        "$out" "action=run override=codex"
@@ -98,7 +99,7 @@ check_contains "notional disclaimer" "$out" "not billed cash"
 
 echo "--- 2: Codex at \$100 blocks Codex; eligible Claude is routed ---"
 reset_state
-echo "$((NOW - 600)) 1.0" > "$SB/spend-window.log"
+echo "$((NOW - 600)) claude run-t2 1.0" > "$SB/spend-total.log"
 codex_json "100.5:$((NOW - 300))"
 out="$(run 'CLAUDE_5H_BUDGET_USD=100 CODEX_5H_BUDGET_USD=100 select_cycle_engine; echo "action=$CYCLE_ROUTER_ACTION override=$CYCLE_ENGINE_OVERRIDE"; echo "$CYCLE_ROUTER_MSG"')"
 check_contains "runs claude"     "$out" "action=run override="
@@ -107,7 +108,7 @@ check "state persisted claude" "$(cat "$SB/router-state")" "claude"
 
 echo "--- 3: both engine gates blocked -> pause until earliest reset ---"
 reset_state
-echo "$((NOW - 600)) 150.0" > "$SB/spend-window.log"
+echo "$((NOW - 600)) claude run-t3 150.0" > "$SB/spend-total.log"
 codex_json "120.0:$((NOW - 300))"
 out="$(run 'CLAUDE_5H_BUDGET_USD=100 CODEX_5H_BUDGET_USD=100 select_cycle_engine; echo "action=$CYCLE_ROUTER_ACTION"; echo "$CYCLE_ROUTER_MSG"')"
 check_contains "paused"          "$out" "action=pause"
@@ -116,21 +117,20 @@ check_contains "resume time"      "$out" "Resume: $(utc "$NOW" %Y-%m-%dT)"
 
 echo "--- 4: one engine's rollover does not reset the other's counter ---"
 reset_state
-# Claude window rolled: its 5h ledger is empty. Codex sessions unchanged.
-: > "$SB/spend-window.log"
+# Claude window rolled: only an out-of-window ledger row. Codex sessions unchanged.
+echo "$((NOW - 21600)) claude run-t4old 9.9" > "$SB/spend-total.log"
 codex_json "42.0:$((NOW - 300))"
 out="$(run 'CLAUDE_5H_BUDGET_USD=100 CODEX_5H_BUDGET_USD=100 evaluate_budget_gates >/dev/null; echo "c=$BG_CLAUDE5 x=$BG_CODEX5"')"
 check "claude rolled to 0"    "${out##*c=}" "0.0000 x=42.0000"
 # And the mirror: codex empty, claude carries
 codex_json "0.0:$((NOW - 700000))"   # only an out-of-window session
-echo "$((NOW - 600)) 7.5" > "$SB/spend-window.log"
+echo "$((NOW - 600)) claude run-t4b 7.5" > "$SB/spend-total.log"
 out="$(run 'CLAUDE_5H_BUDGET_USD=100 CODEX_5H_BUDGET_USD=100 evaluate_budget_gates >/dev/null; echo "c=$BG_CLAUDE5 x=$BG_CODEX5"')"
 check "codex 0, claude kept" "${out##*c=}" "7.5000 x=0.0000"
 
 echo "--- 5: a 5h rollover does not reset DAILY or WEEKLY ---"
 reset_state
-: > "$SB/spend-window.log"                       # 5h window rolled
-echo "$((NOW - 21600)) claude run-a 30.0" > "$SB/spend-total.log"   # 6h ago, same UTC day
+echo "$((NOW - 21600)) claude run-a 30.0" > "$SB/spend-total.log"   # 6h ago: outside 5h, same UTC day
 codex_json "20.0:$((NOW - 21600))"
 out="$(run 'TOTAL_DAILY_BUDGET_USD=500 TOTAL_WEEKLY_BUDGET_USD=2500 evaluate_budget_gates >/dev/null; echo "d=$BG_DAILY w=$BG_WEEKLY"')"
 check "daily survives roll"  "${out##*d=}" "50.0000 w=50.0000"
@@ -208,7 +208,7 @@ check_contains "flags stale in status line" "$out" "STALE"
 
 echo "--- 14: Alternate stays deterministic across eligibility states ---"
 reset_state
-echo "$((NOW - 600)) 1.0" > "$SB/spend-window.log"
+echo "$((NOW - 600)) claude run-t14 1.0" > "$SB/spend-total.log"
 codex_json "1.0:$((NOW - 300))"
 echo claude > "$SB/router-state"
 out="$(run 'CLAUDE_5H_BUDGET_USD=100 CODEX_5H_BUDGET_USD=100 select_cycle_engine; echo "override=$CYCLE_ENGINE_OVERRIDE"')"
@@ -227,7 +227,7 @@ check_contains "deterministic resume to codex" "$out" "override=codex"
 echo "--- 15: deprecated variables warn and cannot override the new gates ---"
 reset_state
 # behavioral: old vars set at values that WOULD have gated under the old model
-echo "$((NOW - 600)) 50.0" > "$SB/spend-window.log"
+echo "$((NOW - 600)) claude run-t15 50.0" > "$SB/spend-total.log"
 codex_json "1.0:$((NOW - 300))"
 out="$(run 'WINDOW_BUDGET_USD=1 TOTAL_BUDGET_USD=1 CLAUDE_5H_BUDGET_USD=100 CODEX_5H_BUDGET_USD=100 select_cycle_engine; echo "action=$CYCLE_ROUTER_ACTION"')"
 check_contains "old vars do not gate" "$out" "action=run"

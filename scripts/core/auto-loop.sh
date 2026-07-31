@@ -114,7 +114,9 @@ OPERATOR_USAGE_FILE="${OPERATOR_USAGE_FILE:-$LOG_DIR/operator-usage.json}"
 OPERATOR_USAGE_STALE_SECS="${OPERATOR_USAGE_STALE_SECS:-900}"
 WINDOW_SECONDS="${WINDOW_SECONDS:-18000}"
 BUDGET_PAUSE_SECONDS="${BUDGET_PAUSE_SECONDS:-1800}"
-SPEND_LEDGER="$LOG_DIR/spend-window.log"
+# spend-window.log is RETIRED (REVISE-2 gate A3): the 5h Claude figure is now
+# derived from TOTAL_SPEND_LEDGER via window_spend(), the same idempotent,
+# fail-closed rows DAILY/WEEKLY read. Nothing writes or reads the old file.
 # Codex quota ledger (APP-189 Phase 1). Codex `exec` returns no USD cost, and the
 # ChatGPT/Codex quota is message/window-based rather than dollar-based — so Codex
 # consumption is metered as CYCLE COUNT within the same rolling WINDOW_SECONDS.
@@ -224,7 +226,9 @@ JCODE_TOOLS_ALLOW="${JCODE_TOOLS_ALLOW:-}"
 # `mcp__airtable__delete_records`, which does not exist: the real tool is
 # `delete_records_for_table`, so the guard protected nothing while the destructive tool
 # stayed available. Names are verified against the live tool set at boot.
-JCODE_TOOLS_DENY="${JCODE_TOOLS_DENY:-gmail,browser,swarm,selfdev,memory,side_panel,bg,initiative,open,mcp__airtable__delete_records_for_table,mcp__airtable__delete_table,mcp__airtable__delete_automation,mcp__airtable__delete_interface,mcp__airtable__delete_page,mcp__airtable__revert_action,mcp__linear__delete_attachment,mcp__linear__delete_comment,mcp__linear__delete_diff_comment,mcp__linear__delete_status_update}"
+# `mcp` is jcode's own MCP MANAGEMENT tool (add/remove servers at runtime) — a
+# cycle must never be able to reconfigure its own tool surface (REVISE-2 gate B9).
+JCODE_TOOLS_DENY="${JCODE_TOOLS_DENY:-mcp,gmail,browser,swarm,selfdev,memory,side_panel,bg,initiative,open,mcp__airtable__delete_records_for_table,mcp__airtable__delete_table,mcp__airtable__delete_automation,mcp__airtable__delete_interface,mcp__airtable__delete_page,mcp__airtable__revert_action,mcp__linear__delete_attachment,mcp__linear__delete_comment,mcp__linear__delete_diff_comment,mcp__linear__delete_status_update}"
 
 CURRENT_ENGINE_PID=""
 LOOP_HARNESS="$(printf '%s' "${LOOP_HARNESS:-cli}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
@@ -447,12 +451,15 @@ _fmt_utc() {
         || echo "epoch $1"
 }
 
-# Append a cycle's cost to the rolling-window ledger (skips 0 / N/A) AND to the
-# cumulative TOTAL ledger, idempotently.
+# Record a Claude cycle's cost. ONE ledger: the idempotent, fail-closed TOTAL
+# ledger now feeds the 5h window too (via window_spend), so the four gates read
+# the same rows and cannot diverge. The old separate rolling-window file was
+# written with `|| true` — a fail-OPEN path where a full disk or a permission
+# slip silently un-metered the 5h gate while DAILY/WEEKLY disagreed (REVISE-2
+# gate A3 removed it).
 record_spend() {
     local cost="$1"
     case "$cost" in ''|N/A|0|0.0) return 0 ;; esac
-    printf '%s %s\n' "$(date +%s)" "$cost" >> "$SPEND_LEDGER" 2>/dev/null || true
     record_total_spend "claude" "${LOOP_BOOT_ID}-c${loop_count:-0}" "$cost"
 }
 
@@ -461,6 +468,15 @@ record_spend() {
 # across every period the ledger feeds (DAILY and WEEKLY alike).
 record_total_spend() {
     local engine="$1" run_id="$2" usd="$3"
+    # STRICT decimal only. A malformed amount written here poisons every period
+    # total that later reads the ledger back (awk would coerce it to 0). The
+    # spend happened but cannot be represented — same class as an unwritable
+    # ledger: latch, do not write garbage.
+    if ! printf '%s' "$usd" | grep -qE '^[0-9]+(\.[0-9]+)?$'; then
+        log "[BUDGET-FAIL-CLOSED] non-numeric spend amount '$usd' for $engine/$run_id — refusing to write it; latching"
+        latch_budget_hold "spend amount unparseable ('$usd' on $engine, run $run_id)"
+        return 1
+    fi
     if [ -f "$TOTAL_SPEND_LEDGER" ] \
        && awk -v r="$run_id" '$3 == r { found=1; exit } END { exit !found }' "$TOTAL_SPEND_LEDGER" 2>/dev/null; then
         return 0
@@ -552,7 +568,7 @@ CODEX_SPEND_CACHE="$LOG_DIR/.codex-spend-cache"
 # period change, not a stale reduction.)
 # Prints "<usd> <stale 0|1>". Subshell-safe, same as before.
 _codex_spend_since() {
-    local anchor="$1" key="${2:-5h}" out cache
+    local anchor="$1" key="${2:-5h}" out cache val qual cached_val cached_anchor
     cache="$CODEX_SPEND_CACHE-$key"
     out="$(CODEX_HOME="${CODEX_HOME:-$LOG_DIR/.codex}" ccusage codex session --json 2>/dev/null \
         | python3 -c '
@@ -561,6 +577,9 @@ try:
     d = json.load(sys.stdin)
 except Exception:
     sys.exit(1)
+sessions = d.get("sessions")
+if not isinstance(sessions, list):
+    sys.exit(1)  # structurally not a session report: a FAILURE, never a $0
 anchor = int(sys.argv[1])
 excl = set()
 try:
@@ -572,13 +591,18 @@ try:
 except Exception:
     excl = set()  # unreadable exclusion file -> exclude nothing (tightening)
 total = 0.0
-for s in d.get("sessions", []):
+degraded = False
+for s in sessions:
     la = s.get("lastActivity")
     if not la:
+        # a session with no timestamp cannot be ruled OUT of this window; the
+        # report is semantically partial, and partial may never read lower
+        degraded = True
         continue
     try:
         e = int(datetime.datetime.fromisoformat(la.replace("Z", "+00:00")).timestamp())
     except Exception:
+        degraded = True
         continue
     # lastActivity is the sessions END, so a session straddling the anchor is
     # counted in full. That over-counts, which is the safe direction for a cap.
@@ -587,18 +611,57 @@ for s in d.get("sessions", []):
     sf = (s.get("sessionFile") or "").lower()
     if sf and any(t in sf for t in excl):
         continue  # verified analyst session
-    total += float(s.get("costUSD") or 0)
-print("%.4f" % total)
+    c = s.get("costUSD")
+    try:
+        total += float(c)
+    except (TypeError, ValueError):
+        degraded = True  # an in-window session with no priceable cost
+if degraded:
+    q = "degraded"
+elif not sessions:
+    q = "empty"
+else:
+    q = "clean"
+print("%.4f %s" % (total, q))
 ' "$anchor" "$ANALYST_SESSIONS_FILE" 2>/dev/null || true)"
+    # cache line: "<usd> <anchor>" (legacy caches carried just "<usd>")
+    cached_val=""; cached_anchor=""
+    if [ -f "$cache" ]; then
+        read -r cached_val cached_anchor < "$cache" 2>/dev/null || true
+    fi
+    case "$cached_val" in ''|*[!0-9.]*) cached_val="" ;; esac
     if [ -n "$out" ]; then
-        printf '%s' "$out" > "$cache" 2>/dev/null || true
-        printf '%s 0' "$out"
+        val="${out%% *}"; qual="${out##* }"
+        if [ "$qual" = "clean" ]; then
+            # A CLEAN read always stands, higher or lower: a lower clean value
+            # inside the same period is legitimate (a session newly verified as
+            # the analyst's drops out of the sum; a period boundary moved). Only
+            # NON-clean reads are barred from lowering an observation — that is
+            # the empty/degraded branch below.
+            printf '%s %s' "$val" "$anchor" > "$cache" 2>/dev/null || true
+            printf '%s 0' "$val"
+            return 0
+        fi
+        # empty or degraded: the tool answered, but the answer is semantically
+        # partial (no sessions at all / unplaceable sessions / unpriceable
+        # costUSD). A partial read may never LOWER a prior observation in ANY
+        # period: report max(claimed, last-known), flag stale, and leave the
+        # cache alone — a partial read is not an observation.
+        if [ -n "$cached_val" ] && awk -v n="$val" -v o="$cached_val" 'BEGIN { exit !(o > n) }'; then
+            val="$cached_val"
+        fi
+        printf '%s 1' "$val"
         return 0
     fi
-    # Measurement failed. Fall back to this gate's last known value rather than
-    # printing 0 — reporting zero would quietly switch the gate off, which is
-    # the one failure mode a budget guard must never have.
-    printf '%s 1' "$(cat "$cache" 2>/dev/null || echo "0")"
+    # Measurement FAILED outright. With a prior observation, reuse it (stale).
+    # Without one there is nothing safe to report: 0 would switch the gate off on
+    # the exact boot where measurement broke. Print NA — evaluate_budget_gates
+    # latches on it before any arithmetic can launder it into a zero.
+    if [ -n "$cached_val" ]; then
+        printf '%s 1' "$cached_val"
+    else
+        printf 'NA 1'
+    fi
     return 0
 }
 
@@ -647,9 +710,23 @@ for s in d.get("sessions", []):
 # calendar-week boundary.
 _weekly_resume_epoch() {
     local week_anchor="$1" limit="$2"
+    # STRICT parse (REVISE-2 gate A6): this arithmetic decides when spending
+    # resumes, and a malformed ledger row coerced to 0 would resume EARLY. Any
+    # row that is not `epoch engine run_id decimal` aborts the walk — print 0 and
+    # let the caller's guard turn that into a conservative now+pause retry.
+    if [ -f "$TOTAL_SPEND_LEDGER" ] \
+       && grep -qvE '^[0-9]+ [a-z]+ [^ ]+ [0-9]+(\.[0-9]+)?$' "$TOTAL_SPEND_LEDGER" 2>/dev/null; then
+        echo 0
+        return 0
+    fi
     {
+        # ALL ledger rows, both engines: jcode-codex cycles exist only here, and a
+        # resume walk that skips them reopens the weekly gate while codex spend is
+        # still inside the rolling 7×24h window (REVISE-2 gate A6). The ccusage
+        # entries below are the DISJOINT CLI-codex source, so no row is counted
+        # twice.
         [ -f "$TOTAL_SPEND_LEDGER" ] \
-            && awk -v c="$week_anchor" '$1 >= c && $2 == "claude" { print $1, $4 }' "$TOTAL_SPEND_LEDGER" 2>/dev/null
+            && awk -v c="$week_anchor" '$1 >= c { print $1, $4 }' "$TOTAL_SPEND_LEDGER" 2>/dev/null
         _codex_spend_entries_since "$week_anchor"
     } | sort -n | awk -v limit="$limit" '
         { epoch[NR] = $1; cost[NR] = $2; total += $2 }
@@ -663,25 +740,15 @@ _weekly_resume_epoch() {
         }'
 }
 
+# Claude USD inside the CURRENT plan window, derived from the idempotent TOTAL
+# ledger — the same rows DAILY/WEEKLY read (REVISE-2 gate A3). Sums from the
+# operator's plan-window anchor when known: the plan's quota resets at a fixed
+# instant, so a plain rolling window right after a reset would still carry
+# pre-reset spend and downgrade the model against a plan that is actually empty.
+# blockStart comes from `ccusage blocks --active` via the reporter, shared with
+# the TOTAL cap via _window_anchor_epoch() so the two can never disagree.
 window_spend() {
-    [ -f "$SPEND_LEDGER" ] || { echo "0"; return; }
-    local now cutoff
-    now=$(date +%s)
-    cutoff=$((now - WINDOW_SECONDS))
-    # Prune on the rolling cutoff (this ledger's own retention)...
-    awk -v c="$cutoff" '$1 >= c' "$SPEND_LEDGER" > "$SPEND_LEDGER.tmp" 2>/dev/null \
-        && mv "$SPEND_LEDGER.tmp" "$SPEND_LEDGER" 2>/dev/null || true
-
-    # ...but SUM from the operator's plan-window anchor when we know it. The plan's
-    # quota resets at a fixed instant while this ledger rolls, so right after a reset
-    # the rolling window still carries pre-reset spend: the loop would read itself as
-    # a third full against a plan that is actually empty, and downgrade the model for
-    # no reason. blockStart comes from `ccusage blocks --active` via the reporter.
-    # Shared with codex_window_spend() via _window_anchor_epoch() so the Claude cap
-    # and the TOTAL cap can never disagree about where the window starts.
-    cutoff="$(_window_anchor_epoch)"
-
-    awk -v c="$cutoff" '$1 >= c {s += $2} END {printf "%.4f", s + 0}' "$SPEND_LEDGER" 2>/dev/null || echo "0"
+    claude_spend_since "$(_window_anchor_epoch)"
 }
 
 # Record one completed Codex cycle's real token usage (APP-189). `codex exec --json`
@@ -1034,6 +1101,20 @@ evaluate_budget_gates() {
     BG_CODEX5="${x5_raw%% *}"; x5_stale="${x5_raw##* }"
     xd_raw="$(_codex_spend_since "$day_start" daily)"
     xw_raw="$(_codex_spend_since "$week_start" weekly)"
+    # A FIRST-EVER ccusage failure with no cached observation prints NA — there is
+    # no usable number, and the _sum_usd arithmetic below would silently coerce it
+    # to 0, which is the budget-off failure mode. Latch before any laundering.
+    # Checked per gate: the three refreshes fail independently.
+    local _cx
+    for _cx in "$BG_CODEX5" "${xd_raw%% *}" "${xw_raw%% *}"; do
+        if [ "$_cx" = "NA" ]; then
+            log "[BUDGET-FAIL-CLOSED] ccusage measurement failed with NO prior observation — no codex figure exists; latching"
+            latch_budget_hold "ccusage failed with no cached observation (first-ever failure; a 0 here would switch the codex gates off)"
+            BG_CLAUDE_OK=0; BG_CODEX_OK=0
+            BG_TOTAL_GATE="UNREADABLE"
+            return 0
+        fi
+    done
     # SUM the two disjoint codex sources: ccusage (CLI-harness cycles, via CODEX_HOME)
     # + the total ledger (jcode-harness cycles). A window legitimately contains both
     # under the mixed configuration, and neither source can see the other's cycles.
@@ -1892,13 +1973,40 @@ run_engine_cycle() {
                     printf '%s limit %s %s\n' "$(date +%s)" "$(window_spend)" "${CLAUDE_5H_BUDGET_USD:-inf}" \
                         >> "$LOG_DIR/ceiling-events.log" 2>/dev/null || true
                     log "Cycle #$loop_count [FALLBACK] Claude usage-limited — retrying on Codex"
-                    local _saved_bin="$RESOLVED_ENGINE_BIN" _saved_model="$MODEL"
-                    RESOLVED_ENGINE_BIN="$RESOLVED_CODEX_BIN"
-                    MODEL="$CODEX_MODEL"   # empty -> codex config.toml default (gpt-5.6-sol)
-                    run_codex_cycle "$prompt"
-                    RESOLVED_ENGINE_BIN="$_saved_bin"
-                    MODEL="$_saved_model"
-                    FALLBACK_USED=1
+                    # REVISE-2 gate A5: the Claude ATTEMPT spent (or may have spent)
+                    # before the limit hit. Persist it under its OWN idempotent run
+                    # ID BEFORE Codex starts — the Codex result overwrites
+                    # OUTPUT/CYCLE_COST, so anything not written now is lost from
+                    # every period total. Unmeasurable attempt spend latches instead
+                    # of guessing, and then no Codex retry runs on top of it.
+                    local _fb_cost=""
+                    if [ "${CYCLE_HARNESS_USED:-}" = "jcode" ]; then
+                        _fb_cost="$(printf '%s' "$JCODE_COST_JSON" | jq -r '.cost_usd // empty' 2>/dev/null || true)"
+                    else
+                        _fb_cost="$(printf '%s\n' "$RESULT_MESSAGE" | grep -E '^[[:space:]]*\{' | tail -1 \
+                            | jq -r '.total_cost_usd // .cost_usd // empty' 2>/dev/null || true)"
+                    fi
+                    if printf '%s' "$_fb_cost" | grep -qE '^[0-9]+(\.[0-9]+)?$'; then
+                        if awk -v c="$_fb_cost" 'BEGIN { exit !(c + 0 > 0) }'; then
+                            record_total_spend "claude" "${LOOP_BOOT_ID}-c${loop_count:-0}-fb-claude" "$_fb_cost"
+                            log "[FALLBACK] Claude attempt \$$_fb_cost persisted (run ${LOOP_BOOT_ID}-c${loop_count:-0}-fb-claude) before the Codex retry"
+                        else
+                            log "[FALLBACK] Claude attempt reported \$0 — limit hit before any spend; nothing to persist"
+                        fi
+                        # The claude attempt's adapter output must not leak onto the
+                        # codex cycle's accounting.
+                        JCODE_COST_JSON=""
+                        local _saved_bin="$RESOLVED_ENGINE_BIN" _saved_model="$MODEL"
+                        RESOLVED_ENGINE_BIN="$RESOLVED_CODEX_BIN"
+                        MODEL="$CODEX_MODEL"   # empty -> codex config.toml default (gpt-5.6-sol)
+                        run_codex_cycle "$prompt"
+                        RESOLVED_ENGINE_BIN="$_saved_bin"
+                        MODEL="$_saved_model"
+                        FALLBACK_USED=1
+                    else
+                        log "[BUDGET-FAIL-CLOSED] Claude attempt cost unparseable ('$_fb_cost') at fallback — latching; NOT retrying on Codex with unmeasured spend behind us"
+                        latch_budget_hold "claude fallback attempt spend unmeasurable at cycle #${loop_count:-?}"
+                    fi
                 else
                     log "Cycle #$loop_count [FALLBACK] requested but codex binary not found"
                 fi
@@ -1929,6 +2037,13 @@ run_engine_cycle() {
 # Two ways in: an operator writes it (cutover lock), or the loop latches it itself when
 # it can no longer measure what it spends (gate 4). Only an operator clears it.
 LOOP_HOLD_FILE="${LOOP_HOLD_FILE:-$LOG_DIR/LOOP_HOLD}"
+
+# One-shot canary token (REVISE-2 gate C15). With the hold PRE-ARMED on disk, this
+# token authorizes the boot preflight plus EXACTLY ONE cycle: the loop consumes
+# (deletes) it before the engine call, so a crash/OOM/restart mid-cycle boots into
+# a plain held state — a second cycle can never launch itself. Operator writes it
+# (`touch`), the loop only ever deletes it.
+LOOP_ONE_SHOT_FILE="${LOOP_ONE_SHOT_FILE:-$LOG_DIR/LOOP_HOLD_ONE_SHOT_TOKEN}"
 
 latch_budget_hold() { # $1=reason
     {
@@ -2003,7 +2118,11 @@ extract_cycle_metadata() {
                 CYCLE_COST="$_c"
                 [ "$_est" = "true" ] && log "[COST] estimated (uncalibrated model) — $(printf '%s' "$JCODE_COST_JSON" | head -c 200)"
             else
-                log "[COST] adapter produced no number — budget gates would under-read; failing the cycle"
+                # REVISE-2 gate A4: an unmetered cycle is not a retryable error —
+                # the five-error breaker would retry unmetered spend, which just
+                # spends more unmetered. Latch immediately; operator clears.
+                log "[COST] adapter produced no usable number — unmetered spend; failing the cycle AND latching"
+                latch_budget_hold "jcode cycle #${loop_count:-?} cost missing/zero — unmetered spend (adapter output: $(printf '%s' "$JCODE_COST_JSON" | head -c 120))"
                 CYCLE_SUBTYPE="error"
                 [ "$EXIT_CODE" -eq 0 ] && EXIT_CODE=1
             fi
@@ -2012,9 +2131,11 @@ extract_cycle_metadata() {
             # This used to log and move on, which is precisely the silent-zero the
             # whole adapter exists to prevent: a systemic cause (a lost +x bit, a
             # future image without jq) would under-read all four gates forever while
-            # every cycle logged healthy. Fail the cycle instead — five consecutive
-            # failures trip the existing circuit breaker, which IS the brake.
-            log "[COST] NO COST NUMBER for this cycle — failing it rather than letting the budget gates under-read"
+            # every cycle logged healthy. REVISE-2 gate A4: fail the cycle AND latch
+            # — the breaker is a retry mechanism, and retrying unmetered spend only
+            # spends more unmetered.
+            log "[COST] NO COST NUMBER for this cycle — failing it and latching rather than letting the budget gates under-read"
+            latch_budget_hold "jcode cycle #${loop_count:-?} produced NO cost number (adapter missing/crashed, empty stream, or jq absent)"
             CYCLE_SUBTYPE="error"
             [ "$EXIT_CODE" -eq 0 ] && EXIT_CODE=1
         fi
@@ -2161,6 +2282,20 @@ else
 fi
 log "Engine bin: $RESOLVED_ENGINE_BIN"
 
+# REVISE-2 gate B7: a container that boots INTO a mechanical hold must not touch a
+# provider, a model, or the network — not even for preflight. Wait HERE, before any
+# probe, until the operator clears the hold or arms a one-shot token (which
+# authorizes the boot checks plus exactly one cycle; the deterministic MCP probe
+# below makes protocol calls only, never a model call).
+if loop_hold_active && [ ! -f "$LOOP_ONE_SHOT_FILE" ]; then
+    log "[LOOP-HOLD] Boot under mechanical hold — ALL preflight probes skipped (zero model calls, zero external calls). Waiting for the operator."
+    save_state "held"
+    while loop_hold_active && [ ! -f "$LOOP_ONE_SHOT_FILE" ]; do
+        sleep "${LOOP_INTERVAL:-60}" || true
+    done
+    log "[LOOP-HOLD] hold cleared / one-shot armed — continuing boot preflight"
+fi
+
 # --- jcode harness preflight ------------------------------------------------
 # jcode does NOT error on an unknown `-m`: it silently runs its own default model
 # (measured 2026-07-31 — a dated `claude-haiku-4-5-20251001` ran as opus-5, which is
@@ -2240,45 +2375,92 @@ print(",".join(sorted(k for k,v in srv.items() if isinstance(v,dict) and v.get("
     for _r in $(printf '%s' "$_mcp_required" | tr ',' ' '); do
         printf '%s' ",$_mcp_have," | grep -q ",$_r," || _mcp_missing="$_mcp_missing $_r"
     done
-    if [ -z "$_mcp_have" ] || [ -n "$_mcp_missing" ]; then
-        echo "Error: jcode MCP preflight FAILED — missing/unusable server(s):${_mcp_missing:- (config unreadable or empty)}" >&2
+    # EXTRA servers fail too (REVISE-2 gate B9): the tool surface is an exact,
+    # operator-owned set — a server nobody approved is a capability nobody audited.
+    _mcp_extra=""
+    for _h in $(printf '%s' "$_mcp_have" | tr ',' ' '); do
+        printf '%s' ",$_mcp_required," | grep -q ",$_h," || _mcp_extra="$_mcp_extra $_h"
+    done
+    if [ -z "$_mcp_have" ] || [ -n "$_mcp_missing" ] || [ -n "$_mcp_extra" ]; then
+        echo "Error: jcode MCP preflight FAILED — missing:${_mcp_missing:- none} extra:${_mcp_extra:- none}${_mcp_have:+ }${_mcp_have:-(config unreadable or empty)}" >&2
         echo "       file: $_mcp_file" >&2
-        echo "       have: ${_mcp_have:-<none>} | required: $_mcp_required" >&2
+        echo "       have: ${_mcp_have:-<none>} | required (exact): $_mcp_required" >&2
         echo "       A jcode cycle without these tools reads stale state and writes conclusions from it." >&2
         echo "       Regenerate with scripts/core/jcode-mcp-config.py, or set LOOP_HARNESS=cli." >&2
         exit 1
     fi
-    log "Harness MCP config: $_mcp_have (all required present in the file)"
+    log "Harness MCP config: $_mcp_have (exact required set)"
 
-    # …and a config is not a capability. Ask jcode itself, once, whether those servers
-    # are actually reachable — a server that fails to launch produces NO error from
-    # jcode, just a model with fewer tools (measured: the community airtable package
-    # died on a broken dependency while every file-level check passed).
-    # JCODE_MCP_PROBE=0 skips it; that is for a deliberate offline boot, and it logs.
-    if [ "${JCODE_MCP_PROBE:-1}" = "1" ] && [ -x "$PROJECT_DIR/scripts/core/jcode-mcp-probe.sh" ]; then
-        # `set -e` makes a failing command substitution INSIDE AN ASSIGNMENT fatal, and
-        # this assignment runs at boot under the entrypoint's supervision — i.e. a
-        # probe failure would kill the container instead of printing the diagnosis it
-        # exists to print. Disarm for exactly this call. (Caught by the canary; it is
-        # the same shape the pre-deploy audit flagged in the entrypoint.)
-        set +e
-        _probe_out="$(PROJECT_DIR="$PROJECT_DIR" JCODE_BIN="$JCODE_BIN" \
-            JCODE_HOME="${JCODE_HOME:-$HOME/.jcode}" \
-            JCODE_MCP_REQUIRED="${JCODE_MCP_REQUIRED:-$_mcp_required,airtable-call-ok}" \
-            bash "$PROJECT_DIR/scripts/core/jcode-mcp-probe.sh" 2>&1)"
-        _probe_rc=$?
-        set -e
-        if [ "$_probe_rc" -ne 0 ]; then
-            echo "Error: jcode MCP RUNTIME probe failed (rc=$_probe_rc)" >&2
-            printf '%s\n' "$_probe_out" >&2
-            echo "       The config lists the servers; jcode cannot actually reach them." >&2
-            echo "       A cycle would run with fewer tools and no error. Refusing to start." >&2
+    # Config FRESHNESS (REVISE-2 gate B11): JCODE_HOME is a persistent volume, so a
+    # stale mcp.json from a previous boot survives a failed generation — and would
+    # pass every content check above. The generator stamps mcp.json.meta (epoch +
+    # sha256) on each successful write; require the stamp to match the bytes on
+    # disk AND to postdate THIS container boot.
+    _boot_epoch_file="${CONTAINER_BOOT_EPOCH_FILE:-$LOG_DIR/.container-boot-epoch}"
+    _meta_check="$(python3 -c '
+import hashlib, json, sys
+mcp, bootf = sys.argv[1], sys.argv[2]
+try:
+    m = json.load(open(mcp + ".meta"))
+    boot = int(open(bootf).read().strip())
+except Exception as e:
+    print("FAIL no-meta-or-boot-stamp (%s)" % e); sys.exit(0)
+try:
+    sha = hashlib.sha256(open(mcp, "rb").read()).hexdigest()
+except Exception as e:
+    print("FAIL unreadable-config (%s)" % e); sys.exit(0)
+if m.get("sha256") != sha:
+    print("FAIL sha-mismatch (config edited after generation, or half-finished)"); sys.exit(0)
+if int(m.get("epoch", 0)) < boot:
+    print("FAIL stale (stamped before this boot: generation FAILED this boot and left last boots file)"); sys.exit(0)
+print("OK %s" % sha[:12])
+' "$_mcp_file" "$_boot_epoch_file" 2>&1)"
+    case "$_meta_check" in
+        OK*) log "Harness MCP config stamp: $_meta_check (generated this boot)" ;;
+        *)
+            echo "Error: jcode MCP config is not provably from THIS boot: $_meta_check" >&2
+            echo "       A stale mcp.json on the persistent volume is not proof of a working generation." >&2
+            echo "       Fix the generator failure (see entrypoint log), or set LOOP_HARNESS=cli." >&2
             exit 1
-        fi
-        log "Harness MCP runtime: ${_probe_out#MCP_PROBE_OK: }"
-    else
-        log "WARNING: jcode MCP runtime probe SKIPPED — server reachability is unproven"
+            ;;
+    esac
+
+    # …and a config is not a capability. RUNTIME probe (REVISE-2 gates B8-B11): a
+    # deterministic MCP protocol client — initialize / tools/list / one read-only
+    # tools/call per the manifest — judged ONLY on protocol-level facts (is_error,
+    # error-prefixed content), never on model prose. It consumes no model quota.
+    # It is MANDATORY: there is no env bypass and a missing probe is a failed
+    # boot, not a skipped check. (The old model-based probe.sh is retired: it
+    # burned Claude quota and graded a sentence.)
+    if [ -n "${JCODE_MCP_PROBE:-}" ]; then
+        log "WARNING: JCODE_MCP_PROBE is set but IGNORED — the probe is mandatory (REVISE-2 gate B11); remove the variable."
     fi
+    if [ ! -f "$PROJECT_DIR/scripts/core/jcode-mcp-probe.py" ] \
+       || [ ! -f "$PROJECT_DIR/scripts/core/jcode-mcp-manifest.json" ]; then
+        echo "Error: jcode MCP probe or manifest missing under scripts/core/ — refusing to start." >&2
+        echo "       A boot that cannot prove its tool surface does not run (REVISE-2 gate B11)." >&2
+        exit 1
+    fi
+    # `set -e` makes a failing command substitution INSIDE AN ASSIGNMENT fatal, and
+    # this assignment runs at boot under the entrypoint's supervision — i.e. a
+    # probe failure would kill the container instead of printing the diagnosis it
+    # exists to print. Disarm for exactly this call.
+    set +e
+    _probe_out="$(JCODE_TOOLS_DENY="$JCODE_TOOLS_DENY" \
+        python3 "$PROJECT_DIR/scripts/core/jcode-mcp-probe.py" \
+        --config "$_mcp_file" \
+        --manifest "$PROJECT_DIR/scripts/core/jcode-mcp-manifest.json" \
+        --evidence "$LOG_DIR/mcp-probe-evidence.json" 2>&1)"
+    _probe_rc=$?
+    set -e
+    if [ "$_probe_rc" -ne 0 ]; then
+        echo "Error: jcode MCP RUNTIME probe failed (rc=$_probe_rc)" >&2
+        printf '%s\n' "$_probe_out" >&2
+        echo "       The config lists the servers; the protocol probe could not verify them against the manifest." >&2
+        echo "       A cycle would run with an unaudited tool surface. Refusing to start." >&2
+        exit 1
+    fi
+    log "Harness MCP runtime: $(printf '%s\n' "$_probe_out" | tail -1)"
 fi
 engine_version=$("$RESOLVED_ENGINE_BIN" --version 2>/dev/null | head -n1 || true)
 case "$RESOLVED_ENGINE_BIN" in
@@ -2339,6 +2521,26 @@ while true; do
     if check_stop_requested; then
         log "Stop requested. Shutting down gracefully."
         cleanup
+    fi
+
+    # Mechanical hold — checked FIRST, before the router, before ccusage, before
+    # any Telegram notifier (REVISE-2 gate B7): a held loop must produce ZERO model
+    # calls and ZERO external calls, and the router path is not free of them. A
+    # hold DIRECTIVE only asks the model to be idle; this file actually stops it.
+    # Exception: a one-shot token (gate C15) is consumed HERE — hold stays on disk,
+    # exactly one cycle runs, and any restart mid-cycle boots plainly held.
+    if loop_hold_active; then
+        if [ -f "$LOOP_ONE_SHOT_FILE" ]; then
+            rm -f "$LOOP_ONE_SHOT_FILE" 2>/dev/null || true
+            log "[LOOP-HOLD] one-shot token consumed — running exactly ONE cycle with the hold PRE-ARMED (crash/OOM/restart boots held; token is gone)"
+        else
+            log "[LOOP-HOLD] Refusing to run a cycle — mechanical hold in place ($LOOP_HOLD_FILE):"
+            while IFS= read -r _hl; do log "[LOOP-HOLD]   $_hl"; done < "$LOOP_HOLD_FILE" 2>/dev/null || true
+            log "[LOOP-HOLD] Operator clears it by removing that file. The loop stays up and re-checks each interval (no router, no ccusage, no notifiers while held)."
+            save_state "held"
+            sleep "$LOOP_INTERVAL" || true
+            continue
+        fi
     fi
 
     # Quota-aware router: pick this cycle's engine from headroom in both ledgers
@@ -2439,19 +2641,6 @@ This is Cycle #$loop_count. Act decisively."
         continue
     fi
 
-    # Mechanical hold, checked immediately before the engine call and independent of
-    # anything the model reads. This is what a cutover locks with — a HOLD directive
-    # only asks the model to be idle, and an idle-asked cycle still starts an engine,
-    # still spends, and can still write.
-    if loop_hold_active; then
-        log "[LOOP-HOLD] Refusing to run Cycle #$loop_count — mechanical hold in place ($LOOP_HOLD_FILE):"
-        while IFS= read -r _hl; do log "[LOOP-HOLD]   $_hl"; done < "$LOOP_HOLD_FILE" 2>/dev/null || true
-        log "[LOOP-HOLD] Operator clears it by removing that file. The loop stays up and re-checks each interval."
-        save_state "held"
-        sleep "$LOOP_INTERVAL"
-        continue
-    fi
-
     if ! prompt_guardrails_intact "$FULL_PROMPT"; then
         log "[GUARDRAIL-MISSING] Refusing to run Cycle #$loop_count — the assembled prompt is missing: $MISSING_GUARDRAILS"
         log "[GUARDRAIL-MISSING] Not a crash: the loop stays up and will retry next interval. Fix PROMPT.md or the assembly, do NOT bypass this."
@@ -2512,6 +2701,28 @@ This is Cycle #$loop_count. Act decisively."
         fi
     else
         record_spend "$CYCLE_COST"
+    fi
+
+    # REVISE-2 gate A4: any cycle that is SUPPOSED to carry a per-cycle USD number
+    # (every jcode cycle, and every CLI-Claude cycle) but reports zero, N/A or an
+    # unparseable value is UNMETERED SPEND — latch immediately and persistently.
+    # CLI-codex cycles are exempt: their USD is priced later by ccusage from
+    # CODEX_HOME session files, so they never carry a number here by design.
+    _cost_expected=0
+    if [ "${CYCLE_HARNESS_USED:-}" = "jcode" ] || ! _cycle_ran_on_codex; then
+        _cost_expected=1
+    fi
+    if [ "$_cost_expected" -eq 1 ] && ! loop_hold_active; then
+        _cost_ok=0
+        if printf '%s' "${CYCLE_COST:-}" | grep -qE '^[0-9]+(\.[0-9]+)?$' \
+           && ! awk -v c="${CYCLE_COST:-0}" 'BEGIN { exit !(c + 0 == 0) }'; then
+            _cost_ok=1
+        fi
+        if [ "$_cost_ok" -eq 0 ]; then
+            log "[BUDGET-FAIL-CLOSED] cycle #$loop_count (${CYCLE_PROVIDER_USED:-$ENGINE}/${CYCLE_HARNESS_USED:-cli}) reported cost '${CYCLE_COST:-}' — zero/N-A/unparseable is unmetered spend; latching (not a breaker retry)"
+            latch_budget_hold "cycle #$loop_count cost unusable ('${CYCLE_COST:-}' on ${CYCLE_PROVIDER_USED:-$ENGINE}/${CYCLE_HARNESS_USED:-cli})"
+            [ "$EXIT_CODE" -eq 0 ] && EXIT_CODE=1
+        fi
     fi
 
     # --- per-cycle telemetry ledger (opus experiment + reserve-% cap controller) ---

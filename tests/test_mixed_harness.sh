@@ -28,6 +28,7 @@ run_cycle() {
         RESULT_MESSAGE="$6"; JCODE_COST_JSON="$7"; EXIT_CODE="$8"
         OUTPUT="raw stderr tail"; CYCLE_COST="N/A"
         log() { echo "LOG:$*"; }
+        latch_budget_hold() { echo "LATCH:$*"; }
         '"$(awk '/^_cycle_ran_on_codex\(\)/,/^}/' "$SRC")"'
         '"$(awk '/^extract_cycle_metadata\(\)/,/^}/' "$SRC")"'
         extract_cycle_metadata
@@ -78,20 +79,23 @@ out=$(run_cycle cli openai claude codex 0 "$CODEX_MSG" "" 0)
 contains "override survives"    "$out" "shell_rc=0"
 contains "override typed codex" "$out" "type=codex_exec"
 
-echo "--- 6: a jcode cycle with NO cost number must FAIL, never pass as healthy ---"
+echo "--- 6: a jcode cycle with NO cost number must FAIL AND LATCH (REVISE-2 A4) ---"
 out=$(run_cycle jcode claude claude "" 0 "SUMMARY: ran but unmetered" "" 0)
 contains "marked error"      "$out" "subtype=error"
 contains "exit code raised"  "$out" "rc=1"
+contains "latched immediately" "$out" "LATCH:"
 
-echo "--- 7: a jcode cycle whose adapter returned JSON without cost_usd also fails ---"
+echo "--- 7: a jcode cycle whose adapter returned JSON without cost_usd also fails+latches ---"
 out=$(run_cycle jcode claude claude "" 0 "SUMMARY: x" '{"model":"claude-sonnet-5","estimated":true}' 0)
 contains "no-number marked error" "$out" "subtype=error"
 contains "no-number raises rc"    "$out" "rc=1"
+contains "no-number latches"      "$out" "LATCH:"
 
-echo "--- 7b: a COMPLETED jcode cycle reporting \$0 is unmetered, not free ---"
+echo "--- 7b: a COMPLETED jcode cycle reporting \$0 is unmetered, not free — latches ---"
 out=$(run_cycle jcode claude claude "" 0 "SUMMARY: y" '{"model":"claude-sonnet-5","cost_usd":0,"estimated":false}' 0)
 contains "zero-cost marked error" "$out" "subtype=error"
 contains "zero-cost raises rc"    "$out" "rc=1"
+contains "zero-cost latches"      "$out" "LATCH:"
 
 echo "--- 7c: a zero cost on an ALREADY-FAILED cycle is not double-reported ---"
 out=$(run_cycle jcode claude claude "" 0 "" '{"model":"claude-sonnet-5","cost_usd":0,"estimated":false}' 124)
@@ -101,6 +105,73 @@ echo "--- 8: CLI-claude on a mixed boot still parses its own JSON result ---"
 out=$(run_cycle cli claude claude "" 0 "$CLAUDE_CLI_MSG" "" 0)
 contains "cli claude cost parsed" "$out" "cost=1.23"
 contains "cli claude typed"       "$out" "type=result"
+
+# ── REVISE-2 gate A5: the Claude ATTEMPT is persisted BEFORE the Codex retry ──
+# Drives run_engine_cycle with stubbed engines + a REAL record_total_spend and a
+# real ledger file, so the assertion is on ledger ROWS, not on log lines.
+#   $1 = harness the claude attempt ran on   $2 = attempt cost json / result msg
+run_fallback() {
+    local SB; SB="$(mktemp -d)"
+    bash -c '
+        set -euo pipefail
+        SB="$1"; H="$2"; PAYLOAD="$3"
+        TOTAL_SPEND_LEDGER="$SB/spend-total.log"; TOTAL_LEDGER_RETENTION_DAYS=90
+        LOOP_BOOT_ID=fbtest; loop_count=7; LOG_DIR="$SB"
+        ENGINE=claude; FALLBACK_ENGINE=codex; CYCLE_ENGINE_OVERRIDE=""
+        RESOLVED_ENGINE_BIN=/bin/true; RESOLVED_CODEX_BIN=/bin/true
+        MODEL=claude-sonnet-5; CODEX_MODEL=""; CLAUDE_5H_BUDGET_USD=100
+        LOOP_HARNESS=cli; LOOP_HARNESS_CODEX=cli
+        log() { echo "LOG:$*"; }
+        latch_budget_hold() { echo "LATCH:$*"; }
+        _budget_now() { date +%s; }
+        window_spend() { echo 1.0; }
+        check_usage_limit() { return 0; }   # always "limited" for this test
+        resolve_codex_bin() { echo /bin/true; }
+        run_claude_cycle() {
+            CYCLE_PROVIDER_USED=claude; CYCLE_HARNESS_USED="$H"
+            OUTPUT="usage limit reached"; EXIT_CODE=1
+            if [ "$H" = jcode ]; then
+                RESULT_MESSAGE="limited"; JCODE_COST_JSON="$PAYLOAD"
+            else
+                RESULT_MESSAGE="$PAYLOAD"; JCODE_COST_JSON=""
+            fi
+        }
+        run_codex_cycle() {
+            echo "CODEX_RAN jcode_cost_json_at_codex_start=[${JCODE_COST_JSON:-}]"
+            CYCLE_PROVIDER_USED=openai; CYCLE_HARNESS_USED=cli
+            OUTPUT="codex output"; RESULT_MESSAGE="Cycle complete."; EXIT_CODE=0
+        }
+        '"$(awk '/^record_total_spend\(\)/,/^}/' "$SRC")"'
+        '"$(awk '/^run_engine_cycle\(\)/,/^}/' "$SRC")"'
+        run_engine_cycle "prompt"
+        echo "FALLBACK_USED=$FALLBACK_USED"
+        echo "LEDGER:$(cat "$SB/spend-total.log" 2>/dev/null | tr "\n" ";")"
+    ' _ "$SB" "$@" 2>&1
+    rm -rf "$SB"
+}
+
+echo "--- 9: jcode-claude attempt cost persisted under its own run ID before codex ---"
+out=$(run_fallback jcode '{"model":"claude-sonnet-5","cost_usd":0.31,"estimated":false}')
+contains "attempt row written"     "$out" "claude fbtest-c7-fb-claude 0.31"
+contains "codex retry ran"         "$out" "CODEX_RAN"
+contains "cost json cleared first" "$out" "jcode_cost_json_at_codex_start=[]"
+contains "fallback flagged"        "$out" "FALLBACK_USED=1"
+
+echo "--- 9b: CLI-claude attempt cost parsed from its result JSON and persisted ---"
+out=$(run_fallback cli '{"type":"result","subtype":"error","total_cost_usd":0.0821,"result":"limit"}')
+contains "cli attempt row written" "$out" "claude fbtest-c7-fb-claude 0.0821"
+contains "cli codex retry ran"     "$out" "CODEX_RAN"
+
+echo "--- 9c: \$0 attempt persists nothing but the retry still runs ---"
+out=$(run_fallback cli '{"type":"result","subtype":"error","total_cost_usd":0,"result":"limit"}')
+case "$out" in *"fb-claude"*) echo "  FAIL zero attempt wrote a row"; fail=1 ;; *) echo "  PASS no ledger row for \$0 attempt" ;; esac
+contains "zero attempt: retry ran" "$out" "CODEX_RAN"
+
+echo "--- 9d: UNPARSEABLE attempt cost LATCHES and blocks the codex retry ---"
+out=$(run_fallback cli 'no json here at all')
+contains "latched"                 "$out" "LATCH:claude fallback attempt spend unmeasurable"
+case "$out" in *CODEX_RAN*) echo "  FAIL codex ran despite unmeasured claude spend"; fail=1 ;; *) echo "  PASS codex retry blocked" ;; esac
+contains "no fallback flag"        "$out" "FALLBACK_USED=0"
 
 echo
 if [ "$fail" -eq 0 ]; then echo "ALL MIXED-HARNESS TESTS PASS"; else echo "FAILURES PRESENT"; exit 1; fi
