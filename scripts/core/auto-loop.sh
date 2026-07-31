@@ -441,6 +441,19 @@ record_total_spend() {
         && mv "$TOTAL_SPEND_LEDGER.tmp" "$TOTAL_SPEND_LEDGER" 2>/dev/null || true
 }
 
+# Codex notional spend since an epoch, from the cumulative ledger. Only the jcode
+# harness writes codex rows here; on the CLI path this is legitimately 0 and the
+# ccusage figure is the real one. Callers take the MAX of the two so a mixed window
+# (some CLI cycles, some jcode cycles) can never read lower than either source alone —
+# a budget reader that under-counts is not a brake.
+codex_ledger_spend_since() {
+    [ -f "$TOTAL_SPEND_LEDGER" ] || { echo "0.0000"; return; }
+    awk -v c="$1" '$1 >= c && $2 == "codex" { s += $4 } END { printf "%.4f", s + 0 }' \
+        "$TOTAL_SPEND_LEDGER" 2>/dev/null || echo "0.0000"
+}
+
+_max_usd() { awk -v a="$1" -v b="$2" 'BEGIN { printf "%.4f", (a+0 > b+0 ? a+0 : b+0) }'; }
+
 # Claude notional spend since an epoch, from the cumulative ledger.
 claude_spend_since() {
     [ -f "$TOTAL_SPEND_LEDGER" ] || { echo "0.0000"; return; }
@@ -976,8 +989,15 @@ evaluate_budget_gates() {
     BG_CODEX5="${x5_raw%% *}"; x5_stale="${x5_raw##* }"
     xd_raw="$(_codex_spend_since "$day_start" daily)"
     xw_raw="$(_codex_spend_since "$week_start" weekly)"
-    BG_DAILY="$(awk -v a="$(claude_spend_since "$day_start")" -v b="${xd_raw%% *}" 'BEGIN { printf "%.4f", a + b }')"
-    BG_WEEKLY="$(awk -v a="$(claude_spend_since "$week_start")" -v b="${xw_raw%% *}" 'BEGIN { printf "%.4f", a + b }')"
+    # Take the higher of ccusage (CLI cycles) and the ledger (jcode cycles) for every
+    # codex figure. Neither source sees the other's cycles, and a window can legally
+    # contain both across a cutover or a rollback.
+    local xd_usd xw_usd
+    BG_CODEX5="$(_max_usd "$BG_CODEX5" "$(codex_ledger_spend_since "$anchor")")"
+    xd_usd="$(_max_usd "${xd_raw%% *}" "$(codex_ledger_spend_since "$day_start")")"
+    xw_usd="$(_max_usd "${xw_raw%% *}" "$(codex_ledger_spend_since "$week_start")")"
+    BG_DAILY="$(awk -v a="$(claude_spend_since "$day_start")" -v b="$xd_usd" 'BEGIN { printf "%.4f", a + b }')"
+    BG_WEEKLY="$(awk -v a="$(claude_spend_since "$week_start")" -v b="$xw_usd" 'BEGIN { printf "%.4f", a + b }')"
 
     local stale_note=""
     [ "$x5_stale" = "1" ] && stale_note=" (codex figures STALE — ccusage failed, last known values reused; a stale read never lowers an observed total)"
@@ -1488,7 +1508,15 @@ run_jcode_cycle() {
     wait "$watchdog_pid" 2>/dev/null || true
     set -e
 
-    OUTPUT=$(tail -c 4000 "$output_file" 2>/dev/null || true)
+    # OUTPUT feeds check_usage_limit / codex_auth_failed / the fallback trigger. On the
+    # CLI path it was the full merged stdout+stderr; jcode splits them, and its API
+    # errors (rate_limit_error, auth failures) arrive as ndjson EVENTS on stdout, not on
+    # stderr. Taking stderr alone would make a rate-limited cycle look like a plain
+    # error: no Codex fallback, no [LIMIT] ceiling row, and a 300s cooldown retry
+    # against a closed window instead of the 3600s limit wait. Concatenate both, with
+    # the error events first so a long stack trace cannot push them out of the tail.
+    OUTPUT=$( { grep -h '"type":"error"' "$events_file" 2>/dev/null | tail -c 2000; \
+                tail -c 4000 "$output_file" 2>/dev/null; } || true)
 
     # Final assistant text. NOT `done.text` alone — that is the last text BLOCK, not the
     # answer (measured: a two-line reply came back as its second line only). The shared
@@ -1755,11 +1783,20 @@ extract_cycle_metadata() {
                 CYCLE_COST="$_c"
                 [ "$_est" = "true" ] && log "[COST] estimated (uncalibrated model) — $(printf '%s' "$JCODE_COST_JSON" | head -c 200)"
             else
-                log "[COST] adapter produced no number — budget gates would under-read; treating cycle as error"
+                log "[COST] adapter produced no number — budget gates would under-read; failing the cycle"
                 CYCLE_SUBTYPE="error"
+                [ "$EXIT_CODE" -eq 0 ] && EXIT_CODE=1
             fi
         else
-            log "[COST] no ndjson cost for this cycle (adapter missing or empty stream)"
+            # No number at all (adapter missing/crashed, empty stream, jq absent).
+            # This used to log and move on, which is precisely the silent-zero the
+            # whole adapter exists to prevent: a systemic cause (a lost +x bit, a
+            # future image without jq) would under-read all four gates forever while
+            # every cycle logged healthy. Fail the cycle instead — five consecutive
+            # failures trip the existing circuit breaker, which IS the brake.
+            log "[COST] NO COST NUMBER for this cycle — failing it rather than letting the budget gates under-read"
+            CYCLE_SUBTYPE="error"
+            [ "$EXIT_CODE" -eq 0 ] && EXIT_CODE=1
         fi
         CYCLE_TYPE="jcode_${ENGINE}"
         if [ "$CYCLE_SUBTYPE" = "unknown" ]; then
@@ -1919,12 +1956,27 @@ if [ "$LOOP_HARNESS" = "jcode" ]; then
     _jcode_catalog() { "$JCODE_BIN" --quiet --no-update model list -p "$1" 2>/dev/null || true; }
     _claude_catalog="$(_jcode_catalog claude)"
     _openai_catalog="$(_jcode_catalog openai)"
+    # An EMPTY catalog is an UNKNOWN, never a proof of absence. Reading it as
+    # "every model is missing" would exit 1 on every boot, and the entrypoint
+    # supervises this process — that is a container crash loop, the APP-235/240
+    # shape. (Measured 2026-07-31: the catalog is static, answering with no auth
+    # and with --network none. This guard is for the day that stops being true.)
+    if [ -z "$_claude_catalog" ] || [ -z "$_openai_catalog" ]; then
+        log "WARNING: jcode model catalog unavailable — cannot verify model names."
+        log "         Falling back to LOOP_HARNESS=cli for this boot rather than"
+        log "         running unverified (an unknown -m silently becomes jcode's default model)."
+        LOOP_HARNESS="cli"
+    else
     _bad=""
+    # Ladder rungs may legally carry a `model:effort` suffix (APP-241); the catalog
+    # holds bare model names, so compare only the part before the colon.
     for _m in $(printf '%s' "$CLAUDE_TIER_LADDER" | tr ',' ' ') "$MODEL"; do
         [ -z "$_m" ] && continue
+        _m="${_m%%:*}"
         printf '%s\n' "$_claude_catalog" | grep -qx -- "$_m" || _bad="$_bad claude:$_m"
     done
     _om="${CODEX_MODEL:-${JCODE_OPENAI_MODEL:-gpt-5.6-sol}}"
+    _om="${_om%%:*}"
     printf '%s\n' "$_openai_catalog" | grep -qx -- "$_om" || _bad="$_bad openai:$_om"
     if [ -n "$_bad" ]; then
         echo "Error: model name(s) not in jcode's catalog:$_bad" >&2
@@ -1933,6 +1985,7 @@ if [ "$LOOP_HARNESS" = "jcode" ]; then
         exit 1
     fi
     log "Harness preflight: all ladder models present in jcode catalog"
+    fi
     # MCP is not optional for this company: cycles read and write Airtable and Linear.
     # jcode reads only the global ~/.jcode/mcp.json, so a missing file is a silent
     # capability loss, not an error — check it here where it is still loud.
@@ -2146,6 +2199,16 @@ This is Cycle #$loop_count. Act decisively."
         # engine) — meter its real token usage from the JSONL stream. Codex runs on a
         # separate quota, so it is intentionally NOT written to the Claude USD ledger.
         record_codex_usage "$OUTPUT"
+        # …but the USD still has to reach the DAILY/WEEKLY totals and the Codex 5h
+        # gate. On the CLI path those read `ccusage codex session`, which parses
+        # CODEX_HOME session files. **jcode never writes CODEX_HOME**, so without this
+        # line an openai cycle under LOOP_HARNESS=jcode is invisible to three of the
+        # four APP-263 gates while the adapter's correct figure is dropped on the
+        # floor: unbounded gpt-5.6-sol spend behind a [BUDGET] line reading $0.0000.
+        # Found by the pre-deploy audit, not by testing — every cycle "worked".
+        if [ "$LOOP_HARNESS" = "jcode" ]; then
+            record_total_spend "codex" "${LOOP_BOOT_ID}-c${loop_count:-0}" "$CYCLE_COST"
+        fi
     else
         record_spend "$CYCLE_COST"
     fi

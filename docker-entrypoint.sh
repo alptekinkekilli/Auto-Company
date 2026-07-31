@@ -319,8 +319,18 @@ DASH_PID=$!
 #      consensus.md.
 if [ "${LOOP_HARNESS:-cli}" = "jcode" ]; then
     export JCODE_NO_TELEMETRY=1
-    JHOME="${JCODE_HOME:-$HOME/.jcode}"
-    mkdir -p "$JHOME" && chmod 700 "$JHOME"
+    # Default to the PERSISTENT logs volume, not $HOME: the container filesystem is
+    # replaced on every redeploy, and jcode's OpenAI credential is a FILE
+    # (~/.jcode/openai-auth.json — there is no env-var equivalent the way there is for
+    # Claude). On an ephemeral home, every redeploy would silently kill the openai
+    # provider: the usage-limit fallback and the budget-offload path both go dead while
+    # the loop keeps reporting healthy Claude cycles.
+    JHOME="${JCODE_HOME:-/app/logs/.jcode}"
+    export JCODE_HOME="$JHOME"
+    # Guarded: under `set -e` an unguarded failure here exits the entrypoint, and the
+    # entrypoint IS the container — one bad line becomes a restart loop (APP-235/240).
+    mkdir -p "$JHOME" 2>/dev/null || echo "[entrypoint] WARNING: cannot create $JHOME" >&2
+    chmod 700 "$JHOME" 2>/dev/null || true
 
     if python3 /app/scripts/core/jcode-mcp-config.py --src /app/.mcp.json --dest "$JHOME/mcp.json"; then
         echo "[entrypoint] jcode MCP config written"
@@ -331,18 +341,34 @@ if [ "${LOOP_HARNESS:-cli}" = "jcode" ]; then
     case "${CLAUDE_CODE_OAUTH_TOKEN:-}" in
         sk-ant-oat*)
             _exp=$(( ($(date +%s) + 86400*300) * 1000 ))
-            CLAUDE_CODE_OAUTH_TOKEN=$(python3 -c 'import json,os,sys; print(json.dumps({"claudeAiOauth":{"accessToken":os.environ["CLAUDE_CODE_OAUTH_TOKEN"],"refreshToken":"","expiresAt":int(sys.argv[1]),"scopes":["user:inference"],"subscriptionType":"max"}}))' "$_exp")
-            export CLAUDE_CODE_OAUTH_TOKEN
-            echo "[entrypoint] jcode: wrapped Claude oat token"
+            # `|| true` keeps a python failure from exiting the entrypoint; the empty
+            # value is then caught below and left unwrapped rather than crash-looping.
+            _wrapped=$(python3 -c 'import json,os,sys; print(json.dumps({"claudeAiOauth":{"accessToken":os.environ["CLAUDE_CODE_OAUTH_TOKEN"],"refreshToken":"","expiresAt":int(sys.argv[1]),"scopes":["user:inference"],"subscriptionType":"max"}}))' "$_exp" 2>/dev/null || true)
+            if [ -n "$_wrapped" ]; then
+                CLAUDE_CODE_OAUTH_TOKEN="$_wrapped"
+                export CLAUDE_CODE_OAUTH_TOKEN
+                echo "[entrypoint] jcode: wrapped Claude oat token"
+            else
+                echo "[entrypoint] WARNING: could not wrap the Claude token for jcode — claude cycles will fail auth" >&2
+            fi
+            unset _wrapped
+            ;;
+        *)
+            # Not an oat token (a JSON blob already, or something else). Say so: jcode
+            # gets the raw value and any failure would otherwise appear only as
+            # per-cycle 401s with no boot-time signal.
+            echo "[entrypoint] NOTE: CLAUDE_CODE_OAUTH_TOKEN is not an sk-ant-oat value — passing it through unwrapped" >&2
             ;;
     esac
 
     # Idempotent: only append what is absent, never rewrite a config the operator or a
     # login flow has already shaped.
     grep -q claude_code_native_credentials "$JHOME/config.toml" 2>/dev/null || \
-        printf '[auth]\ntrusted_external_sources = ["claude_code_native_credentials"]\n' >> "$JHOME/config.toml"
+        printf '[auth]\ntrusted_external_sources = ["claude_code_native_credentials"]\n' >> "$JHOME/config.toml" 2>/dev/null || \
+        echo "[entrypoint] WARNING: could not write $JHOME/config.toml (auth consent)" >&2
     grep -q '^\[features\]' "$JHOME/config.toml" 2>/dev/null || \
-        printf '\n[features]\nmemory = false\nswarm = false\nmermaid = false\n\n[agents]\nmemory_sidecar_enabled = false\n' >> "$JHOME/config.toml"
+        printf '\n[features]\nmemory = false\nswarm = false\nmermaid = false\n\n[agents]\nmemory_sidecar_enabled = false\n' >> "$JHOME/config.toml" 2>/dev/null || \
+        echo "[entrypoint] WARNING: could not write $JHOME/config.toml (features off)" >&2
 fi
 
 # --- autonomous loop (background so we can wait on both) ---
