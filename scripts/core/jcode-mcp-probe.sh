@@ -48,10 +48,19 @@ esac
 ev="$(mktemp)"; trap 'rm -f "$ev"' EXIT
 
 # Deliberately the cheapest model and a read-only question: this runs on every boot.
-# --tools is NOT restricted here; the probe must see what the harness will see, and the
-# cycle-time allowlist is applied separately by auto-loop.sh.
-timeout "$TIMEOUT" "$JCODE_BIN" -p "$PROVIDER" -m "$MODEL" -C "$WORKDIR" \
-    run 'Call the airtable MCP tool that lists bases. Then reply with ONE line: the comma-separated lowercase names of every MCP server you can see. Nothing else.' \
+#
+# The probe applies the SAME tool flags the cycles will. It used to run unrestricted,
+# which made it prove things about a configuration production never uses — and it then
+# reported every denied tool as "still available", because in the probe's own run they
+# genuinely were. A check that measures a different setup than the one it certifies is
+# worse than no check.
+JCODE_TOOLS_DENY="${JCODE_TOOLS_DENY:-}" export JCODE_TOOLS_DENY
+JCODE_TOOLS_ALLOW="${JCODE_TOOLS_ALLOW:-}"
+_tool_flags=()
+[ -n "$JCODE_TOOLS_ALLOW" ] && _tool_flags+=(--disable-base-tools --tools "$JCODE_TOOLS_ALLOW")
+[ -n "$JCODE_TOOLS_DENY" ] && _tool_flags+=(--disabled-tools "$JCODE_TOOLS_DENY")
+timeout "$TIMEOUT" "$JCODE_BIN" -p "$PROVIDER" -m "$MODEL" -C "$WORKDIR" "${_tool_flags[@]}" \
+    run 'Call the airtable MCP tool that lists bases. Then reply with ONE line: the comma-separated lowercase names of every MCP server you can see, followed by "|" and then the comma-separated full names of every tool you have whose name contains delete, remove, archive, revert or drop (write "none" if you have none). Nothing else.' \
     --quiet --no-update --no-selfdev --ndjson > "$ev" 2>/dev/null
 rc=$?
 
@@ -62,7 +71,7 @@ rc=$?
 # server name whether or not anything was called).
 vf="$(mktemp)"; trap 'rm -f "$ev" "$vf"' EXIT
 python3 - "$ev" "$REQUIRED" > "$vf" 2>/dev/null <<'PY'
-import json, sys
+import json, os, sys
 ev_path, required = sys.argv[1], sys.argv[2]
 called_ok = set()      # servers with at least one SUCCESSFUL tool_done
 seen = set()           # servers that appear at all (start or done)
@@ -93,7 +102,23 @@ with open(ev_path, encoding="utf-8", errors="replace") as fh:
 # Server visibility still comes from the model's line (jcode exposes no list command),
 # but a CALL is judged only by events.
 listed = "".join(text).lower()
+
+# DENYLIST PROOF. A denied tool name that does not exist protects nothing, and that is
+# not hypothetical: the first hand-written list named mcp__airtable__delete_records
+# while the real tool is delete_records_for_table, so the destructive tool stayed
+# available behind a guard that looked configured. The model reports the destructive
+# tools it can still reach; any name here that IS in the denylist means the denial did
+# not take, and any denied name the model never reports is at least worth surfacing.
+deny = [d.strip() for d in (os.environ.get("JCODE_TOOLS_DENY") or "").split(",") if d.strip()]
+still_available = []
+after_pipe = listed.split("|", 1)[1] if "|" in listed else ""
+for d in deny:
+    if d.lower() in after_pipe:
+        still_available.append(d)
+
 missing = []
+if still_available:
+    missing.append("denylist-not-applied(" + ",".join(still_available) + ")")
 for r in required.split(","):
     r = r.strip()
     if not r:

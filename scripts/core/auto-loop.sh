@@ -204,15 +204,27 @@ RESOLVED_ENGINE_BIN=""
 # its own tool list. So the Codex CLI's `enabled_tools` control has a real equivalent
 # here and the migration does not have to downgrade it to policy.
 #
-# Base tools are an explicit ALLOW list: everything not named is gone. Dropped on
-# purpose — `gmail` (a mail path outside the audited Twilio/ForwardEmail send rail),
-# `browser` (the company reaches the browser only through the gateway-locked browseros
-# MCP), `swarm`/`selfdev`/`memory`/`side_panel`/`bg`/`initiative`/`open` (no cycle uses
-# them; `memory` would also give cross-cycle state that must live only in consensus.md).
-JCODE_TOOLS_ALLOW="${JCODE_TOOLS_ALLOW:-Bash,Read,Write,Edit,multiedit,apply_patch,patch,ls,agentgrep,todo,batch,webfetch,websearch,Skill,mcp,discover_tools}"
-# Destructive MCP tools are named individually, mirroring what the Codex CLI's
-# enabled_tools allowlist already excludes for the same servers.
-JCODE_TOOLS_DENY="${JCODE_TOOLS_DENY:-mcp__airtable__delete_records,mcp__airtable__delete_table,mcp__linear__delete_attachment,mcp__linear__delete_comment,mcp__linear__delete_diff_comment,mcp__linear__delete_status_update}"
+# WHY A DENYLIST AND NOT AN ALLOWLIST — measured, not preferred. `--tools` is a TOTAL
+# allowlist: it gates MCP tools as well as base ones, with no wildcard (`mcp__*` was
+# tried and rejected), so an allowlist forces enumerating every MCP tool of every
+# server. That set includes browseros, whose surface the operator deliberately chose to
+# WATCH rather than restrict (2026-07-28), and it would silently break the loop the day
+# a server renames or adds a read tool. A canary proved the failure directly: with the
+# allowlist on, the first real cycle died on `Tool 'mcp__airtable__list_bases' is not
+# allowed`. So base tools are removed by name, and destructive MCP tools are removed by
+# name — both mechanical, both verified at boot below.
+#
+# Removed base tools: `gmail` (a mail path outside the audited send rail), `browser`
+# (the company reaches a browser only through the gateway-locked browseros MCP),
+# `swarm`/`selfdev`/`side_panel`/`bg`/`initiative`/`open` (unused), and `memory`
+# (cross-run state; consensus.md must remain the only cross-cycle memory).
+JCODE_TOOLS_ALLOW="${JCODE_TOOLS_ALLOW:-}"
+# Destructive MCP tools, enumerated from the HOSTED servers actually in use — not
+# guessed. The first hand-written version of this list named
+# `mcp__airtable__delete_records`, which does not exist: the real tool is
+# `delete_records_for_table`, so the guard protected nothing while the destructive tool
+# stayed available. Names are verified against the live tool set at boot.
+JCODE_TOOLS_DENY="${JCODE_TOOLS_DENY:-gmail,browser,swarm,selfdev,memory,side_panel,bg,initiative,open,mcp__airtable__delete_records_for_table,mcp__airtable__delete_table,mcp__airtable__delete_automation,mcp__airtable__delete_interface,mcp__airtable__delete_page,mcp__airtable__revert_action,mcp__linear__delete_attachment,mcp__linear__delete_comment,mcp__linear__delete_diff_comment,mcp__linear__delete_status_update}"
 
 CURRENT_ENGINE_PID=""
 LOOP_HARNESS="$(printf '%s' "${LOOP_HARNESS:-cli}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
@@ -1581,9 +1593,9 @@ run_jcode_cycle() {
         esac
         local cmd=("$JCODE_BIN" "-p" "$provider" "-C" "$PROJECT_DIR")
         [ -n "$MODEL" ] && cmd+=("-m" "$MODEL")
-        # Mechanical tool surface. --disable-base-tools makes the allow list total:
-        # a tool added by a future jcode version is absent until someone names it,
-        # which is the safe direction for an unattended loop.
+        # Mechanical tool surface. The allow list stays OPT-IN (empty by default): it is
+        # total, gating MCP tools too, so turning it on without enumerating every MCP
+        # tool kills the cycle — a canary died exactly that way.
         if [ -n "$JCODE_TOOLS_ALLOW" ]; then
             cmd+=("--disable-base-tools" "--tools" "$JCODE_TOOLS_ALLOW")
         fi
@@ -2178,15 +2190,26 @@ if [ "$LOOP_HARNESS" = "jcode" ]; then
     _bad=""
     # Ladder rungs may legally carry a `model:effort` suffix (APP-241); the catalog
     # holds bare model names, so compare only the part before the colon.
+    #
+    # And compare model FAMILIES, not exact strings: the catalog is not stable. The same
+    # jcode binary listed `claude-haiku-4-5` in one container and
+    # `claude-haiku-4-5-20251001` in another (measured 2026-07-31 minutes apart), and
+    # both run — Anthropic maps one to the other and jcode says so in the done event.
+    # An exact match would therefore refuse to boot at a random future moment for a
+    # config that is entirely valid. Stripping a trailing -YYYYMMDD still catches the
+    # thing this guard is for (a typo or a retired family), while the AUTHORITATIVE
+    # protection is the runtime substitution check on every cycle's done event.
+    _strip_date() { printf '%s' "${1%%:*}" | sed -E 's/-[0-9]{8}$//'; }
+    _cat_families="$(printf '%s\n' "$_claude_catalog" | sed -E 's/-[0-9]{8}$//' | sort -u)"
     for _m in $(printf '%s' "$CLAUDE_TIER_LADDER" | tr ',' ' ') "$MODEL"; do
         [ -z "$_m" ] && continue
-        _m="${_m%%:*}"
-        printf '%s\n' "$_claude_catalog" | grep -qx -- "$_m" || _bad="$_bad claude:$_m"
+        _mf="$(_strip_date "$_m")"
+        printf '%s\n' "$_cat_families" | grep -qx -- "$_mf" || _bad="$_bad claude:$_m"
     done
     if [ "$LOOP_HARNESS_CODEX" = "jcode" ]; then
-        _om="${CODEX_MODEL:-${JCODE_OPENAI_MODEL:-gpt-5.6-sol}}"
-        _om="${_om%%:*}"
-        printf '%s\n' "$_openai_catalog" | grep -qx -- "$_om" || _bad="$_bad openai:$_om"
+        _om="$(_strip_date "${CODEX_MODEL:-${JCODE_OPENAI_MODEL:-gpt-5.6-sol}}")"
+        printf '%s\n' "$_openai_catalog" | sed -E 's/-[0-9]{8}$//' | grep -qx -- "$_om" \
+            || _bad="$_bad openai:$_om"
     fi
     if [ -n "$_bad" ]; then
         echo "Error: model name(s) not in jcode's catalog:$_bad" >&2
