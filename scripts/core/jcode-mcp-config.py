@@ -34,6 +34,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import sys
 from pathlib import Path
 
@@ -115,13 +116,21 @@ def convert(name: str, spec: dict) -> tuple[dict | None, str]:
     got_url = expand(str(url or ""))
     if not got_url:
         return None, "url missing or references an unset variable"
-    args = ["-y", "mcp-remote", got_url, "--allow-http", "--transport", "http-only"]
+    # Prefer the image-installed binary; fall back to npx only if it is absent. The npx
+    # path is the one that produced two silent, dependency-corrupt server failures.
+    bridge = shutil.which("mcp-remote")
+    if bridge:
+        cmd_name, args = bridge, [got_url, "--allow-http", "--transport", "http-only"]
+    else:
+        cmd_name = "npx"
+        args = ["-y", "mcp-remote", got_url, "--allow-http", "--transport", "http-only"]
     for k, v in (spec.get("headers") or {}).items():
         got = expand(str(v))
         if got is None:
             return None, f"header {k} references an unset variable"
         args += ["--header", f"{k}: {got}"]
-    return {"command": "npx", "args": args}, "http via mcp-remote bridge"
+    return ({"command": cmd_name, "args": args},
+            "http via mcp-remote bridge" + ("" if cmd_name == "npx" else " (image-installed)"))
 
 
 def main() -> int:

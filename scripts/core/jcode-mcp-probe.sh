@@ -17,7 +17,12 @@
 # run (which is also a failure — an unprovable capability is not a capability).
 set -uo pipefail
 
-REQUIRED="${1:-${JCODE_MCP_REQUIRED:-airtable,linear,context7,browseros}}"
+# `airtable-call-ok` is deliberately in the required set: a server can be VISIBLE and
+# still fail every call — measured 2026-07-31, when the airtable bridge appeared in the
+# model's server list and then answered "Failed to connect to MCP server 'airtable'" on
+# each attempt (a corrupt npx dependency cache). Visibility is not capability, so the
+# probe now proves one real read.
+REQUIRED="${1:-${JCODE_MCP_REQUIRED:-airtable,linear,context7,browseros,airtable-call-ok}}"
 JCODE_BIN="${JCODE_BIN:-$(command -v jcode 2>/dev/null || echo /usr/local/bin/jcode)}"
 PROVIDER="${JCODE_PROBE_PROVIDER:-claude}"
 MODEL="${JCODE_PROBE_MODEL:-claude-haiku-4-5}"
@@ -26,13 +31,27 @@ WORKDIR="${JCODE_PROBE_CWD:-${PROJECT_DIR:-/app}}"
 
 [ -x "$JCODE_BIN" ] || { echo "MCP_PROBE_FAILED: jcode not executable at $JCODE_BIN" >&2; exit 2; }
 
+# The loop deliberately keeps the RAW sk-ant-oat token in its own environment (so the
+# CLI rollback path keeps working) and wraps it only inside each jcode subprocess. This
+# probe is its own process, so it must do the same wrap — without it jcode gets a token
+# shape it cannot use, answers nothing, and the probe reports "unreachable" for servers
+# that are perfectly fine. (Exactly what happened on the first canary run.)
+case "${CLAUDE_CODE_OAUTH_TOKEN:-}" in
+    sk-ant-oat*)
+        _exp=$(( ($(date +%s) + 86400*300) * 1000 ))
+        _wrapped=$(python3 -c 'import json,os,sys; print(json.dumps({"claudeAiOauth":{"accessToken":os.environ["CLAUDE_CODE_OAUTH_TOKEN"],"refreshToken":"","expiresAt":int(sys.argv[1]),"scopes":["user:inference"],"subscriptionType":"max"}}))' "$_exp" 2>/dev/null || true)
+        [ -n "$_wrapped" ] && export CLAUDE_CODE_OAUTH_TOKEN="$_wrapped"
+        unset _wrapped _exp
+        ;;
+esac
+
 ev="$(mktemp)"; trap 'rm -f "$ev"' EXIT
 
 # Deliberately the cheapest model and a read-only question: this runs on every boot.
 # --tools is NOT restricted here; the probe must see what the harness will see, and the
 # cycle-time allowlist is applied separately by auto-loop.sh.
 timeout "$TIMEOUT" "$JCODE_BIN" -p "$PROVIDER" -m "$MODEL" -C "$WORKDIR" \
-    run 'List the names of every MCP server you can currently see, comma separated, lowercase, nothing else. If you can see none, reply exactly NONE.' \
+    run 'Do TWO things. (1) Call the airtable MCP tool that lists bases and note whether the CALL SUCCEEDED. (2) Then reply with one line: the comma-separated lowercase names of every MCP server you can see, and append ",airtable-call-ok" only if the call in step 1 actually returned data. Nothing else.' \
     --quiet --no-update --no-selfdev --ndjson > "$ev" 2>/dev/null
 rc=$?
 

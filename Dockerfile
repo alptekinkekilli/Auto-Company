@@ -63,6 +63,15 @@ RUN npm install -g @openai/codex@0.144.6 && npm cache clean --force
 
 # Wrangler — the company deploys its products to Cloudflare (Pages/Workers).
 # Authenticates via CLOUDFLARE_API_TOKEN (deploy-scoped Coolify secret).
+# MCP bridge, installed at BUILD time and pinned. The generated jcode MCP config used
+# to spawn these with `npx -y mcp-remote`, which downloads on EVERY server start into a
+# per-arg-hash cache — and that cache can be partial: measured 2026-07-31 in this image,
+# two independent servers died on missing transitive deps (`hono/ws`, `ee-first`) while
+# jcode reported no error at all, so the cycle just silently had no Airtable tools.
+# Load-bearing capability must be a build-time property that is verified once, not a
+# network fetch repeated per spawn.
+RUN npm install -g mcp-remote@0.1.38 && npm cache clean --force
+
 RUN npm install -g wrangler && npm cache clean --force
 
 # jcode CLI (https://github.com/1jehuang/jcode) — candidate single harness for

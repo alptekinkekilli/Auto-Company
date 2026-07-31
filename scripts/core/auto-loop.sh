@@ -1628,6 +1628,31 @@ run_jcode_cycle() {
         RESULT_MESSAGE=$(python3 "$PROJECT_DIR/scripts/core/jcode-final-text.py" "$events_file" 2>/dev/null || true)
     fi
 
+    # MODEL SUBSTITUTION — the runtime check that the boot preflight cannot be.
+    # The catalog is NOT static: the same jcode binary listed `claude-haiku-4-5` in one
+    # container and `claude-haiku-4-5-20251001` in another (measured 2026-07-31), so a
+    # name that preflights clean in one environment can be absent in the next. What IS
+    # authoritative is what actually ran: jcode reports a substitution in the done
+    # event's `status_detail` ("⚠ Anthropic served 'X' instead of requested 'Y'") and
+    # names the real model in done.model. A substituted model silently changes both the
+    # cost tier and the reasoning tier the ladder chose, so fail the cycle rather than
+    # bank a result from a model nobody selected.
+    JCODE_MODEL_RAN=""
+    if command -v jq >/dev/null 2>&1 && [ -s "$events_file" ]; then
+        JCODE_MODEL_RAN=$(jq -r 'select(.type=="done") | .model // empty' "$events_file" 2>/dev/null | tail -1 || true)
+        _subst=$(jq -r 'select(.type=="done") | .status_detail // empty' "$events_file" 2>/dev/null | tail -1 || true)
+        case "$_subst" in
+            *"instead of requested"*)
+                log "[MODEL-SUBSTITUTED] $_subst — failing the cycle; the ladder's tier choice was not honoured"
+                EXIT_CODE=1
+                ;;
+        esac
+        if [ -n "$MODEL" ] && [ -n "$JCODE_MODEL_RAN" ] && [ "$JCODE_MODEL_RAN" != "$MODEL" ]; then
+            log "[MODEL-SUBSTITUTED] requested '$MODEL' but ran '$JCODE_MODEL_RAN' — failing the cycle"
+            EXIT_CODE=1
+        fi
+    fi
+
     # Cost: never silently zero. The adapter prices unknown models conservatively and
     # flags them; a missing number here would loosen four budget gates at once.
     JCODE_COST_JSON=""
@@ -2176,7 +2201,7 @@ if [ "$LOOP_HARNESS" = "jcode" ]; then
     # cycle. This used to warn and continue; it now refuses to start, and the required
     # set is exact so a partially-generated config cannot pass either.
     _mcp_file="${JCODE_HOME:-$HOME/.jcode}/mcp.json"
-    _mcp_required="${JCODE_MCP_REQUIRED:-airtable,linear,context7,browseros}"
+    _mcp_required="${JCODE_MCP_CONFIG_REQUIRED:-airtable,linear,context7,browseros}"
     _mcp_have="$(python3 -c '
 import json,sys
 try:
@@ -2208,10 +2233,18 @@ print(",".join(sorted(k for k,v in srv.items() if isinstance(v,dict) and v.get("
     # died on a broken dependency while every file-level check passed).
     # JCODE_MCP_PROBE=0 skips it; that is for a deliberate offline boot, and it logs.
     if [ "${JCODE_MCP_PROBE:-1}" = "1" ] && [ -x "$PROJECT_DIR/scripts/core/jcode-mcp-probe.sh" ]; then
+        # `set -e` makes a failing command substitution INSIDE AN ASSIGNMENT fatal, and
+        # this assignment runs at boot under the entrypoint's supervision — i.e. a
+        # probe failure would kill the container instead of printing the diagnosis it
+        # exists to print. Disarm for exactly this call. (Caught by the canary; it is
+        # the same shape the pre-deploy audit flagged in the entrypoint.)
+        set +e
         _probe_out="$(PROJECT_DIR="$PROJECT_DIR" JCODE_BIN="$JCODE_BIN" \
-            JCODE_MCP_REQUIRED="$_mcp_required" \
+            JCODE_HOME="${JCODE_HOME:-$HOME/.jcode}" \
+            JCODE_MCP_REQUIRED="${JCODE_MCP_REQUIRED:-$_mcp_required,airtable-call-ok}" \
             bash "$PROJECT_DIR/scripts/core/jcode-mcp-probe.sh" 2>&1)"
         _probe_rc=$?
+        set -e
         if [ "$_probe_rc" -ne 0 ]; then
             echo "Error: jcode MCP RUNTIME probe failed (rc=$_probe_rc)" >&2
             printf '%s\n' "$_probe_out" >&2
