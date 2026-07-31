@@ -195,7 +195,9 @@ RESOLVED_ENGINE_BIN=""
 # so the router, tier ladder, budget gates and fallback logic keep working unchanged.
 # Rolling back is one variable — set LOOP_HARNESS=cli and restart; the CLIs stay in
 # the image on purpose until jcode has a clean observation window.
-LOOP_HARNESS="${LOOP_HARNESS:-cli}"
+CURRENT_ENGINE_PID=""
+LOOP_HARNESS="$(printf '%s' "${LOOP_HARNESS:-cli}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+[ -z "$LOOP_HARNESS" ] && LOOP_HARNESS="cli"
 JCODE_BIN="${JCODE_BIN:-$(command -v jcode 2>/dev/null || echo /usr/local/bin/jcode)}"
 # jcode's provider names differ from this loop's ENGINE names.
 jcode_provider_for() { case "$1" in codex) echo openai ;; *) echo claude ;; esac; }
@@ -1161,6 +1163,15 @@ EOF
 
 cleanup() {
     log "=== Auto Loop Shutting Down (PID $$) ==="
+    # Take the running engine down with us. Each engine now runs in its own process
+    # group (APP-272), which also means a terminal Ctrl-C no longer reaches it: it
+    # would keep working, finish minutes later, and write consensus.md/Airtable with
+    # no loop supervising — the very two-writer hazard the process-group change was
+    # made to end, reintroduced on the manual-stop path.
+    if [ -n "${CURRENT_ENGINE_PID:-}" ] && kill -0 "$CURRENT_ENGINE_PID" 2>/dev/null; then
+        log "Stopping in-flight engine (pgid $CURRENT_ENGINE_PID)"
+        _kill_engine_group "$CURRENT_ENGINE_PID"
+    fi
     rm -f "$PID_FILE"
     save_state "stopped"
     exit 0
@@ -1451,6 +1462,19 @@ _kill_engine_group() {
     kill -KILL -"$pid" 2>/dev/null || kill -KILL "$pid" 2>/dev/null || true
 }
 
+# Reap the watchdog WITHOUT cancelling an escalation that is still in flight. Killing it
+# the instant `wait` returns looks harmless — but `wait` returns when the group leader
+# dies of TERM, i.e. in the middle of the watchdog's TERM->KILL sleep, so the KILL pass
+# was never reached and anything that ignored TERM survived the timeout.
+_reap_watchdog() { # $1=watchdog pid  $2=timeout flag file
+    if [ -s "$2" ]; then
+        wait "$1" 2>/dev/null || true      # let the KILL escalation complete
+        return
+    fi
+    kill "$1" 2>/dev/null || true
+    wait "$1" 2>/dev/null || true
+}
+
 # jcode path for BOTH providers. Differences from the CLI path, each measured:
 #   * no `total_cost_usd` — cost comes from scripts/core/engine-usage-cost.py over the
 #     ndjson (which SUMS every `tokens` event: `done.usage` is the LAST request only,
@@ -1468,6 +1492,13 @@ run_jcode_cycle() {
     local provider="${2:-claude}"
     local output_file timeout_flag events_file effort
     output_file=$(mktemp); timeout_flag=$(mktemp); events_file=$(mktemp)
+    if [ -z "$MODEL" ] && [ "$provider" != "openai" ]; then
+        log "[COST] refusing a jcode claude cycle with an empty MODEL — jcode would run its own default model (measured: opus-5, ~10x the ladder's tier)"
+        OUTPUT="empty MODEL on the jcode claude path"; RESULT_MESSAGE=""
+        EXIT_CODE=1; CYCLE_TIMED_OUT=0; JCODE_COST_JSON=""
+        rm -f "$output_file" "$timeout_flag" "$events_file"
+        return
+    fi
     if [ "$provider" = "openai" ]; then
         effort="$CODEX_EFFORT"
         # Empty MODEL means "the codex config.toml default" on the CLI path; jcode has
@@ -1491,6 +1522,7 @@ run_jcode_cycle() {
         "${cmd[@]}"
     ) > "$events_file" 2> "$output_file" &
     local engine_pid=$!
+    CURRENT_ENGINE_PID=$engine_pid
     set +m
 
     (
@@ -1504,8 +1536,8 @@ run_jcode_cycle() {
 
     wait "$engine_pid"
     EXIT_CODE=$?
-    kill "$watchdog_pid" 2>/dev/null || true
-    wait "$watchdog_pid" 2>/dev/null || true
+    _reap_watchdog "$watchdog_pid" "$timeout_flag"
+    CURRENT_ENGINE_PID=""
     set -e
 
     # OUTPUT feeds check_usage_limit / codex_auth_failed / the fallback trigger. On the
@@ -1576,6 +1608,7 @@ run_codex_cycle_cli() {
         "${codex_cmd[@]}"
     ) > "$output_file" 2>&1 &
     local codex_pid=$!
+    CURRENT_ENGINE_PID=$codex_pid
     set +m
 
     (
@@ -1590,8 +1623,8 @@ run_codex_cycle_cli() {
     wait "$codex_pid"
     EXIT_CODE=$?
 
-    kill "$watchdog_pid" 2>/dev/null || true
-    wait "$watchdog_pid" 2>/dev/null || true
+    _reap_watchdog "$watchdog_pid" "$timeout_flag"
+    CURRENT_ENGINE_PID=""
     set -e
 
     OUTPUT=$(cat "$output_file")
@@ -1631,6 +1664,7 @@ run_claude_cycle_cli() {
         "${claude_cmd[@]}"
     ) > "$output_file" 2>&1 &
     local claude_pid=$!
+    CURRENT_ENGINE_PID=$claude_pid
     set +m
 
     (
@@ -1645,8 +1679,8 @@ run_claude_cycle_cli() {
     wait "$claude_pid"
     EXIT_CODE=$?
 
-    kill "$watchdog_pid" 2>/dev/null || true
-    wait "$watchdog_pid" 2>/dev/null || true
+    _reap_watchdog "$watchdog_pid" "$timeout_flag"
+    CURRENT_ENGINE_PID=""
     set -e
 
     OUTPUT=$(cat "$output_file")
@@ -1772,7 +1806,7 @@ extract_cycle_metadata() {
     # through the Claude JSON parser would set CYCLE_COST to empty and silently stop
     # record_spend — the same class of failure as APP-240, where a mis-routed parser
     # took the whole loop down.
-    if [ "$LOOP_HARNESS" = "jcode" ]; then
+    if [ "${LOOP_HARNESS:-cli}" = "jcode" ]; then
         RESULT_TEXT=$(printf '%s' "$RESULT_MESSAGE" | head -c 2000 || true)
         [ -z "$RESULT_TEXT" ] && RESULT_TEXT=$(printf '%s' "$OUTPUT" | head -c 2000 || true)
         if [ -n "$JCODE_COST_JSON" ] && command -v jq >/dev/null 2>&1; then

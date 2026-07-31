@@ -52,7 +52,8 @@ HARNESS="$SB/harness.sh"
     echo 'codex_window_count() { echo 0; }'
     echo '_router_persist() { echo "$1" > "$ROUTER_STATE_FILE"; }'
     for f in _budget_now _utc_day_start _fmt_utc _window_anchor_epoch window_spend \
-             record_total_spend claude_spend_since _codex_spend_since \
+             record_total_spend claude_spend_since codex_ledger_spend_since _max_usd \
+             _codex_spend_since \
              _codex_spend_entries_since _weekly_resume_epoch _notify_gate_block_once \
              evaluate_budget_gates select_cycle_engine; do
         extract "$f"
