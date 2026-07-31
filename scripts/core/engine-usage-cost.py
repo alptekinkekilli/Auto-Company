@@ -40,6 +40,13 @@ PRICES = {
     "claude-sonnet-5-20250929":   (3.00, 15.00),
     "claude-haiku-4-5":           (1.00, 5.00),
     "claude-haiku-4-5-20251001":  (1.00, 5.00),
+    # Calibrated 2026-07-31 from litellm model_prices (canonical OpenAI-direct
+    # row, azure/bedrock variants ignored). cache_read is $0.50/M = exactly
+    # 0.10x input, so the uniform CACHE_R below is correct for this row too;
+    # OpenAI has no cache-write surcharge and its tokens events carry
+    # cache_creation_input: null -> _n() zeroes it, write multipliers never
+    # engage. Validated same day against a kept ndjson run (hand-calc match).
+    "gpt-5.6-sol":                (5.00, 30.00),
 }
 CACHE_W_5M, CACHE_W_1H, CACHE_R = 1.25, 2.00, 0.10
 # Aggregate cache_creation with no TTL breakdown (jcode's shape) is priced at

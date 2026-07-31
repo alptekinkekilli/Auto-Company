@@ -78,7 +78,17 @@ grep -q claude_code_native_credentials "$HOME/.jcode/config.toml" 2>/dev/null ||
 "$JCODE_BIN" "${JQUIET[@]}" model list -p "$PROVIDER" 2>/dev/null | grep -qx "$MODEL" \
   || fail "model '$MODEL' not in 'jcode model list -p $PROVIDER' — refusing (jcode would silently substitute its default)"
 
-WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
+WORK="$(mktemp -d)"
+# Persist the raw ndjson event streams before the workdir dies — they are the
+# only source for price calibration / cost audits (the 5x-estimate era ended
+# because no run had kept one). Last 5 runs, pruned oldest-first.
+NDJSON_KEEP="$APP/logs/analyst-ndjson"
+persist_ndjson() {
+  mkdir -p "$NDJSON_KEEP/$STAMP" 2>/dev/null || return 0
+  cp "$WORK"/*.ndjson "$NDJSON_KEEP/$STAMP/" 2>/dev/null || true
+  ls -dt "$NDJSON_KEEP"/*/ 2>/dev/null | tail -n +6 | xargs rm -rf 2>/dev/null || true
+}
+trap 'persist_ndjson; rm -rf "$WORK"' EXIT
 MSG="$WORK/msg.txt"
 
 read -r -d '' PROMPT <<EOF
