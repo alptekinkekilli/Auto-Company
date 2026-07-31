@@ -39,6 +39,25 @@ from pathlib import Path
 
 VAR_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 
+# Per-server overrides applied ONLY on the jcode path, each with a measured reason.
+# These are not preference: without them a provider is simply unusable.
+OVERRIDES: dict[str, dict] = {
+    # The community `@tacticlaunch/mcp-linear` package publishes a tool whose JSON
+    # schema uses `contains` (linear_createManagedOAuthApplication.grantTypes). The
+    # OpenAI API REJECTS THE WHOLE REQUEST on it — every openai-provider cycle dies
+    # with `invalid_function_parameters` before doing any work (measured 2026-07-31).
+    # Anthropic accepts the same schema, so this would have looked fine right up to
+    # the first Codex-routed cycle after cutover. Linear's own hosted endpoint (the
+    # one the Codex CLI already uses in production) does not carry that tool; a live
+    # read of APP-272 through it on the openai provider returned the real title and
+    # state, so write capability is preserved, not traded away.
+    "linear": {
+        "url": "https://mcp.linear.app/mcp",
+        "headers": {"Authorization": "Bearer ${LINEAR_API_KEY}"},
+        "_why": "community server's schema is rejected by the OpenAI API",
+    },
+}
+
 
 def expand(value: str) -> str | None:
     """Substitute ${VAR} from the environment. Returns None if any var is unset."""
@@ -109,7 +128,13 @@ def main() -> int:
 
     out: dict[str, dict] = {}
     for name, spec in servers.items():
-        conv, note = convert(name, spec if isinstance(spec, dict) else {})
+        spec = spec if isinstance(spec, dict) else {}
+        if name in OVERRIDES:
+            ov = dict(OVERRIDES[name])
+            why = ov.pop("_why", "")
+            print(f"[jcode-mcp] override {name}: {why}", file=sys.stderr)
+            spec = ov
+        conv, note = convert(name, spec)
         if conv is None:
             print(f"[jcode-mcp] SKIP {name}: {note}", file=sys.stderr)
             continue
