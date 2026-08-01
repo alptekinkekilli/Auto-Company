@@ -335,6 +335,11 @@ All skills are under `.claude/skills/`. Any agent can use any skill when relevan
 
 - `senior-qa`
 
+### Cost and Efficiency
+
+- `cost-measurement` — measure before optimizing; the residual-cost model and the traps that have already produced wrong answers here
+- `enforceable-guardrails` — write rules that change behavior instead of rules that read well and get ignored
+
 ### Internal Utilities
 
 - `team`, `find-skills`, `skill-creator`, `agent-browser`
