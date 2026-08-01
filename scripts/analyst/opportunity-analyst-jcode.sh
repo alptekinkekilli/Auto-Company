@@ -168,6 +168,16 @@ log_run_cost() { # $1=ndjson file $2=label — visibility only, never gating
 }
 
 run_jcode() { # $1=effort $2=prompt $3=events-out $4=text-out
+  # jcode `run` has no stdin/file transport: the prompt rides argv, and Linux caps a
+  # single argument at 131072 bytes (E2BIG surfaces as an unexplained rc=126 — this
+  # killed loop cycles #7/#8 on 2026-07-31). Pass-1 here is a ~1.7KB by-reference
+  # bootstrap and pass-2 embeds only the registry live span (~8KB measured), so this
+  # guard should never fire — it exists so growth fails LOUDLY instead of as rc=126.
+  local _pb; _pb=$(printf '%s' "$2" | wc -c | tr -d ' ')
+  if [ "${_pb:-0}" -ge 126000 ]; then
+    log "[$STAMP] PROMPT-TOO-LARGE: jcode argv prompt is ${_pb} bytes (>=126000; kernel per-arg cap 131072) — refusing before exec dies rc=126"
+    return 1
+  fi
   ( cd "$APP" && JCODE_OPENAI_REASONING_EFFORT="$1" timeout "$TIMEOUT" \
       "$JCODE_BIN" -p "$PROVIDER" -m "$MODEL" -C "$APP" run "$2" \
       "${JQUIET[@]}" --ndjson ) >"$3" 2>"$3.err"
