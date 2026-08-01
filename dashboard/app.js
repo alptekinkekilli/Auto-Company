@@ -26,6 +26,8 @@ const els = {
   analystBadge: document.getElementById("analystBadge"),
   analystCopy: document.getElementById("analystCopy"),
   analystCopyAll: document.getElementById("analystCopyAll"),
+  analystRunNow: document.getElementById("analystRunNow"),
+  analystRunStatus: document.getElementById("analystRunStatus"),
   logText: document.getElementById("logText"),
   rawText: document.getElementById("rawText"),
 
@@ -482,9 +484,46 @@ async function loadAnalysis() {
     } else {
       els.analystText.textContent = "(no analysis yet — the Codex analyst cron has not run)";
     }
+    renderAnalystTrigger(data && data.trigger);
   } catch (err) {
     analystLoaded = false;
     els.analystText.textContent = "Failed to load analysis — will retry when you close and reopen this panel.";
+  }
+}
+
+// On-demand run lifecycle, from the host watcher's volume markers. The button is a
+// courtesy — the server refuses doubles, the host flock is the real guard.
+function renderAnalystTrigger(trigger) {
+  if (!els.analystRunStatus) return;
+  if (!trigger) { els.analystRunStatus.textContent = ""; return; }
+  if (trigger.running) {
+    els.analystRunStatus.textContent = `Analyst run IN FLIGHT (${trigger.running_info || "no info"})`;
+    els.analystRunNow.disabled = true;
+  } else if (trigger.pending) {
+    els.analystRunStatus.textContent = "Run request QUEUED — the host watcher fires within 5 minutes.";
+    els.analystRunNow.disabled = true;
+  } else {
+    els.analystRunStatus.textContent = trigger.last ? `Last on-demand run: ${trigger.last}` : "";
+    els.analystRunNow.disabled = false;
+  }
+}
+
+async function runAnalystNow() {
+  if (!window.confirm("Queue an Opportunity Analyst run now? Starts within 5 minutes, takes ~15 minutes, costs ~$23.")) return;
+  const label = els.analystRunNow.textContent;
+  els.analystRunNow.disabled = true;
+  els.analystRunNow.textContent = "Queuing...";
+  try {
+    const res = await fetch("/api/analyst/run", { method: "POST" });
+    const data = await res.json();
+    els.analystRunStatus.textContent = data.ok
+      ? data.message
+      : `Refused: ${data.error || "unknown reason"}`;
+  } catch (err) {
+    els.analystRunStatus.textContent = err instanceof Error ? err.message : String(err);
+  } finally {
+    els.analystRunNow.textContent = label;
+    loadAnalysis().catch(() => {});
   }
 }
 
@@ -521,6 +560,9 @@ if (els.analystCopy) {
 }
 if (els.analystCopyAll) {
   els.analystCopyAll.addEventListener("click", () => copyToBtn(els.analystCopyAll, analystRaw));
+}
+if (els.analystRunNow) {
+  els.analystRunNow.addEventListener("click", runAnalystNow);
 }
 
 // Director panel: copy-to-clipboard directive templates (served from

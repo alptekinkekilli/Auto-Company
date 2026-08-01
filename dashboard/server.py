@@ -43,6 +43,16 @@ CONSENSUS_FILE = REPO_ROOT / "memories" / "consensus.md"
 DIRECTIVE_FILE = REPO_ROOT / "memories" / "human-directive.md"
 CANDIDATE_REGISTRY_FILE = REPO_ROOT / "memories" / "candidate-registry.md"
 ANALYSIS_FILE = REPO_ROOT / "memories" / "analysis-directive.md"
+# On-demand analyst trigger (cockpit "Run analyst now"). The cockpit runs INSIDE the
+# app container and cannot start host containers (the analyst is a host-cron one-shot
+# container), so the button writes a request FILE into the shared logs volume — the
+# LOOP_HOLD idiom — and the host-side watcher consumes it under the same flock the
+# 04:30 schedule uses (autocompany-deploy/scripts/opportunity-analyst-trigger.sh via
+# /etc/cron.d/opportunity-analyst, every 5 minutes). The watcher writes the RUNNING /
+# LAST_TRIGGER markers back into the volume, which is how state is visible here.
+ANALYST_RUN_REQUEST_FILE = REPO_ROOT / "logs" / "ANALYST_RUN_REQUEST"
+ANALYST_RUNNING_FILE = REPO_ROOT / "logs" / "ANALYST_RUNNING"
+ANALYST_LAST_TRIGGER_FILE = REPO_ROOT / "logs" / "ANALYST_LAST_TRIGGER"
 # Operator-request ledger (written by the company + scripts/core/operator_request_notify.py)
 # and the cockpit's answer channel. The answer channel is deliberately NOT
 # human-directive.md: that file is a single slot holding one PENDING work instruction, so
@@ -601,7 +611,51 @@ def read_analysis() -> dict[str, Any]:
             ).isoformat()
     except OSError:
         pass
-    return {"present": bool(raw.strip()), "updated": updated, "markdown": raw}
+    return {
+        "present": bool(raw.strip()),
+        "updated": updated,
+        "markdown": raw,
+        "trigger": analyst_trigger_state(),
+    }
+
+
+def analyst_trigger_state() -> dict[str, Any]:
+    """Lifecycle of the on-demand analyst trigger, from the volume markers."""
+    return {
+        "pending": ANALYST_RUN_REQUEST_FILE.exists(),
+        "running": ANALYST_RUNNING_FILE.exists(),
+        "running_info": read_text_file(ANALYST_RUNNING_FILE, "").strip(),
+        "last": read_text_file(ANALYST_LAST_TRIGGER_FILE, "").strip(),
+    }
+
+
+def analyst_run_now() -> dict[str, Any]:
+    """Queue an on-demand Opportunity Analyst run (host watcher fires within 5 min).
+
+    Guards mirror the wake button's philosophy — the server refuses rather than
+    guesses: an already-pending request or an in-flight run is never doubled. The
+    real anti-overlap guard is the host-side flock; these checks just keep the
+    button honest and the state legible.
+    """
+    state = analyst_trigger_state()
+    if state["pending"]:
+        return {"ok": False, "reason": "pending",
+                "error": "A run request is already queued — the host watcher fires within 5 minutes."}
+    if state["running"]:
+        return {"ok": False, "reason": "running",
+                "error": f"An analyst run is already in flight ({state['running_info'] or 'no info'})."}
+    import datetime
+
+    stamp = datetime.datetime.now(tz=datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    try:
+        ANALYST_RUN_REQUEST_FILE.write_text(
+            f"requested_at={stamp} by=cockpit\n", encoding="utf-8"
+        )
+    except OSError as exc:  # noqa: BLE001
+        return {"ok": False, "error": f"Could not write the request file: {exc}"}
+    return {"ok": True,
+            "message": "Queued — the host watcher starts the run within 5 minutes. "
+                       "A full run takes ~15 minutes and costs roughly $23 (calibrated)."}
 
 
 DIRECTIVE_TEMPLATES_DIR = REPO_ROOT / "dashboard" / "directive-templates"
@@ -1528,6 +1582,12 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
         if path == "/api/wake":
             result = wake_loop()
+            result["timestamp"] = datetime.now(timezone.utc).isoformat()
+            self._json(result, code=HTTPStatus.OK if result.get("ok") else HTTPStatus.CONFLICT)
+            return
+
+        if path == "/api/analyst/run":
+            result = analyst_run_now()
             result["timestamp"] = datetime.now(timezone.utc).isoformat()
             self._json(result, code=HTTPStatus.OK if result.get("ok") else HTTPStatus.CONFLICT)
             return

@@ -203,6 +203,8 @@
         <h3>Opportunity Analyst — Codex 2nd brain</h3>
         <div class="panel-head-right">
           <span id="analystBadge" class="badge badge-none">memories</span>
+          <button id="analystRunNow" class="ghost-btn" type="button"
+                  title="Queue an on-demand analyst run. The host watcher starts it within 5 minutes; a full run takes ~15 min and costs ~$23.">Run analyst now</button>
           <button id="analystCopy" class="ghost-btn" type="button" title="Copy just the paste-ready directive block">Copy directive</button>
           <button id="analystCopyAll" class="ghost-btn" type="button" title="Copy the full analysis report">Copy all</button>
           <button class="collapse-toggle" data-target="analystBody" aria-expanded="false" aria-label="Toggle analyst">▸</button>
@@ -214,6 +216,7 @@
           every candidate, challenging the company's pick, and drafting a paste-ready directive.
           Copy the <code>## Directive</code> block into the Director panel. Read-only.
         </p>
+        <p id="analystRunStatus" class="muted director-hint"></p>
         <div id="analystText" class="markdown-view ideas-view">(open to load…)</div>
       </div>
     </section>
