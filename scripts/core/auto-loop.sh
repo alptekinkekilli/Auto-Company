@@ -2625,6 +2625,8 @@ while true; do
 3. Prefer shipping one completed milestone over broad parallel exploration.
 4. Never write files via shell heredoc (\`cat <<EOF\`). Use \`apply_patch\` for file creates/edits.
 5. Never execute shell lines that begin with \`>\` or \`>=\`; treat them as text and keep them inside markdown/files.
+6. OUTPUT HYGIENE — every tool round-trip re-bills your ENTIRE context. Never stream long command output into the conversation: redirect to a file (\`cmd > /tmp/out.log 2>&1\`) and read back only \`tail -20\`/a grep excerpt. Never dump large files whole (\`memories/candidate-registry.md\`, \`memories/decision-ledger.md\`) — use grep/offset reads for the rows you need.
+7. TURN ECONOMY — never poll: no sleep-and-recheck sequences across tool calls; if you must wait on a condition, ONE blocking \`until <cond>; do sleep 20; done\` costs a single turn regardless of duration. Batch related lookups into one call where the tool allows. After roughly 40 tool calls in a cycle, STOP investigating: persist findings + Next Action to \`memories/consensus.md\` and end the cycle — the next cycle continues fresh and cheaper than a bloated context (a timed-out cycle loses its tail work AND books a 5x conservative cost estimate). Policy: \`docs/cto/turn-economy-policy.md\`.
 $_discovery_line
 
 ---
@@ -2660,6 +2662,8 @@ This is Cycle #$loop_count. Act decisively."
 3. Prefer shipping one completed milestone over broad parallel exploration.
 4. Never write files via shell heredoc (\`cat <<EOF\`). Use \`apply_patch\` for file creates/edits.
 5. Never execute shell lines that begin with \`>\` or \`>=\`; treat them as text and keep them inside markdown/files.
+6. OUTPUT HYGIENE — every tool round-trip re-bills your ENTIRE context. Never stream long command output into the conversation: redirect to a file (\`cmd > /tmp/out.log 2>&1\`) and read back only \`tail -20\`/a grep excerpt. Never dump large files whole (\`memories/candidate-registry.md\`, \`memories/decision-ledger.md\`) — use grep/offset reads for the rows you need.
+7. TURN ECONOMY — never poll: no sleep-and-recheck sequences across tool calls; if you must wait on a condition, ONE blocking \`until <cond>; do sleep 20; done\` costs a single turn regardless of duration. Batch related lookups into one call where the tool allows. After roughly 40 tool calls in a cycle, STOP investigating: persist findings + Next Action to \`memories/consensus.md\` and end the cycle — the next cycle continues fresh and cheaper than a bloated context (a timed-out cycle loses its tail work AND books a 5x conservative cost estimate). Policy: \`docs/cto/turn-economy-policy.md\`.
 $_discovery_line
 
 ---
@@ -2798,6 +2802,27 @@ This is Cycle #$loop_count. Act decisively."
     _tele_fill="$(window_spend)"
     printf '%s %s %s %s %s %s\n' "$(date +%s)" "$_tele_eng" "$_tele_model" "$_tele_eff" "${CYCLE_COST:-N/A}" "$_tele_fill" >> "$LOG_DIR/engine-telemetry.log" 2>/dev/null || true
     log "[TELEMETRY] engine=$_tele_eng model=$_tele_model effort=$_tele_eff cost=${CYCLE_COST:-N/A} claude_window=\$$_tele_fill/${CLAUDE_5H_BUDGET_USD:-∞}"
+
+    # Turn-economy self-audit (turn-economy-policy sec.4): one deterministic pass over
+    # jcode's own daily log at an EXISTING return moment — never a new polling loop.
+    # Advisory only; a failure here must never fail the cycle.
+    if [ "$CYCLE_HARNESS_USED" = "jcode" ]; then
+        _ta_log="${JCODE_HOME:-$HOME/.jcode}/logs/jcode-$(date +%Y-%m-%d).log"
+        if [ -f "$_ta_log" ] && [ -f "$SCRIPT_DIR/../ops/turn-audit.py" ]; then
+            _ta_line=$(python3 "$SCRIPT_DIR/../ops/turn-audit.py" "$_ta_log" --summary-last 2>/dev/null || true)
+            [ -n "$_ta_line" ] && log "[$_ta_line]"
+            case "$_ta_line" in
+                *"verdict=ok"*|"") : ;;
+                *)
+                    if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+                        bash "$SCRIPT_DIR/telegram-notify.sh" \
+                            "📊 Turn-economy audit, Cycle #${loop_count}: ${_ta_line#TURN-AUDIT }" \
+                            >/dev/null 2>&1 || true
+                    fi
+                    ;;
+            esac
+        fi
+    fi
 
     # Did this cycle actually leave anything behind? (APP-242)
     check_stall
