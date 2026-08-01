@@ -2833,6 +2833,16 @@ This is Cycle #$loop_count. Act decisively."
             >/dev/null 2>&1 || true
     fi
 
+    # Registry-lookup queue (APP-277). The company can DISCOVER firms alone but cannot
+    # QUALIFY most of them: since Rule 9 made directories discovery-only the accepted G4
+    # bridge is a registry datum, and MERSİS is CAPTCHA-gated, so each lookup costs one
+    # operator keystroke. Same discipline as above — existing return moment, own cooldown,
+    # advisory, never writes to Airtable.
+    if [ -f "$SCRIPT_DIR/../ops/registry-queue-watch.py" ]; then
+        python3 "$SCRIPT_DIR/../ops/registry-queue-watch.py" --app "$PROJECT_DIR" \
+            >/dev/null 2>&1 || true
+    fi
+
     if [ "$CYCLE_HARNESS_USED" = "jcode" ]; then
         _ta_log="${JCODE_HOME:-$HOME/.jcode}/logs/jcode-$(date +%Y-%m-%d).log"
         if [ -f "$_ta_log" ] && [ -f "$SCRIPT_DIR/../ops/turn-audit.py" ]; then
