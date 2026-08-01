@@ -228,7 +228,21 @@ JCODE_TOOLS_ALLOW="${JCODE_TOOLS_ALLOW:-}"
 # stayed available. Names are verified against the live tool set at boot.
 # `mcp` is jcode's own MCP MANAGEMENT tool (add/remove servers at runtime) — a
 # cycle must never be able to reconfigure its own tool surface (REVISE-2 gate B9).
-JCODE_TOOLS_DENY="${JCODE_TOOLS_DENY:-mcp,gmail,browser,swarm,selfdev,memory,side_panel,bg,initiative,open,mcp__airtable__delete_records_for_table,mcp__airtable__delete_table,mcp__airtable__delete_automation,mcp__airtable__delete_interface,mcp__airtable__delete_page,mcp__airtable__revert_action,mcp__linear__delete_attachment,mcp__linear__delete_comment,mcp__linear__delete_diff_comment,mcp__linear__delete_status_update}"
+# Tool DENYLIST. Two jobs, deliberately in one list:
+#   (1) safety — jcode's own `mcp` management tool, the base tools we never grant, and
+#       every destructive MCP tool (enumerated from the LIVE servers; the probe verifies
+#       coverage at boot and refuses the boot if any is missing);
+#   (2) CONTEXT BUDGET — every advertised tool costs ~540 prompt tokens on EVERY turn.
+#       Measured 2026-08-01: 129 tools = 70,014 tokens of prompt prefix per turn, and a
+#       20-turn cycle re-reads that ~20 times. Denying a tool removes it from the locked
+#       tool list (measured: 149 → 129 with the 20 entries below), so the denylist is
+#       also the only lever on that overhead.
+# Linear WRITE tools are denied per operator instruction 2026-08-01 — Linear had zero
+# calls of any kind that day while advertising 52 tools. The 31 read tools (get_*/list_*/
+# search_documentation) stay, so the company can still READ Linear; issue/comment WRITES
+# now require the operator (I use the GraphQL path for those anyway). Re-granting is a
+# one-line revert of this default.
+JCODE_TOOLS_DENY="${JCODE_TOOLS_DENY:-mcp,gmail,browser,swarm,selfdev,memory,side_panel,bg,initiative,open,mcp__airtable__delete_records_for_table,mcp__airtable__delete_table,mcp__airtable__delete_automation,mcp__airtable__delete_interface,mcp__airtable__delete_page,mcp__airtable__revert_action,mcp__linear__delete_attachment,mcp__linear__delete_comment,mcp__linear__delete_diff_comment,mcp__linear__delete_status_update,mcp__linear__create_attachment,mcp__linear__create_attachment_from_upload,mcp__linear__create_issue_label,mcp__linear__extract_images,mcp__linear__merge_diff,mcp__linear__prepare_attachment_upload,mcp__linear__resolve_diff_thread,mcp__linear__save_comment,mcp__linear__save_diff_comment,mcp__linear__save_document,mcp__linear__save_issue,mcp__linear__save_milestone,mcp__linear__save_project,mcp__linear__save_release,mcp__linear__save_release_note,mcp__linear__save_status_update,mcp__linear__submit_diff_review}"
 
 CURRENT_ENGINE_PID=""
 LOOP_HARNESS="$(printf '%s' "${LOOP_HARNESS:-cli}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
@@ -1765,8 +1779,11 @@ run_jcode_cycle() {
     # flags them; a missing number here would loosen four budget gates at once.
     JCODE_COST_JSON=""
     if [ -s "$events_file" ] && [ -x "$PROJECT_DIR/scripts/core/engine-usage-cost.py" ]; then
+        # --model-hint is consulted ONLY if the stream has no `done` event (the
+        # watchdog killed the cycle mid-flight). done.model still wins whenever it
+        # exists, so the substitution guard above is untouched.
         JCODE_COST_JSON=$(python3 "$PROJECT_DIR/scripts/core/engine-usage-cost.py" \
-            --ndjson-file "$events_file" 2>/dev/null || true)
+            --ndjson-file "$events_file" --model-hint "$MODEL" 2>/dev/null || true)
     fi
 
     # Keep the raw stream for cost audits / price calibration (last 20 cycles).

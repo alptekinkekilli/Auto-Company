@@ -108,10 +108,21 @@ def cost_for(model: str, u: dict) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default=None)
+    # Consulted ONLY when the stream carries no `done` event — i.e. the cycle was
+    # killed (timeout/OOM) before jcode could report what ran. The token counts in
+    # that stream are REAL (summed `tokens` events up to the kill); the only unknown
+    # is model identity, and the loop does know which model it REQUESTED. Without
+    # this, such a cycle priced at the unknown-model row × the conservative factor:
+    # measured 2026-08-01, one timed-out cycle booked $63.63 against a real ~$12.7
+    # and filled 64% of the 5h window on its own. The result stays `estimated: true`
+    # and names the hint in `basis` — a hinted price is never a calibrated one, and
+    # an unrecognised hint still falls through to the conservative row.
+    ap.add_argument("--model-hint", default=None)
     src = ap.add_mutually_exclusive_group(required=True)
     src.add_argument("--usage-json")
     src.add_argument("--ndjson-file")
     args = ap.parse_args()
+    hinted = False
 
     if args.usage_json:
         if not args.model:
@@ -161,9 +172,17 @@ def main() -> int:
             usage = totals
         # The done event records what ACTUALLY ran (jcode silently falls back
         # to its default model on an unknown -m). Trust it unless overridden.
-        model = args.model or (done or {}).get("model") or "unknown"
+        # The hint ranks BELOW done.model on purpose: it may only stand in where
+        # there is no done event at all, never override one that exists.
+        model = args.model or (done or {}).get("model") or args.model_hint or "unknown"
+        if not done and args.model_hint and model == args.model_hint:
+            hinted = True
 
-    print(json.dumps(cost_for(model, usage)))
+    result = cost_for(model, usage)
+    if hinted:
+        result["estimated"] = True
+        result["basis"] += " (requested-model HINT — no done event; the cycle was killed)"
+    print(json.dumps(result))
     return 0
 
 
