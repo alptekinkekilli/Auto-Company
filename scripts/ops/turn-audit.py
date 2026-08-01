@@ -20,14 +20,23 @@ Summary line fields:
   cache_read=<tok> cache_write=<tok> floor_usd=<x> tool_wall_share=<pct>
   fast_gaps=<n>/<n> verdict=<ok|CHATTY|BLOATED>
 
-Verdicts (advisory, thresholds from the 2026-08-01 baseline):
-  CHATTY  — turns > 60 in one cycle (cycle #2 timed out at 73)
-  BLOATED — msgs_max > 120 (context ~200K+ = premium-tariff territory)
+Verdicts (advisory). Thresholds tightened 2026-08-01 after they proved useless: a
+58-turn / 118-message / $5.81 cycle scored "ok" by sitting just under both bars, so the
+audit called a genuine overrun clean. They are now anchored to the Runtime Guardrail the
+company is actually given ("wrap up after ~40 tool calls"), not to the worst run seen:
+  CHATTY  — turns > 40      (the guardrail's own number; 58 must not read as ok)
+  BLOATED — msgs_max > 80   (~2 messages per turn at the same 40-turn point)
+Raising these is loosening a measurement, not a policy — do it only with new evidence.
 """
+import os
 import re
 import sys
 from datetime import datetime
 from collections import defaultdict
+
+# Verdict thresholds, named so a change is visible in a diff and testable.
+TURNS_CHATTY = int(os.environ.get("TURN_AUDIT_TURNS_CHATTY", "40"))
+MSGS_BLOATED = int(os.environ.get("TURN_AUDIT_MSGS_BLOATED", "80"))
 
 TS = re.compile(r"^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\.(\d{3})\]")
 SES = re.compile(r"\[ses:(session_[a-z]+_\d+)\|prv:(\w+)\|mod:(\w[\w.-]*)\]")
@@ -90,9 +99,9 @@ def summary_line(sid, s):
     tool_wall = sum(c[1] for c in s["tools"].values())
     share = (100.0 * tool_wall / dur) if dur else 0.0
     verdict = "ok"
-    if s["msgs_max"] > 120:
+    if s["msgs_max"] > MSGS_BLOATED:
         verdict = "BLOATED"
-    elif s["turns"] > 60:
+    elif s["turns"] > TURNS_CHATTY:
         verdict = "CHATTY"
     return (
         f"TURN-AUDIT session={sid} provider={s['provider']} turns={s['turns']} "

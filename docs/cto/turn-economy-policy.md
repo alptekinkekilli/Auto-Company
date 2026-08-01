@@ -44,24 +44,40 @@ roughly $12.7.
 4. **Batch.** Related lookups go into one tool call where the tool allows (Airtable
    filterByFormula over per-record gets; one grep over repeated reads).
 
+**Rule 3 is not self-enforcing.** jcode has no max-turns flag (checked 2026-08-01:
+`--tools`, `--disabled-tools`, `--tool-profile` exist; no iteration cap), so the only
+mechanical ceiling is `CYCLE_TIMEOUT_SECONDS` — and hitting it costs the cycle's tail
+work. Text asking the company to stop at ~40 calls was measurably exceeded (58) on the
+first cycle that carried it. Treat the audit's CHATTY/BLOATED line as the feedback
+signal, not as proof the rule is being followed.
+
 ## Guard rails in the machinery
 
 - **Self-audit at an existing return moment** (never a new poll): after every jcode
   cycle, `scripts/ops/turn-audit.py --summary-last` classifies the session from
   jcode's own daily log and the loop logs a `[TURN-AUDIT …]` line. Verdicts:
-  `CHATTY` (>60 turns), `BLOATED` (>120 messages ≈ 200K+ context). Non-ok verdicts
-  are pushed to Telegram. Advisory — it never fails a cycle.
+  `CHATTY` (>40 turns), `BLOATED` (>80 messages). Non-ok verdicts are pushed to
+  Telegram. Advisory — it never fails a cycle.
+  **Thresholds tightened 2026-08-01 (were 60/120).** A real 58-turn / 118-message /
+  $5.81 cycle scored "ok" by sitting just under both bars — the audit called a 45%
+  overrun of rule 3 clean. The bars are now anchored to the guardrail the company is
+  actually given (~40 tool calls), not to the worst run observed. Re-scored against
+  that day's eight sessions the new bars flag exactly one, so they discriminate rather
+  than nag. Widening them is loosening a measurement, not a policy.
 - **Cost floor vs booked cost.** The audit line's `floor_usd` prices cache traffic
   only (in/out tokens are redacted in jcode's log). A booked cycle cost many times
   the floor plus a `[COST] estimated (uncalibrated model)` line means the 5x
   unknown-model row fired (typical after a timeout kill), NOT that the cycle really
   burned that much. The ledger keeps the conservative figure by design — never
   "correct" it downward without an operator ruling.
-- **Known gap (operator decision pending):** on a timeout kill the requested model
-  IS known to the loop (the TIER line) even though the `done` event is gone. Passing
-  it to the adapter as a hint would price timeout kills at ~1x instead of 5x. This
-  loosens a REVISE-2 fail-closed invariant, so it is NOT implemented — recorded here
-  for the APP-268 calibration review (due 2026-08-14).
+- **Killed-cycle pricing — CLOSED 2026-08-01** (was "operator decision pending"). A
+  timeout kill destroys the `done` event, so the adapter had no model name and priced
+  at the unknown row x5: one cycle booked $63.63 against a real ~$12.7 and filled 64%
+  of the 5h window alone, holding the effort ladder down for hours. The loop now passes
+  `--model-hint`, consulted ONLY when there is no `done` event. What did NOT change:
+  `done.model` still wins wherever it exists (the substitution guard is untouched), an
+  unrecognised hint still falls through to the conservative row, and hinted results stay
+  `estimated: true` with the hint named in `basis`. `tests/test_cost_model_hint.sh`.
 
 ## Diagnosis quick list (any agent, any harness)
 

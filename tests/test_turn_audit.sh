@@ -50,7 +50,29 @@ contains "msgs tracked"      "$out" "msgs_max=146"
 contains "cache summed"      "$out" "cache_read=450000"
 contains "BLOATED verdict"   "$out" "verdict=BLOATED"
 
-echo "--- 3: verdict=ok for the small session (via full report) ---"
+echo "--- 3: threshold BOUNDARIES are pinned (tightened 2026-08-01: 40 turns / 80 msgs) ---"
+# The old bars (60/120) let a real 58-turn / 118-message overrun score "ok". These
+# cases fail loudly if anyone widens them again.
+BOUND="$WORK/jcode-2026-08-02.log"
+mk_session() { # $1 session  $2 turns  $3 msgs_per_turn
+    for i in $(seq 1 "$2"); do
+        mkline "03:00:0$((i % 10))" "$1" "API call starting: $(( i * $3 )) messages, 129 tools"
+    done
+}
+: > "$BOUND"
+mk_session session_boundary_9 41 1 >> "$BOUND"   # 41 turns, msgs_max 41 -> CHATTY only
+out=$(python3 "$AUDIT" "$BOUND" --summary-last)
+contains "41 turns is CHATTY"  "$out" "verdict=CHATTY"
+: > "$BOUND"
+mk_session session_boundary_8 40 1 >> "$BOUND"   # exactly at the bar -> still ok
+out=$(python3 "$AUDIT" "$BOUND" --summary-last)
+contains "40 turns still ok"   "$out" "verdict=ok"
+: > "$BOUND"
+mk_session session_boundary_7 5 17 >> "$BOUND"   # msgs_max 85 -> BLOATED beats CHATTY
+out=$(python3 "$AUDIT" "$BOUND" --summary-last)
+contains "85 msgs is BLOATED"  "$out" "verdict=BLOATED"
+
+echo "--- 4: verdict=ok for the small session (via full report) ---"
 out=$(python3 "$AUDIT" "$LOG" | grep session_ant_1000)
 contains "ok verdict" "$out" "verdict=ok"
 
