@@ -2823,6 +2823,16 @@ This is Cycle #$loop_count. Act decisively."
     # Turn-economy self-audit (turn-economy-policy sec.4): one deterministic pass over
     # jcode's own daily log at an EXISTING return moment — never a new polling loop.
     # Advisory only; a failure here must never fail the cycle.
+    # Directive staleness (APP-276). Same discipline as the turn audit: it runs at an
+    # EXISTING return moment, never on its own timer, and it is advisory — it reports
+    # age and escalates on a schedule, never edits or clears the directive. A directive
+    # whose Completion clause needs operator action can otherwise sit PENDING in silence
+    # (measured: 31.4h, found only because the operator asked).
+    if [ -f "$SCRIPT_DIR/../ops/directive-staleness-watch.py" ]; then
+        python3 "$SCRIPT_DIR/../ops/directive-staleness-watch.py" --app "$PROJECT_DIR" \
+            >/dev/null 2>&1 || true
+    fi
+
     if [ "$CYCLE_HARNESS_USED" = "jcode" ]; then
         _ta_log="${JCODE_HOME:-$HOME/.jcode}/logs/jcode-$(date +%Y-%m-%d).log"
         if [ -f "$_ta_log" ] && [ -f "$SCRIPT_DIR/../ops/turn-audit.py" ]; then

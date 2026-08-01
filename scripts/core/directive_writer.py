@@ -94,15 +94,74 @@ def audit(action: str, actor: str, before: str, after: str, detail: str) -> None
     normalize_ownership(AUDIT)
 
 
+def _telegram_env() -> dict[str, str]:
+    """Telegram creds, from the process env or — failing that — runtime.env.
+
+    The writer is invoked three ways: by the dashboard (a child of the entrypoint, so
+    the env is there), by `docker exec` from apply-directive.sh, and by the analyst.
+    A `docker exec` gets a FRESH shell that never sourced runtime.env, so both vars are
+    empty and notify() returned silently — measured 2026-08-01: every refusal on the
+    apply-directive.sh path was invisible to the operator, including the in-flight gate
+    firing on a directive they believed had been applied. Read the file as a fallback so
+    the alerting does not depend on which door the writer came through.
+    """
+    env = {k: os.environ.get(k, "") for k in ("TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID")}
+    if all(env.values()):
+        return env
+    try:
+        for line in open(APP / "logs" / "runtime.env", encoding="utf-8", errors="replace"):
+            if "=" not in line or line.lstrip().startswith("#"):
+                continue
+            k, _, v = line.strip().partition("=")
+            if k in env and not env[k]:
+                env[k] = v.strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return env
+
+
 def notify(msg: str) -> None:
-    if not (os.environ.get("TELEGRAM_BOT_TOKEN") and os.environ.get("TELEGRAM_CHAT_ID")):
+    env = _telegram_env()
+    if not all(env.values()):
         return
     if not NOTIFY.exists():
         return
     try:
-        subprocess.run(["bash", str(NOTIFY), msg], capture_output=True, timeout=25)
+        subprocess.run(["bash", str(NOTIFY), msg], capture_output=True, timeout=25,
+                       env={**os.environ, **env})
     except Exception:  # noqa: BLE001 — a failed notification must never fail a write
         pass
+
+
+def _why_pending(live_text: str) -> str:
+    """A compact 'why is the live one still PENDING' for the refusal notification.
+
+    Operator feedback 2026-08-01: the refusal told them WHAT happened but not why the
+    slot was occupied, so a directive they believed applied sat unexplained for 31h.
+    The honest answer is the directive's OWN Completion clause — the conditions it set
+    for itself — plus how long it has been waiting. Quoted, never paraphrased: a
+    summary of a completion condition is how a gate gets softened by accident.
+    """
+    import re as _re
+    from datetime import datetime as _dt, timezone as _tz
+
+    age = ""
+    m = _re.search(r"^##\s*Updated\s*\n+(\S+)", live_text, _re.MULTILINE)
+    if m:
+        try:
+            then = _dt.fromisoformat(m.group(1).strip().replace("Z", "+00:00"))
+            age = f" for {(_dt.now(_tz.utc) - then).total_seconds() / 3600:.1f}h"
+        except ValueError:
+            pass
+
+    body = ""
+    m2 = _re.search(r"^##\s*Completion\s*$(.+?)(?=^##\s|\Z)", live_text,
+                    _re.MULTILINE | _re.DOTALL)
+    if m2:
+        body = " ".join(m2.group(1).split())
+        if len(body) > 700:
+            body = body[:700].rsplit(" ", 1)[0] + " …"
+    return age, body
 
 
 def backup(text: str, reason: str) -> Path | None:
@@ -231,7 +290,21 @@ def cmd_write(args) -> int:
               "         Pass --allow-pending to overwrite it deliberately.",
               file=sys.stderr)
         audit("write-refused", args.actor, live_sha, "", "reason=in-flight-pending")
-        notify(f"🚧 Directive write REFUSED ({args.actor}): live directive is PENDING, not overwritten.")
+        _age, _completion = _why_pending(live)
+        _msg = (
+            f"🚧 Directive NOT applied ({args.actor}).\n\n"
+            "Your new directive was REFUSED and nothing was written — the live "
+            f"directive has been PENDING{_age} and is unchanged. This is the "
+            "in-flight gate, not an error.\n\n"
+        )
+        if _completion:
+            _msg += f"WHY IT IS STILL PENDING — its own Completion clause:\n{_completion}\n\n"
+        _msg += (
+            "To replace it deliberately:\n"
+            "AC_ALLOW_PENDING=1 apply-directive.sh <file>\n\n"
+            "Or close the live one first: directive_writer.py status (PENDING->DONE)."
+        )
+        notify(_msg)
         return 2
 
     bk = backup(live, "preoverwrite")
