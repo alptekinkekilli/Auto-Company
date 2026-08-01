@@ -1651,6 +1651,21 @@ run_jcode_cycle() {
         effort="$CLAUDE_EFFORT"
     fi
 
+    # jcode `run` has NO stdin/file transport (measured 2026-08-01: `run -` sends the
+    # model a literal dash) — the prompt must ride argv, and Linux caps one argument at
+    # 131072 bytes. The assembly-time [PROMPT-SIZE] switch keeps prompts under that;
+    # this is the belt-and-suspenders check so a future oversized prompt fails with a
+    # named reason instead of exec's unexplained rc=126 (cycles #7/#8, 2026-07-31).
+    local _pbytes
+    _pbytes=$(printf '%s' "$prompt" | wc -c | tr -d ' ')
+    if [ "${_pbytes:-0}" -ge 126000 ]; then
+        log "[PROMPT-TOO-LARGE] jcode argv prompt is ${_pbytes} bytes (>=126000; kernel per-arg cap 131072) — failing the cycle before exec dies rc=126"
+        OUTPUT="prompt too large for jcode argv (${_pbytes} bytes)"; RESULT_MESSAGE=""
+        EXIT_CODE=1; CYCLE_TIMED_OUT=0; JCODE_COST_JSON=""
+        rm -f "$output_file" "$timeout_flag" "$events_file"
+        return
+    fi
+
     set +e
     set -m
     (
@@ -1792,8 +1807,11 @@ run_codex_cycle_cli() {
         if [ -n "$CODEX_EFFORT" ]; then
             codex_cmd+=("-c" "model_reasoning_effort=\"${CODEX_EFFORT}\"")
         fi
-        codex_cmd+=("$prompt")
-        "${codex_cmd[@]}"
+        # Prompt over STDIN via the documented `-` sentinel, never argv (131072-byte
+        # per-argument kernel cap → rc=126; measured cycle #7 2026-07-31). Verified
+        # in-container 2026-08-01: `printf … | codex exec … -` answered verbatim.
+        codex_cmd+=("-")
+        printf '%s' "$prompt" | "${codex_cmd[@]}"
     ) > "$output_file" 2>&1 &
     local codex_pid=$!
     CURRENT_ENGINE_PID=$codex_pid
@@ -1839,7 +1857,12 @@ run_claude_cycle_cli() {
     set -m
     (
         cd "$PROJECT_DIR" || exit 1
-        local claude_cmd=("$RESOLVED_ENGINE_BIN" "-p" "$prompt" "--output-format" "json")
+        # Prompt over STDIN, never argv: a single argv argument is capped at 131072
+        # bytes (MAX_ARG_STRLEN) and exec dies rc=126 past it — measured on cycles
+        # #7/#8 2026-07-31 when consensus growth pushed the assembled prompt over the
+        # cap. `claude -p` with no positional prompt reads stdin (verified in-container
+        # 2026-08-01: piped prompt answered verbatim).
+        local claude_cmd=("$RESOLVED_ENGINE_BIN" "-p" "--output-format" "json")
         if [ -n "$MODEL" ]; then
             claude_cmd+=("--model" "$MODEL")
         fi
@@ -1849,7 +1872,7 @@ run_claude_cycle_cli() {
         if [ -n "$CLAUDE_PERMISSION_MODE" ]; then
             claude_cmd+=("--permission-mode" "$CLAUDE_PERMISSION_MODE")
         fi
-        "${claude_cmd[@]}"
+        printf '%s' "$prompt" | "${claude_cmd[@]}"
     ) > "$output_file" 2>&1 &
     local claude_pid=$!
     CURRENT_ENGINE_PID=$claude_pid
@@ -2613,6 +2636,47 @@ $CONSENSUS
 ---
 
 This is Cycle #$loop_count. Act decisively."
+
+    # E2BIG guard (cycles #7/#8, 2026-07-31): the assembled prompt travels to jcode as
+    # ONE argv argument, and Linux caps a single argument at MAX_ARG_STRLEN = 131072
+    # bytes regardless of ARG_MAX. Past it, exec fails E2BIG and bash reports rc=126 —
+    # which reads like "binary not executable" and says nothing about the prompt. Both
+    # engines died on the same iteration the moment consensus.md growth pushed
+    # PROMPT.md+consensus past the cap. The CLI paths now pipe the prompt over stdin
+    # (immune), but jcode `run` has no stdin/file transport, so an oversized prompt is
+    # rebuilt here with the consensus BY REFERENCE instead of inline. Bytes, not ${#…}:
+    # this file is full of multibyte Turkish text and the kernel counts bytes.
+    _fp_bytes=$(printf '%s' "$FULL_PROMPT" | wc -c | tr -d ' ')
+    if [ "${_fp_bytes:-0}" -ge "${PROMPT_ARGV_MAX_BYTES:-120000}" ]; then
+        log "[PROMPT-SIZE] assembled prompt is ${_fp_bytes} bytes (cap ${PROMPT_ARGV_MAX_BYTES:-120000}; kernel per-arg limit 131072) — consensus pre-load switched to read-by-reference for this cycle"
+        FULL_PROMPT="$PROMPT
+
+---
+
+## Runtime Guardrails (must follow)
+
+1. Early in the cycle, create or update \`memories/consensus.md\` with the required section skeleton.
+2. If work scope is large, persist partial decisions to \`memories/consensus.md\` before deep dives.
+3. Prefer shipping one completed milestone over broad parallel exploration.
+4. Never write files via shell heredoc (\`cat <<EOF\`). Use \`apply_patch\` for file creates/edits.
+5. Never execute shell lines that begin with \`>\` or \`>=\`; treat them as text and keep them inside markdown/files.
+$_discovery_line
+
+---
+
+## Current Consensus (TOO LARGE to pre-load — read it FIRST)
+
+The consensus normally pre-loaded here did not fit this prompt. Your FIRST action this
+cycle: read \`memories/consensus.md\` IN FULL and treat its contents exactly as if they
+had been pre-loaded above. Additionally: a consensus too large to inline means past
+cycles have been hoarding — as part of this cycle's normal work, prune resolved/stale
+material out of \`memories/consensus.md\` into the appropriate \`docs/<role>/\` files so
+it fits again. Consensus is a baton, not an archive.
+
+---
+
+This is Cycle #$loop_count. Act decisively."
+    fi
 
     # The company's own brakes must be IN the prompt that is actually sent. Assert on
     # the assembled text, never on the source files — every silent failure this loop
