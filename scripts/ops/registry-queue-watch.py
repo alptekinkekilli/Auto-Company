@@ -38,6 +38,7 @@ from datetime import datetime, timezone
 
 BASE = "appPLc31jSlgulX3D"
 T_BRIDGE = "tblREW6MtTMTP5h5N"
+T_EKAP = "tblrQfg4nS3htetcE"
 T_OUTREACH = "tbl1fZbNmolrEXAMy"
 # A Held row counts as "attribution-blocked" when its status says Held and its notes name
 # the gate. Kept as substrings, not a regex, so the intent stays readable.
@@ -93,6 +94,10 @@ def main() -> int:
         pending = fetch(T_BRIDGE, key, "{status}='PENDING'")
         bridge_all = fetch(T_BRIDGE, key)
         outreach = fetch(T_OUTREACH, key)
+        # EKAP Bridge was a blind spot in v1 (found 2026-08-01: EKAPBR-2026-08-01-002 sat
+        # PENDING while this watcher reported an empty queue). Both queues block on the
+        # SAME scarce resource — an operator-authenticated session — so both belong here.
+        ekap_pending = fetch(T_EKAP, key, "{status}='PENDING'")
     except Exception as exc:  # noqa: BLE001 — a watcher must not become an outage
         print(f"airtable read failed: {exc}", file=sys.stderr)
         return 1
@@ -115,10 +120,12 @@ def main() -> int:
         if token and token not in named:
             unasked.append(biz)
 
-    print(f"bridge_pending={len(pending)} unasked_attribution_holds={len(unasked)}")
+    total_pending = len(pending) + len(ekap_pending)
+    print(f"registry_pending={len(pending)} ekap_pending={len(ekap_pending)} "
+          f"unasked_attribution_holds={len(unasked)}")
 
     state_path = os.path.join(args.app, "logs", ".registry-queue-state.json")
-    if len(pending) < args.threshold and not (len(unasked) >= args.threshold * 2):
+    if total_pending < args.threshold and not (len(unasked) >= args.threshold * 2):
         if not args.dry_run:
             try:
                 os.remove(state_path)
@@ -145,14 +152,23 @@ def main() -> int:
     # The headline names whichever problem actually fired. Leading with "0 bekleyen
     # sorgu" because the OTHER branch tripped would train the operator to ignore this.
     lines = []
-    if pending:
-        lines.append(f"🔎 MERSİS oturumu zamanı — Registry Bridge kuyruğunda {len(pending)} bekleyen sorgu var.")
-        for r in pending[:8]:
-            f = r["fields"]
-            lines.append(f"  • {f.get('request_id','?')} — {str(f.get('firm','?'))[:60]} (anahtar: {f.get('query_key','?')})")
-        if len(pending) > 8:
-            lines.append(f"  … +{len(pending) - 8} tane daha")
-        lines += ["", "Her sorgu ~1 CAPTCHA; login operatöre ait. Claude'a 'MERSİS turu yapalım' de."]
+    if total_pending:
+        lines.append(f"🔎 Operatör oturumu zamanı — köprü kuyruklarında {total_pending} bekleyen talep var.")
+        if pending:
+            lines.append(f"MERSİS (Registry Bridge) — {len(pending)} sorgu, her biri ~1 CAPTCHA:")
+            for r in pending[:6]:
+                f = r["fields"]
+                lines.append(f"  • {f.get('request_id','?')} — {str(f.get('firm','?'))[:55]} (anahtar: {f.get('query_key','?')})")
+            if len(pending) > 6:
+                lines.append(f"  … +{len(pending) - 6} tane daha")
+        if ekap_pending:
+            lines.append(f"EKAP (KararId köprüsü) — {len(ekap_pending)} talep, giriş yapılmış oturum gerekir:")
+            for r in ekap_pending[:6]:
+                f = r["fields"]
+                lines.append(f"  • {f.get('request_id','?')} — KararNo {f.get('KararNo','?')}")
+            if len(ekap_pending) > 6:
+                lines.append(f"  … +{len(ekap_pending) - 6} tane daha")
+        lines += ["", "Login operatöre ait. Claude'a 'köprü turu yapalım' de."]
         if unasked:
             lines += ["", f"Ayrıca {len(unasked)} firma atıf (G4) nedeniyle Held ama hiç bridge talebi açılmamış."]
     else:
@@ -187,7 +203,7 @@ def main() -> int:
             pass
 
     state["last_notified_iso"] = now.isoformat()
-    state["pending_at_notify"] = len(pending)
+    state["pending_at_notify"] = total_pending
     try:
         tmp = state_path + ".tmp"
         with open(tmp, "w", encoding="utf-8") as fh:
