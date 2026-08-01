@@ -33,6 +33,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import time
 
 BASE = "https://ekap.kik.gov.tr/EKAP/Vatandas/KurulKararGoster.aspx?KararId="
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
@@ -50,10 +51,19 @@ def _hasher():
     return mod
 
 
-def fetch(url: str) -> str:
-    """curl, with a browser UA. urllib fails the TLS handshake against this host on macOS."""
-    r = subprocess.run(["curl", "-sSL", "-A", UA, "--max-time", "60", url],
-                       capture_output=True, text=True, timeout=90)
+def fetch(url: str, attempts: int = 3) -> str:
+    """curl, with a browser UA. urllib fails the TLS handshake against this host on macOS.
+
+    KararGoster returns an empty body often enough that a single miss is not a finding — the
+    cycle that died was partly spent re-fetching by hand after exactly this. Retry here, so
+    the caller never has to spend a turn on it.
+    """
+    for i in range(attempts):
+        r = subprocess.run(["curl", "-sSL", "-A", UA, "--max-time", "60", url],
+                           capture_output=True, text=True, timeout=90)
+        if len(r.stdout) > 2000:
+            return r.stdout
+        time.sleep(3 * (i + 1))
     return r.stdout
 
 
