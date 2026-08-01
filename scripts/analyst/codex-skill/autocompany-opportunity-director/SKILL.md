@@ -159,7 +159,47 @@ For each `CONDITIONAL GO` or `PIVOT`, specify: hypothesis; one narrow segment; t
 
 Framework default is 10 days, 50 qualified personalized contacts, 10 problem interviews, and 3 real payments — deviate only with documented reasoning about buyer rarity or economics. In this vertical the qualified pool is small and slow; if the default sample is unreachable, say what sample **is** reachable and what that costs in confidence, rather than quietly shrinking the bar.
 
-### 9. Write the directive
+### 9. Read the cost audit (do not recompute it)
+
+`memories/cost-audit.md` is regenerated deterministically minutes before you run. Every
+number in it comes from a log file. Your job is to say what those numbers MEAN and what
+should change — never to recalculate them, and never to estimate a figure the audit did
+not measure. If the file is missing, or its date is not today, say exactly that and skip
+the section; a stale cost claim is worse than none.
+
+Read it for three things, in this order:
+
+1. **Is the reported spend real?** The audit separates calibrated prices from
+   conservative-row (`phantom`) ones. A phantom total is an ACCOUNTING artefact, not
+   money or usage — never recommend cutting work because of it, and never let it feed a
+   "we are overspending" conclusion.
+2. **Did any cycle waste its own budget?** Timeouts, CHATTY/BLOATED verdicts, and
+   context growth mean a cycle rode past the point where it should have persisted its
+   findings and ended. That is a company behaviour, and the company can fix it.
+3. **Is the overhead structural?** Per-turn prompt prefix, advertised-vs-called tools,
+   ledger trend. These are infrastructure, and the company CANNOT fix them.
+
+### 9b. Route what you found — the routing is not optional
+
+Two channels, and the boundary is what the company can actually change by itself:
+
+- **Company-fixable → an `## Ops hygiene` block appended to your §11 directive.**
+  Only these: pruning bloated `memories/*.md` into `docs/<role>/`; ending cycles before
+  the timeout instead of riding into the kill; keeping long command output in files and
+  reading back only excerpts; batching lookups. Write them as instructions the company
+  can execute in one cycle, with a verifiable finish state. Omit the block entirely when
+  the audit shows nothing — an empty ritual block trains the operator to ignore it.
+- **Infrastructure → an OPREQ, never a directive.** Budget or accounting code, the tier
+  ladder, `LOOP_INTERVAL`, the MCP tool denylist, the hold mechanism, anything needing a
+  redeploy. Follow the standing operator-request protocol: one request, evidence, the
+  exact decision being asked for.
+
+Never put an infrastructure fix in the directive. The directive is executed by the
+company on itself; instructing it to edit its own budget gates, hold, or accounting is
+precisely the failure the guardrail invariant exists to prevent. If you are unsure which
+side a finding falls on, it is infrastructure.
+
+### 10. Write the directive
 
 Use [references/directive-template.md](references/directive-template.md). It must: state `ACTIVE`, issue date, scope, ordered priority; define what is and is not authorized; allow one active validation; carry numerical continue/pivot/stop gates; forbid product construction before the paid gate; require logged payments, delivery time, outcomes, repeat behavior, and acquisition source; and end with the exact condition that marks it `DONE`.
 
@@ -187,5 +227,6 @@ Never call something `GO` because the code is ready, a regulation exists, a comp
 8. Context7 technical evidence and its decision impact — or an explicit statement that it was not decision-relevant.
 9. Minimum validation experiment.
 10. Continue / pivot / stop gates.
-11. Paste-ready `memories/human-directive.md`.
-12. Confidence, open questions, and the single piece of evidence that would most change this verdict.
+11. **Cost and efficiency** — read from `memories/cost-audit.md`: real vs phantom spend, wasted cycles, structural overhead, and the trend. Numbers quoted, never recomputed. End it with the routing you applied: which findings went into the directive's `## Ops hygiene` block and which became OPREQs (state "none" where that is the truth).
+12. Paste-ready `memories/human-directive.md` — including the `## Ops hygiene` block when, and only when, §11 produced company-fixable findings.
+13. Confidence, open questions, and the single piece of evidence that would most change this verdict.

@@ -91,6 +91,19 @@ persist_ndjson() {
 trap 'persist_ndjson; rm -rf "$WORK"' EXIT
 MSG="$WORK/msg.txt"
 
+# Deterministic cost audit, refreshed immediately before the analyst reads it. The
+# analyst INTERPRETS these numbers and must never recompute them: a high-effort model
+# doing arithmetic over log files is both expensive and able to produce a plausible
+# wrong number. Non-fatal by design — a failed audit costs the report one section, it
+# must never cost the run.
+if [ -x "$APP/scripts/ops/cost-audit.py" ]; then
+  if python3 "$APP/scripts/ops/cost-audit.py" --app "$APP" >>"$PROGRESS" 2>&1; then
+    log "[$STAMP] cost audit refreshed (memories/cost-audit.md)"
+  else
+    log "[$STAMP] NOTE: cost audit failed — the report's cost section will say NOT MEASURED"
+  fi
+fi
+
 read -r -d '' PROMPT <<EOF
 FIRST, read $SKILL_MD in full and adopt it as your operating skill for this task —
 including any files under its references/ directory that it tells you to consult.
@@ -101,6 +114,7 @@ Inputs are in this workspace ($APP) — find them with rg:
 - memories/candidate-registry.md     (read the LIVE span: ## Selected -> ## Archived; dedup key is axis = buyer × delivery × price)
 - memories/human-directive.md        (the operator's standing instruction — it outranks your judgment on scope)
 - memories/consensus.md              (Auto Company's own current reading + state)
+- memories/cost-audit.md             (TODAY's deterministic cost/turn-economy measurements — interpret these, never recompute them; if the file is missing or stale, say so instead of estimating)
 - PROJECT_EVALUATION_FRAMEWORK.md
 - docs/research/                     (tender-track reports, qualification passes, primary-source notes)
 
