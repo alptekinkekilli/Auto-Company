@@ -30,7 +30,7 @@ tail work, and (because the timeout kill destroyed the `done` event) was booked 
 the deliberate 5x conservative unknown-model estimate: $63.63 against a real burn of
 roughly $12.7.
 
-## Rules (enforced via Runtime Guardrails 6-7)
+## Rules (enforced via Runtime Guardrails 6-8)
 
 1. **Move waiting into the shell.** One blocking `until <cond>; do sleep 20; done`
    is ONE turn regardless of duration. Never sleep-and-recheck across tool calls.
@@ -43,6 +43,17 @@ roughly $12.7.
    cycle continues fresh — cheaper than a bloated context, and it cannot time out.
 4. **Batch.** Related lookups go into one tool call where the tool allows (Airtable
    filterByFormula over per-record gets; one grep over repeated reads).
+5. **Narrow reads — never pull a whole table.** Scope every collection read:
+   `filterByFormula` (rows) + `fields[]` (columns) + `maxRecords` (ceiling). Measured
+   2026-08-01 over 7 cycles: `mcp__airtable__list_records_for_table` averaged **29.5 KB
+   per call** and its re-reads cost **$2.38** — 7x all external web research in the same
+   window ($0.34, 78 calls). The five Qualified rows the company actually needed are
+   **1.2 KB** when asked for by name. Applies to any tool that can return a whole
+   collection, not only Airtable.
+6. **Fetch late, not early.** Cost = output size x turns REMAINING. Worst call observed:
+   170,958 bytes at turn 7 of a 74-turn cycle → re-read 67 times → ~$0.98 for one call.
+   The same bytes at turn 60 would have cost ~$0.10. If a big read can wait until after
+   the decisions that depend on the small ones, let it wait.
 
 **Rule 3 is not self-enforcing.** jcode has no max-turns flag (checked 2026-08-01:
 `--tools`, `--disabled-tools`, `--tool-profile` exist; no iteration cap), so the only
