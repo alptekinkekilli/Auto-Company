@@ -160,6 +160,35 @@ def opted_out(fields: dict) -> bool:
     return "opt-out" in blob or "opt out" in blob or "listeden çık" in blob
 
 
+# BODY LEAK SCANNER (directive 2026-08-02 revision 3). Four marker classes, each named in the
+# directive verbatim. Word-boundaried where the marker is an ordinary word that could otherwise
+# appear inside an unrelated one (e.g. "ross" inside "across"); left as plain substrings where
+# the marker is already distinctive enough that a boundary would only weaken it (e.g. "OPREQ").
+# Every entry is (compiled pattern, human label) so a refusal can name exactly what it hit.
+_NAME_MARKERS = ["munger", "bezos", "vogels", "norman", "duarte", "cooper", "dhh", "bach",
+                 "hightower", "godin", "pg", "graham", "ross", "campbell", "thompson"]
+BODY_LEAK_MARKERS = (
+    [(re.compile(r"\b%s\b" % re.escape(n), re.IGNORECASE), n) for n in _NAME_MARKERS]
+    + [(re.compile(re.escape(m), re.IGNORECASE), m) for m in (
+        "PASS WITH CONDITIONS", "NO-GO", "OPREQ", "WTP", "HOLD —", "HOLD -",
+        "grep-confirmed", "sha256:", "content_hash",
+        "Category 1", "Category 2", "Category 3",
+        "Deliberately NOT", "not a usable pitch", "do not create a row",
+    )]
+)
+
+
+def body_leak_scan(body: str) -> str:
+    """Refuse a send whose body carries internal-only vocabulary. Returns the empty string
+    when clean, or a message naming the exact marker hit (never a bare "leak found" — a
+    refusal that does not say what tripped it gets worked around, per the directive)."""
+    for pattern, label in BODY_LEAK_MARKERS:
+        m = pattern.search(body)
+        if m:
+            return "marker %r matched %r" % (label, m.group(0))
+    return ""
+
+
 def g4_live(firm: str, app_dir: str) -> tuple[bool, str]:
     """Re-derive G4 now. The bridge row is found by firm name because that is the only link
     the two tables share; an ambiguous match is a REFUSE, not a guess."""
@@ -224,6 +253,40 @@ def decide(rec: str, app_dir: str) -> dict:
     # "Failed: Missing Email / Email subject / Email body" into the compliance log, which then
     # surfaced to the operator as a delivery problem. Eligible and ready are different
     # questions and the gate owes an answer to both.
+    missing = [k for k in ("Email subject", "Email body") if not (fields.get(k) or "").strip()]
+    if missing:
+        return {**d, "verdict": "REFUSE",
+                "reason": "row is not ready to send: %s empty — render the template into the "
+                          "row first" % ", ".join(missing)}
+
+    # BODY LEAK SCAN (directive 2026-08-02 revision 3, root-caused by the N.K.Y incident of
+    # 2026-08-02T15:01Z). A message went out whose facts were correct but which carried the
+    # company's own internal reasoning into a stranger's inbox — which agent ruled what, which
+    # rows were deliberately not created, method notes, process vocabulary. Nobody forgot a
+    # rule; there was no check. This is that check, and it runs before every other body-
+    # dependent gate below, exactly like every other check here: any failure is a REFUSE, never
+    # an ALLOW, because a scanner that cannot be completed is exactly the kind of "I could not
+    # tell" this whole gate exists to turn into a refusal rather than a pass.
+    try:
+        leak = body_leak_scan(fields.get("Email body") or "")
+    except Exception as e:                       # noqa: BLE001 - a scanner error is a refusal
+        return {**d, "verdict": "REFUSE",
+                "reason": "body leak scan failed to run: %s" % e}
+    if leak:
+        return {**d, "verdict": "REFUSE",
+                "reason": "Email body carries internal vocabulary and must not be sent: %s" % leak}
+
+    # UNSPLIT MIGRATION GUARD. A row whose own `Exclusion ground` field still carries internal
+    # vocabulary has not been through the split yet — the template that renders `Email body`
+    # from `Exclusion ground` would carry the leak forward even though the body scan above
+    # only sees what was rendered so far. Catch the source field too, so a half-finished
+    # migration cannot send just because nobody re-rendered the body yet.
+    eg_leak = body_leak_scan(fields.get("Exclusion ground") or "")
+    if eg_leak:
+        return {**d, "verdict": "REFUSE",
+                "reason": "row's 'Exclusion ground' is not split yet — internal vocabulary "
+                          "still present: %s" % eg_leak}
+
     # The ground sentence is INTERPOLATED verbatim into the customer-facing template, and that
     # field doubles as an internal research note. N.K.Y (2026-08-02) shipped 1,234 characters of
     # English analysis into a Turkish sentence — including a parenthetical inference about a
@@ -240,12 +303,6 @@ def decide(rec: str, app_dir: str) -> dict:
                               "English markers). It goes into the customer's sentence as-is; "
                               "rewrite it as one short Turkish clause naming only THIS firm."
                               % (len(ground), en)}
-
-    missing = [k for k in ("Email subject", "Email body") if not (fields.get(k) or "").strip()]
-    if missing:
-        return {**d, "verdict": "REFUSE",
-                "reason": "row is not ready to send: %s empty — render the template into the "
-                          "row first" % ", ".join(missing)}
 
     # PHASE. Read the stage from the authority's own decision and require the message to say
     # the same thing. Fetching costs a round trip, so it runs only once the row is otherwise

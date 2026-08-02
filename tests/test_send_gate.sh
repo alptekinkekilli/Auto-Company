@@ -192,5 +192,55 @@ else
   echo "  FAIL the N.K.Y pairing was not detected"; fail=1
 fi
 
+echo "15. body leak scanner (directive 2026-08-02 rev 3, N.K.Y incident 2026-08-02T15:01Z)"
+# The N.K.Y message that actually went out carried the company's own internal reasoning
+# into a stranger's inbox: which agent ruled what, a deliberate row-creation decision, method
+# notes. This is the exact body that shipped — loaded from a fixture so the test asserts
+# against the real incident, not a paraphrase of it.
+NKY_ROW=$(python3 -c "
+import json
+body = json.load(open('tests/fixtures/nky_actual_sent_body.json'))['Email body']
+print(json.dumps({'Business':'N.K.Y Mimarlık Müh. İnş. ve Tic. Ltd. Şti.','Status':'Qualified',
+ 'Email':'info@nky.com.tr','Email subject':'s','Email body':body,
+ 'Exclusion ground':'As özel ortak of the JV, an ordinary remediable documentary defect, m.54/11-b corrective measure.'}))")
+OUT=$(run "$NKY_ROW" '[]' 1)
+contains "refuses the actual sent body" "$OUT" "REFUSE"
+contains "names critic-munger" "$OUT" "munger"
+
+echo "  a clean authority-only body does not fire (a scanner that refuses everything is an outage)"
+CLEAN_BODY_ROW=$(python3 -c "
+import json
+print(json.dumps({'Business':'X','Status':'Qualified','Email':'a@b.tr','Email subject':'k',
+ 'Email body':'Kamuya açık KİK kurul kararında, X firmasının bilanço oranlarının uygun olmaması nedeniyle değerlendirme dışı bırakıldığını gördüm.',
+ 'Exclusion ground':'bilanço oranlarının uygun olmaması (mali yeterlik)'}))")
+check "clean body is allowed" "$(run "$CLEAN_BODY_ROW" '[]' 1 | cut -d'|' -f1)" "ALLOW"
+
+echo "  one case per marker class"
+mkcase() { python3 -c "
+import json, sys
+print(json.dumps({'Business':'X','Status':'Qualified','Email':'a@b.tr','Email subject':'k',
+ 'Email body':sys.argv[1], 'Exclusion ground':'temiz gerekçe metni'}))" "$1"; }
+contains "persona name (bezos)" "$(run "$(mkcase 'ceo-bezos onayladı bu metni')" '[]' 1)" "REFUSE"
+contains "verdict vocabulary (PASS WITH CONDITIONS)" "$(run "$(mkcase 'critic ruled PASS WITH CONDITIONS on this row')" '[]' 1)" "REFUSE"
+contains "verdict vocabulary (OPREQ)" "$(run "$(mkcase 'see OPREQ-208A-001 for context')" '[]' 1)" "REFUSE"
+contains "method/provenance (sha256:)" "$(run "$(mkcase 'verified via sha256:abcdef1234567890')" '[]' 1)" "REFUSE"
+contains "method/provenance (Category 2)" "$(run "$(mkcase 'this is a Category 2 finding')" '[]' 1)" "REFUSE"
+contains "internal phrasing (Deliberately NOT)" "$(run "$(mkcase 'Deliberately NOT creating a row for the partner')" '[]' 1)" "REFUSE"
+contains "internal phrasing (not a usable pitch)" "$(run "$(mkcase 'this is not a usable pitch to the partner')" '[]' 1)" "REFUSE"
+
+echo "  a scanner refusal names the marker it hit, not a bare 'leak found'"
+OUT=$(run "$(mkcase 'ceo-bezos onayladı')" '[]' 1)
+contains "names the exact marker" "$OUT" "bezos"
+
+echo "16. an UNSPLIT row (leak still in Exclusion ground, body not yet re-rendered) is refused"
+# A half-finished migration: Exclusion ground still carries the internal marker even though
+# nobody has re-rendered Email body from it yet. The source-field guard must catch this too.
+UNSPLIT=$(python3 -c "
+import json
+print(json.dumps({'Business':'X','Status':'Qualified','Email':'a@b.tr','Email subject':'k',
+ 'Email body':'temiz görünen bir metin, henüz yeniden render edilmedi',
+ 'Exclusion ground':'ordinary defect — critic-munger PASS WITH CONDITIONS confirmed this'}))")
+contains "refuses" "$(run "$UNSPLIT" '[]' 1)" "not split yet"
+
 if [ "$fail" -eq 0 ]; then echo "ALL PASS"; else echo "FAILURES"; fi
 exit "$fail"
