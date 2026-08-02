@@ -236,6 +236,15 @@ def main() -> int:
                 failures.append(f"denylist missing '{full}'")
 
     # 2+3+5. live probe per server (only servers present in BOTH sets)
+    # A readcheck PER SERVER, not one for the whole surface. The single-server form
+    # (`readcheck`) is still accepted and folded in, but it is what let Context7 pass
+    # every boot for days while never being called once: listing tools proves a server
+    # answered a handshake, not that a cycle can USE it. Context7's own troubleshooting
+    # docs make the same point — verify with a real request, and check that an
+    # unauthorized one is actually challenged, rather than assuming the wiring holds.
+    readchecks = list(man.get("readchecks") or [])
+    if man.get("readcheck"):
+        readchecks.append(man["readcheck"])
     readcheck = man.get("readcheck") or {}
     for sname in sorted(set(man_servers) & set(cfg_servers)):
         spec = cfg_servers[sname]
@@ -268,20 +277,20 @@ def main() -> int:
                 failures.append(
                     f"server '{sname}' is MISSING expected destructive tool(s): "
                     f"{','.join(missing_d)} — stale manifest or wrong endpoint")
-            if readcheck.get("server") == sname:
-                tool = readcheck.get("tool") or ""
+            for rc in [r for r in readchecks if r.get("server") == sname]:
+                tool = rc.get("tool") or ""
                 if tool not in tools:
                     failures.append(
                         f"readcheck tool '{tool}' not in '{sname}' tools/list")
-                else:
-                    res = cli.call_tool(tool, readcheck.get("arguments") or {})
-                    verdict = judge_readcheck(res)
-                    sev["readcheck"] = {"tool": tool,
-                                        "ok": verdict == "",
-                                        "detail": verdict or "ok"}
-                    if verdict:
-                        failures.append(
-                            f"readcheck {sname}:{tool} failed: {verdict}")
+                    continue
+                res = cli.call_tool(tool, rc.get("arguments") or {})
+                verdict = judge_readcheck(res)
+                sev.setdefault("readchecks", []).append(
+                    {"tool": tool, "ok": verdict == "", "detail": verdict or "ok"})
+                sev["readcheck"] = sev["readchecks"][-1]   # back-compat for readers
+                if verdict:
+                    failures.append(
+                        f"readcheck {sname}:{tool} failed: {verdict}")
         except ServerError as e:
             failures.append(f"server '{sname}' failed mid-probe: {e}")
         finally:
@@ -289,13 +298,33 @@ def main() -> int:
 
     # The read call is REQUIRED, not best-effort: a manifest without one, or a
     # pass where it silently never ran, is not a proven boot (gate B9).
-    rcs = readcheck.get("server") or ""
-    if not rcs or not readcheck.get("tool"):
+    if not readchecks:
         failures.append("manifest defines no readcheck — a boot without one "
                         "proven read-only call is not a proven boot")
-    elif "readcheck" not in evidence["servers"].get(rcs, {}) \
-            and not any(rcs in f for f in failures):
-        failures.append(f"readcheck on '{rcs}' never executed")
+    # Every server named in the manifest's `servers` block must have a readcheck, and
+    # every readcheck must have actually run. Silence is not a pass: the failure this
+    # guards against is a server that lists tools and then errors on every call.
+    for sname in sorted(man_servers):
+        if any(r.get("server") == sname for r in readchecks):
+            continue
+        # An exemption must be WRITTEN DOWN with a reason. A server can be genuinely
+        # unreadable without side effects (browseros drives a real browser), but that
+        # has to be a visible decision in the manifest, not an omission nobody notices.
+        why = (man_servers[sname] or {}).get("readcheck_exempt")
+        if not why:
+            failures.append(
+                f"no readcheck defined for '{sname}' — tools/list alone does not "
+                f"prove a cycle can call it. Add one, or set readcheck_exempt with "
+                f"a reason.")
+    for rc in readchecks:
+        rcs = rc.get("server") or ""
+        if not rcs or not rc.get("tool"):
+            failures.append(f"malformed readcheck entry: {rc!r}")
+            continue
+        ran = [x for x in evidence["servers"].get(rcs, {}).get("readchecks", [])
+               if x.get("tool") == rc.get("tool")]
+        if not ran and not any(rcs in f for f in failures):
+            failures.append(f"readcheck on '{rcs}' never executed")
 
     if args.evidence:
         try:
@@ -316,10 +345,20 @@ def main() -> int:
     served = ",".join(sorted(evidence["servers"]))
     rc = evidence["servers"].get(readcheck.get("server") or "", {}) \
         .get("readcheck", {})
+    # Report EVERY readcheck, not just one. The boot line is the only place an operator
+    # sees this, and a summary that names a single server is how "Context7 is wired" went
+    # unchallenged while it was never called.
+    shown = []
+    for r in readchecks:
+        got = [x for x in evidence["servers"].get(r.get("server") or "", {})
+               .get("readchecks", []) if x.get("tool") == r.get("tool")]
+        shown.append("%s:%s:%s" % (r.get("server"), r.get("tool"),
+                                   "ok" if got and got[0].get("ok") else "MISSING"))
+    exempt = sorted(k for k, v in man_servers.items() if (v or {}).get("readcheck_exempt"))
     print(f"MCP_PROBE_OK servers={served} "
-          f"readcheck={readcheck.get('server')}:{readcheck.get('tool')}:"
-          f"{'ok' if rc.get('ok') else 'MISSING'} "
-          f"denylist_entries={len(deny)}")
+          f"readchecks={','.join(shown) or 'NONE'} "
+          + (f"exempt={','.join(exempt)} " if exempt else "")
+          + f"denylist_entries={len(deny)}")
     return 0
 
 

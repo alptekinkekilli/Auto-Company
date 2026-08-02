@@ -9,13 +9,9 @@
     "endpoints on 2026-07-31; the pattern the probe scans live tools with is",
     "(delete|remove|archive|revert|drop|destroy|purge). base_denied are jcode's own",
     "built-in tools that must appear in JCODE_TOOLS_DENY, including its `mcp`",
-    "management tool (a cycle must not be able to reconfigure its own tool surface)."
+    "management tool (a cycle must not be able to reconfigure its own tool surface).",
+    "readchecks (2026-08-02): ONE PROVEN CALL PER SERVER. The old single `readcheck` covered airtable only, which is how Context7 passed every boot for days while never being called once — tools/list proves a handshake, not usability. Context7's own troubleshooting docs say the same: verify with a real request. A server that cannot be read without side effects must carry a written readcheck_exempt reason; an omission now fails the boot."
   ],
-  "readcheck": {
-    "server": "airtable",
-    "tool": "list_bases",
-    "arguments": {}
-  },
   "base_denied": [
     "mcp",
     "gmail",
@@ -51,7 +47,28 @@
       "destructive": []
     },
     "browseros": {
-      "destructive": []
+      "destructive": [],
+      "readcheck_exempt": "drives a real browser shared with the operator's own EKAP/MERSIS sessions; every tool it exposes either navigates or reads a live page, so a boot-time call would touch operator state. Covered instead by the tabs/list call the bridge scripts make."
     }
-  }
+  },
+  "readchecks": [
+    {
+      "server": "airtable",
+      "tool": "list_bases",
+      "arguments": {}
+    },
+    {
+      "server": "linear",
+      "tool": "list_teams",
+      "arguments": {}
+    },
+    {
+      "server": "context7",
+      "tool": "resolve-library-id",
+      "arguments": {
+        "libraryName": "Next.js",
+        "query": "routing"
+      }
+    }
+  ]
 }

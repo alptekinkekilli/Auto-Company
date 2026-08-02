@@ -42,7 +42,13 @@ write_manifest() { # $1 at-destructive-json  $2 base-denied-json
 import json, sys
 sb, at_d, base = sys.argv[1:4]
 man = {
-    "readcheck": {"server": "at", "tool": "list_bases", "arguments": {}},
+    # One proven call PER SERVER (2026-08-02). The old fixture proved `at` only, which
+    # mirrored the production manifest — and that gap is how Context7 passed every boot
+    # for days without ever being called.
+    "readchecks": [
+        {"server": "at", "tool": "list_bases", "arguments": {}},
+        {"server": "ln", "tool": "get_issue", "arguments": {}},
+    ],
     "base_denied": json.loads(base),
     "servers": {
         "at": {"destructive": json.loads(at_d)},
@@ -65,7 +71,8 @@ write_config "MOCK_TOOLS=$AT_TOOLS" "MOCK_TOOLS=$LN_TOOLS"
 write_manifest '["delete_records_for_table","revert_action"]' '["mcp","gmail"]'
 out="$(run_probe)"
 check_contains "probe ok"   "$out" "MCP_PROBE_OK"
-check_contains "readcheck ok" "$out" "readcheck=at:list_bases:ok"
+check_contains "readcheck at ok" "$out" "at:list_bases:ok"
+check_contains "readcheck ln ok" "$out" "ln:get_issue:ok"
 check_contains "rc 0"       "$out" "rc=0"
 check_contains "evidence has tool census" "$(cat "$SB/evidence.json")" '"tool_count": 4'
 check_contains "evidence readcheck ok"    "$(cat "$SB/evidence.json")" '"ok": true'
@@ -124,10 +131,42 @@ check_contains "rc 1"              "$out" "rc=1"
 
 echo "--- 10: manifest without a readcheck -> fail (a read must be proven) ---"
 write_config "MOCK_TOOLS=$AT_TOOLS" "MOCK_TOOLS=$LN_TOOLS"
-python3 -c 'import json,sys; m=json.load(open(sys.argv[1])); del m["readcheck"]; json.dump(m,open(sys.argv[1],"w"))' "$SB/manifest.json"
+python3 -c 'import json,sys; m=json.load(open(sys.argv[1])); del m["readchecks"]; json.dump(m,open(sys.argv[1],"w"))' "$SB/manifest.json"
 out="$(run_probe)"
 check_contains "no-readcheck named" "$out" "manifest defines no readcheck"
 check_contains "rc 1"               "$out" "rc=1"
 
 echo
-[ "$fail" -eq 0 ] && echo "ALL MCP-PROBE TESTS PASS" || { echo "FAILURES PRESENT"; exit 1; }
+
+
+echo "--- 11: a server with NO readcheck and no exemption -> fail ---"
+# The lock the operator asked for on 2026-08-02: tools/list proves a handshake, not that a
+# cycle can use the server. Context7 satisfied every boot check for days while never being
+# called once, because only ONE server carried a proven read.
+write_config "MOCK_TOOLS=$AT_TOOLS" "MOCK_TOOLS=$LN_TOOLS"; write_manifest '["delete_records_for_table","revert_action"]' "[\"mcp\",\"gmail\"]"
+python3 -c 'import json,sys; m=json.load(open(sys.argv[1])); m["readchecks"]=[r for r in m["readchecks"] if r["server"]!="ln"]; json.dump(m,open(sys.argv[1],"w"))' "$SB/manifest.json"
+out="$(JCODE_TOOLS_DENY="$DENY_OK" python3 "$PROBE" --config "$SB/mcp.json" --manifest "$SB/manifest.json" --evidence "$SB/evidence.json" 2>&1)"; rc=$?
+check_contains "names the server and the remedy" "$out" "no readcheck defined for 'ln'"
+check_contains "offers the exemption" "$out" "readcheck_exempt"
+check_rc "rc" "$rc" 1
+
+echo "--- 12: a WRITTEN exemption is accepted (browseros is the real case) ---"
+# Self-contained: an earlier version of this case inherited case 11's manifest and failed
+# for a reason that had nothing to do with exemptions. A test that depends on the previous
+# test's leftovers reports the wrong cause.
+write_config "MOCK_TOOLS=$AT_TOOLS" "MOCK_TOOLS=$LN_TOOLS"; write_manifest '["delete_records_for_table","revert_action"]' "[\"mcp\",\"gmail\"]"
+python3 -c 'import json,sys; m=json.load(open(sys.argv[1])); m["readchecks"]=[r for r in m["readchecks"] if r["server"]!="ln"]; m["servers"]["ln"]["readcheck_exempt"]="drives live operator state"; json.dump(m,open(sys.argv[1],"w"))' "$SB/manifest.json"
+out="$(JCODE_TOOLS_DENY="$DENY_OK" python3 "$PROBE" --config "$SB/mcp.json" --manifest "$SB/manifest.json" --evidence "$SB/evidence.json" 2>&1)"; rc=$?
+check_contains "exemption surfaced in the boot line" "$out" "exempt=ln"
+check_rc "rc" "$rc" 0
+
+echo "--- 13: a readcheck naming a tool the server does not expose -> fail ---"
+# The negative half of the lock, run live against production on 2026-08-02 as well.
+write_manifest '["delete_records_for_table","revert_action"]' "[\"mcp\",\"gmail\"]"
+python3 -c 'import json,sys; m=json.load(open(sys.argv[1])); [r.__setitem__("tool","list_bases_BOGUS") for r in m["readchecks"] if r["server"]=="at"]; json.dump(m,open(sys.argv[1],"w"))' "$SB/manifest.json"
+out="$(JCODE_TOOLS_DENY="$DENY_OK" python3 "$PROBE" --config "$SB/mcp.json" --manifest "$SB/manifest.json" --evidence "$SB/evidence.json" 2>&1)"; rc=$?
+check_contains "names the missing tool" "$out" "list_bases_BOGUS"
+check_rc "rc" "$rc" 1
+
+if [ "$fail" -eq 0 ]; then echo "ALL MCP-PROBE TESTS PASS"; else echo "FAILURES PRESENT"; fi
+exit "$fail"
