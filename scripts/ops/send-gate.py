@@ -58,6 +58,49 @@ GROUND_MAX_EN = 3        # healthy sent grounds measured 0
 TOTAL_CAP = 20
 
 
+PREQUAL = ("ön yeterlik", "on yeterlik", "ön yeterlilik")
+BID = ("teklifinin değerlendirme dışı", "tekliflerinin değerlendirme dışı",
+       "teklifin değerlendirme dışı", "teklifleri değerlendirme dışı")
+
+
+def phase_of(decision_text: str) -> str:
+    """Which stage did the authority actually eliminate at — from ITS OWN operative sentence.
+
+    Not from our prose. N.K.Y (2025/UD.I-1751) reads "İş Ortaklığının ön yeterlik başvurusunun
+    yeterli kabul edilmeyerek ön yeterlik değerlendirmesi dışında bırakılması": nobody had bid
+    yet. The approved template says "teklif değerlendirilmeden önce eleyebilir" and "…
+    değerlendirme dışı bırakıldığını gördüm", which describes bid evaluation — so that message
+    told a real firm the wrong thing about its own file (sent 2026-08-02 15:01Z).
+
+    Returns "PREQUAL", "BID", or "UNKNOWN". UNKNOWN is a refusal upstream, never a pass: a
+    stage we cannot read is a claim we cannot make.
+    """
+    tail = (decision_text or "")[-4000:].lower()
+    if not tail:
+        return "UNKNOWN"
+    pre = any(k in tail for k in PREQUAL)
+    bid = any(k in tail for k in BID)
+    if pre and not bid:
+        return "PREQUAL"
+    if bid and not pre:
+        return "BID"
+    if pre and bid:
+        # Both appear: let the operative sentence decide by whichever comes last.
+        return "PREQUAL" if max(tail.rfind(k) for k in PREQUAL) > max(
+            tail.rfind(k) for k in BID) else "BID"
+    return "UNKNOWN"
+
+
+def body_claims(body: str) -> str:
+    """What stage does the message assert? Mirrors the approved template's own wording."""
+    b = (body or "").lower()
+    if any(k in b for k in PREQUAL):
+        return "PREQUAL"
+    if "değerlendirme dışı bırakıld" in b or "teklif değerlendirilmeden" in b:
+        return "BID"
+    return "UNKNOWN"
+
+
 def load_key(app_dir: str) -> None:
     if os.environ.get("AIRTABLE_API_KEY"):
         return
@@ -203,6 +246,36 @@ def decide(rec: str, app_dir: str) -> dict:
         return {**d, "verdict": "REFUSE",
                 "reason": "row is not ready to send: %s empty — render the template into the "
                           "row first" % ", ".join(missing)}
+
+    # PHASE. Read the stage from the authority's own decision and require the message to say
+    # the same thing. Fetching costs a round trip, so it runs only once the row is otherwise
+    # ready to send.
+    src = (fields.get("Exclusion ground source") or "") + " " + (fields.get("Notes") or "")
+    kid = re.search(r"KararId=([0-9a-f]{64})", src)
+    if kid:
+        try:
+            spec = importlib.util.spec_from_file_location(
+                "kdr", os.path.join(HERE, "kik-decision-read.py"))
+            kdr = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(kdr)
+            dec = kdr.text_of(kdr.fetch(
+                "https://ekap.kik.gov.tr/EKAP/Vatandas/KurulKararGoster.aspx?KararId=" + kid.group(1)))
+        except Exception as e:                    # noqa: BLE001 — unreadable is a refusal
+            return {**d, "verdict": "REFUSE",
+                    "reason": "could not read the decision to check the procurement phase: %s" % e}
+        dphase = phase_of(dec)
+        bphase = body_claims(fields.get("Email body") or "")
+        d["phase"] = "decision=%s body=%s" % (dphase, bphase)
+        if dphase == "UNKNOWN":
+            return {**d, "verdict": "REFUSE",
+                    "reason": "cannot tell from the decision whether this was ön yeterlik or "
+                              "teklif evaluation — a stage we cannot read is a claim we cannot make"}
+        if bphase != dphase:
+            return {**d, "verdict": "REFUSE",
+                    "reason": "phase mismatch: the decision is %s but the message says %s. "
+                              "Saying 'teklif değerlendirme dışı' about an ön yeterlik "
+                              "elimination tells the firm the wrong thing about its own file."
+                              % (dphase, bphase)}
 
     # GROUP-ROUTED outreach (operator decision, 2026-08-02). Some bidders are members of a
     # multi-company group whose public contact is a GROUP mailbox: no page ties that mailbox

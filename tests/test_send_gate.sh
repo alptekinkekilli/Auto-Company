@@ -167,5 +167,30 @@ print(json.dumps({'Business':'X','Status':'Qualified','Email':'a@b.tr','Email su
  'Email body':'g','Exclusion ground':'aşırı düşük teklif açıklamasının tevsik yöntemi mevzuata uygun değil'}))")
 check "a short Turkish ground passes" "$(run "$GOOD" '[]' 1 | cut -d'|' -f1)" "ALLOW"
 
+echo "14. procurement phase must match the authority's own decision"
+# N.K.Y (2025/UD.I-1751) was eliminated at ÖN YETERLİK — nobody had bid yet — but the approved
+# template says "teklif değerlendirilmeden önce" and "değerlendirme dışı bırakıldığını gördüm".
+# That message went to a real firm on 2026-08-02 and told it the wrong thing about its own file.
+# The strings below are the operative wording of the two real decisions.
+PH='import importlib.util,sys
+spec=importlib.util.spec_from_file_location("sg",sys.argv[1])
+m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+print(m.phase_of(sys.argv[2]) if sys.argv[3]=="d" else m.body_claims(sys.argv[2]))'
+ph() { python3 -c "$PH" "$SCRIPT" "$1" d; }
+bc() { python3 -c "$PH" "$SCRIPT" "$1" b; }
+
+NKY_DEC='Sonuc olarak, Apco Teknik Grup - N.K.Y Mimarlik Is Ortakliginin ön yeterlik basvurusunun yeterli kabul edilmeyerek ön yeterlik degerlendirmesi disinda birakilmasi gerekmektedir.'
+RMH_DEC='Sonuc olarak, Abe Biyosidal ile Rmh Ilac Kimya San. ve Tic. Ltd. Sti.nin tekliflerinin değerlendirme dışı bırakılması gerekmektedir.'
+check "ön yeterlik decision reads PREQUAL"   "$(ph "$NKY_DEC")" "PREQUAL"
+check "bid decision reads BID"               "$(ph "$RMH_DEC")" "BID"
+check "an unreadable decision is UNKNOWN"    "$(ph "")" "UNKNOWN"
+check "the template body claims BID"         "$(bc 'gerekçesiyle değerlendirme dışı bırakıldığını gördüm')" "BID"
+check "a prequal-worded body claims PREQUAL" "$(bc 'ön yeterlik değerlendirmesi dışında bırakıldığını gördüm')" "PREQUAL"
+if [ "$(ph "$NKY_DEC")" != "$(bc 'gerekçesiyle değerlendirme dışı bırakıldığını gördüm')" ]; then
+  echo "  PASS the exact N.K.Y pairing is detected as a mismatch"
+else
+  echo "  FAIL the N.K.Y pairing was not detected"; fail=1
+fi
+
 if [ "$fail" -eq 0 ]; then echo "ALL PASS"; else echo "FAILURES"; fi
 exit "$fail"
