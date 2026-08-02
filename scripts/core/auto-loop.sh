@@ -2868,6 +2868,21 @@ This is Cycle #$loop_count. Act decisively."
             >/dev/null 2>&1 || true
     fi
 
+    # Context7 consultation (2026-08-02). CLAUDE.md has required a Context7 check before
+    # writing code against an external library for days; measured over 20 cycles, the company
+    # made 291 MCP calls and ZERO to Context7. The tool is fine — the probe records it
+    # reachable with 2 tools and it is not denied — the rule just had no mechanical check,
+    # exactly like Guardrail 7, which also did not hold. This is the check.
+    #
+    # It fires only when a source file was written that imports something OUTSIDE the standard
+    # library, so our own urllib/json/subprocess tooling never trips it: 0/20 on the current
+    # history. Log only, never Telegram — a rule this narrow does not deserve a notification,
+    # and pushing it would repeat the 41%-false-alarm mistake in a new place.
+    if [ -f "$SCRIPT_DIR/../ops/context7-check.py" ]; then
+        _c7_line=$(python3 "$SCRIPT_DIR/../ops/context7-check.py" --app "$PROJECT_DIR" 2>/dev/null || true)
+        [ -n "$_c7_line" ] && log "$_c7_line"
+    fi
+
     if [ "$CYCLE_HARNESS_USED" = "jcode" ]; then
         _ta_log="${JCODE_HOME:-$HOME/.jcode}/logs/jcode-$(date +%Y-%m-%d).log"
         if [ -f "$_ta_log" ] && [ -f "$SCRIPT_DIR/../ops/turn-audit.py" ]; then
