@@ -126,12 +126,25 @@ def convert(name: str, spec: dict) -> tuple[dict | None, str]:
     else:
         cmd_name = "npx"
         args = ["-y", "mcp-remote", got_url, "--allow-http", "--transport", "http-only"]
+    # Headers stay UNEXPANDED in argv. mcp-remote expands ${VAR} in --header values from
+    # its own environment (README-documented, and proven behaviourally 2026-08-02: a local
+    # sink received "Bearer sekret-canary-42" while the argv carried the literal
+    # "Bearer ${AUTH_TOKEN}"). Expanding here put the real key on the command line, where
+    # `ps` reads it — the exact shape that leaked three API keys on 2026-08-01. The value
+    # rides in the child's env block instead; the probe and jcode both pass that through.
+    env_out = {}
     for k, v in (spec.get("headers") or {}).items():
-        got = expand(str(v))
-        if got is None:
-            return None, f"header {k} references an unset variable"
-        args += ["--header", f"{k}: {got}"]
-    return ({"command": cmd_name, "args": args},
+        v = str(v)
+        for var in VAR_RE.findall(v):
+            got = os.environ.get(var)
+            if not got:
+                return None, f"header {k} references unset variable {var}"
+            env_out[var] = got
+        args += ["--header", f"{k}: {v}"]
+    out = {"command": cmd_name, "args": args}
+    if env_out:
+        out["env"] = env_out
+    return (out,
             "http via mcp-remote bridge" + ("" if cmd_name == "npx" else " (image-installed)"))
 
 
