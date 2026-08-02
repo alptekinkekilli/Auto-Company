@@ -118,7 +118,13 @@ def main() -> int:
     ap.add_argument("--silence-hours", type=float,
                     default=float(os.environ.get("REPLY_SILENCE_HOURS", "72")))
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--fixture", default=None,
+                    help="TEST ONLY: read records from a JSON file instead of Airtable")
     args = ap.parse_args()
+
+    if args.fixture:
+        rows = json.loads(open(args.fixture, encoding="utf-8").read())
+        return classify(rows, args)
 
     key = api_key(args.app)
     if not key:
@@ -133,7 +139,11 @@ def main() -> int:
     except Exception as exc:  # noqa: BLE001 — a watcher must not become an outage
         print(f"airtable read failed: {exc}", file=sys.stderr)
         return 1
+    return classify(rows, args)
 
+
+def classify(rows: list[dict], args) -> int:
+    """Everything after the fetch: same code path for production and for the fixtures."""
     state_path = os.path.join(args.app, STATE)
     try:
         state = json.loads(open(state_path, encoding="utf-8").read())
