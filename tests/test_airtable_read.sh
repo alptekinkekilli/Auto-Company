@@ -67,7 +67,16 @@ contains "pageSize capped" "$OUT" '"pageSize": 100'
 OUT=$(run --table tblX --view V --fields Name --max-records 3)
 contains "pageSize follows small asks" "$OUT" '"pageSize": 3'
 
-echo "8. --describe needs no scope"
+echo "8. --fields accepts the comma form as well as the repeated one"
+# The company guessed comma-joined twice in two cycles and burned a turn each time. Both
+# spellings must produce the identical query.
+A=$(run --table tblX --view V --fields "Name,Status" --fields Email)
+B=$(run --table tblX --view V --fields Name --fields Status --fields Email)
+if [ "$A" = "$B" ]; then echo "  PASS comma form == repeated form"; else
+    echo "  FAIL comma form differs"; echo "   A=$A"; echo "   B=$B"; fail=1; fi
+contains "fields expanded" "$A" '"fields": ["Name", "Status", "Email"]'
+
+echo "9. --describe needs no scope"
 # --print-query so this stays offline even on a machine that HAS a key: --describe would
 # otherwise reach the API, and a suite that hits the network on some machines is not a suite.
 OUT=$(run --table tblX --describe --base appX); RC=$?

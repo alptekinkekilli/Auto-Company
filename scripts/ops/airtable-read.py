@@ -128,7 +128,14 @@ def build_params(args) -> dict:
 
     params: dict = {"maxRecords": max_records, "pageSize": min(PAGE_MAX, max_records)}
     if args.fields:
-        params["fields[]"] = list(args.fields)
+        # Accept BOTH forms. The flag is repeatable, but a comma-separated list is the obvious
+        # guess and the company spent a turn rediscovering that twice in two cycles
+        # (2026-08-02 cycle summaries: "--fields needs to be repeated, not comma-joined").
+        # Refusing a reasonable guess to defend a convention costs more than supporting it.
+        expanded: list[str] = []
+        for f in args.fields:
+            expanded.extend(x.strip() for x in f.split(",") if x.strip())
+        params["fields[]"] = expanded
     if args.view:
         params["view"] = args.view
     if args.record:
