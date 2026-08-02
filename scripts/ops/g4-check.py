@@ -124,17 +124,39 @@ def address_anchor(registered: str, page_text: str) -> tuple[bool, str]:
 
 
 def registry_id_anchor(row_text: str, page_text: str) -> tuple[bool, str]:
-    """The other accepted anchor: the site printing the MERSİS or ticaret sicil number."""
-    mersis = re.findall(r"\b\d{16}\b", row_text or "")
+    """The site printing a REGISTRY NUMBER for the firm: MERSİS, vergi no, or ticaret sicil.
+
+    Operator, 2026-08-02: Turkish company sites are legally required to publish exactly this
+    block (ünvan, MERSİS, sicil, vergi dairesi/no, registered address, KEP) — most simply do
+    not comply. wowwo.com/iletisim is a compliant example and prints all of it. So when a
+    site publishes none of it that is a fact about the SITE's compliance, not a doubt about
+    the firm — but it also means there is nothing to anchor to, and the verdict stays HOLD.
+
+    Digit length decides how much context is demanded, because a short number can coincide:
+      16 digits (MERSİS)  — unique enough to accept bare
+      10 digits (vergi no)— accept bare
+      <=8 digits (sicil)  — only with a 'sicil' word nearby, or it would match a phone number,
+                            a postcode, or a price
+    """
     page = page_text or ""
-    for m in mersis:
-        if m in re.sub(r"[^0-9]", "", page):
+    digits = re.sub(r"[^0-9]", "", page)
+    low = page.lower()
+    for m in re.findall(r"\b\d{16}\b", row_text or ""):
+        if m in digits:
             return True, "site prints MERSİS no %s" % m
-    return False, "site prints no MERSİS number from the row"
+    for v in re.findall(r"\b\d{10}\b", row_text or ""):
+        if v in digits:
+            return True, "site prints vergi no %s" % v
+    if "sicil" in low:
+        for sn in re.findall(r"\b\d{4,8}\b", row_text or ""):
+            if sn in digits:
+                return True, "site prints ticaret sicil no %s (page mentions 'sicil')" % sn
+    return False, ("site prints no registry number from the row (MERSİS / vergi no / sicil) — "
+                   "note this is a site-compliance gap, not evidence against the firm")
 
 
 def field(row_text: str, label: str) -> str:
-    m = re.search(re.escape(label) + r"\s*:\s*(.+)", row_text or "")
+    m = re.search(re.escape(label) + r"\s*:\s*([^|\n]+)", row_text or "")
     return m.group(1).strip() if m else ""
 
 
@@ -185,7 +207,14 @@ def site_evidence(domain: str, mcp: str) -> tuple[dict, str]:
 
 
 def judge(fields: dict, domain_override: str, mcp: str) -> dict:
-    notes = fields.get("result_notes", "") or ""
+    # Read the STRUCTURED fields too, not just the prose. The registry bridge has dedicated
+    # columns (result_data, mersis_no, ticaret_sicil_no) and the address lives in result_data
+    # on every properly-filled row — this checker only read result_notes and therefore
+    # reported "no registered address on the row" for rows that plainly had one (Arkenom,
+    # 2026-08-02). Same class as the label bug above: looking in one place and calling the
+    # absence a finding.
+    notes = "\n".join(str(fields.get(k) or "") for k in
+                      ("result_notes", "result_data", "mersis_no", "ticaret_sicil_no"))
     firm = fields.get("firm", "") or ""
     claimed = bool(re.search(r"G4[^\n]{0,40}PASS", notes))
     # Accept every label the rows actually use. The first live run returned "no registered
@@ -194,6 +223,8 @@ def judge(fields: dict, domain_override: str, mcp: str) -> dict:
     registered = ""
     for label in ("Tescilli Adres (MERKEZ)", "Tescilli Adres", "Firma Adres Bilgisi",
                   "Adres", "Registered address"):
+        # result_data is pipe-separated ("... | Adres: X | E-tebligat: ...") so stop at the
+        # separator, or the "address" swallows the rest of the line and matches nothing.
         registered = field(notes, label)
         if registered:
             break

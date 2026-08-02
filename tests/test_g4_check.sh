@@ -20,6 +20,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 SCRIPT=scripts/ops/g4-check.py
 fail=0
+trap 'echo "  FAIL harness error on line $LINENO"; fail=1' ERR
 check() { if [ "$2" = "$3" ]; then echo "  PASS $1"; else echo "  FAIL $1: got '$2' want '$3'"; fail=1; fi; }
 
 py() { python3 - "$SCRIPT" "$@" <<'PY'
@@ -63,6 +64,16 @@ echo "6. domain extraction ignores authority sources"
 check "keeps firm site only" \
   "$(py dom 'site https://rayelsis.com/iletisim ve karar https://ekap.kik.gov.tr/EKAP/Vatandas/X kaynak https://mersis.ticaret.gov.tr/y')" \
   "rayelsis.com"
+
+echo "7. vergi no and ticaret sicil are accepted anchors, with length-appropriate care"
+# Turkish sites are legally required to publish ünvan/MERSİS/sicil/vergi no/address (wowwo.com
+# is a compliant example); most do not. Where they DO, these are the anchors — and the shorter
+# the number, the more context it needs before it counts.
+ROW='MERSİS No: 0734225615100001 | Vergi D./No: ULUS V.D. / 7342256151 | Ticaret Sicil No: 446627'
+check "vergi no (10 digit) accepted bare" "$(py id "$ROW" 'Vergi No 7342256151')" "yes"
+check "sicil (6 digit) needs the word sicil" "$(py id "$ROW" 'Ticaret Sicil No: 446627')" "yes"
+check "bare 6-digit number is NOT an anchor" "$(py id "$ROW" 'kampanya kodu 446627, son 3 gun')" "no"
+check "no number on the page is not an anchor" "$(py id "$ROW" 'hicbir numara yok')" "no"
 
 if [ "$fail" -eq 0 ]; then echo "ALL PASS"; else echo "FAILURES"; fi
 exit "$fail"
