@@ -2847,6 +2847,17 @@ This is Cycle #$loop_count. Act decisively."
             >/dev/null 2>&1 || true
     fi
 
+    # Outreach outcomes (2026-08-02). Five real messages are out and the send order is
+    # explicitly serialised on "#1's observed outcome" — which nothing was watching. The
+    # inbound worker already writes Replied/Reply log onto the row; this only NOTICES, and
+    # keeps the three outcomes apart: a reply, a delivery failure, and silence. A message
+    # that never arrived must never be counted as silence. Advisory, own cooldown, never
+    # writes to Airtable, never draws "not interested" from an absence.
+    if [ -f "$SCRIPT_DIR/../ops/reply-watch.py" ]; then
+        python3 "$SCRIPT_DIR/../ops/reply-watch.py" --app "$PROJECT_DIR" \
+            >/dev/null 2>&1 || true
+    fi
+
     if [ "$CYCLE_HARNESS_USED" = "jcode" ]; then
         _ta_log="${JCODE_HOME:-$HOME/.jcode}/logs/jcode-$(date +%Y-%m-%d).log"
         if [ -f "$_ta_log" ] && [ -f "$SCRIPT_DIR/../ops/turn-audit.py" ]; then
