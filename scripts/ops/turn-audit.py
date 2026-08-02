@@ -20,13 +20,35 @@ Summary line fields:
   cache_read=<tok> cache_write=<tok> floor_usd=<x> tool_wall_share=<pct>
   fast_gaps=<n>/<n> verdict=<ok|CHATTY|BLOATED>
 
-Verdicts (advisory). Thresholds tightened 2026-08-01 after they proved useless: a
-58-turn / 118-message / $5.81 cycle scored "ok" by sitting just under both bars, so the
-audit called a genuine overrun clean. They are now anchored to the Runtime Guardrail the
-company is actually given ("wrap up after ~40 tool calls"), not to the worst run seen:
-  CHATTY  — turns > 40      (the guardrail's own number; 58 must not read as ok)
-  BLOATED — msgs_max > 80   (~2 messages per turn at the same 40-turn point)
-Raising these is loosening a measurement, not a policy — do it only with new evidence.
+Verdicts (advisory), RECALIBRATED 2026-08-02 against 34 measured cycles.
+
+The 40-turn / 80-message bars fired on **14 of 34 cycles (41%)**. An alarm that fires on
+two cycles in five is not a signal; the operator learns to scroll past it, and the one
+cycle that actually mattered arrives looking exactly like the noise. Two defects, both
+visible only once the distribution was plotted:
+
+  * The bars sat inside normal behaviour. Measured: turns p50=34, p75=49, p90=65;
+    msgs p50=69, p75=102, p90=130. An 80-message bar is below the 75th percentile.
+  * `msgs_max` is not an independent signal — it is almost exactly 2x turns in every
+    cycle (40/81, 46/92, 78/156). Two thresholds on one underlying quantity double the
+    false-alarm rate and add nothing.
+
+What actually distinguishes the harmful cycles is not chattiness but RISK: the tail runs
+601-893s against a 900s watchdog (one was killed by it, losing its tail work) and costs
+$3.2-6.9. So the verdict is now anchored to that, and msgs_max is reported but no longer
+judged:
+
+  CHATTY  — turns > 55                      (~p80: talkative, still finishing safely)
+  BLOATED — turns > 65 (~p90), OR dur >= 675s (75% of the 900s watchdog), OR
+            floor_usd >= 5.00               (the tail that actually costs)
+
+Note the divergence this creates with Runtime Guardrail 7's "~40 tool calls": the measured
+median cycle is 34 turns and healthy cycles run to ~50. The guardrail is advisory prose;
+this is the feedback signal, and a signal calibrated to a number reality never respects is
+worthless. Fix the prose or the reality — do not blunt the instrument.
+
+Loosening these is loosening a measurement, not a policy: change them only with new
+distribution evidence, and say what the distribution was.
 """
 import os
 import re
@@ -35,8 +57,12 @@ from datetime import datetime
 from collections import defaultdict
 
 # Verdict thresholds, named so a change is visible in a diff and testable.
-TURNS_CHATTY = int(os.environ.get("TURN_AUDIT_TURNS_CHATTY", "40"))
-MSGS_BLOATED = int(os.environ.get("TURN_AUDIT_MSGS_BLOATED", "80"))
+TURNS_CHATTY = int(os.environ.get("TURN_AUDIT_TURNS_CHATTY", "55"))
+TURNS_BLOATED = int(os.environ.get("TURN_AUDIT_TURNS_BLOATED", "65"))
+# 75% of the 900s watchdog: past here a cycle is at real risk of being killed and losing
+# its tail work, which is the expensive failure this audit exists to anticipate.
+DUR_BLOATED = float(os.environ.get("TURN_AUDIT_DUR_BLOATED", "675"))
+USD_BLOATED = float(os.environ.get("TURN_AUDIT_USD_BLOATED", "5.00"))
 
 TS = re.compile(r"^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\.(\d{3})\]")
 SES = re.compile(r"\[ses:(session_[a-z]+_\d+)\|prv:(\w+)\|mod:(\w[\w.-]*)\]")
@@ -98,8 +124,10 @@ def summary_line(sid, s):
     fast = sum(1 for g in gaps if g < 60)
     tool_wall = sum(c[1] for c in s["tools"].values())
     share = (100.0 * tool_wall / dur) if dur else 0.0
+    # msgs_max is still reported — it is useful when reading one cycle — but it no longer
+    # votes: it tracks turns at ~2x and was only ever a second vote for the same fact.
     verdict = "ok"
-    if s["msgs_max"] > MSGS_BLOATED:
+    if (s["turns"] > TURNS_BLOATED or dur >= DUR_BLOATED or floor_usd(s) >= USD_BLOATED):
         verdict = "BLOATED"
     elif s["turns"] > TURNS_CHATTY:
         verdict = "CHATTY"

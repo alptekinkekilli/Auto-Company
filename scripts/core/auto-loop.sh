@@ -2863,9 +2863,12 @@ This is Cycle #$loop_count. Act decisively."
         if [ -f "$_ta_log" ] && [ -f "$SCRIPT_DIR/../ops/turn-audit.py" ]; then
             _ta_line=$(python3 "$SCRIPT_DIR/../ops/turn-audit.py" "$_ta_log" --summary-last 2>/dev/null || true)
             [ -n "$_ta_line" ] && log "[$_ta_line]"
+            # Only BLOATED is pushed. CHATTY stays in the log where it can be read when
+            # someone is looking at cost, because a notification that arrives on 41% of
+            # cycles (measured over 34 cycles with the old bars) trains the operator to
+            # scroll past it — and then the one cycle that mattered looks like the noise.
             case "$_ta_line" in
-                *"verdict=ok"*|"") : ;;
-                *)
+                *"verdict=BLOATED"*)
                     if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
                         bash "$SCRIPT_DIR/telegram-notify.sh" \
                             "📊 Turn-economy audit, Cycle #${loop_count}: ${_ta_line#TURN-AUDIT }" \

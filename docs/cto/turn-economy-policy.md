@@ -67,14 +67,25 @@ signal, not as proof the rule is being followed.
 - **Self-audit at an existing return moment** (never a new poll): after every jcode
   cycle, `scripts/ops/turn-audit.py --summary-last` classifies the session from
   jcode's own daily log and the loop logs a `[TURN-AUDIT …]` line. Verdicts:
-  `CHATTY` (>40 turns), `BLOATED` (>80 messages). Non-ok verdicts are pushed to
-  Telegram. Advisory — it never fails a cycle.
-  **Thresholds tightened 2026-08-01 (were 60/120).** A real 58-turn / 118-message /
-  $5.81 cycle scored "ok" by sitting just under both bars — the audit called a 45%
-  overrun of rule 3 clean. The bars are now anchored to the guardrail the company is
-  actually given (~40 tool calls), not to the worst run observed. Re-scored against
-  that day's eight sessions the new bars flag exactly one, so they discriminate rather
-  than nag. Widening them is loosening a measurement, not a policy.
+  `CHATTY` (>55 turns), `BLOATED` (>65 turns, OR >=675s, OR >=$5.00 floor). Only
+  **BLOATED** is pushed to Telegram; CHATTY stays in the log. Advisory — never fails a cycle.
+  **Recalibrated 2026-08-02 against 34 measured cycles**, replacing the 2026-08-01 bars
+  (40 turns / 80 messages) which fired on **14 of 34 cycles — 41%**. An alarm at that rate
+  is not a signal: it trains the reader to scroll past, and then the cycle that matters
+  arrives looking exactly like the noise. Two defects showed up only once the distribution
+  was plotted:
+  * the bars sat inside normal behaviour — turns p50=34 / p75=49 / p90=65, msgs p50=69 /
+    p75=102 / p90=130, so an 80-message bar is *below* the 75th percentile;
+  * `msgs_max` was never independent — it is ~2x turns in every cycle (40/81, 46/92,
+    78/156), so two thresholds voted twice on one fact and doubled the false alarms.
+  What separates the harmful cycles is RISK, not chattiness: the tail runs 601-893s against
+  the 900s watchdog (one was killed by it and lost its tail work) and costs $3.2-6.9. The
+  bars now encode that directly, and `msgs_max` is reported but no longer votes.
+  **Note the divergence with rule 3's "~40 tool calls":** the measured median cycle is 34
+  turns and healthy cycles reach ~50. A feedback signal calibrated to a number reality never
+  respects is worthless — fix the prose or fix the reality, but do not blunt the instrument.
+  Widening these is loosening a measurement, not a policy: change them only with new
+  distribution evidence, and state what the distribution was.
 - **Cost floor vs booked cost.** The audit line's `floor_usd` prices cache traffic
   only (in/out tokens are redacted in jcode's log). A booked cycle cost many times
   the floor plus a `[COST] estimated (uncalibrated model)` line means the 5x

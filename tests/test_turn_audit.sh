@@ -48,29 +48,51 @@ case "$out" in *session_ant_1000*) echo "  FAIL old session leaked"; fail=1 ;; *
 contains "turns counted"     "$out" "turns=3"
 contains "msgs tracked"      "$out" "msgs_max=146"
 contains "cache summed"      "$out" "cache_read=450000"
-contains "BLOATED verdict"   "$out" "verdict=BLOATED"
+# 3 turns / 40s / 146 messages: under the old bars this was BLOATED purely on message
+# count. It is a short, cheap, fast session — the recalibration must call it ok, and this
+# assertion is the one that proves msgs_max no longer votes.
+contains "high msgs alone is ok" "$out" "verdict=ok"
 
-echo "--- 3: threshold BOUNDARIES are pinned (tightened 2026-08-01: 40 turns / 80 msgs) ---"
-# The old bars (60/120) let a real 58-turn / 118-message overrun score "ok". These
-# cases fail loudly if anyone widens them again.
+echo "--- 3: threshold BOUNDARIES are pinned (recalibrated 2026-08-02 from 34 cycles) ---"
+# The old 40-turn / 80-message bars fired on 14 of 34 real cycles (41%) — an alarm at that
+# rate is noise, and msgs_max was never independent (it tracks turns at ~2x). The bars now
+# sit at the measured p80/p90 and add the two facts that actually hurt: nearing the 900s
+# watchdog, and cost. These cases fail loudly if anyone moves them without new evidence.
 BOUND="$WORK/jcode-2026-08-02.log"
-mk_session() { # $1 session  $2 turns  $3 msgs_per_turn
+# NOTE: session names must match session_<letters>_<digits> or the parser skips
+# them entirely and every assertion fails as 'no sessions found'.
+mk_session() { # $1 session  $2 turns  $3 msgs_per_turn  [$4 seconds between turns]
+    step="${4:-0}"
     for i in $(seq 1 "$2"); do
-        mkline "03:00:0$((i % 10))" "$1" "API call starting: $(( i * $3 )) messages, 129 tools"
+        secs=$(( i * step ))
+        mk_t=$(printf '%02d:%02d:%02d' $(( 3 + secs / 3600 )) $(( (secs % 3600) / 60 )) $(( secs % 60 )))
+        mkline "$mk_t" "$1" "API call starting: $(( i * $3 )) messages, 129 tools"
     done
 }
 : > "$BOUND"
-mk_session session_boundary_9 41 1 >> "$BOUND"   # 41 turns, msgs_max 41 -> CHATTY only
+mk_session session_boundary_1 56 1 >> "$BOUND"   # 56 turns -> CHATTY
 out=$(python3 "$AUDIT" "$BOUND" --summary-last)
-contains "41 turns is CHATTY"  "$out" "verdict=CHATTY"
+contains "56 turns is CHATTY"   "$out" "verdict=CHATTY"
 : > "$BOUND"
-mk_session session_boundary_8 40 1 >> "$BOUND"   # exactly at the bar -> still ok
+mk_session session_boundary_2 55 1 >> "$BOUND"   # exactly at the bar -> still ok
 out=$(python3 "$AUDIT" "$BOUND" --summary-last)
-contains "40 turns still ok"   "$out" "verdict=ok"
+contains "55 turns still ok"    "$out" "verdict=ok"
 : > "$BOUND"
-mk_session session_boundary_7 5 17 >> "$BOUND"   # msgs_max 85 -> BLOATED beats CHATTY
+mk_session session_boundary_3 66 1 >> "$BOUND"   # past p90 -> BLOATED
 out=$(python3 "$AUDIT" "$BOUND" --summary-last)
-contains "85 msgs is BLOATED"  "$out" "verdict=BLOATED"
+contains "66 turns is BLOATED"  "$out" "verdict=BLOATED"
+: > "$BOUND"
+# The regression that started this: 40 turns / 81 messages / 298s / $2.38 was flagged
+# BLOATED and was in fact a perfectly healthy cycle. It must now read ok.
+mk_session session_boundary_4 40 2 >> "$BOUND"   # 40 turns, msgs_max 80
+out=$(python3 "$AUDIT" "$BOUND" --summary-last)
+contains "40t/80m now ok"       "$out" "verdict=ok"
+: > "$BOUND"
+# Duration alone must be able to raise BLOATED: a short-turn cycle can still crawl toward
+# the watchdog, and that is the failure that loses tail work.
+mk_session session_boundary_5 20 1 40 >> "$BOUND"   # 20 turns spread over 800s
+out=$(python3 "$AUDIT" "$BOUND" --summary-last)
+contains "long-but-quiet BLOATED" "$out" "verdict=BLOATED"
 
 echo "--- 4: verdict=ok for the small session (via full report) ---"
 out=$(python3 "$AUDIT" "$LOG" | grep session_ant_1000)
