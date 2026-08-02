@@ -154,6 +154,16 @@ def decide(rec: str, app_dir: str) -> dict:
     if "@" not in addr:
         return {**d, "verdict": "REFUSE", "reason": "no usable email address on the row"}
     d["email"] = addr
+    # READINESS, not just eligibility. The first autonomous send attempt (2026-08-02, Rayelsis)
+    # was ALLOWed against a row with no subject or body: the send path refused it and wrote
+    # "Failed: Missing Email / Email subject / Email body" into the compliance log, which then
+    # surfaced to the operator as a delivery problem. Eligible and ready are different
+    # questions and the gate owes an answer to both.
+    missing = [k for k in ("Email subject", "Email body") if not (fields.get(k) or "").strip()]
+    if missing:
+        return {**d, "verdict": "REFUSE",
+                "reason": "row is not ready to send: %s empty — render the template into the "
+                          "row first" % ", ".join(missing)}
 
     try:
         ok, why = g4_live(firm, app_dir)

@@ -163,9 +163,19 @@ def classify(rows: list[dict], args) -> int:
         if (f.get("Replied") or rlog.strip()) and not seen.get("reply"):
             replies.append((name, first_ts(rlog) or "?", rlog.strip().split("\n")[0][:160]))
             seen["reply"] = True
-        if any(h in elog for h in FAILURE_HINTS) and not seen.get("failure"):
-            bad = [ln for ln in elog.split("\n") if any(h in ln for h in FAILURE_HINTS)]
-            failures.append((name, bad[0][:160] if bad else elog[:160]))
+        # A failure that a later attempt SUPERSEDED is not a delivery problem. Measured
+        # 2026-08-02: Rayelsis logged "Failed: Missing Email/subject/body" at 14:22 and
+        # "Sent" at 14:26 — the message arrived, and reporting it as undelivered would send
+        # the operator chasing a resolved event. The rule "an undelivered message is not
+        # silence" still stands; this only decides WHETHER it is still undelivered.
+        bad_lines = [ln for ln in elog.split("\n") if any(h in ln for h in FAILURE_HINTS)]
+        ok_lines = [ln for ln in elog.split("\n")
+                    if "Sent:" in ln and not any(h in ln for h in FAILURE_HINTS)]
+        last_bad = max((first_ts(ln) or "" for ln in bad_lines), default="")
+        last_ok = max((first_ts(ln) or "" for ln in ok_lines), default="")
+        unresolved = bool(last_bad) and last_bad > last_ok
+        if unresolved and not seen.get("failure"):
+            failures.append((name, bad_lines[0][:160] if bad_lines else elog[:160]))
             seen["failure"] = True
         age = hours_since(sent_at)
         if (age is not None and age >= args.silence_hours

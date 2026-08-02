@@ -37,7 +37,7 @@ d = m.decide("recTEST", "/app")
 print(d["verdict"] + "|" + d["reason"])
 PY
 }
-OK='{"Business":"Test Firma Ltd","Status":"Qualified","Email":"info@example.com.tr"}'
+OK='{"Business":"Test Firma Ltd","Status":"Qualified","Email":"info@example.com.tr","Email subject":"konu","Email body":"<div>gövde</div>"}'
 
 echo "1. caps"
 THREE='[{"Last contact date":"'"$(date -u +%Y-%m-%d)"'","Status":"Qualified"},{"Last contact date":"'"$(date -u +%Y-%m-%d)"'","Status":"Qualified"},{"Last contact date":"'"$(date -u +%Y-%m-%d)"'","Status":"Qualified"}]'
@@ -73,6 +73,16 @@ echo "7. TEST rows do not consume the caps"
 # Excluded by STATUS: a real firm may legitimately have 'test' in its name.
 TESTROWS='[{"Last contact date":"2026-08-01","Status":"TEST_COMPLETED / Archived"},{"Last contact date":"2026-08-01","Status":"TEST_PENDING"}]'
 check "test rows ignored" "$(run "$OK" "$TESTROWS" 1 | cut -d'|' -f1)" "ALLOW"
+
+echo "8. an eligible but UNRENDERED row is refused"
+# The first autonomous attempt (Rayelsis, 2026-08-02) was allowed against a row with no
+# subject or body; the send path rejected it and wrote a Failed entry into the compliance
+# log, which reached the operator as a delivery problem. Eligible != ready.
+OUT=$(run '{"Business":"X","Status":"Qualified","Email":"a@b.tr"}' '[]' 1)
+contains "refuses" "$OUT" "not ready to send"
+contains "names the fields" "$OUT" "Email subject"
+OUT=$(run '{"Business":"X","Status":"Qualified","Email":"a@b.tr","Email subject":"s","Email body":"   "}' '[]' 1)
+contains "whitespace body is still empty" "$OUT" "Email body"
 
 if [ "$fail" -eq 0 ]; then echo "ALL PASS"; else echo "FAILURES"; fi
 exit "$fail"

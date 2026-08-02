@@ -27,6 +27,10 @@ OLD=$(python3 -c "import datetime;print((datetime.datetime.now(datetime.timezone
 python3 - "$WORK/rows.json" "$NOW" "$OLD" <<'PY'
 import json, sys
 out, now, old = sys.argv[1], sys.argv[2], sys.argv[3]
+# four minutes before "now", lexicographically comparable like the real timestamps
+import datetime as _d
+now_minus = (_d.datetime.strptime(now, "%Y-%m-%dT%H:%M:%S.000Z")
+             - _d.timedelta(minutes=4)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 rows = [
  {"id": "recREPLY", "fields": {"Business": "Cevap Veren A.Ş.", "Replied": True,
   "Email log": "[%s] Sent: Sent (1/15 today)" % old,
@@ -37,6 +41,12 @@ rows = [
   "Email log": "[%s] Sent: Sent (2/15 today)" % now}},
  {"id": "recSILENT", "fields": {"Business": "Sessiz Kalan Ltd.",
   "Email log": "[%s] Sent: Sent (3/15 today)" % old}},
+ # A failure the NEXT attempt superseded four minutes later: the message arrived, so it is
+ # not a delivery problem. Real case, Rayelsis 2026-08-02. Newest entry first, as the
+ # outreach worker writes them.
+ {"id": "recRETRIED", "fields": {"Business": "Tekrar Denenen Ltd.",
+  "Email log": "[%s] Sent: Sent (1/15 today)\n[%s] Failed: Missing Email / Email subject / Email body"
+               % (now, now_minus)}},
 ]
 open(out, "w", encoding="utf-8").write(json.dumps(rows, ensure_ascii=False))
 PY
@@ -45,7 +55,7 @@ run() { python3 "$SCRIPT" --app "$WORK" --fixture "$WORK/rows.json" --silence-ho
 
 echo "1-5. first pass over a mixed fixture"
 OUT=$(run)
-contains "counts"          "$OUT" "sent_rows=4 new_replies=1 new_failures=1 newly_silent=1"
+contains "counts"          "$OUT" "sent_rows=5 new_replies=1 new_failures=1 newly_silent=1"
 contains "reply reported"  "$OUT" "Cevap Veren"
 contains "reply content"   "$OUT" "İKN 2026/123456"
 contains "stage-2 warning" "$OUT" "Stage 2"
@@ -72,6 +82,12 @@ if [ -f "$WORK/logs/reply-watch-state.json" ]; then
 else
     echo "  PASS dry-run wrote no state"
 fi
+
+echo "9. a failure superseded by a later Sent is NOT a delivery problem"
+# Rayelsis, 2026-08-02: "Failed: Missing Email/subject/body" at 14:22, "Sent" at 14:26. The
+# message arrived. Reporting it would send the operator chasing a resolved event — while the
+# standing rule "an undelivered message is not silence" stays exactly as it was.
+absent "retried row not reported as failed" "$OUT" "Tekrar Denenen"
 
 if [ "$fail" -eq 0 ]; then echo "ALL PASS"; else echo "FAILURES"; fi
 exit "$fail"
