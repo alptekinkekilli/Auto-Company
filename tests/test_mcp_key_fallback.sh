@@ -14,6 +14,13 @@
 # SAME file and has no `security` binary, so the fallback must never fire there. That is what
 # these tests pin: the branch is chosen by the SHAPE of the key that arrives.
 #
+# context7 is in here too. It used to be an HTTP server whose key rode in a header, which
+# cannot be wrapped — but the official docs (retrieved 2026-08-02 via the Context7 REST
+# fallback, since the MCP itself was the thing that was broken) document a stdio server that
+# reads CONTEXT7_API_KEY from the environment, so it takes the identical treatment. The key
+# goes in the ENV, never in argv: the docs also offer `--api-key`, and that form would put the
+# secret on the command line where `ps` reads it.
+#
 #   1. macOS, placeholder arrives   -> Keychain is consulted
 #   2. macOS, variable unset        -> Keychain is consulted
 #   3. container, real key present  -> passed through untouched, `security` never runs
@@ -42,7 +49,9 @@ run() {  # run <snippet> <env assignment...>
     env PATH="$STUB:$PATH" "${@:2}" sh -c "$1"
 }
 
-for pair in "airtable AIRTABLE_API_KEY pat-real.value" "linear LINEAR_API_KEY lin_api_realvalue"; do
+for pair in "airtable AIRTABLE_API_KEY pat-real.value" \
+            "linear LINEAR_API_KEY lin_api_realvalue" \
+            "context7 CONTEXT7_API_KEY ctx7sk-realvalue"; do
     set -- $pair
     srv=$1; var=$2; real=$3
     echo "$srv"

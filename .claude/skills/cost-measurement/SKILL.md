@@ -82,8 +82,10 @@ arithmetic between two places is how a wrong number gets a second life.
 
 ## Instrumentation you do not have to build (Claude Code / Agent SDK)
 
-Retrieved from the official docs via Context7 on 2026-08-02 — check it again before relying on
-a name, because these have moved between versions.
+Retrieved from the official docs on 2026-08-02 via the Context7 **REST fallback**, not the MCP —
+the MCP server was answering "Invalid API key" for that whole session (root cause and fix:
+`.mcp.json`'s key-shape fallback). Naming the path is the rule, not a footnote. Check these
+again before relying on a name, because they have moved between versions.
 
 **Turn it on.** The CLI exports three INDEPENDENT OpenTelemetry signals, each gated by its own
 exporter variable, so you can take metrics without paying for traces:

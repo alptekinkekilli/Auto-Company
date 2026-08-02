@@ -1,9 +1,9 @@
 {
   "mcpServers": {
     "context7": {
-      "type": "http",
-      "url": "https://mcp.context7.com/mcp",
-      "headers": {
+      "command": "sh",
+      "args": ["-c", "case \"$CONTEXT7_API_KEY\" in ctx7sk*) ;; *) CONTEXT7_API_KEY=$(security find-generic-password -w -a \"$USER\" -s autocompany-context7-key 2>/dev/null);; esac; export CONTEXT7_API_KEY; exec npx -y @upstash/context7-mcp"],
+      "env": {
         "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}"
       }
     },
