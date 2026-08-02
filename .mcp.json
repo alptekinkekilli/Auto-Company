@@ -8,15 +8,15 @@
       }
     },
     "airtable": {
-      "command": "npx",
-      "args": ["-y", "airtable-mcp-server"],
+      "command": "sh",
+      "args": ["-c", "case \"$AIRTABLE_API_KEY\" in *.*) ;; *) AIRTABLE_API_KEY=$(security find-generic-password -w -a \"$USER\" -s autocompany-airtable-pat 2>/dev/null);; esac; export AIRTABLE_API_KEY; exec npx -y airtable-mcp-server"],
       "env": {
         "AIRTABLE_API_KEY": "${AIRTABLE_API_KEY}"
       }
     },
     "linear": {
-      "command": "npx",
-      "args": ["-y", "@tacticlaunch/mcp-linear"],
+      "command": "sh",
+      "args": ["-c", "case \"$LINEAR_API_KEY\" in lin_api_*) ;; *) LINEAR_API_KEY=$(security find-generic-password -w -a \"$USER\" -s autocompany-linear-key 2>/dev/null);; esac; export LINEAR_API_KEY; exec npx -y @tacticlaunch/mcp-linear"],
       "env": {
         "LINEAR_API_KEY": "${LINEAR_API_KEY}"
       }

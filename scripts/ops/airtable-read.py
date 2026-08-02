@@ -47,6 +47,7 @@ import argparse
 import json
 import os
 import ssl
+import subprocess
 import sys
 import urllib.error
 import urllib.parse
@@ -89,6 +90,25 @@ def load_env(app_dir: str) -> None:
             k = k.strip()
             if k in ("AIRTABLE_API_KEY", "AIRTABLE_BASE_ID") and not os.environ.get(k):
                 os.environ[k] = v.strip().strip('"').strip("'")
+
+
+def load_keychain() -> None:
+    """Last resort on the operator's Mac, where there is no logs/runtime.env at all.
+
+    Without this, every read from outside the container needed an ssh + docker exec round
+    trip. The value goes into this process's env only — the subprocess call carries the
+    SERVICE NAME in argv, never the secret.
+    """
+    if os.environ.get("AIRTABLE_API_KEY") or sys.platform != "darwin":
+        return
+    try:
+        out = subprocess.run(["security", "find-generic-password", "-w",
+                              "-s", "autocompany-airtable-pat"],
+                             capture_output=True, text=True, timeout=10).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return
+    if out:
+        os.environ["AIRTABLE_API_KEY"] = out
 
 
 def build_params(args) -> dict:
@@ -269,6 +289,7 @@ def main() -> int:
         return 0
 
     load_env(args.app)
+    load_keychain()
     token = os.environ.get("AIRTABLE_API_KEY", "")
     base = args.base or os.environ.get("AIRTABLE_BASE_ID", "")
     if not token:

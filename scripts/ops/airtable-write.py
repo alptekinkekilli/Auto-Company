@@ -34,6 +34,7 @@ import argparse
 import json
 import os
 import ssl
+import subprocess
 import sys
 import urllib.error
 import urllib.request
@@ -59,6 +60,24 @@ def load_env(app_dir: str) -> None:
             k = k.strip()
             if k in ("AIRTABLE_API_KEY", "AIRTABLE_BASE_ID") and not os.environ.get(k):
                 os.environ[k] = v.strip().strip('"').strip("'")
+
+
+def load_keychain() -> None:
+    """Last resort on the operator's Mac, where there is no logs/runtime.env at all.
+
+    The subprocess call carries the SERVICE NAME in argv, never the secret; the value goes
+    into this process's env only.
+    """
+    if os.environ.get("AIRTABLE_API_KEY") or sys.platform != "darwin":
+        return
+    try:
+        out = subprocess.run(["security", "find-generic-password", "-w",
+                              "-s", "autocompany-airtable-pat"],
+                             capture_output=True, text=True, timeout=10).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return
+    if out:
+        os.environ["AIRTABLE_API_KEY"] = out
 
 
 def call(method: str, url: str, payload: dict | None = None) -> dict:
@@ -117,6 +136,7 @@ def main() -> int:
     args = ap.parse_args()
 
     load_env(args.app)
+    load_keychain()
     if not os.environ.get("AIRTABLE_API_KEY"):
         print("AIRTABLE_API_KEY not set and not found in %s/logs/runtime.env" % args.app,
               file=sys.stderr)

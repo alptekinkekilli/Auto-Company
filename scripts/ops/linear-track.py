@@ -70,8 +70,12 @@ def key() -> str:
                          capture_output=True, text=True).stdout.strip()
     if out.startswith("lin_api_"):
         return out
-    # The value in ~/.zshrc has been malformed since at least 2026-08-01; never fall back to it
-    # silently — a 401 that looks like "Linear is down" wastes more time than this message.
+    # Earlier note here said the ~/.zshrc value was "malformed". Measured 2026-08-02: it is
+    # not. ~/.zshrc holds no key at all, only `export LINEAR_API_KEY="$(security …)"`, and the
+    # Keychain item reads back fine. What breaks is that ~/.zshrc runs for INTERACTIVE shells
+    # only, so a GUI-launched Claude Code never has the variable — and .mcp.json's
+    # "${LINEAR_API_KEY}" is then passed through VERBATIM to the server. Hence the Keychain
+    # read above, and the same fallback now wired into .mcp.json itself.
     raise SystemExit("no usable Linear key (env LINEAR_API_KEY or Keychain autocompany-linear-key)")
 
 
