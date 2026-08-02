@@ -148,5 +148,24 @@ print(json.dumps({'Business':'X','Status':'Qualified','Email':'a@b.tr','Email su
  'Email body':'g','Notes':'G4 RESOLVED 2026-07-01\n\nG4 RE-VERIFICATION FAILED ... MOVED TO HELD'}))")
 contains "an OLDER stamp does not clear a NEWER hold" "$(run "$STALE_STAMP" '[]' 1)" "disagrees with itself"
 
+echo "13. an Exclusion ground unfit to send verbatim is refused"
+# N.K.Y, 2026-08-02: the field doubles as an internal research note and is interpolated into
+# the customer's Turkish sentence as-is. 1,234 chars of English analysis went out, including a
+# parenthetical inference about a DIFFERENT company. Healthy grounds measured 50-204 chars, 0
+# English markers.
+LONG_EN='As özel ortak (special/minority partner) of JV, N.K.Y own submitted foreign iş deneyim belgesi had a defective apostil chain and the other submitted documents did not independently meet the required amount. Both defects are attributed by name specifically to N.K.Y and were not attributed to the pilot partner by implication.'
+BAD=$(python3 -c "
+import json,sys
+print(json.dumps({'Business':'X','Status':'Qualified','Email':'a@b.tr','Email subject':'k',
+ 'Email body':'g','Exclusion ground':sys.argv[1]}))" "$LONG_EN")
+contains "refuses" "$(run "$BAD" '[]' 1)" "not fit to send verbatim"
+contains "reports the measurements" "$(run "$BAD" '[]' 1)" "English markers"
+
+GOOD=$(python3 -c "
+import json
+print(json.dumps({'Business':'X','Status':'Qualified','Email':'a@b.tr','Email subject':'k',
+ 'Email body':'g','Exclusion ground':'aşırı düşük teklif açıklamasının tevsik yöntemi mevzuata uygun değil'}))")
+check "a short Turkish ground passes" "$(run "$GOOD" '[]' 1 | cut -d'|' -f1)" "ALLOW"
+
 if [ "$fail" -eq 0 ]; then echo "ALL PASS"; else echo "FAILURES"; fi
 exit "$fail"

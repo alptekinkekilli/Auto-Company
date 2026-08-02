@@ -53,6 +53,8 @@ BASE = "appPLc31jSlgulX3D"
 OUTREACH = "tbl1fZbNmolrEXAMy"
 BRIDGE = "tblREW6MtTMTP5h5N"
 DAILY_CAP = 3
+GROUND_MAX_CHARS = 300   # healthy sent grounds measured 50-204
+GROUND_MAX_EN = 3        # healthy sent grounds measured 0
 TOTAL_CAP = 20
 
 
@@ -179,6 +181,23 @@ def decide(rec: str, app_dir: str) -> dict:
     # "Failed: Missing Email / Email subject / Email body" into the compliance log, which then
     # surfaced to the operator as a delivery problem. Eligible and ready are different
     # questions and the gate owes an answer to both.
+    # The ground sentence is INTERPOLATED verbatim into the customer-facing template, and that
+    # field doubles as an internal research note. N.K.Y (2026-08-02) shipped 1,234 characters of
+    # English analysis into a Turkish sentence — including a parenthetical inference about a
+    # DIFFERENT company — because nothing checked that the field was fit to send. Every other
+    # sent firm's ground is 50-204 characters of plain Turkish with zero English markers, so
+    # both bars below are far from the healthy range and would have caught only this one.
+    ground = (fields.get("Exclusion ground") or "").strip()
+    if ground:
+        en = len(re.findall(r"\b(the|and|of|was|were|not|by name|per|independently|"
+                            r"attributed|submitted|defect\w*)\b", ground, re.I))
+        if len(ground) > GROUND_MAX_CHARS or en >= GROUND_MAX_EN:
+            return {**d, "verdict": "REFUSE",
+                    "reason": "'Exclusion ground' is not fit to send verbatim (%d chars, %d "
+                              "English markers). It goes into the customer's sentence as-is; "
+                              "rewrite it as one short Turkish clause naming only THIS firm."
+                              % (len(ground), en)}
+
     missing = [k for k in ("Email subject", "Email body") if not (fields.get(k) or "").strip()]
     if missing:
         return {**d, "verdict": "REFUSE",
