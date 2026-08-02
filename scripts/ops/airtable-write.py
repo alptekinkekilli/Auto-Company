@@ -92,7 +92,11 @@ def call(method: str, url: str, payload: dict | None = None) -> dict:
         raise SystemExit("Airtable %s %s: %s" % (method, e.code, e.read().decode()[:400]))
 
 
-def guard(before: dict, new: dict, allow_clear: bool, force: bool) -> list[str]:
+SUBSTANTIAL = 300   # chars: below this an overwrite is an edit, above it a loss
+
+
+def guard(before: dict, new: dict, allow_clear: bool, force: bool,
+          replace: bool = False) -> list[str]:
     """Everything that can refuse a write, decided from data alone so it can be tested.
 
     Kept out of main() on purpose: the rest of this script cannot run without a live API
@@ -110,6 +114,22 @@ def guard(before: dict, new: dict, allow_clear: bool, force: bool) -> list[str]:
     if cleared and not allow_clear:
         problems.append("would clear non-empty field(s): %s\n"
                         "  pass --allow-clear if erasing them is the intent." % ", ".join(cleared))
+    # OVERWRITE, not clear — the gap this tool had. Writing a G4 evidence block over a bridge
+    # row's result_notes on 2026-08-02 destroyed the G3 registry block underneath it: MERSİS
+    # number, registered address, sicil. Nothing was "cleared", so every existing guard passed,
+    # and the loss only surfaced when g4-check.py said "no registered address on the row".
+    # An accumulating evidence field is APPENDED to; replacing one wholesale is a decision.
+    for n in new:
+        old_v, new_v = before.get(n), new[n]
+        if not isinstance(old_v, str) or not isinstance(new_v, str):
+            continue
+        if len(old_v) >= SUBSTANTIAL and old_v.strip() and old_v.strip() not in new_v \
+                and not replace:
+            problems.append(
+                "would REPLACE %d chars in '%s' with %d chars that do not contain the old text.\n"
+                "  If this field accumulates evidence, append instead: read it, add to it, write\n"
+                "  the whole thing back. If replacing really is the intent, pass --replace." % (
+                    len(old_v), n, len(new_v)))
     return problems
 
 
@@ -132,6 +152,8 @@ def main() -> int:
     ap.add_argument("--apply", action="store_true", help="without this it is a dry run")
     ap.add_argument("--allow-clear", action="store_true")
     ap.add_argument("--force", action="store_true", help="write field names absent from the row")
+    ap.add_argument("--replace", action="store_true",
+                    help="replace a substantial existing value instead of appending to it")
     ap.add_argument("--cell-chars", type=int, default=220)
     args = ap.parse_args()
 
@@ -156,7 +178,7 @@ def main() -> int:
     before = call("GET", url).get("fields", {})
     names = list(new)
 
-    problems = guard(before, new, args.allow_clear, args.force)
+    problems = guard(before, new, args.allow_clear, args.force, args.replace)
     if problems:
         for p in problems:
             print("refused: " + p, file=sys.stderr)

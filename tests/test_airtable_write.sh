@@ -24,7 +24,8 @@ import importlib.util, json, sys
 spec = importlib.util.spec_from_file_location("aw", sys.argv[1])
 m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 out = m.guard(json.loads(sys.argv[2]), json.loads(sys.argv[3]),
-              sys.argv[4] == "1", sys.argv[5] == "1")
+              sys.argv[4] == "1", sys.argv[5] == "1",
+              len(sys.argv) > 6 and sys.argv[6] == "1")
 print(" | ".join(out).replace("\n", " "))
 PY
 }
@@ -53,6 +54,25 @@ echo "5. both problems are reported together, not one at a time"
 OUT=$(g '{"Ref":"old"}' '{"Ref":"","Nope":"x"}' 0 0)
 contains "clear reported" "$OUT" "--allow-clear"
 contains "missing reported" "$OUT" "--force"
+
+echo "6. replacing a substantial value that drops the old text is refused"
+# The real loss: a G4 evidence block written over a bridge row destroyed the G3 registry
+# block beneath it. Nothing was "cleared", so every other guard passed.
+OLD=$(python3 -c "print('G3 block: MERSIS 0734225615100001, address ... ' + 'x'*300)")
+OUT=$(g "{\"Notes\":\"$OLD\"}" '{"Notes":"G4 block only"}' 0 0)
+contains "names the field" "$OUT" "Notes"
+contains "offers append" "$OUT" "append instead"
+contains "names the flag" "$OUT" "--replace"
+
+echo "7. an APPEND that keeps the old text is allowed"
+NEWV=$(python3 -c "
+import json,sys
+old='G3 block: MERSIS 0734225615100001, address ... ' + 'x'*300
+print(json.dumps({'Notes': old + chr(10)+chr(10) + 'G4 block appended'}))")
+check "append passes" "$(g "{\"Notes\":\"$OLD\"}" "$NEWV" 0 0)" ""
+
+echo "8. a SHORT value may be overwritten without ceremony"
+check "short overwrite" "$(g '{"Notes":"draft"}' '{"Notes":"final"}' 0 0)" ""
 
 if [ "$fail" -eq 0 ]; then echo "ALL PASS"; else echo "FAILURES"; fi
 exit "$fail"
