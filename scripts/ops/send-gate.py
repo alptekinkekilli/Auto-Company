@@ -78,7 +78,11 @@ def load_key(app_dir: str) -> None:
 
 
 def air(path: str, params: dict | None = None) -> dict:
-    url = "%s/%s/%s" % (API_ROOT, BASE, path)
+    # Quote the path component: Airtable accepts a table NAME as well as an ID, and a name
+    # with a space ("Ihale Outreach") produced a malformed URL. Found by the company itself
+    # in cycle #7, 2026-08-02 — its fix lived only in the container and the next deploy wiped
+    # it, so it is ported here where it survives.
+    url = "%s/%s/%s" % (API_ROOT, BASE, "/".join(urllib.parse.quote(p, safe="") for p in path.split("/")))
     if params:
         url += "?" + urllib.parse.urlencode(params)
     req = urllib.request.Request(url, headers={

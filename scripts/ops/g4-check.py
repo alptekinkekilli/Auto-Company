@@ -181,14 +181,16 @@ def domains_in(text: str) -> list[str]:
 
 
 def air_get(base: str, table: str, rec: str) -> dict:
-    req = urllib.request.Request("%s/%s/%s/%s" % (API_ROOT, base, table, rec),
+    req = urllib.request.Request("%s/%s/%s/%s" % (API_ROOT, base,
+                                 urllib.parse.quote(table, safe=""), rec),
                                  headers={"Authorization": "Bearer " + os.environ["AIRTABLE_API_KEY"]})
     return json.load(urllib.request.urlopen(req, timeout=45)).get("fields", {})
 
 
 def air_list(base: str, table: str, formula: str) -> list[dict]:
     q = urllib.parse.urlencode({"filterByFormula": formula, "maxRecords": 50})
-    req = urllib.request.Request("%s/%s/%s?%s" % (API_ROOT, base, table, q),
+    req = urllib.request.Request("%s/%s/%s?%s" % (API_ROOT, base,
+                                 urllib.parse.quote(table, safe=""), q),
                                  headers={"Authorization": "Bearer " + os.environ["AIRTABLE_API_KEY"]})
     return json.load(urllib.request.urlopen(req, timeout=45)).get("records", [])
 
