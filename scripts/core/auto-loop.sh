@@ -2858,6 +2858,16 @@ This is Cycle #$loop_count. Act decisively."
             >/dev/null 2>&1 || true
     fi
 
+    # Turn-economy TREND (2026-08-02). The per-cycle verdict says whether THAT cycle was
+    # heavy; it cannot say whether the optimisation is working. This folds each audit line
+    # into a durable history and speaks only on a sustained regression or when the target
+    # has held for two consecutive windows — at which point it says so and can be removed.
+    # Runs here, at the same existing return moment: no timer, no poll.
+    if [ -f "$SCRIPT_DIR/../ops/bloat-trend.py" ]; then
+        python3 "$SCRIPT_DIR/../ops/bloat-trend.py" --app "$PROJECT_DIR" \
+            >/dev/null 2>&1 || true
+    fi
+
     if [ "$CYCLE_HARNESS_USED" = "jcode" ]; then
         _ta_log="${JCODE_HOME:-$HOME/.jcode}/logs/jcode-$(date +%Y-%m-%d).log"
         if [ -f "$_ta_log" ] && [ -f "$SCRIPT_DIR/../ops/turn-audit.py" ]; then
