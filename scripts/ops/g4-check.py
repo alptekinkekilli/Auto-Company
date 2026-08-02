@@ -112,14 +112,23 @@ def address_anchor(registered: str, page_text: str) -> tuple[bool, str]:
         return False, "no registered address on the row to anchor against"
     numbers = [w for w in reg if w.isdigit()]
     names = [w for w in reg if not w.isdigit() and w not in STOP and len(w) > 2]
+    # A Turkish address ends with the administrative tail — ilçe then il — and those two carry
+    # almost no identifying power: "Battalgazi/Malatya" fits a whole district. The identifying
+    # part is what comes before it (mahalle, cadde, han/apartman). Weighing them equally is how
+    # MAGİM nearly passed on ilçe+il alone, and how ARKENOM was wrongly failed: its Google
+    # profile publishes "Kemankeş Karamustafa Paşa, Mumhane Cd., Beyoğlu/İstanbul" — mahalle
+    # AND cadde matching the register — but no door number, and the old bar demanded digits.
+    identifying, tail = (names[:-2], names[-2:]) if len(names) > 2 else (names, [])
     hit_numbers = [n for n in numbers if n in page]
-    hit_names = [n for n in names if n in page]
-    # Two independent number hits (e.g. street 2374 + door 3), or one number plus a
-    # distinctive name, is the bar. One lone number is a coincidence waiting to happen.
-    strong = (len(hit_numbers) >= 2) or (hit_numbers and hit_names)
-    detail = "numbers matched %s/%s (%s), name tokens %s/%s (%s)" % (
+    hit_ident = [n for n in identifying if n in page]
+    hit_tail = [n for n in tail if n in page]
+    # Any ONE of: two independent numbers (street + door), a number plus an identifying name,
+    # or two identifying names (mahalle + cadde). The administrative tail alone is never enough.
+    strong = (len(hit_numbers) >= 2) or (hit_numbers and hit_ident) or (len(hit_ident) >= 2)
+    detail = "numbers %s/%s (%s), identifying %s/%s (%s), tail %s/%s (%s)" % (
         len(hit_numbers), len(numbers), ",".join(hit_numbers) or "-",
-        len(hit_names), len(names), ",".join(hit_names[:4]) or "-")
+        len(hit_ident), len(identifying), ",".join(hit_ident[:4]) or "-",
+        len(hit_tail), len(tail), ",".join(hit_tail) or "-")
     return strong, detail
 
 
@@ -245,17 +254,34 @@ def judge(fields: dict, domain_override: str, mcp: str) -> dict:
         return out
 
     ok_addr, addr_detail = address_anchor(registered, text)
+    # A verified business profile that links THIS domain and publishes an address AGREEING with
+    # the register is a real bridge, and refusing it was an over-generalisation. The lesson from
+    # RAYELSİS was that a directory CONFLICTING with the register cannot win — not that an
+    # agreeing one counts for nothing. Record it on the row as "Profile bridge: <source> —
+    # <address as printed>"; the same matcher decides, so agreement is measured, not asserted.
+    # Read the whole PARAGRAPH, not one line: a profile citation names the source, the linked
+    # domain and the address, and the address is usually the last part. Grabbing only the first
+    # line found the citation and none of the address (measured 2026-08-02, Arkenom).
+    pm = re.search(r"Profile bridge\s*:\s*(.+?)(?:\n\s*\n|\Z)", notes or "", re.S)
+    prof = pm.group(1).strip() if pm else ""
+    ok_prof, prof_detail = (False, "")
+    if prof and not ok_addr:
+        ok_prof, prof_detail = address_anchor(registered, prof)
+        out["anchor_profile"] = "profile bridge %s: %s" % (
+            "AGREES" if ok_prof else "does NOT agree", prof_detail)
     ok_id, id_detail = registry_id_anchor(notes, text)
     out["anchor_address"] = addr_detail
     out["anchor_registry_id"] = id_detail
-    if not (ok_addr or ok_id):
+    if not (ok_addr or ok_id or ok_prof):
         out["verdict"] = "HOLD"
         out["reason"] = ("first-party contact found, but nothing anchors it to the REGISTERED "
                          "identity — %s; %s" % (addr_detail, id_detail))
         return out
     out["verdict"] = "PASS"
     out["reason"] = "first-party %s + %s" % (
-        ",".join(out["first_party"][:2]), "registered address on site" if ok_addr else id_detail)
+        ",".join(out["first_party"][:2]),
+        "registered address on site" if ok_addr
+        else (id_detail if ok_id else "profile bridge agrees with the register"))
     return out
 
 

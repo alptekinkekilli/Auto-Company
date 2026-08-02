@@ -75,5 +75,16 @@ check "sicil (6 digit) needs the word sicil" "$(py id "$ROW" 'Ticaret Sicil No: 
 check "bare 6-digit number is NOT an anchor" "$(py id "$ROW" 'kampanya kodu 446627, son 3 gun')" "no"
 check "no number on the page is not an anchor" "$(py id "$ROW" 'hicbir numara yok')" "no"
 
+echo "8. mahalle+cadde is an anchor even with no door number; ilçe+il alone is not"
+# ARKENOM: the Google profile publishes "Kemankeş Karamustafa Paşa, Mumhane Cd., Beyoğlu/
+# İstanbul" — mahalle AND cadde matching the register, no door number. The old bar demanded
+# digits and wrongly failed it. MAGİM is the opposite case and must still fail: its site gave
+# only "Battalgazi/Malatya", which is the administrative tail and fits a whole district.
+ARK="KEMANKEŞ KARAMUSTAFAPAŞA MAH. MUMHANE CAD. SAĞIROĞLU HAN NO:3/3 BEYOĞLU/İSTANBUL"
+check "mahalle+cadde, no number" "$(py addr "$ARK" 'Kemankeş Karamustafa Paşa, Mumhane Cd., 34425 Beyoğlu/İstanbul')" "yes"
+MAG="SARICIOĞLU MAH. BUHARA CAD. MATİM İŞ MERKEZİ MGM MARKET APT. NO: 158 A BATTALGAZİ/MALATYA"
+check "ilçe+il only is NOT an anchor" "$(py addr "$MAG" 'Orduzu, 44050 Malatya Merkez/Malatya Battalgazi / MALATYA')" "no"
+check "wrong mahalle on the right ilçe is NOT an anchor" "$(py addr "$ARK" 'Cihangir Mah. Sıraselviler Cd., Beyoğlu/İstanbul')" "no"
+
 if [ "$fail" -eq 0 ]; then echo "ALL PASS"; else echo "FAILURES"; fi
 exit "$fail"
