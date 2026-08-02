@@ -84,5 +84,47 @@ contains "names the fields" "$OUT" "Email subject"
 OUT=$(run '{"Business":"X","Status":"Qualified","Email":"a@b.tr","Email subject":"s","Email body":"   "}' '[]' 1)
 contains "whitespace body is still empty" "$OUT" "Email body"
 
+echo "10. GROUP_ROUTED: allowed only when the body names the firm AND cites the decision"
+# Operator decision 2026-08-02: a group mailbox can never satisfy strict G4, so the firm would
+# be unreachable forever. Writing to the group while NAMING the bidding legal person and the
+# karar no makes a misroute self-correcting instead of an accusation against the wrong company.
+TITLE="MAGİM GRUP İNŞAAT-GIDA VE İHTİYAÇ MADDELERİ YATIRIM TİCARET LİMİTED ŞİRKETİ"
+GR_OK=$(python3 -c "
+import json
+print(json.dumps({'Business':'Magim Grup','Status':'Qualified','Email':'ankara@magimgroup.com',
+ 'Email subject':'k','Outreach mode':'GROUP_ROUTED','Group domain':'magimgroup.com',
+ 'Registered title':'$TITLE','KIK exclusion ref':'2025/UY.II-2574 (İKN x)',
+ 'Email body':'... $TITLE ... 2025/UY.II-2574 ...'}))")
+check "allowed with full evidence" "$(run "$GR_OK" '[]' 0 | cut -d'|' -f1)" "ALLOW"
+
+# Each missing piece must refuse ON ITS OWN — G4 is stubbed FAILING throughout, so nothing
+# here is being carried by the ordinary path.
+NO_TITLE=$(python3 -c "
+import json
+print(json.dumps({'Business':'Magim Grup','Status':'Qualified','Email':'ankara@magimgroup.com',
+ 'Email subject':'k','Outreach mode':'GROUP_ROUTED','Group domain':'magimgroup.com',
+ 'Registered title':'$TITLE','KIK exclusion ref':'2025/UY.II-2574',
+ 'Email body':'sadece karar 2025/UY.II-2574 var, unvan yok'}))")
+contains "refuses without the title" "$(run "$NO_TITLE" '[]' 0)" "FULL registered title"
+
+NO_KARAR=$(python3 -c "
+import json
+print(json.dumps({'Business':'Magim Grup','Status':'Qualified','Email':'ankara@magimgroup.com',
+ 'Email subject':'k','Outreach mode':'GROUP_ROUTED','Group domain':'magimgroup.com',
+ 'Registered title':'$TITLE','KIK exclusion ref':'2025/UY.II-2574',
+ 'Email body':'... $TITLE ... karar numarasi yok'}))")
+contains "refuses without the karar no" "$(run "$NO_KARAR" '[]' 0)" "karar no"
+
+WRONG_DOM=$(python3 -c "
+import json
+print(json.dumps({'Business':'Magim Grup','Status':'Qualified','Email':'bilgi@baskasite.com',
+ 'Email subject':'k','Outreach mode':'GROUP_ROUTED','Group domain':'magimgroup.com',
+ 'Registered title':'$TITLE','KIK exclusion ref':'2025/UY.II-2574',
+ 'Email body':'... $TITLE ... 2025/UY.II-2574 ...'}))")
+contains "refuses an off-group recipient" "$(run "$WRONG_DOM" '[]' 0)" "not first-party on the group domain"
+
+echo "11. GROUP_ROUTED does not lift the caps"
+check "daily cap still binds" "$(run "$GR_OK" "$THREE" 0 | cut -d'|' -f1)" "REFUSE"
+
 if [ "$fail" -eq 0 ]; then echo "ALL PASS"; else echo "FAILURES"; fi
 exit "$fail"

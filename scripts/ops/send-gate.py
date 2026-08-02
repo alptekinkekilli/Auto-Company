@@ -165,6 +165,49 @@ def decide(rec: str, app_dir: str) -> dict:
                 "reason": "row is not ready to send: %s empty — render the template into the "
                           "row first" % ", ".join(missing)}
 
+    # GROUP-ROUTED outreach (operator decision, 2026-08-02). Some bidders are members of a
+    # multi-company group whose public contact is a GROUP mailbox: no page ties that mailbox
+    # to one member, so strict G4 can never pass, and the firm becomes unreachable forever.
+    # The operator's resolution is better than the rule it replaces: write to the group, and
+    # NAME the bidding legal person and the decision inside the message. The identity risk G4
+    # guards against is accusing the wrong company — naming the firm and the karar no makes a
+    # misroute self-correcting instead of defamatory.
+    #
+    # This is a narrower permission than it looks, and the gate enforces all of it:
+    #   * the recipient domain must be the group domain recorded on the row, and the address
+    #     must be first-party on it (a group mailbox, not a third-party form);
+    #   * the BODY must contain the FULL registered title, so the reader knows exactly which
+    #     member company is meant;
+    #   * the BODY must contain the KİK karar no, so the claim is checkable at source.
+    # Miss any of those and it is a REFUSE, exactly like a failed G4.
+    group_note = (fields.get("Notes") or "") + " " + (fields.get("Email body") or "")
+    if (fields.get("Outreach mode") or "").strip().upper() == "GROUP_ROUTED":
+        body = fields.get("Email body") or ""
+        title = (fields.get("Registered title") or "").strip()
+        karar = (fields.get("KIK exclusion ref") or "").strip()
+        kno = re.search(r"\d{4}/[A-ZÇĞİÖŞÜ]{2}\.[IVX]+-\d+", karar or "")
+        gaps = []
+        if not title:
+            gaps.append("row has no 'Registered title' to name in the body")
+        elif title.upper() not in body.upper():
+            gaps.append("body does not contain the FULL registered title")
+        if not kno:
+            gaps.append("row has no parsable KİK karar no")
+        elif kno.group(0) not in body:
+            gaps.append("body does not cite the KİK karar no (%s)" % kno.group(0))
+        gdom = (fields.get("Group domain") or "").strip().lower()
+        if not gdom:
+            gaps.append("row records no verified 'Group domain'")
+        elif not addr.lower().endswith("@" + gdom):
+            gaps.append("recipient %s is not first-party on the group domain %s" % (addr, gdom))
+        if gaps:
+            return {**d, "verdict": "REFUSE",
+                    "reason": "group-routed send is not evidenced: " + "; ".join(gaps)}
+        return {**d, "verdict": "ALLOW",
+                "reason": "GROUP_ROUTED: %s on %s; body names %s and cites %s (caps %d/%d today, "
+                          "%d/%d total)" % (addr, gdom, title[:40], kno.group(0),
+                                            day, DAILY_CAP, total, TOTAL_CAP)}
+
     try:
         ok, why = g4_live(firm, app_dir)
     except Exception as e:                       # noqa: BLE001 - any failure is a refusal
