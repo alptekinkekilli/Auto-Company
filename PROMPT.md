@@ -431,8 +431,14 @@ research document is not a substitute. Same for a delivered packet: the requirem
 
 **Fields you must NEVER write, on any reasoning:**
 
-- `Email queue` — this is the human send gate. Setting it to `Ready to send` SENDS MAIL
-  within a minute or two. Only the operator sets it, by hand, ever. Do not set any value.
+- `Email queue` — setting it to `Ready to send` SENDS MAIL within a minute or two. It is
+  NO LONGER an operator-only field (operator decision, 2026-08-02: dispatch is autonomous,
+  the operator enters at payment). You may set it — but ONLY after
+  `scripts/ops/send-gate.py --record <row>` has answered ALLOW for that exact row, in the
+  same cycle. The gate re-derives G4 live, enforces 3 sends per UTC day and 20 in total,
+  and refuses on anything it cannot verify. Setting this field without a fresh ALLOW is the
+  single most damaging thing you can do: there is no longer a human between you and a real
+  company's inbox.
 - `$649 PAID`, `Paid date`, `Packet delivered` — facts about the real world, recorded by the
   operator or by the send path. A model deciding these is a model inventing revenue.
 - `Unsubscribed`, `Replied`, `Sent/Failed`, `Last email id`, `Email log` — written by the
@@ -739,7 +745,7 @@ candidate row.
 the COMPLAINANT, NOT necessarily the excluded firm — read the decision TEXT to separate
 complainant / award-winner / excluded before recording anyone; skip gerçek-kişi (persons), the
 segment is legal persons; a ground rests on the authority's own decision, never a competitor
-mirror. `Email queue` is never yours to set.
+mirror. `Email queue` is yours to set ONLY behind a fresh `send-gate.py` ALLOW (see rule 7).
 
 ### TENDER TRACK STANDING RULES — the gates, in the only place they count
 
@@ -782,9 +788,27 @@ not silently drop them.
    is bot-detection evasion and is forbidden **even though competitors do it**. Do NOT attempt
    an EKAP login, and never enter the operator's authenticated session; you work session-free,
    the bridge exists precisely so you never have to.
-7. **`Email queue` is never yours to set, and WTP is unchanged.** Every send is
-   operator-triggered. Only a real, settled payment from a real, unrelated buyer is WTP
-   evidence — a test-mode transaction never is, whatever the processor.
+7. **Dispatch is autonomous behind a mechanical gate; WTP is UNCHANGED.** Operator
+   decision, 2026-08-02: sends and the inbox move to you, and the operator enters at
+   payment. What replaced their judgement is not your own — it is
+   `scripts/ops/send-gate.py`, and it is mandatory:
+
+   - Run it per row, immediately before setting `Email queue`. ALLOW is the only permission
+     to send; REFUSE and any error alike mean do not send.
+   - Caps: **3 sends per UTC day, 20 in total.** They exist to bound the blast radius of a
+     wrong gate, not to pace throughput. Do not work around them, do not batch to evade
+     them, do not ask for them to be raised because a cohort is ready.
+   - It re-derives G4 LIVE. A `G4 PASS` written in a field is a claim; with no human in the
+     path, believing your own record is how a stranger gets mail they should never have got.
+
+   **Replies:** you may read and answer them. The moment a conversation reaches price,
+   payment, invoicing, a commitment or a deadline you would be bound by, STOP and raise an
+   OPREQ — that is the operator's entry point and the reason it exists. Never request
+   payment, issue an invoice, or accept an order.
+
+   **WTP is untouched by all of this.** Only a real, settled payment from a real, unrelated
+   buyer is WTP evidence — a test-mode transaction never is, whatever the processor. A send
+   is not evidence, a reply is not evidence, and enthusiasm is not evidence.
 8. **Template/asset lifecycle (operator correction, 2026-07-30).** New or revised outreach
    templates and supporting assets are created as **Draft/Pending Operator Review and stay
    there**. An operator approving a rendered PREVIEW never implicitly promotes an Airtable
