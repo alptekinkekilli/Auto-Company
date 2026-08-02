@@ -126,5 +126,27 @@ contains "refuses an off-group recipient" "$(run "$WRONG_DOM" '[]' 0)" "not firs
 echo "11. GROUP_ROUTED does not lift the caps"
 check "daily cap still binds" "$(run "$GR_OK" "$THREE" 0 | cut -d'|' -f1)" "REFUSE"
 
+echo "12. a row that disagrees with itself is refused"
+# Arkenom, 2026-08-02: Status "Qualified" while Notes said "MOVED TO HELD" — and the firm had
+# already been emailed. Keying on Status alone let the row pass while contradicting itself.
+CONTRA=$(python3 -c "
+import json
+print(json.dumps({'Business':'X','Status':'Qualified','Email':'a@b.tr','Email subject':'k',
+ 'Email body':'g','Notes':'G4 RE-VERIFICATION FAILED ... MOVED TO HELD'}))")
+contains "refuses" "$(run "$CONTRA" '[]' 1)" "disagrees with itself"
+contains "names the remedy" "$(run "$CONTRA" '[]' 1)" "G4 RESOLVED"
+
+RESOLVED=$(python3 -c "
+import json
+print(json.dumps({'Business':'X','Status':'Qualified','Email':'a@b.tr','Email subject':'k',
+ 'Email body':'g','Notes':'G4 RE-VERIFICATION FAILED ... MOVED TO HELD\n\nG4 RESOLVED 2026-08-02: render-first, refuted.'}))")
+check "a stamped resolution clears it" "$(run "$RESOLVED" '[]' 1 | cut -d'|' -f1)" "ALLOW"
+
+STALE_STAMP=$(python3 -c "
+import json
+print(json.dumps({'Business':'X','Status':'Qualified','Email':'a@b.tr','Email subject':'k',
+ 'Email body':'g','Notes':'G4 RESOLVED 2026-07-01\n\nG4 RE-VERIFICATION FAILED ... MOVED TO HELD'}))")
+contains "an OLDER stamp does not clear a NEWER hold" "$(run "$STALE_STAMP" '[]' 1)" "disagrees with itself"
+
 if [ "$fail" -eq 0 ]; then echo "ALL PASS"; else echo "FAILURES"; fi
 exit "$fail"

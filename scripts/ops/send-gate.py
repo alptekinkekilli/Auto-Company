@@ -150,6 +150,22 @@ def decide(rec: str, app_dir: str) -> dict:
     if (fields.get("Status") or "") != "Qualified":
         return {**d, "verdict": "REFUSE", "reason": "Status is %r, not 'Qualified'"
                 % fields.get("Status")}
+    # Status vs Notes. Arkenom (2026-08-02) carried Status='Qualified' while its Notes said
+    # "G4 RE-VERIFICATION FAILED ... MOVED TO HELD" — and the firm had already been emailed.
+    # The gate keyed on Status alone, so a row can disagree with itself and still pass. Rows
+    # are append-only, so ORDER stands in for time: an unresolved HOLD marker is one with no
+    # resolution stamp after it. Write "G4 RESOLVED <date>" (or SUPERSEDED / ÇÖZÜLDÜ) below
+    # the old marker when it is genuinely settled — never delete the marker.
+    notes = fields.get("Notes") or ""
+    hold_at = max([notes.upper().rfind(m) for m in
+                   ("MOVED TO HELD", "G4 RE-VERIFICATION FAILED", "HELD - EVIDENCE")] )
+    res_at = max([notes.upper().rfind(m) for m in
+                  ("G4 RESOLVED", "SUPERSEDED", "ÇÖZÜLDÜ", "G4 ÇÖZÜLDÜ")])
+    if hold_at >= 0 and res_at < hold_at:
+        return {**d, "verdict": "REFUSE",
+                "reason": "row disagrees with itself: Status='Qualified' but Notes carry an "
+                          "unresolved HOLD marker. Settle it and stamp 'G4 RESOLVED <date>' "
+                          "below the marker, or set the Status that is actually true."}
     addr = (fields.get("Email") or "").strip()
     if "@" not in addr:
         return {**d, "verdict": "REFUSE", "reason": "no usable email address on the row"}
