@@ -105,7 +105,7 @@ def cmd_list() -> int:
             print("%-9s (unreadable)" % ident)
             continue
         desc = iss.get("description") or ""
-        print("%-9s open=%-3d done=%-3d  %s" % (ident, desc.count("- [ ] "), desc.count("- [x] "), what))
+        print("%-9s open=%-3d done=%-3d  %s" % (ident, desc.count("- [ ]"), desc.count("- [x]"), what))
         for line in desc.split("\n"):
             if line.strip().startswith("- [ ] "):
                 print("             · %s" % line.strip()[6:120])
