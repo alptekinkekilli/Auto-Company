@@ -1,6 +1,6 @@
 ---
 name: cost-measurement
-description: "Measure what a cycle actually costs before changing anything about it. Use when spend looks wrong, when asked where the tokens go, when checking whether an efficiency change worked, or before proposing any optimisation. Covers the residual-cost model (size x turns remaining), the existing measurement scripts, and the five traps that have already produced wrong answers in this system."
+description: "Measure what a cycle actually costs before changing anything about it. Use when spend looks wrong, when asked where the tokens go, when checking whether an efficiency change worked, or before proposing any optimisation. Covers the residual-cost model (size x turns remaining), the existing measurement scripts, the five traps that have already produced wrong answers here, the Claude Code / Agent SDK OpenTelemetry instrumentation you should use instead of parsing logs, and how to design an alarm nobody learns to ignore."
 argument-hint: "[what you are trying to find out]"
 ---
 
@@ -79,6 +79,75 @@ arithmetic between two places is how a wrong number gets a second life.
 6. **State the notional/real distinction.** These dollars are API-equivalent on a Max
    subscription, not billed cash. Their real job is driving the four budget gates — which is
    exactly why a phantom row matters: it can trip a gate no real usage justified.
+
+## Instrumentation you do not have to build (Claude Code / Agent SDK)
+
+Retrieved from the official docs via Context7 on 2026-08-02 — check it again before relying on
+a name, because these have moved between versions.
+
+**Turn it on.** The CLI exports three INDEPENDENT OpenTelemetry signals, each gated by its own
+exporter variable, so you can take metrics without paying for traces:
+
+```bash
+CLAUDE_CODE_ENABLE_TELEMETRY=1
+OTEL_METRICS_EXPORTER=otlp      # counters: tokens, cost, sessions, tool decisions
+OTEL_LOGS_EXPORTER=otlp         # structured records: prompts, API requests, errors, tool results
+OTEL_TRACES_EXPORTER=otlp       # spans: interactions, model requests, tool calls, hooks
+CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1   # required for traces specifically
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+OTEL_EXPORTER_OTLP_ENDPOINT=http://collector.example.com:4318
+```
+
+**Metrics worth knowing by name:** `claude_code.cost.usage`, `claude_code.token.usage`,
+`claude_code.lines_of_code.count`. All segment by the standard attributes, and `model` is
+available on all three (from v2.1.172). Per-model breakdowns are approximated by joining on
+`session.id` and filtering `query_source = 'main'`.
+
+**Two properties that decide whether a number is trustworthy:**
+* **Cost metrics are approximations.** The docs say so explicitly: reconcile against the
+  provider's billing, never present the metric as the invoice. Same posture as our own
+  `floor_usd` — a floor, not a price.
+* **Streaming is counted once.** A response streamed across many frames is counted exactly
+  once toward cost and token metrics, so a naive per-frame sum double-counts. If you write your
+  own collector, this is the first bug you will have.
+
+**The usage shape**, if you are summing tokens yourself (Agent SDK `Usage`): `input_tokens`,
+`output_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`, and inside
+`cache_creation` the split `ephemeral_5m_input_tokens` / `ephemeral_1h_input_tokens`. That split
+matters: a 1h cache write is a different tariff from a 5m one, and a loop that re-writes a large
+cache every turn pays it every turn.
+
+**Attribution.** `OTEL_RESOURCE_ATTRIBUTES` carries `enduser.id` / `tenant.id` per call
+(percent-encode the values — reserved characters will silently corrupt the attribute string).
+That is how spend gets attributed to a skill, plugin or subagent type rather than to "the agent".
+
+**When to reach for this instead of parsing logs:** we parse a harness log because our loop runs
+jcode, which exports none of this. If a workload runs on Claude Code proper, do NOT hand-roll a
+parser — turn on the exporter. A parser is a liability that drifts with every log format change,
+and ours has already broken once on a session-name pattern.
+
+## Alarm design — a measurement nobody reads is not a measurement
+
+Learned expensively on 2026-08-02: the turn-economy alarm fired on **14 of 34 cycles (41%)** and
+had trained everyone to scroll past it. Rules that came out of that:
+
+1. **Calibrate to the distribution, not to the policy you wish held.** The bars were set at the
+   guardrail's aspirational "~40 tool calls" while the measured median was 34 and healthy cycles
+   reached ~50. Plot p50/p75/p90 first, then place the bar.
+2. **Do not threshold two correlated metrics.** `msgs_max` was ~2x `turns` in every single
+   cycle; two bars on one underlying quantity double the false alarms and add nothing.
+3. **Alarm on RISK, not on style.** What distinguished the harmful cycles was proximity to the
+   watchdog (601-893s of a 900s limit, one killed) and cost — not chattiness.
+4. **Escalate what you push, not what you log.** CHATTY goes to the log; only BLOATED is pushed.
+5. **Recompute historical verdicts when the ruler changes.** Comparing a window scored with old
+   thresholds against one scored with new thresholds measures the ruler, not the work — it
+   showed a fake 33% vs a real 0% on first run.
+6. **Give a watcher an exit condition.** State the target, require it to hold across TWO
+   consecutive windows, and have the watcher say when it can be switched off. One good window
+   right after the change is indistinguishable from luck.
+
+Trend tooling: `scripts/ops/bloat-trend.py` (rolling windows over
+`logs/turn-audit-history.ndjson`, regression + target-met only).
 
 Durable policy: `docs/cto/turn-economy-policy.md`. To turn a finding into a rule that actually
 holds, use the `enforceable-guardrails` skill — a measurement that ends in advisory prose
