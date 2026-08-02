@@ -38,6 +38,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import urllib.request
@@ -105,7 +106,10 @@ def cmd_list() -> int:
             print("%-9s (unreadable)" % ident)
             continue
         desc = iss.get("description") or ""
-        print("%-9s open=%-3d done=%-3d  %s" % (ident, desc.count("- [ ]"), desc.count("- [x]"), what))
+        # Linear stores a ticked box as "- [X]" (upper case) regardless of what was written,
+        # so counting "- [x]" reported done=0 immediately after a successful tick.
+        done = len(re.findall(r"^\s*- \[[xX]\]", desc, re.M))
+        print("%-9s open=%-3d done=%-3d  %s" % (ident, desc.count("- [ ]"), done, what))
         for line in desc.split("\n"):
             if line.strip().startswith("- [ ] "):
                 print("             · %s" % line.strip()[6:120])
