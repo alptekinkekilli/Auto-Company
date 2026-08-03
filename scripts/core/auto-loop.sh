@@ -2613,6 +2613,17 @@ while true; do
     backup_consensus
     gitignore_snapshot=$(snapshot_gitignore)
 
+    # State snapshot PRE-RUN (2026-08-03). Guardrail 10 first asked the MODEL to open
+    # the cycle with scripts/ops/state-snapshot.py; the very first cycle after that
+    # deploy ignored it (85 turns, BLOATED, snapshot never invoked — it dove straight
+    # into consensus's Next Action). A ritual the model may skip is not a mechanism:
+    # run it HERE and inject the output, so it costs zero turns and zero adherence.
+    _snapshot_block=""
+    if [ -f "$SCRIPT_DIR/../ops/state-snapshot.py" ]; then
+        _snapshot_block=$(timeout 120 python3 "$SCRIPT_DIR/../ops/state-snapshot.py" --app "$PROJECT_DIR" 2>/dev/null || true)
+    fi
+    [ -z "$_snapshot_block" ] && _snapshot_block="(snapshot unavailable this cycle — run \`python3 scripts/ops/state-snapshot.py --app .\` yourself, ONCE, before anything else)"
+
     # Build prompt with consensus pre-injected
     PROMPT=$(cat "$PROMPT_FILE")
     CONSENSUS=$(cat "$CONSENSUS_FILE" 2>/dev/null || echo "No consensus file found. This is the very first cycle.")
@@ -2661,9 +2672,15 @@ while true; do
 7. TURN ECONOMY — never poll: no sleep-and-recheck sequences across tool calls; if you must wait on a condition, ONE blocking \`until <cond>; do sleep 20; done\` costs a single turn regardless of duration. Batch related lookups into one call where the tool allows. After roughly 40 tool calls in a cycle, STOP investigating: persist findings + Next Action to \`memories/consensus.md\` and end the cycle — the next cycle continues fresh and cheaper than a bloated context (a timed-out cycle loses its tail work AND books a 5x conservative cost estimate). Policy: \`docs/cto/turn-economy-policy.md\`.
 8. NARROW READS — read Airtable through \`python3 scripts/ops/airtable-read.py\`, NOT through an MCP table dump. \`mcp__airtable__list_records_for_table\` is DENIED at the harness: it returned whole tables, averaged 29.5 KB per call, and its context re-reads cost \$2.38 — more than ALL web research in the same 7 cycles (\$0.34). The wrapper takes \`--formula\`/\`--view\`/\`--record\` (scope), \`--fields\` (columns), \`--max-records\` (ceiling), \`--count-only\` and \`--describe\`; it refuses an unscoped read and names the flag that fixes it. Measured live: three rows, two columns = 147 bytes. Writes and other Airtable tools are untouched. The same discipline applies to every tool that can return a whole collection. And fetch LATE: a large result at turn 5 of a 40-turn cycle is re-billed 35 times; the identical result at turn 35 is re-billed 5 times.
 9. SITE EVIDENCE IS RENDERED EVIDENCE — a \`curl\`/WebFetch of a site is NEVER sufficient to conclude that something is ABSENT from it. Modern sites ship a JavaScript shell: \`arkenom.com.tr\` returns 652 bytes containing \`<div id=root></div>\`, and a G4 re-verification read that as publishes NO email anywhere and moved a real prospect to Held. The address was on the page all along (\`info@arkenom.com.tr\`, in the footer and the security-policy text). Operator instruction 2026-08-01: *“ben browser os boşuna mı kurdum — oradan bakacaksınız, hem şirket hem sen.”* Use \`python3 scripts/ops/site-contact-evidence.py <domain>\`: it renders through BrowserOS first, then corroborates with the served HTML, the site's own JS bundles and its KVKK/aydınlatma/iletişim pages, and it reports WHICH source each address came from. A negative finding is only permitted when the render actually succeeded — otherwise the verdict is INCONCLUSIVE and the firm is not demoted on it.
-10. STATE RITUAL = ONE CALL — open the cycle with a single \`python3 scripts/ops/state-snapshot.py --app .\` run: it prints directive Status+sha16, open OPREQs, both bridge queue PENDING counts, send-gate counters and reply outcomes, plus a DELTA line versus the previous cycle's snapshot. Do NOT re-probe any of those surfaces individually unless the snapshot prints ERROR for that field or its DELTA names it as changed. \`DELTA: none\` means the world has not moved: skip ALL re-verification of previous cycles' work (no re-running test suites “as a baseline”, no re-reading code that consensus already records as fixed) and go straight to this cycle's ONE milestone. The directive file itself stays canonical — read it when its sha changed or when consensus does not carry its orders.
+10. STATE RITUAL = ONE CALL, ALREADY MADE — the \`## State Snapshot\` section below is the output of \`scripts/ops/state-snapshot.py\`, pre-run for you at cycle start: directive Status+sha16, open OPREQs, both bridge queue PENDING counts, send-gate counters, reply outcomes, and a DELTA line versus the previous cycle. Do NOT re-probe any of those surfaces (no send-gate --report, no reply-watch, no bridge queue reads, no OPREQ grep) unless the snapshot prints ERROR for that field or its DELTA names it as changed. \`DELTA: none\` means the world has not moved: skip ALL re-verification of previous cycles' work (no re-running test suites “as a baseline”, no re-reading code that consensus already records as fixed) and go straight to this cycle's ONE milestone. The directive file itself stays canonical — read it when its sha changed or when consensus does not carry its orders.
 $_discovery_line
 $_turnfb_line
+
+---
+
+## State Snapshot (pre-run at cycle start — do NOT re-run these probes)
+
+$_snapshot_block
 
 ---
 
@@ -2702,9 +2719,15 @@ This is Cycle #$loop_count. Act decisively."
 7. TURN ECONOMY — never poll: no sleep-and-recheck sequences across tool calls; if you must wait on a condition, ONE blocking \`until <cond>; do sleep 20; done\` costs a single turn regardless of duration. Batch related lookups into one call where the tool allows. After roughly 40 tool calls in a cycle, STOP investigating: persist findings + Next Action to \`memories/consensus.md\` and end the cycle — the next cycle continues fresh and cheaper than a bloated context (a timed-out cycle loses its tail work AND books a 5x conservative cost estimate). Policy: \`docs/cto/turn-economy-policy.md\`.
 8. NARROW READS — read Airtable through \`python3 scripts/ops/airtable-read.py\`, NOT through an MCP table dump. \`mcp__airtable__list_records_for_table\` is DENIED at the harness: it returned whole tables, averaged 29.5 KB per call, and its context re-reads cost \$2.38 — more than ALL web research in the same 7 cycles (\$0.34). The wrapper takes \`--formula\`/\`--view\`/\`--record\` (scope), \`--fields\` (columns), \`--max-records\` (ceiling), \`--count-only\` and \`--describe\`; it refuses an unscoped read and names the flag that fixes it. Measured live: three rows, two columns = 147 bytes. Writes and other Airtable tools are untouched. The same discipline applies to every tool that can return a whole collection. And fetch LATE: a large result at turn 5 of a 40-turn cycle is re-billed 35 times; the identical result at turn 35 is re-billed 5 times.
 9. SITE EVIDENCE IS RENDERED EVIDENCE — a \`curl\`/WebFetch of a site is NEVER sufficient to conclude that something is ABSENT from it. Modern sites ship a JavaScript shell: \`arkenom.com.tr\` returns 652 bytes containing \`<div id=root></div>\`, and a G4 re-verification read that as publishes NO email anywhere and moved a real prospect to Held. The address was on the page all along (\`info@arkenom.com.tr\`, in the footer and the security-policy text). Operator instruction 2026-08-01: *“ben browser os boşuna mı kurdum — oradan bakacaksınız, hem şirket hem sen.”* Use \`python3 scripts/ops/site-contact-evidence.py <domain>\`: it renders through BrowserOS first, then corroborates with the served HTML, the site's own JS bundles and its KVKK/aydınlatma/iletişim pages, and it reports WHICH source each address came from. A negative finding is only permitted when the render actually succeeded — otherwise the verdict is INCONCLUSIVE and the firm is not demoted on it.
-10. STATE RITUAL = ONE CALL — open the cycle with a single \`python3 scripts/ops/state-snapshot.py --app .\` run: it prints directive Status+sha16, open OPREQs, both bridge queue PENDING counts, send-gate counters and reply outcomes, plus a DELTA line versus the previous cycle's snapshot. Do NOT re-probe any of those surfaces individually unless the snapshot prints ERROR for that field or its DELTA names it as changed. \`DELTA: none\` means the world has not moved: skip ALL re-verification of previous cycles' work (no re-running test suites “as a baseline”, no re-reading code that consensus already records as fixed) and go straight to this cycle's ONE milestone. The directive file itself stays canonical — read it when its sha changed or when consensus does not carry its orders.
+10. STATE RITUAL = ONE CALL, ALREADY MADE — the \`## State Snapshot\` section below is the output of \`scripts/ops/state-snapshot.py\`, pre-run for you at cycle start: directive Status+sha16, open OPREQs, both bridge queue PENDING counts, send-gate counters, reply outcomes, and a DELTA line versus the previous cycle. Do NOT re-probe any of those surfaces (no send-gate --report, no reply-watch, no bridge queue reads, no OPREQ grep) unless the snapshot prints ERROR for that field or its DELTA names it as changed. \`DELTA: none\` means the world has not moved: skip ALL re-verification of previous cycles' work (no re-running test suites “as a baseline”, no re-reading code that consensus already records as fixed) and go straight to this cycle's ONE milestone. The directive file itself stays canonical — read it when its sha changed or when consensus does not carry its orders.
 $_discovery_line
 $_turnfb_line
+
+---
+
+## State Snapshot (pre-run at cycle start — do NOT re-run these probes)
+
+$_snapshot_block
 
 ---
 

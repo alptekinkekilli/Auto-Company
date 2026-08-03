@@ -38,7 +38,7 @@ for start in $STARTS; do
     block=$(sed -n "${start},${end}p" "$SCRIPT")
 
     out=$(PROMPT="[prompt]" CONSENSUS="[consensus]" _discovery_line="[discovery]" \
-          _turnfb_line="[turnfb]" loop_count=7 \
+          _turnfb_line="[turnfb]" _snapshot_block="[snapshot]" loop_count=7 \
           bash -c "$block"$'\nprintf %s "$FULL_PROMPT"' 2>&1)
     rc=$?
     if [ "$rc" -ne 0 ]; then
@@ -53,7 +53,7 @@ for start in $STARTS; do
     esac
     # The numbered rules the company is actually held to. A rule that silently vanishes from
     # one branch is the failure mode this file also guards against.
-    for rule in "OUTPUT HYGIENE" "TURN ECONOMY" "NARROW READS" "SITE EVIDENCE IS RENDERED" "STATE RITUAL = ONE CALL"; do
+    for rule in "OUTPUT HYGIENE" "TURN ECONOMY" "NARROW READS" "SITE EVIDENCE IS RENDERED" "STATE RITUAL = ONE CALL, ALREADY MADE"; do
         case "$out" in
             *"$rule"*) ok "branch@$start has rule: $rule" ;;
             *) bad "branch@$start rule" "$rule missing" ;;
@@ -68,6 +68,12 @@ for start in $STARTS; do
     case "$out" in
         *"[turnfb]"*) ok "branch@$start carries the turn-feedback slot" ;;
         *) bad "branch@$start turnfb" "\$_turnfb_line did not reach the assembled prompt" ;;
+    esac
+    # The pre-run snapshot must land in BOTH branches — the by-reference branch trims
+    # consensus, never the snapshot (7 short lines that replace 10+ probe turns).
+    case "$out" in
+        *"## State Snapshot"*"[snapshot]"*) ok "branch@$start injects the pre-run snapshot" ;;
+        *) bad "branch@$start snapshot" "\$_snapshot_block did not reach the assembled prompt" ;;
     esac
 done
 

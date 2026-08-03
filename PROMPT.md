@@ -12,10 +12,11 @@ other language.
 At the very start of every cycle, read `memories/human-directive.md`.
 
 > Mechanics note (2026-08-03): the surrounding state ritual — directive Status/sha,
-> open OPREQs, both bridge queues, send counters, reply outcomes — is served by ONE
-> call, `python3 scripts/ops/state-snapshot.py --app .` (Runtime Guardrail 10). Reading
-> the directive body when it changed is the only per-file read this section requires;
-> never fan the rest out into separate probes.
+> open OPREQs, both bridge queues, send counters, reply outcomes — is PRE-RUN for you:
+> the loop injects `scripts/ops/state-snapshot.py` output as a `## State Snapshot`
+> section in this very prompt (Runtime Guardrail 10). Reading the directive body when
+> its sha changed is the only per-file read this section requires; never fan the rest
+> out into separate probes.
 
 - If the file exists and its `## Status` is `PENDING`, the human operator has set
   a direction. Its `## Directive` text **overrides your own Next Action for this
