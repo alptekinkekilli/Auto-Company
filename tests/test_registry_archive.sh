@@ -126,6 +126,14 @@ OUT=$(python3 "$RA" --app "$TMP" --check)
 OUT=$(python3 "$RA" --app "$TMP" --check --threshold-kb 0)
 has "advisory names the tool" "$OUT" "[REGISTRY-SIZE]"
 
+echo "[4b] --allow-undated-month archives the dateless frozen section"
+build_fixture
+OUT=$(python3 "$RA" --app "$TMP" --apply --allow-undated-month 2026-07)
+has "undated section now moves" "$OUT" "3 section(s)"
+grep -qF "No date here at all" "$REG" && bad "undated section still in live" || ok "undated section archived"
+grep -qF "No date here at all" "$TMP/memories/registry-archive/2026-07.md" && ok "undated section in stated month" || bad "undated section not in 2026-07.md"
+OUT=$(python3 "$RA" --app "$TMP" --apply --allow-undated-month 2026-99 2>&1) && bad "bad month accepted" || has "bad month refused" "$OUT" "must be YYYY-MM"
+
 echo "[5] frozen-pattern section INSIDE protected region is never touched"
 build_fixture
 python3 - "$REG" "$OLD_D" <<'PY'

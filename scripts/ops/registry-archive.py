@@ -105,9 +105,13 @@ def plan_note_chunks(text: str, first_heading: int, cutoff: dt.date) -> list[tup
     return chunks
 
 
-def plan_section_chunks(text: str, prot: tuple[int, int], cutoff: dt.date) -> tuple[list[tuple[int, int, dt.date]], int]:
+def plan_section_chunks(text: str, prot: tuple[int, int], cutoff: dt.date,
+                        undated_month: dt.date | None) -> tuple[list[tuple[int, int, dt.date]], int]:
     """Archivable frozen sections as (start, end, max_embedded_date); also returns
-    how many candidate sections were SKIPPED for having no parseable date."""
+    how many candidate sections were SKIPPED for having no parseable date. When
+    --allow-undated-month is given, dateless frozen sections are archived into that
+    month instead of skipped (explicit operator statement of when they were written
+    — e.g. the Cycle 106-131 'PART A' scans all date from the 2026-07-24 rewrite)."""
     heads = heading_line_starts(text)
     chunks, undated = [], 0
     for i, h in enumerate(heads):
@@ -125,7 +129,10 @@ def plan_section_chunks(text: str, prot: tuple[int, int], cutoff: dt.date) -> tu
             except ValueError:
                 pass
         if not dates:
-            undated += 1
+            if undated_month is not None:
+                chunks.append((h, end, undated_month))
+            else:
+                undated += 1
             continue
         if max(dates) >= cutoff:
             continue
@@ -150,7 +157,15 @@ def main() -> int:
     ap.add_argument("--threshold-kb", type=int, default=250)
     ap.add_argument("--note-age-days", type=int, default=14)
     ap.add_argument("--section-age-days", type=int, default=3)
+    ap.add_argument("--allow-undated-month", default=None, metavar="YYYY-MM",
+                    help="archive dateless frozen sections into this month instead of skipping them")
     args = ap.parse_args()
+    undated_month = None
+    if args.allow_undated_month:
+        try:
+            undated_month = dt.date.fromisoformat(args.allow_undated_month + "-01")
+        except ValueError:
+            die(f"--allow-undated-month must be YYYY-MM, got {args.allow_undated_month!r}")
     app = os.path.abspath(args.app)
     live_path = os.path.join(app, "memories", "candidate-registry.md")
     arch_dir = os.path.join(app, "memories", "registry-archive")
@@ -181,7 +196,8 @@ def main() -> int:
         die("no '## ' headings found — not a registry-shaped file")
     prot = protected_span(original)
     notes = plan_note_chunks(original, heads[0], today - dt.timedelta(days=args.note_age_days))
-    sections, undated = plan_section_chunks(original, prot, today - dt.timedelta(days=args.section_age_days))
+    sections, undated = plan_section_chunks(
+        original, prot, today - dt.timedelta(days=args.section_age_days), undated_month)
     all_chunks = sorted(notes + sections)
     if not all_chunks:
         print(f"nothing to archive (notes eligible: 0, sections eligible: 0, undated sections skipped: {undated})")
