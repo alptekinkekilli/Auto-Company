@@ -69,13 +69,17 @@ def categorize(calls: list[tuple[str, str]]) -> dict:
     c = {"calls": len(calls), "ctx7": 0, "airtable_r": 0, "airtable_w": 0,
          "linear": 0, "browser": 0}
     for name, raw in calls:
+        # Match on the TOOL NAME and, for bash, the COMMAND — never on arbitrary input
+        # text: measured 2026-08-03, apply_patch/read calls EDITING browser-related code
+        # matched a substring rule and inflated `browser` (and would inflate `linear`).
         cmd = ""
         if name == "bash":
             try:
                 cmd = json.loads(raw).get("command", "") or ""
             except (json.JSONDecodeError, AttributeError):
                 cmd = raw
-        low = (name + " " + cmd).lower()
+        low = cmd.lower()
+        lname = name.lower()
         if "ctx7" in low:
             c["ctx7"] += 1
         if "airtable-read.py" in low:
@@ -85,9 +89,9 @@ def categorize(calls: list[tuple[str, str]]) -> dict:
         elif name.startswith("mcp__airtable__"):
             key = "airtable_w" if any(h in name for h in AIRTABLE_WRITE_HINTS) else "airtable_r"
             c[key] += 1
-        if "linear" in low:
+        if "linear" in lname or "linear-track.py" in low or "api.linear.app" in low:
             c["linear"] += 1
-        if "site-contact-evidence" in low or "browseros" in low:
+        if "browseros" in lname or "site-contact-evidence" in low or "browseros" in low:
             c["browser"] += 1
     return c
 
