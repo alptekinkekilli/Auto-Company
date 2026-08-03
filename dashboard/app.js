@@ -478,15 +478,19 @@ async function loadToolUsage() {
     const data = await res.json();
     toolUsageLoaded = true;
     if (data && data.present) {
-      const pad = (v, n) => String(v).padStart(n);
-      const lines = ["date         ctx7  air-r  air-w  linear  browser  calls  cycles"];
+      // Real table, not padded text: the cockpit's .mono class is Rajdhani (proportional),
+      // so character-count alignment can never line up. Values are our own ledger's
+      // numbers/ISO dates; render as numbers to keep the cells inert.
+      const cols = ["ctx7", "airtable_r", "airtable_w", "linear", "browser", "calls", "cycles"];
+      const heads = ["date", "ctx7", "air-r", "air-w", "linear", "browser", "calls", "cycles"];
+      let html = "<table class=\"usage-table\"><thead><tr>" +
+        heads.map((h) => `<th>${h}</th>`).join("") + "</tr></thead><tbody>";
       for (const d of data.days) {
-        lines.push(
-          `${d.date}  ${pad(d.ctx7, 5)}  ${pad(d.airtable_r, 5)}  ${pad(d.airtable_w, 5)}  ` +
-          `${pad(d.linear, 6)}  ${pad(d.browser, 7)}  ${pad(d.calls, 5)}  ${pad(d.cycles, 6)}`
-        );
+        html += "<tr><td>" + String(d.date).slice(0, 10) + "</td>" +
+          cols.map((k) => `<td>${Number(d[k]) || 0}</td>`).join("") + "</tr>";
       }
-      text.textContent = lines.join("\n");
+      html += "</tbody></table>";
+      text.innerHTML = html;
       badge.textContent = data.updated ? "LOADED · " + formatTime(data.updated) : "LOADED";
       badge.classList.remove("badge-none");
     } else {

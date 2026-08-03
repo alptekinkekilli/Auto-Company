@@ -266,6 +266,31 @@ select {
   font-family: "Rajdhani", sans-serif;
 }
 
+/* Tool Analytics — text-only usage table (.mono is Rajdhani, NOT monospace, so
+   padded-text columns cannot align; a real table can). */
+.usage-table {
+  border-collapse: collapse;
+  font-family: "Rajdhani", sans-serif;
+  font-variant-numeric: tabular-nums;
+  margin-top: 4px;
+}
+.usage-table th,
+.usage-table td {
+  padding: 3px 14px 3px 0;
+  text-align: right;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.usage-table th {
+  text-transform: uppercase;
+  font-size: 0.78em;
+  letter-spacing: 0.06em;
+  opacity: 0.65;
+}
+.usage-table th:first-child,
+.usage-table td:first-child {
+  text-align: left;
+}
+
 .grid-details {
   display: grid;
   grid-template-columns: minmax(280px, 1fr) minmax(300px, 2fr);
