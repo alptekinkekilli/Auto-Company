@@ -163,7 +163,10 @@ def main() -> int:
     else:
         print(f"opreq: open={len(opreqs)}" + (f" ids={','.join(opreqs)}" if opreqs else ""))
     print(f"bridges: registry_pending={reg} ekap_pending={ekap}")
-    print(f"sends: {' | '.join(str(sends).splitlines())}")
+    _sends_disp = " | ".join(str(sends).splitlines())
+    if _sends_disp.startswith("sends: "):
+        _sends_disp = _sends_disp[len("sends: "):]
+    print(f"sends: {_sends_disp}")
     print(f"replies: {replies}")
 
     # DELTA — errored/skipped fields are excluded from comparison on BOTH sides, so a
