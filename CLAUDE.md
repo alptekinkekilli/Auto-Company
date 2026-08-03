@@ -235,8 +235,10 @@ version-accurate documentation for external libraries and frameworks.
 - **When to use:** before writing code against any external library/framework/API
   (Next.js, Cloudflare Workers, Stripe, a new npm/pip package, etc.) — pull the
   current docs instead of relying on possibly-stale training knowledge.
-- **How:** `resolve-library-id` to find the library, then `query-docs` for the relevant
-  topic (the tool was renamed from `get-library-docs`).
+- **How (preferred, 2026-08-03):** the `find-docs` skill (`.claude/skills/find-docs/`) —
+  `npx ctx7@latest` CLI, works on BOTH engines, zero per-turn tool surface, and its
+  context-hygiene steps (redirect + excerpt read) are mandatory. MCP path
+  (`resolve-library-id` → `query-docs`) stays as fallback. Name the path you used.
 - This complements the local skill pool (`.claude/skills/` = how-to workflows);
   Context7 = current API surface of the thing you're building on.
 - A separate `scripts/ops/` REST-fallback script exists for Context7 outside the MCP
