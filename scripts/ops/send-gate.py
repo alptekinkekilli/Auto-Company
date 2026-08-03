@@ -189,7 +189,7 @@ def body_leak_scan(body: str) -> str:
     return ""
 
 
-def g4_live(firm: str, app_dir: str) -> tuple[bool, str]:
+def g4_live(firm: str, app_dir: str, outreach_website: str = "") -> tuple[bool, str]:
     """Re-derive G4 now. The bridge row is found by firm name because that is the only link
     the two tables share; an ambiguous match is a REFUSE, not a guess.
 
@@ -203,6 +203,17 @@ def g4_live(firm: str, app_dir: str) -> tuple[bool, str]:
     info@rayelsis.com PASS reason verbatim. Fix: after the broad token search, require the
     candidate row's own `firm` field to be an EXACT match to the input firm name once both
     are whitespace-normalized and casefolded — not merely "the only row this token found."
+
+    GAP CLOSED 2026-08-03 (cycle 82): a Registry Bridge row can be a genuine EXACT match for
+    the firm and still carry no domain in its own evidence (`result_data`/notes), when the
+    lookup was a pure MERSİS company-data query with no web reference (Bilgi Birikim,
+    2026-08-03). `g4.judge()` then HOLDs on "no candidate domain recorded on the row" even
+    though a first-party domain for this exact firm was ALREADY verified in an earlier cycle
+    and sits on the Outreach row's own `Website` field. Only ever used as a FALLBACK — never
+    to override or supplement a domain the bridge row's OWN evidence already names, so this
+    cannot reopen the cycle-77 wrong-firm-domain risk: the bridge row must still be the exact
+    firm match found above, and `outreach_website` is the domain of THAT SAME row's own
+    Outreach record, passed in by the caller, not derived here from any other source.
     """
     spec = importlib.util.spec_from_file_location("g4", os.path.join(HERE, "g4-check.py"))
     g4 = importlib.util.module_from_spec(spec)
@@ -226,9 +237,21 @@ def g4_live(firm: str, app_dir: str) -> tuple[bool, str]:
         return False, ("registry bridge has no exact firm-name match for %r (token %r matched "
                        "%d row(s), %d exact) — cannot verify G4"
                        % (firm[:60], token, len(recs), len(exact)))
-    v = g4.judge(exact[0].get("fields", {}), "", os.environ.get(
+    bridge_fields = exact[0].get("fields", {})
+    domain_override = ""
+    notes = "\n".join(str(bridge_fields.get(k) or "") for k in
+                      ("result_notes", "result_data", "mersis_no", "ticaret_sicil_no"))
+    if not g4.domains_in(notes) and outreach_website:
+        m = re.search(r"https?://([A-Za-z0-9.\-]+)", outreach_website)
+        # re.sub, not str.lstrip("www.") — lstrip strips a CHARACTER SET, so it would
+        # also mangle e.g. web.firma.com into eb.firma.com (wrong-refuse direction).
+        domain_override = re.sub(r"^www\.", "", (m.group(1) if m else outreach_website).lower())
+    v = g4.judge(bridge_fields, domain_override, os.environ.get(
         "BROWSEROS_MCP", "http://172.17.0.1:9245/mcp"))
-    return v.get("verdict") == "PASS", "%s — %s" % (v.get("verdict"), v.get("reason", ""))
+    reason = v.get("reason", "")
+    if domain_override:
+        reason = "%s [domain from Outreach row's Website field, bridge row named none]" % reason
+    return v.get("verdict") == "PASS", "%s — %s" % (v.get("verdict"), reason)
 
 
 def decide(rec: str, app_dir: str, followup: bool = False) -> dict:
@@ -420,7 +443,7 @@ def decide(rec: str, app_dir: str, followup: bool = False) -> dict:
                                             day, DAILY_CAP, total, TOTAL_CAP)}
 
     try:
-        ok, why = g4_live(firm, app_dir)
+        ok, why = g4_live(firm, app_dir, outreach_website=(fields.get("Website") or "").strip())
     except Exception as e:                       # noqa: BLE001 - any failure is a refusal
         return {**d, "verdict": "REFUSE", "reason": "G4 re-verification failed to run: %s" % e}
     d["g4"] = why

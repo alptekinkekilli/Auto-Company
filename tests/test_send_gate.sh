@@ -33,7 +33,7 @@ followup = sys.argv[5] == "1"
 m.air = lambda path, params=None: (
     {"fields": fields} if "/" in path else
     {"records": [{"fields": f} for f in sent]})
-m.g4_live = lambda firm, app: (g4ok, "PASS — stub" if g4ok else "HOLD — stub")
+m.g4_live = lambda firm, app, outreach_website="": (g4ok, "PASS — stub" if g4ok else "HOLD — stub")
 d = m.decide("recTEST", "/app", followup=followup)
 print(d["verdict"] + "|" + d["reason"])
 PY
@@ -297,6 +297,47 @@ case "$OUT" in *"no exact firm-name match"*) echo "  FAIL exact match should not
 BRIDGE_ROWS2='[{"firm":"  Bilgi Birikim Sistemleri   Bilişim Teknolojileri Anonim Şirketi  "}]'
 OUT=$(run_g4live "Bilgi Birikim Sistemleri Bilişim Teknolojileri Anonim Şirketi" "$BRIDGE_ROWS2")
 case "$OUT" in *"no exact firm-name match"*) echo "  FAIL should normalize whitespace: $OUT"; fail=1 ;; *) echo "  PASS whitespace-normalized name still counts as exact" ;; esac
+
+echo "19. g4_live falls back to the Outreach row's own Website field only when the exact-"
+echo "    matched bridge row names no domain of its own (cycle 82, Bilgi Birikim gap)"
+run_g4live_web() {  # run_g4live_web <firm> <bridge-rows-json> <outreach-website>
+    python3 - "$SCRIPT" "$1" "$2" "$3" <<'PY'
+import importlib.util, json, sys
+spec = importlib.util.spec_from_file_location("sg", sys.argv[1])
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+firm, rows, website = sys.argv[2], json.loads(sys.argv[3]), sys.argv[4]
+m.air = lambda path, params=None: {"records": [{"fields": f} for f in rows]}
+# g4_live() loads g4-check.py fresh via importlib.util.module_from_spec every call. Wrap that
+# function so that, for exactly the "g4" spec it requests, the real domains_in() still runs
+# (that is what decides whether the fallback should even trigger) but judge() is replaced with
+# a stub that just echoes back whatever domain it was actually given — the one thing this test
+# needs to observe.
+def stub_judge(fields, domain_override, mcp):
+    return {"verdict": "HOLD", "reason": "stub sees domain=%r" % domain_override}
+orig_module_from_spec = importlib.util.module_from_spec
+def wrapped(spec2):
+    mod = orig_module_from_spec(spec2)
+    if spec2.name == "g4":
+        orig_exec = spec2.loader.exec_module
+        def exec_and_patch(mm):
+            orig_exec(mm)
+            mm.judge = stub_judge
+        spec2.loader.exec_module = exec_and_patch
+    return mod
+importlib.util.module_from_spec = wrapped
+ok, why = m.g4_live(firm, "/app", outreach_website=website)
+print(("ALLOW" if ok else "REFUSE") + "|" + why)
+PY
+}
+NO_DOMAIN_ROW='[{"firm":"Bilgi Birikim Sistemleri Bilişim Teknolojileri Anonim Şirketi","result_data":"MERSİS No: 0172082863000001 | Firma Durumu: Aktif"}]'
+OUT=$(run_g4live_web "Bilgi Birikim Sistemleri Bilişim Teknolojileri Anonim Şirketi" "$NO_DOMAIN_ROW" "https://www.bilgibirikim.com/")
+contains "bridge row with no domain uses the Outreach row's Website as fallback" "$OUT" "domain='bilgibirikim.com'"
+contains "reason names the fallback source" "$OUT" "Outreach row's Website field"
+HAS_DOMAIN_ROW='[{"firm":"Essa Enerji Sistemleri Sanayi ve Ticaret Anonim Şirketi","result_data":"Site: https://essaenerji.com.tr | Adres: X"}]'
+OUT=$(run_g4live_web "Essa Enerji Sistemleri Sanayi ve Ticaret Anonim Şirketi" "$HAS_DOMAIN_ROW" "https://www.somethingelse.com.tr/")
+contains "bridge row that already names a domain is never overridden by the fallback" "$OUT" "domain=''"
+OUT=$(run_g4live_web "Bilgi Birikim Sistemleri Bilişim Teknolojileri Anonim Şirketi" "$NO_DOMAIN_ROW" "")
+contains "no Outreach website given: no fallback applied, domain stays empty" "$OUT" "domain=''"
 
 if [ "$fail" -eq 0 ]; then echo "ALL PASS"; else echo "FAILURES"; fi
 exit "$fail"
