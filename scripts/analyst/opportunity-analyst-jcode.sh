@@ -90,6 +90,20 @@ else
   fi
   [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] || [ -n "${ANTHROPIC_API_KEY:-}" ] || [ -s "$JHOME/claude-auth.json" ] \
     || fail "no Claude credential: CLAUDE_CODE_OAUTH_TOKEN/ANTHROPIC_API_KEY unset and no $JHOME/claude-auth.json (is /app/logs/runtime.env mounted?)"
+  # jcode cannot read a BARE sk-ant-oat… token — it parses it as an expired OAuth
+  # credential and dies with "token is expired and no usable refresh token" (measured
+  # 2026-08-03, three failed runs). The loop hit the same wall and wraps the token in
+  # a claudeAiOauth JSON envelope with a synthetic expiry just before invoking jcode
+  # (auto-loop.sh, "claudeAiOauth wrapper" note). Same wrapper here, same reason; the
+  # raw token is never echoed and the wrapped form lives only in this process.
+  case "${CLAUDE_CODE_OAUTH_TOKEN:-}" in
+    sk-ant-oat*)
+      _jc_exp=$(( ($(date +%s) + 86400*300) * 1000 ))
+      _jc_tok=$(python3 -c 'import json,os,sys; print(json.dumps({"claudeAiOauth":{"accessToken":os.environ["CLAUDE_CODE_OAUTH_TOKEN"],"refreshToken":"","expiresAt":int(sys.argv[1]),"scopes":["user:inference"],"subscriptionType":"max"}}))' "$_jc_exp" 2>/dev/null || true)
+      [ -n "$_jc_tok" ] && export CLAUDE_CODE_OAUTH_TOKEN="$_jc_tok"
+      unset _jc_tok _jc_exp
+      ;;
+  esac
 fi
 grep -q claude_code_native_credentials "$JHOME/config.toml" 2>/dev/null || {
   mkdir -p "$JHOME"
