@@ -2900,6 +2900,15 @@ This is Cycle #$loop_count. Act decisively."
             >/dev/null 2>&1 || true
     fi
 
+    # Registry size advisory (2026-08-03). candidate-registry.md hit 359KB with ~90%
+    # append-only history; the analyst reads the whole file into an Opus prompt daily.
+    # Log-only nudge at the same return moment; the archival itself is operator-run
+    # (scripts/ops/registry-archive.py, fail-closed invariants), never automatic here.
+    if [ -f "$SCRIPT_DIR/../ops/registry-archive.py" ]; then
+        _ra_line=$(python3 "$SCRIPT_DIR/../ops/registry-archive.py" --app "$PROJECT_DIR" --check 2>/dev/null || true)
+        [ -n "$_ra_line" ] && log "$_ra_line"
+    fi
+
     # Turn-economy TREND (2026-08-02). The per-cycle verdict says whether THAT cycle was
     # heavy; it cannot say whether the optimisation is working. This folds each audit line
     # into a durable history and speaks only on a sustained regression or when the target

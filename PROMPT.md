@@ -1072,6 +1072,13 @@ Also maintain `memories/candidate-registry.md`: when a candidate is selected, ad
 it to Selected (with its Linear issue); when one is killed/closed, move it to
 Archived (with the decision + one-line reason). Never silently delete an archive.
 
+Registry archive (2026-08-03): aged maintenance notes and frozen discovery/cycle
+sections get moved verbatim into `memories/registry-archive/<YYYY-MM>.md` by an
+operator-run tool; `> [archived ...]` pointer lines in the registry mark each batch.
+Those archive files are read-only history: never edit them, never re-inline their
+content, and treat a pointer line as sufficient evidence that the history exists.
+Grep the archive files only when a task genuinely needs old scan detail.
+
 ## CONVERGENCE RULES (MANDATORY)
 
 1. **Cycle 1:** Brainstorm; each agent proposes one idea; finish with a ranked top 3.
