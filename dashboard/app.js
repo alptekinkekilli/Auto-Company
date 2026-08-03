@@ -454,7 +454,11 @@ async function loadIdeas() {
     ideasLoaded = true;
     if (data && data.present) {
       els.ideasText.innerHTML = renderMarkdown(data.markdown || "");
-      els.ideasBadge.textContent = "LOADED";
+      // The file's own H1 carries a rewrite stamp (e.g. "rewritten Cycle 106,
+      // 2026-07-24") that reads like staleness; the mtime is the real freshness.
+      els.ideasBadge.textContent = data.updated
+        ? "LOADED · file updated " + formatTime(data.updated)
+        : "LOADED";
       els.ideasBadge.classList.remove("badge-none");
     } else {
       els.ideasText.textContent = "(no opportunity-scan.md yet)";
@@ -479,7 +483,9 @@ async function loadAnalysis() {
     if (data && data.present) {
       analystRaw = data.markdown || "";
       els.analystText.innerHTML = renderMarkdown(analystRaw);
-      els.analystBadge.textContent = "LOADED";
+      els.analystBadge.textContent = data.updated
+        ? "LOADED · file updated " + formatTime(data.updated)
+        : "LOADED";
       els.analystBadge.classList.remove("badge-none");
     } else {
       els.analystText.textContent = "(no analysis yet — the Codex analyst cron has not run)";
