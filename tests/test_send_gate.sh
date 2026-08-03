@@ -339,5 +339,41 @@ contains "bridge row that already names a domain is never overridden by the fall
 OUT=$(run_g4live_web "Bilgi Birikim Sistemleri Bilişim Teknolojileri Anonim Şirketi" "$NO_DOMAIN_ROW" "")
 contains "no Outreach website given: no fallback applied, domain stays empty" "$OUT" "domain=''"
 
+echo "20. phase check is scoped to first-contact sends only (cycle 86 fix)"
+echo "    the approved Step-2 template asserts no procurement phase, so body_claims() on any"
+echo "    real follow-up body is always UNKNOWN — which used to REFUSE every follow-up"
+echo "    unconditionally, not because the message said the wrong stage but because it made"
+echo "    no claim to check. N.K.Y (cycle 81) and Bilgi Birikim (cycle 82) both hit this."
+PHASE_FIELDS='{"Business":"X","Status":"Qualified","Email":"a@b.tr","Email subject":"k",
+ "Email body":"lutfen IKN ile yanit verin","Exclusion ground":"kisa turkce gerekce",
+ "Exclusion ground source":"KararId=deadbeef00000000000000000000000000000000000000000000000000000001",
+ "Last contact date":"2026-08-01","Contact attempts":1}'
+OUT=$(run "$PHASE_FIELDS" '[]' 1 1)
+case "$OUT" in
+  *"could not read the decision"*) echo "  FAIL follow-up still attempted the phase fetch: $OUT"; fail=1 ;;
+  *"phase mismatch"*) echo "  FAIL follow-up still ran the phase-mismatch check: $OUT"; fail=1 ;;
+  *) echo "  PASS follow-up skips the phase check entirely (no fetch attempted, no mismatch reported)" ;;
+esac
+# First-contact sends must still be checked exactly as before: no network in this offline
+# suite means the fetch will fail, and that failure must still be a REFUSE (fail-closed).
+PHASE_FIELDS_FIRST='{"Business":"X","Status":"Qualified","Email":"a@b.tr","Email subject":"k",
+ "Email body":"lutfen IKN ile yanit verin","Exclusion ground":"kisa turkce gerekce",
+ "Exclusion ground source":"KararId=deadbeef00000000000000000000000000000000000000000000000000000001"}'
+OUT=$(run "$PHASE_FIELDS_FIRST" '[]' 1 0)
+case "$OUT" in
+  *"could not read the decision"*|*"cannot tell from the decision"*)
+    echo "  PASS first-contact sends still run the phase check (fails closed here since no network)" ;;
+  *) echo "  FAIL first-contact phase check did not fail closed: $OUT"; fail=1 ;;
+esac
+
+echo "21. opted_out() catches the mail provider's literal wording (cycle 89: Bilgi Birikim's"
+echo "    follow-up was suppressed 2026-08-03T13:25:46Z with Email log 'Suppressed: Recipient"
+echo "    has opted out' -- the old check tested 'opt-out'/'opt out' but not 'opted out')"
+OPTED_OUT_LOG='{"Business":"X","Status":"Qualified","Email":"a@b.tr","Email subject":"k",
+ "Email body":"g","Last contact date":"2026-08-01",
+ "Email log":"[2026-08-03T13:25:46.855Z] Suppressed: Recipient has opted out\n[2026-08-01T20:26:46.791Z] Sent: Sent (1/15 today)"}'
+contains "refuses a row whose Email log records provider-side opt-out" \
+  "$(run "$OPTED_OUT_LOG" '[]' 1 1)" "opted out"
+
 if [ "$fail" -eq 0 ]; then echo "ALL PASS"; else echo "FAILURES"; fi
 exit "$fail"

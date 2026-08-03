@@ -155,9 +155,20 @@ def counts() -> tuple[int, int]:
 
 
 def opted_out(fields: dict) -> bool:
+    """GAP CLOSED 2026-08-03 (cycle 89): the mail provider's own suppression event on
+    Bilgi Birikim's follow-up read "Suppressed: Recipient has opted out" in `Email log` —
+    the literal phrase the provider writes is "opted out", which this check never matched
+    (it only tested "opt-out" and "opt out", both with a gap the provider's own wording
+    does not have). The row's `Email queue` field went to `Suppressed` from OUTSIDE this
+    gate (the send worker acted on the provider's webhook), so nothing was actually
+    mis-sent this time — but a later cycle re-running send-gate on the same row before
+    checking `Email queue` would have reached this function and gotten a false ALLOW.
+    Added "opted out" explicitly; kept the prior two patterns unchanged since narrowing
+    could reopen the original gap on a differently-worded record."""
     blob = " ".join(str(fields.get(k) or "") for k in
                     ("Status", "Notes", "Email log", "Last channel used")).lower()
-    return "opt-out" in blob or "opt out" in blob or "listeden çık" in blob
+    return ("opt-out" in blob or "opt out" in blob or "opted out" in blob
+            or "listeden çık" in blob)
 
 
 # BODY LEAK SCANNER (directive 2026-08-02 revision 3). Four marker classes, each named in the
@@ -372,7 +383,24 @@ def decide(rec: str, app_dir: str, followup: bool = False) -> dict:
     # PHASE. Read the stage from the authority's own decision and require the message to say
     # the same thing. Fetching costs a round trip, so it runs only once the row is otherwise
     # ready to send.
-    src = (fields.get("Exclusion ground source") or "") + " " + (fields.get("Notes") or "")
+    #
+    # FOLLOW-UP SCOPE (diagnosed cycles 81-82, fixed cycle 86): the approved Step-2 template
+    # makes NO procurement-phase claim anywhere in its copy — it asks the recipient to reply
+    # with the İKN, it does not restate "ön yeterlik" or "teklif değerlendirme dışı". That
+    # means body_claims() on any real Step-2 body always resolves to UNKNOWN, which the check
+    # below then refuses unconditionally — not because the message says the wrong stage, but
+    # because it makes no stage claim to be right or wrong. This check exists to catch a WRONG
+    # claim (the actual N.K.Y incident: a first-contact body asserting the wrong stage); a
+    # template that asserts no stage at all cannot misstate one, so there is nothing here to
+    # verify on a follow-up. Confirmed systemic across both rows that reached this point
+    # (N.K.Y cycle 81, Bilgi Birikim cycle 82) — not row-specific. Scope the check to
+    # first-contact sends only; if a future Step-2 template revision starts asserting a phase,
+    # this same check should be re-enabled for follow-ups at that point.
+    if followup:
+        d["phase"] = "skipped for follow-up — Step-2 template asserts no phase"
+        src = ""
+    else:
+        src = (fields.get("Exclusion ground source") or "") + " " + (fields.get("Notes") or "")
     kid = re.search(r"KararId=([0-9a-f]{64})", src)
     if kid:
         try:
