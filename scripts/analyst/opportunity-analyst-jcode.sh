@@ -134,7 +134,11 @@ MSG="$WORK/msg.txt"
 # doing arithmetic over log files is both expensive and able to produce a plausible
 # wrong number. Non-fatal by design — a failed audit costs the report one section, it
 # must never cost the run.
-if [ -x "$APP/scripts/ops/cost-audit.py" ]; then
+# -f, not -x: the file ships mode 644 (the Dockerfile chmods only scripts/core and
+# scripts/linux), so an -x guard silently skipped the audit on EVERY run — and because
+# the failure NOTE lived inside the same guard, nothing was ever logged about it.
+# Found by the analyst itself (first opus run, 2026-08-03, FINDING B).
+if [ -f "$APP/scripts/ops/cost-audit.py" ]; then
   if python3 "$APP/scripts/ops/cost-audit.py" --app "$APP" >>"$PROGRESS" 2>&1; then
     log "[$STAMP] cost audit refreshed (memories/cost-audit.md)"
   else

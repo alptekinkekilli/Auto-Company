@@ -23,17 +23,18 @@ contains() { case "$2" in *"$3"*) echo "  PASS $1" ;; *) echo "  FAIL $1: '$3' n
 
 # The decision is exercised with air()/g4_live() stubbed: the guards under test are pure
 # policy, and a suite that needs the network is a suite nobody runs before committing.
-run() {  # run <fields-json> <sent-rows-json> <g4-ok 0|1>
-    python3 - "$SCRIPT" "$1" "$2" "$3" <<'PY'
+run() {  # run <fields-json> <sent-rows-json> <g4-ok 0|1> [followup 0|1]
+    python3 - "$SCRIPT" "$1" "$2" "$3" "${4:-0}" <<'PY'
 import importlib.util, json, sys
 spec = importlib.util.spec_from_file_location("sg", sys.argv[1])
 m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 fields, sent, g4ok = json.loads(sys.argv[2]), json.loads(sys.argv[3]), sys.argv[4] == "1"
+followup = sys.argv[5] == "1"
 m.air = lambda path, params=None: (
     {"fields": fields} if "/" in path else
     {"records": [{"fields": f} for f in sent]})
 m.g4_live = lambda firm, app: (g4ok, "PASS — stub" if g4ok else "HOLD — stub")
-d = m.decide("recTEST", "/app")
+d = m.decide("recTEST", "/app", followup=followup)
 print(d["verdict"] + "|" + d["reason"])
 PY
 }
@@ -241,6 +242,61 @@ print(json.dumps({'Business':'X','Status':'Qualified','Email':'a@b.tr','Email su
  'Email body':'temiz görünen bir metin, henüz yeniden render edilmedi',
  'Exclusion ground':'ordinary defect — critic-munger PASS WITH CONDITIONS confirmed this'}))")
 contains "refuses" "$(run "$UNSPLIT" '[]' 1)" "not split yet"
+
+echo "17. follow-up mode (directive rev 4 §3): at most one authorized second contact"
+# Without --followup, a row with Last contact date is refused exactly as before, unchanged.
+SENT_ONCE='{"Business":"X","Status":"Qualified","Email":"a@b.tr","Email subject":"k","Email body":"g","Last contact date":"2026-08-01"}'
+contains "non-followup mode still refuses a second first-contact" "$(run "$SENT_ONCE" '[]' 1 0)" "never send twice"
+
+# In --followup mode, a row that was actually sent once is now allowed.
+check "followup mode allows an already-sent Qualified row" "$(run "$SENT_ONCE" '[]' 1 1 | cut -d'|' -f1)" "ALLOW"
+contains "reason is labeled FOLLOW-UP" "$(run "$SENT_ONCE" '[]' 1 1)" "FOLLOW-UP:"
+
+# A row with no Last contact date has nothing to follow up.
+NEVER_SENT='{"Business":"X","Status":"Qualified","Email":"a@b.tr","Email subject":"k","Email body":"g"}'
+contains "followup mode refuses a row never sent" "$(run "$NEVER_SENT" '[]' 1 1)" "nothing to follow up"
+
+# A row whose Contact attempts is already 2 (first send + a follow-up) is refused a second follow-up.
+ALREADY_FOLLOWED='{"Business":"X","Status":"Qualified","Email":"a@b.tr","Email subject":"k","Email body":"g","Last contact date":"2026-08-01","Contact attempts":2}'
+contains "followup mode refuses a second follow-up" "$(run "$ALREADY_FOLLOWED" '[]' 1 1)" "already sent on this row"
+
+# Follow-up mode does not bypass any other gate — caps, opt-out, body leak scan all still bind.
+contains "followup mode still respects the daily cap" "$(run "$SENT_ONCE" "$THREE" 1 1)" "daily cap reached"
+OPTOUT_SENT='{"Business":"X","Status":"Qualified","Email":"a@b.tr","Email subject":"k","Email body":"g","Last contact date":"2026-08-01","Notes":"firma opt-out istedi"}'
+contains "followup mode still refuses an opted-out firm" "$(run "$OPTOUT_SENT" '[]' 1 1)" "opted out"
+LEAKY_FOLLOWUP=$(python3 -c "
+import json
+print(json.dumps({'Business':'X','Status':'Qualified','Email':'a@b.tr','Email subject':'k',
+ 'Email body':'ceo-bezos onayladı bu metni','Last contact date':'2026-08-01'}))")
+contains "followup mode still runs the body leak scan" "$(run "$LEAKY_FOLLOWUP" '[]' 1 1)" "REFUSE"
+
+echo "18. g4_live firm-name matching (cycle 77 bug: single-longest-word token match let two"
+echo "    different firms sharing a word collide; only an exact normalized-name match is safe)"
+run_g4live() {  # run_g4live <firm> <bridge-rows-json>
+    # Bridge rows here carry no domain/address fields, so if the name-match passes, control
+    # reaches the real g4.judge() with no candidate domain -> a fast HOLD, no network call.
+    # That is enough to prove PAST the name-matching guard vs. REFUSED BY it.
+    python3 - "$SCRIPT" "$1" "$2" <<'PY'
+import importlib.util, json, sys
+spec = importlib.util.spec_from_file_location("sg", sys.argv[1])
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+firm, rows = sys.argv[2], json.loads(sys.argv[3])
+m.air = lambda path, params=None: {"records": [{"fields": f} for f in rows]}
+ok, why = m.g4_live(firm, "/app")
+print(("ALLOW" if ok else "REFUSE") + "|" + why)
+PY
+}
+# Two different firms whose full names both contain the token "Teknolojileri" — this is the
+# exact collision that produced a false ALLOW on Bilgi Birikim using Rayelsis's evidence.
+BRIDGE_ROWS='[{"firm":"Rayelsis Elektronik Elektromekanik Danışmanlık Müşavirlik Lojistik ve Raylı Sistem Teknolojileri Sanayi Ticaret Limited Şirketi"}]'
+OUT=$(run_g4live "Bilgi Birikim Sistemleri Bilişim Teknolojileri Anonim Şirketi" "$BRIDGE_ROWS")
+contains "different firm sharing the longest token is refused, not matched" "$OUT" "no exact firm-name match"
+OUT=$(run_g4live "Rayelsis Elektronik Elektromekanik Danışmanlık Müşavirlik Lojistik ve Raylı Sistem Teknolojileri Sanayi Ticaret Limited Şirketi" "$BRIDGE_ROWS")
+case "$OUT" in *"no exact firm-name match"*) echo "  FAIL exact match should not report name-mismatch: $OUT"; fail=1 ;; *) echo "  PASS exact match bypasses the name-mismatch refusal (reaches judge(), gets a fast no-domain HOLD)" ;; esac
+# Case/whitespace differences between the row and the query should still count as exact.
+BRIDGE_ROWS2='[{"firm":"  Bilgi Birikim Sistemleri   Bilişim Teknolojileri Anonim Şirketi  "}]'
+OUT=$(run_g4live "Bilgi Birikim Sistemleri Bilişim Teknolojileri Anonim Şirketi" "$BRIDGE_ROWS2")
+case "$OUT" in *"no exact firm-name match"*) echo "  FAIL should normalize whitespace: $OUT"; fail=1 ;; *) echo "  PASS whitespace-normalized name still counts as exact" ;; esac
 
 if [ "$fail" -eq 0 ]; then echo "ALL PASS"; else echo "FAILURES"; fi
 exit "$fail"

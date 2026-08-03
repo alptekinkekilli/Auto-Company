@@ -191,7 +191,19 @@ def body_leak_scan(body: str) -> str:
 
 def g4_live(firm: str, app_dir: str) -> tuple[bool, str]:
     """Re-derive G4 now. The bridge row is found by firm name because that is the only link
-    the two tables share; an ambiguous match is a REFUSE, not a guess."""
+    the two tables share; an ambiguous match is a REFUSE, not a guess.
+
+    BUG FIXED 2026-08-03 (cycle 77): the old version searched Registry Bridge by only the
+    single LONGEST WORD in the firm name and treated "exactly 1 row returned" as proof of a
+    safe match. Two distinct firms can share their longest word — Rayelsis's full name and
+    Bilgi Birikim's full name both contain "Teknolojileri" — so a single-token search can
+    return exactly one row that belongs to the WRONG firm, and the old code could not tell
+    the difference: it would report ALLOW using another firm's registry evidence. Caught live
+    before any follow-up was sent: Bilgi Birikim's gate check returned Rayelsis's
+    info@rayelsis.com PASS reason verbatim. Fix: after the broad token search, require the
+    candidate row's own `firm` field to be an EXACT match to the input firm name once both
+    are whitespace-normalized and casefolded — not merely "the only row this token found."
+    """
     spec = importlib.util.spec_from_file_location("g4", os.path.join(HERE, "g4-check.py"))
     g4 = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(g4)
@@ -200,16 +212,26 @@ def g4_live(firm: str, app_dir: str) -> tuple[bool, str]:
         return False, "firm name unusable for bridge lookup"
     token = max(key, key=len)
     recs = air(BRIDGE, {"filterByFormula": "SEARCH(UPPER('%s'),UPPER({firm}))" % token,
-                        "maxRecords": 5}).get("records", [])
+                        "maxRecords": 50}).get("records", [])
+    norm = lambda s: re.sub(r"\s+", " ", (s or "").strip()).casefold()
+    target = norm(firm)
+    exact = [r for r in recs if norm(r.get("fields", {}).get("firm", "")) == target]
     if len(recs) != 1:
-        return False, ("registry bridge match is ambiguous for %r: %d rows — cannot verify G4"
-                       % (token, len(recs)))
-    v = g4.judge(recs[0].get("fields", {}), "", os.environ.get(
+        # More than one row shares the token, or the search found none at all. This is no
+        # longer automatically a REFUSE by itself: fall through to the exact-name check below,
+        # which is what actually disambiguates. Only report the token-count ambiguity if the
+        # exact check ALSO fails to resolve to exactly one row.
+        pass
+    if len(exact) != 1:
+        return False, ("registry bridge has no exact firm-name match for %r (token %r matched "
+                       "%d row(s), %d exact) — cannot verify G4"
+                       % (firm[:60], token, len(recs), len(exact)))
+    v = g4.judge(exact[0].get("fields", {}), "", os.environ.get(
         "BROWSEROS_MCP", "http://172.17.0.1:9245/mcp"))
     return v.get("verdict") == "PASS", "%s — %s" % (v.get("verdict"), v.get("reason", ""))
 
 
-def decide(rec: str, app_dir: str) -> dict:
+def decide(rec: str, app_dir: str, followup: bool = False) -> dict:
     fields = air("%s/%s" % (OUTREACH, rec)).get("fields", {})
     firm = fields.get("Business", "") or ""
     d = {"record": rec, "firm": firm[:70]}
@@ -220,7 +242,27 @@ def decide(rec: str, app_dir: str) -> dict:
         return {**d, "verdict": "REFUSE", "reason": "daily cap reached (%d/%d)" % (day, DAILY_CAP)}
     if total >= TOTAL_CAP:
         return {**d, "verdict": "REFUSE", "reason": "total cap reached (%d/%d)" % (total, TOTAL_CAP)}
-    if fields.get("Last contact date"):
+    # FOLLOW-UP MODE (directive 2026-08-02 rev 4, §3): the directive authorizes "at most one
+    # follow-up per already-contacted Qualified row, behind the gate" — but until this branch
+    # existed, "already contacted" was an unconditional refusal with no code path for a
+    # legitimate second contact at all, so the directive's own permission was unreachable.
+    # This does NOT loosen "never send twice blind" — it distinguishes a genuine repeat
+    # (followup=False, which stays exactly as strict as before) from an authorized, capped,
+    # single follow-up. The existing `Contact attempts` field (number, already on the schema —
+    # no migration needed) is the counter: 1 means the first send only, so a follow-up is
+    # legitimate; >=2 means a follow-up already went out, so a second one is refused exactly
+    # like a second first-contact would be. The send path is responsible for incrementing it
+    # after an actual send — this gate only reads it.
+    if followup:
+        if not fields.get("Last contact date"):
+            return {**d, "verdict": "REFUSE",
+                    "reason": "no prior contact on this row — nothing to follow up"}
+        attempts = fields.get("Contact attempts") or 0
+        if attempts >= 2:
+            return {**d, "verdict": "REFUSE",
+                    "reason": "a follow-up was already sent on this row (Contact attempts=%s) "
+                              "— never twice" % attempts}
+    elif fields.get("Last contact date"):
         return {**d, "verdict": "REFUSE",
                 "reason": "already contacted on %s — never send twice" % fields["Last contact date"]}
     if opted_out(fields):
@@ -384,8 +426,10 @@ def decide(rec: str, app_dir: str) -> dict:
     d["g4"] = why
     if not ok:
         return {**d, "verdict": "REFUSE", "reason": "G4 not verifiable right now: %s" % why}
+    prefix = "FOLLOW-UP: " if followup else ""
     return {**d, "verdict": "ALLOW",
-            "reason": "caps %d/%d today, %d/%d total; G4 %s" % (day, DAILY_CAP, total, TOTAL_CAP, why)}
+            "reason": "%scaps %d/%d today, %d/%d total; G4 %s"
+                      % (prefix, day, DAILY_CAP, total, TOTAL_CAP, why)}
 
 
 def main() -> int:
@@ -394,6 +438,10 @@ def main() -> int:
     ap.add_argument("--record", help="outreach row to decide")
     ap.add_argument("--report", action="store_true")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--followup", action="store_true",
+                    help="decide a follow-up to an already-Sent Qualified row instead of a "
+                         "first contact (directive rev 4 §3): at most one, marked in Notes "
+                         "as 'FOLLOWUP SENT <date>' after the send actually happens")
     args = ap.parse_args()
 
     load_key(args.app)
@@ -410,7 +458,7 @@ def main() -> int:
         print("give --record recXXXX, or --report", file=sys.stderr)
         return 2
 
-    d = decide(args.record, args.app)
+    d = decide(args.record, args.app, followup=args.followup)
     if args.json:
         print(json.dumps(d, ensure_ascii=False, indent=1))
     else:
