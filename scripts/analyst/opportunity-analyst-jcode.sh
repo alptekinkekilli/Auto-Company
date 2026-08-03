@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Opportunity Analyst — jcode variant (gate-5 pilot; RUNBOOK-jcode-gecis.md).
-# NOT wired into cron. The cron wrapper still calls opportunity-analyst.sh (codex);
-# this file becomes the target only after the gate-5 acceptance run passes and the
-# operator says so. Until then it exists to be run BY HAND for acceptance testing:
+# Opportunity Analyst — jcode variant. THE live path since the 2026-07-31 cutover
+# (host cron ENGINE default is jcode); opportunity-analyst.sh (codex CLI) is legacy.
+# Default engine since 2026-08-03: jcode provider `claude`, model `claude-opus-5`
+# (operator: "Codex'i unut şimdilik, kendi analistimizi opus ile kuracağız").
+# Manual run:
 #   docker exec -u app <container> bash /app/scripts/analyst/opportunity-analyst-jcode.sh
 #
 # Behavioral contract is identical to opportunity-analyst.sh — same inputs, same
@@ -15,7 +16,9 @@
 #   skill         $skill from CODEX_HOME          ->  the model READS the repo skill
 #                 (synced every run — a stale-        file itself. One source of truth,
 #                 copy bug lived here once)           no sync step to go stale.
-#   effort        -c model_reasoning_effort=X     ->  JCODE_OPENAI_REASONING_EFFORT=X
+#   effort        -c model_reasoning_effort=X     ->  JCODE_<PROVIDER>_REASONING_EFFORT=X
+#                                                     (openai vs anthropic env, same
+#                                                     case as auto-loop.sh's jcode path)
 #   model check   (codex validated -m)            ->  EXPLICIT preflight against
 #                                                     `jcode model list` — jcode
 #                                                     SILENTLY substitutes its default
@@ -48,14 +51,20 @@ OUT_DIRECTIVE="$APP/memories/analysis-directive.md"
 PROGRESS="$APP/memories/analyst-progress.md"
 
 JCODE_BIN="$(command -v jcode || echo /usr/local/bin/jcode)"
-PROVIDER="${ANALYST_PROVIDER:-openai}"
-MODEL="${ANALYST_MODEL:-gpt-5.6-sol}"
+# Engine switched to Opus by operator decision 2026-08-03 ("Codex'i unut şimdilik,
+# kendi analistimizi opus ile kuracağız"). jcode's provider name for the Claude
+# native-credential path is `claude` (NOT `anthropic` — that value does not exist;
+# `anthropic-api` is the raw-API variant). The Codex path stays reachable via
+# ANALYST_PROVIDER=openai ANALYST_MODEL=gpt-5.6-sol.
+PROVIDER="${ANALYST_PROVIDER:-claude}"
+MODEL="${ANALYST_MODEL:-claude-opus-5}"
 # Operator caps effort at "high" — respect it; do not override the default.
 EFFORT="${ANALYST_EFFORT:-high}"
 TIMEOUT="${ANALYST_TIMEOUT:-1500}"
 STAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 JQUIET=(--quiet --no-update --no-selfdev)
 export JCODE_NO_TELEMETRY=1
+JHOME="${JCODE_HOME:-$HOME/.jcode}"
 
 log() { printf '%s\n' "$1" >> "$PROGRESS"; }
 fail() { log "[$STAMP] ANALYST_FAILED: $1"; echo "ANALYST_FAILED: $1" >&2; exit 1; }
@@ -63,13 +72,28 @@ fail() { log "[$STAMP] ANALYST_FAILED: $1"; echo "ANALYST_FAILED: $1" >&2; exit 
 # --- preconditions ---
 for f in "$REGISTRY" "$CONSENSUS" "$SKILL_MD"; do [ -f "$f" ] || fail "missing input: $f"; done
 [ -x "$JCODE_BIN" ] || fail "jcode not found"
-# Provider auth lands in a PROVIDER-NAMED file (measured gate 4, 2026-07-31:
-# `jcode login openai` writes ~/.jcode/openai-auth.json — there is no auth.json).
-[ -s "$HOME/.jcode/${PROVIDER}-auth.json" ] \
-  || fail "jcode ${PROVIDER}-auth.json missing (run: jcode login --provider $PROVIDER — operator step, gate 4)"
-grep -q claude_code_native_credentials "$HOME/.jcode/config.toml" 2>/dev/null || {
-  mkdir -p "$HOME/.jcode"
-  printf '[auth]\ntrusted_external_sources = ["claude_code_native_credentials"]\n' >> "$HOME/.jcode/config.toml"
+# Auth is PROVIDER-SHAPED, not one rule:
+#   openai -> a jcode login file (measured gate 4, 2026-07-31: `jcode login openai`
+#             writes ~/.jcode/openai-auth.json — there is no generic auth.json).
+#   claude -> the loop's own credential: CLAUDE_CODE_OAUTH_TOKEN (or ANTHROPIC_API_KEY)
+#             through the claude_code_native_credentials trust. The one-shot analyst
+#             container has entrypoint=sleep, so nothing sourced runtime.env for us —
+#             read ONLY the needed key, literally (no shell-eval of the whole file,
+#             no echo of the value anywhere).
+if [ "$PROVIDER" = "openai" ]; then
+  [ -s "$JHOME/openai-auth.json" ] \
+    || fail "jcode openai-auth.json missing (run: jcode login --provider openai — operator step, gate 4)"
+else
+  if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] && [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -f "$APP/logs/runtime.env" ]; then
+    CLAUDE_CODE_OAUTH_TOKEN="$(sed -n 's/^CLAUDE_CODE_OAUTH_TOKEN=//p' "$APP/logs/runtime.env" | head -1)"
+    export CLAUDE_CODE_OAUTH_TOKEN
+  fi
+  [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] || [ -n "${ANTHROPIC_API_KEY:-}" ] || [ -s "$JHOME/claude-auth.json" ] \
+    || fail "no Claude credential: CLAUDE_CODE_OAUTH_TOKEN/ANTHROPIC_API_KEY unset and no $JHOME/claude-auth.json (is /app/logs/runtime.env mounted?)"
+fi
+grep -q claude_code_native_credentials "$JHOME/config.toml" 2>/dev/null || {
+  mkdir -p "$JHOME"
+  printf '[auth]\ntrusted_external_sources = ["claude_code_native_credentials"]\n' >> "$JHOME/config.toml"
 }
 
 # Model preflight — the silent-fallback trap. An unknown -m does NOT error; jcode
@@ -192,7 +216,11 @@ run_jcode() { # $1=effort $2=prompt $3=events-out $4=text-out
     log "[$STAMP] PROMPT-TOO-LARGE: jcode argv prompt is ${_pb} bytes (>=126000; kernel per-arg cap 131072) — refusing before exec dies rc=126"
     return 1
   fi
-  ( cd "$APP" && JCODE_OPENAI_REASONING_EFFORT="$1" timeout "$TIMEOUT" \
+  # Effort rides a PROVIDER-NAMED env var — same case as auto-loop.sh's jcode path
+  # (openai -> JCODE_OPENAI_REASONING_EFFORT, everything else -> the anthropic one).
+  local _effort_env="JCODE_ANTHROPIC_REASONING_EFFORT"
+  [ "$PROVIDER" = "openai" ] && _effort_env="JCODE_OPENAI_REASONING_EFFORT"
+  ( cd "$APP" && env "$_effort_env=$1" timeout "$TIMEOUT" \
       "$JCODE_BIN" -p "$PROVIDER" -m "$MODEL" -C "$APP" run "$2" \
       "${JQUIET[@]}" --ndjson ) >"$3" 2>"$3.err"
   local rc=$?
@@ -228,17 +256,17 @@ restore_directive
 log_run_cost "$WORK/ev1.ndjson" "pass-1"
 
 # --- PASS 1 dispose: write the full decision report to analysis-directive.md ---
-python3 - "$MSG" "$OUT_DIRECTIVE" "$PROGRESS" "$STAMP" "$MODEL" "$USED_EFFORT" <<'PY' || fail "report post-processing failed"
+python3 - "$MSG" "$OUT_DIRECTIVE" "$PROGRESS" "$STAMP" "$MODEL" "$USED_EFFORT" "$PROVIDER" <<'PY' || fail "report post-processing failed"
 import sys
-msg_p, out_p, prog, stamp, model, effort = sys.argv[1:7]
+msg_p, out_p, prog, stamp, model, effort, provider = sys.argv[1:8]
 report = open(msg_p, encoding="utf-8").read().strip()
 if len(report) < 200:
     open(prog,"a",encoding="utf-8").write(f"[{stamp}] ANALYST_FAILED: report too short ({len(report)} chars)\n"); sys.exit(1)
 doc = (f"# Opportunity Analyst — {stamp}\n\n"
-       f"*Engine: jcode `{model}` · effort `{effort}` · skill `autocompany-opportunity-director` (read from repo) · registry-write: PENDING*\n\n"
+       f"*Engine: jcode/{provider} `{model}` · effort `{effort}` · skill `autocompany-opportunity-director` (read from repo) · registry-write: PENDING*\n\n"
        f"---\n\n{report}\n")
 open(out_p,"w",encoding="utf-8").write(doc)
-open(prog,"a",encoding="utf-8").write(f"[{stamp}] REPORT OK | engine=jcode model={model} effort={effort} | report={len(report)}c\n")
+open(prog,"a",encoding="utf-8").write(f"[{stamp}] REPORT OK | engine=jcode/{provider} model={model} effort={effort} | report={len(report)}c\n")
 print("REPORT_OK")
 PY
 
