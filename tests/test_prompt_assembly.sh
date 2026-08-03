@@ -33,7 +33,7 @@ fi
 echo "prompt-assembly branches found: $(printf '%s\n' "$STARTS" | wc -l | tr -d ' ')"
 
 for start in $STARTS; do
-    end=$(awk -v s="$start" 'NR>=s && /^This is Cycle #\$loop_count\. Act decisively\."$/ {print NR; exit}' "$SCRIPT")
+    end=$(awk -v s="$start" 'NR>=s && /^<\/cycle_orders>"$/ {print NR; exit}' "$SCRIPT")
     if [ -z "$end" ]; then bad "branch@$start" "no closing line found"; continue; fi
     block=$(sed -n "${start},${end}p" "$SCRIPT")
 
@@ -74,6 +74,13 @@ for start in $STARTS; do
     case "$out" in
         *"## State Snapshot"*"[snapshot]"*) ok "branch@$start injects the pre-run snapshot" ;;
         *) bad "branch@$start snapshot" "\$_snapshot_block did not reach the assembled prompt" ;;
+    esac
+    # Structural order (2026-08-03 restructure, platform-docs guidance): stable rules
+    # first, bulk consensus data next, volatile snapshot late, operative orders LAST.
+    case "$out" in
+        *"<rules>"*"</rules>"*"<consensus>"*"<state_snapshot>"*"[snapshot]"*"<cycle_orders>"*"This is Cycle #7."*"[turnfb]"*"</cycle_orders>") \
+            ok "branch@$start order: rules -> consensus -> snapshot -> cycle_orders tail" ;;
+        *) bad "branch@$start order" "XML section order broken (rules/consensus/snapshot/cycle_orders)" ;;
     esac
 done
 

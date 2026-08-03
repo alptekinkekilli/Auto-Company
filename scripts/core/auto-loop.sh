@@ -2661,6 +2661,7 @@ while true; do
 
 ---
 
+<rules>
 ## Runtime Guardrails (must follow)
 
 1. Early in the cycle, create or update \`memories/consensus.md\` with the required section skeleton.
@@ -2673,24 +2674,26 @@ while true; do
 8. NARROW READS — read Airtable through \`python3 scripts/ops/airtable-read.py\`, NOT through an MCP table dump. \`mcp__airtable__list_records_for_table\` is DENIED at the harness: it returned whole tables, averaged 29.5 KB per call, and its context re-reads cost \$2.38 — more than ALL web research in the same 7 cycles (\$0.34). The wrapper takes \`--formula\`/\`--view\`/\`--record\` (scope), \`--fields\` (columns), \`--max-records\` (ceiling), \`--count-only\` and \`--describe\`; it refuses an unscoped read and names the flag that fixes it. Measured live: three rows, two columns = 147 bytes. Writes and other Airtable tools are untouched. The same discipline applies to every tool that can return a whole collection. And fetch LATE: a large result at turn 5 of a 40-turn cycle is re-billed 35 times; the identical result at turn 35 is re-billed 5 times.
 9. SITE EVIDENCE IS RENDERED EVIDENCE — a \`curl\`/WebFetch of a site is NEVER sufficient to conclude that something is ABSENT from it. Modern sites ship a JavaScript shell: \`arkenom.com.tr\` returns 652 bytes containing \`<div id=root></div>\`, and a G4 re-verification read that as publishes NO email anywhere and moved a real prospect to Held. The address was on the page all along (\`info@arkenom.com.tr\`, in the footer and the security-policy text). Operator instruction 2026-08-01: *“ben browser os boşuna mı kurdum — oradan bakacaksınız, hem şirket hem sen.”* Use \`python3 scripts/ops/site-contact-evidence.py <domain>\`: it renders through BrowserOS first, then corroborates with the served HTML, the site's own JS bundles and its KVKK/aydınlatma/iletişim pages, and it reports WHICH source each address came from. A negative finding is only permitted when the render actually succeeded — otherwise the verdict is INCONCLUSIVE and the firm is not demoted on it.
 10. STATE RITUAL = ONE CALL, ALREADY MADE — the \`## State Snapshot\` section below is the output of \`scripts/ops/state-snapshot.py\`, pre-run for you at cycle start: directive Status+sha16, open OPREQs, both bridge queue PENDING counts, send-gate counters, reply outcomes, and a DELTA line versus the previous cycle. Do NOT re-probe any of those surfaces (no send-gate --report, no reply-watch, no bridge queue reads, no OPREQ grep) unless the snapshot prints ERROR for that field or its DELTA names it as changed. \`DELTA: none\` means the world has not moved: skip ALL re-verification of previous cycles' work (no re-running test suites “as a baseline”, no re-reading code that consensus already records as fixed) and go straight to this cycle's ONE milestone. The directive file itself stays canonical — read it when its sha changed or when consensus does not carry its orders.
-$_discovery_line
-$_turnfb_line
+</rules>
 
----
-
-## State Snapshot (pre-run at cycle start — do NOT re-run these probes)
-
-$_snapshot_block
-
----
-
+<consensus>
 ## Current Consensus (pre-loaded, do NOT re-read this file)
 
 $CONSENSUS
+</consensus>
 
----
+<state_snapshot>
+## State Snapshot (pre-run at cycle start — do NOT re-run these probes)
 
-This is Cycle #$loop_count. Act decisively."
+$_snapshot_block
+</state_snapshot>
+
+<cycle_orders>
+This is Cycle #$loop_count.
+$_discovery_line
+$_turnfb_line
+Priorities, in order: (1) the Human Directive, per the rules above; (2) only the surfaces the snapshot's DELTA names as changed; (3) ONE milestone, persisted to \`memories/consensus.md\`, then end the cycle within the ~40-tool-call budget (rule 7). Act decisively.
+</cycle_orders>"
 
     # E2BIG guard (cycles #7/#8, 2026-07-31): the assembled prompt travels to jcode as
     # ONE argv argument, and Linux caps a single argument at MAX_ARG_STRLEN = 131072
@@ -2708,6 +2711,7 @@ This is Cycle #$loop_count. Act decisively."
 
 ---
 
+<rules>
 ## Runtime Guardrails (must follow)
 
 1. Early in the cycle, create or update \`memories/consensus.md\` with the required section skeleton.
@@ -2720,17 +2724,9 @@ This is Cycle #$loop_count. Act decisively."
 8. NARROW READS — read Airtable through \`python3 scripts/ops/airtable-read.py\`, NOT through an MCP table dump. \`mcp__airtable__list_records_for_table\` is DENIED at the harness: it returned whole tables, averaged 29.5 KB per call, and its context re-reads cost \$2.38 — more than ALL web research in the same 7 cycles (\$0.34). The wrapper takes \`--formula\`/\`--view\`/\`--record\` (scope), \`--fields\` (columns), \`--max-records\` (ceiling), \`--count-only\` and \`--describe\`; it refuses an unscoped read and names the flag that fixes it. Measured live: three rows, two columns = 147 bytes. Writes and other Airtable tools are untouched. The same discipline applies to every tool that can return a whole collection. And fetch LATE: a large result at turn 5 of a 40-turn cycle is re-billed 35 times; the identical result at turn 35 is re-billed 5 times.
 9. SITE EVIDENCE IS RENDERED EVIDENCE — a \`curl\`/WebFetch of a site is NEVER sufficient to conclude that something is ABSENT from it. Modern sites ship a JavaScript shell: \`arkenom.com.tr\` returns 652 bytes containing \`<div id=root></div>\`, and a G4 re-verification read that as publishes NO email anywhere and moved a real prospect to Held. The address was on the page all along (\`info@arkenom.com.tr\`, in the footer and the security-policy text). Operator instruction 2026-08-01: *“ben browser os boşuna mı kurdum — oradan bakacaksınız, hem şirket hem sen.”* Use \`python3 scripts/ops/site-contact-evidence.py <domain>\`: it renders through BrowserOS first, then corroborates with the served HTML, the site's own JS bundles and its KVKK/aydınlatma/iletişim pages, and it reports WHICH source each address came from. A negative finding is only permitted when the render actually succeeded — otherwise the verdict is INCONCLUSIVE and the firm is not demoted on it.
 10. STATE RITUAL = ONE CALL, ALREADY MADE — the \`## State Snapshot\` section below is the output of \`scripts/ops/state-snapshot.py\`, pre-run for you at cycle start: directive Status+sha16, open OPREQs, both bridge queue PENDING counts, send-gate counters, reply outcomes, and a DELTA line versus the previous cycle. Do NOT re-probe any of those surfaces (no send-gate --report, no reply-watch, no bridge queue reads, no OPREQ grep) unless the snapshot prints ERROR for that field or its DELTA names it as changed. \`DELTA: none\` means the world has not moved: skip ALL re-verification of previous cycles' work (no re-running test suites “as a baseline”, no re-reading code that consensus already records as fixed) and go straight to this cycle's ONE milestone. The directive file itself stays canonical — read it when its sha changed or when consensus does not carry its orders.
-$_discovery_line
-$_turnfb_line
+</rules>
 
----
-
-## State Snapshot (pre-run at cycle start — do NOT re-run these probes)
-
-$_snapshot_block
-
----
-
+<consensus>
 ## Current Consensus (TOO LARGE to pre-load — read it FIRST)
 
 The consensus normally pre-loaded here did not fit this prompt. Your FIRST action this
@@ -2739,10 +2735,20 @@ had been pre-loaded above. Additionally: a consensus too large to inline means p
 cycles have been hoarding — as part of this cycle's normal work, prune resolved/stale
 material out of \`memories/consensus.md\` into the appropriate \`docs/<role>/\` files so
 it fits again. Consensus is a baton, not an archive.
+</consensus>
 
----
+<state_snapshot>
+## State Snapshot (pre-run at cycle start — do NOT re-run these probes)
 
-This is Cycle #$loop_count. Act decisively."
+$_snapshot_block
+</state_snapshot>
+
+<cycle_orders>
+This is Cycle #$loop_count.
+$_discovery_line
+$_turnfb_line
+Priorities, in order: (1) the Human Directive, per the rules above; (2) only the surfaces the snapshot's DELTA names as changed; (3) ONE milestone, persisted to \`memories/consensus.md\`, then end the cycle within the ~40-tool-call budget (rule 7). Act decisively.
+</cycle_orders>"
     fi
 
     # The company's own brakes must be IN the prompt that is actually sent. Assert on
