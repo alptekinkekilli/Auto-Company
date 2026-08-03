@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+"""Per-cycle tool-consultation ledger — the data behind the cockpit's text-only
+"Tool Analytics" panel (operator request, 2026-08-03).
+
+WHY. cycle-ndjson retention is ~20 files (half a day), so any multi-day view of "how
+often does the company actually consult ctx7 / Airtable / Linear / BrowserOS" needs a
+durable ledger. Same architecture as turn-audit-history.ndjson: parse the finished
+cycle's ndjson at the loop's return moment, append ONE small JSON line, never delete.
+
+COUNTING. Tool calls are reassembled from jcode's event stream (tool_start + streamed
+tool_input deltas — measured 2026-08-03: inputs arrive as fragments, tool_exec carries
+no input). Categories, by bash-command substring or MCP tool name:
+  ctx7        "ctx7" in the command (the find-docs skill's whole surface)
+  airtable_r  airtable-read.py | mcp__airtable__* without update/create/delete/upload
+  airtable_w  airtable-write.py | mcp__airtable__* with    update/create/delete/upload
+  linear      "linear" in command or tool name (linear-track.py, api.linear.app, MCPs)
+  browser     site-contact-evidence | browseros (gateway renders)
+A call lands in every category it matches (a curl to api.linear.app piped through
+airtable-read.py would double-count — no such command exists; keep the rule simple).
+
+Idempotent: processed ndjson filenames live in logs/.tool-usage-state.json; a file is
+processed once (the hook runs after the cycle closed its stream). Backfill is free —
+any retained-but-unprocessed ndjson is picked up on the next run, so activating the
+loop hook late loses nothing that retention hasn't already deleted. Exit 0 always.
+
+  tool-usage-audit.py [--app /app] [--report]   # --report: print aggregate, no writes
+"""
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import json
+import os
+import sys
+
+NDJSON_DIR = "logs/cycle-ndjson"
+LEDGER = "logs/tool-usage-history.ndjson"
+STATE = "logs/.tool-usage-state.json"
+
+AIRTABLE_WRITE_HINTS = ("update", "create", "delete", "upload")
+
+
+def calls_from_ndjson(path: str) -> list[tuple[str, str]]:
+    """(tool_name, assembled_input_text) per call, in order."""
+    calls, cur_name, cur_buf = [], None, []
+    try:
+        f = open(path, encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    with f:
+        for line in f:
+            try:
+                ev = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            t = ev.get("type")
+            if t == "tool_start":
+                if cur_name is not None:
+                    calls.append((cur_name, "".join(cur_buf)))
+                cur_name, cur_buf = ev.get("name", "?"), []
+            elif t == "tool_input" and cur_name is not None:
+                cur_buf.append(ev.get("delta", ""))
+    if cur_name is not None:
+        calls.append((cur_name, "".join(cur_buf)))
+    return calls
+
+
+def categorize(calls: list[tuple[str, str]]) -> dict:
+    c = {"calls": len(calls), "ctx7": 0, "airtable_r": 0, "airtable_w": 0,
+         "linear": 0, "browser": 0}
+    for name, raw in calls:
+        cmd = ""
+        if name == "bash":
+            try:
+                cmd = json.loads(raw).get("command", "") or ""
+            except (json.JSONDecodeError, AttributeError):
+                cmd = raw
+        low = (name + " " + cmd).lower()
+        if "ctx7" in low:
+            c["ctx7"] += 1
+        if "airtable-read.py" in low:
+            c["airtable_r"] += 1
+        elif "airtable-write.py" in low:
+            c["airtable_w"] += 1
+        elif name.startswith("mcp__airtable__"):
+            key = "airtable_w" if any(h in name for h in AIRTABLE_WRITE_HINTS) else "airtable_r"
+            c[key] += 1
+        if "linear" in low:
+            c["linear"] += 1
+        if "site-contact-evidence" in low or "browseros" in low:
+            c["browser"] += 1
+    return c
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--app", default="/app")
+    ap.add_argument("--report", action="store_true")
+    args = ap.parse_args()
+    app = os.path.abspath(args.app)
+    nd_dir = os.path.join(app, NDJSON_DIR)
+    ledger = os.path.join(app, LEDGER)
+    state_path = os.path.join(app, STATE)
+
+    if args.report:
+        try:
+            for line in open(ledger, encoding="utf-8"):
+                sys.stdout.write(line)
+        except OSError:
+            print("no ledger yet")
+        return 0
+
+    state = {}
+    try:
+        state = json.load(open(state_path, encoding="utf-8"))
+    except (OSError, ValueError):
+        pass
+    processed = state.get("processed", {})
+
+    try:
+        files = sorted(os.listdir(nd_dir))
+    except OSError:
+        return 0
+    new_lines = []
+    for fn in files:
+        if not fn.endswith(".ndjson") or fn in processed:
+            continue
+        path = os.path.join(nd_dir, fn)
+        try:
+            st = os.stat(path)
+        except OSError:
+            continue
+        row = categorize(calls_from_ndjson(path))
+        row["file"] = fn
+        row["ts"] = dt.datetime.fromtimestamp(st.st_mtime, tz=dt.timezone.utc).strftime(
+            "%Y-%m-%dT%H:%M:%SZ")
+        new_lines.append(json.dumps(row, separators=(",", ":")))
+        processed[fn] = st.st_size
+    if not new_lines:
+        return 0
+    try:
+        with open(ledger, "a", encoding="utf-8") as f:
+            f.write("\n".join(new_lines) + "\n")
+        tmp = state_path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"processed": processed}, f)
+        os.replace(tmp, state_path)
+    except OSError as e:
+        print(f"tool-usage-audit: write failed: {e}", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -198,6 +198,24 @@
       </div>
     </section>
 
+    <section class="panel tool-usage reveal-5">
+      <div class="panel-head">
+        <h3>Tool Analytics — consultations per day</h3>
+        <div class="panel-head-right">
+          <span id="toolUsageBadge" class="badge badge-none">logs</span>
+          <button class="collapse-toggle" data-target="toolUsageBody" aria-expanded="false" aria-label="Toggle tool analytics">▸</button>
+        </div>
+      </div>
+      <div id="toolUsageBody" class="collapsible collapsed">
+        <p class="muted director-hint">
+          How often cycles actually consult ctx7 (find-docs), Airtable (read/write), Linear and
+          BrowserOS — counted from each cycle's tool stream into
+          <code>logs/tool-usage-history.ndjson</code>. Text only, read-only.
+        </p>
+        <pre id="toolUsageText" class="mono" style="overflow-x:auto">(open to load…)</pre>
+      </div>
+    </section>
+
     <section class="panel analyst reveal-5">
       <div class="panel-head">
         <h3>Opportunity Analyst — Codex 2nd brain</h3>

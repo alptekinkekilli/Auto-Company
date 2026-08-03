@@ -598,6 +598,39 @@ def read_ideas() -> dict[str, Any]:
     return {"present": bool(raw.strip()), "updated": updated, "markdown": raw}
 
 
+def read_tool_usage() -> dict[str, Any]:
+    """Aggregate logs/tool-usage-history.ndjson (written by scripts/ops/tool-usage-audit.py
+    at the loop's return moment) into per-UTC-day totals for the text-only Tool Analytics
+    panel. Read-only; the ledger is tiny (~100 bytes/cycle), so a full read is fine."""
+    ledger = REPO_ROOT / "logs" / "tool-usage-history.ndjson"
+    days: dict[str, dict[str, int]] = {}
+    updated = ""
+    keys = ("calls", "ctx7", "airtable_r", "airtable_w", "linear", "browser")
+    try:
+        with open(ledger, encoding="utf-8") as f:
+            for line in f:
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                day = str(row.get("ts", ""))[:10]
+                if not day:
+                    continue
+                agg = days.setdefault(day, {k: 0 for k in keys} | {"cycles": 0})
+                agg["cycles"] += 1
+                for k in keys:
+                    agg[k] += int(row.get(k) or 0)
+        import datetime as _dt
+
+        updated = _dt.datetime.fromtimestamp(
+            ledger.stat().st_mtime, tz=_dt.timezone.utc
+        ).isoformat()
+    except OSError:
+        pass
+    ordered = [{"date": d, **v} for d, v in sorted(days.items(), reverse=True)[:10]]
+    return {"present": bool(ordered), "updated": updated, "days": ordered}
+
+
 def read_analysis() -> dict[str, Any]:
     """Read the Opportunity Analyst output (memories/analysis-directive.md) for the Analyst panel."""
     raw = read_text_file(ANALYSIS_FILE, "")
@@ -1526,6 +1559,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
             return
         if path == "/api/ideas":
             self._json(read_ideas())
+            return
+        if path == "/api/tool-usage":
+            self._json(read_tool_usage())
             return
         if path == "/api/analysis":
             self._json(read_analysis())

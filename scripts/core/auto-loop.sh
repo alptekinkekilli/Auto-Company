@@ -2925,6 +2925,15 @@ Priorities, in order: (1) the Human Directive, per the rules above; (2) only the
             >/dev/null 2>&1 || true
     fi
 
+    # Tool-consultation ledger (2026-08-03). Feeds the cockpit's text-only Tool
+    # Analytics panel: one JSON line per finished cycle (ctx7/airtable/linear/browser
+    # call counts from the cycle's ndjson). Durable — ndjson retention is ~20 files,
+    # this ledger is what makes a 10-day view possible. Idempotent, backfills itself.
+    if [ -f "$SCRIPT_DIR/../ops/tool-usage-audit.py" ]; then
+        python3 "$SCRIPT_DIR/../ops/tool-usage-audit.py" --app "$PROJECT_DIR" \
+            >/dev/null 2>&1 || true
+    fi
+
     # Context7 consultation (2026-08-02). CLAUDE.md has required a Context7 check before
     # writing code against an external library for days; measured over 20 cycles, the company
     # made 291 MCP calls and ZERO to Context7. The tool is fine — the probe records it

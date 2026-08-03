@@ -469,6 +469,37 @@ async function loadIdeas() {
   }
 }
 
+let toolUsageLoaded = false;
+async function loadToolUsage() {
+  const text = document.getElementById("toolUsageText");
+  const badge = document.getElementById("toolUsageBadge");
+  try {
+    const res = await fetch("/api/tool-usage", { cache: "no-store" });
+    const data = await res.json();
+    toolUsageLoaded = true;
+    if (data && data.present) {
+      const pad = (v, n) => String(v).padStart(n);
+      const lines = ["date         ctx7  air-r  air-w  linear  browser  calls  cycles"];
+      for (const d of data.days) {
+        lines.push(
+          `${d.date}  ${pad(d.ctx7, 5)}  ${pad(d.airtable_r, 5)}  ${pad(d.airtable_w, 5)}  ` +
+          `${pad(d.linear, 6)}  ${pad(d.browser, 7)}  ${pad(d.calls, 5)}  ${pad(d.cycles, 6)}`
+        );
+      }
+      text.textContent = lines.join("\n");
+      badge.textContent = data.updated ? "LOADED · " + formatTime(data.updated) : "LOADED";
+      badge.classList.remove("badge-none");
+    } else {
+      text.textContent =
+        "(no ledger yet — tool-usage-audit.py starts writing at the loop's next restart; " +
+        "it backfills retained cycles on its first run)";
+    }
+  } catch (err) {
+    toolUsageLoaded = false;
+    text.textContent = "Failed to load tool usage — will retry when you close and reopen this panel.";
+  }
+}
+
 let analystLoaded = false;
 let analystRaw = "";
 async function loadAnalysis() {
@@ -727,6 +758,9 @@ document.querySelectorAll(".collapse-toggle").forEach((btn) => {
     btn.setAttribute("aria-expanded", String(!collapsed));
     if (btn.getAttribute("data-target") === "ideasBody" && !collapsed && !ideasLoaded) {
       loadIdeas().catch(() => {});
+    }
+    if (btn.getAttribute("data-target") === "toolUsageBody" && !collapsed && !toolUsageLoaded) {
+      loadToolUsage();
     }
     if (btn.getAttribute("data-target") === "analystBody" && !collapsed && !analystLoaded) {
       loadAnalysis().catch(() => {});
