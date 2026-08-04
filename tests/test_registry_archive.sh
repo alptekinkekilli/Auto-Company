@@ -120,11 +120,18 @@ echo "[3] second apply: idempotent no-op"
 OUT=$(python3 "$RA" --app "$TMP" --apply)
 has "nothing left to archive" "$OUT" "nothing to archive"
 
-echo "[4] --check: silent under threshold, advisory above"
+echo "[4] --check: silent under threshold; above it, only when archivable work exists"
 OUT=$(python3 "$RA" --app "$TMP" --check)
 [ -z "$OUT" ] && ok "silent under threshold" || bad "unexpected output: $OUT"
+# post-apply state: over threshold but NOTHING eligible -> eligible-aware check stays
+# silent (a non-actionable advisory every cycle is an alarm people learn to skip)
+OUT=$(python3 "$RA" --app "$TMP" --check --threshold-kb 0)
+[ -z "$OUT" ] && ok "silent when nothing archivable" || bad "non-actionable advisory: $OUT"
+# fresh fixture: over threshold AND eligible chunks exist -> advisory with counts
+build_fixture
 OUT=$(python3 "$RA" --app "$TMP" --check --threshold-kb 0)
 has "advisory names the tool" "$OUT" "[REGISTRY-SIZE]"
+has "advisory carries eligible counts" "$OUT" "archivable"
 
 echo "[4b] --allow-undated-month archives the dateless frozen section"
 build_fixture

@@ -176,10 +176,39 @@ def main() -> int:
         except OSError:
             return 0
         kb = (size + 1023) // 1024
-        if size > args.threshold_kb * 1024:
+        if size <= args.threshold_kb * 1024:
+            return 0
+        # Eligible-aware (2026-08-04): a size-only advisory fired every cycle for days
+        # while the dry-run said "nothing to archive" — a non-actionable alarm teaches
+        # everyone to scroll past it (the 41%-alarm lesson). Only advise when an
+        # --apply run would actually move something; a purely-live file over the
+        # threshold shrinks by itself as notes age past --note-age-days.
+        eligible = None  # None = file did not parse -> size-only advisory (operator should look)
+        try:
+            text = open(live_path, encoding="utf-8").read()
+            heads = heading_line_starts(text)
+            prot = protected_span(text)
+            today = dt.date.today()
+            notes = plan_note_chunks(text, heads[0] if heads else len(text),
+                                     today - dt.timedelta(days=args.note_age_days))
+            sections, _und = plan_section_chunks(
+                text, prot, today - dt.timedelta(days=args.section_age_days), None)
+            eligible = (len(notes), len(sections))
+        except SystemExit:
+            # the invariant checks die() on a malformed file — a check must never
+            # kill the loop's return moment, and an unparseable registry is exactly
+            # when the operator SHOULD look.
+            pass
+        if eligible is None:
             print(
-                f"[REGISTRY-SIZE] candidate-registry.md is {kb} KB (threshold {args.threshold_kb}) — "
-                f"operator-run `python3 scripts/ops/registry-archive.py --app . --apply` rolls frozen "
+                f"[REGISTRY-SIZE] candidate-registry.md is {kb} KB (threshold {args.threshold_kb}) "
+                f"and did NOT parse cleanly — operator should inspect it; archival plan unavailable"
+            )
+        elif eligible[0] or eligible[1]:
+            print(
+                f"[REGISTRY-SIZE] candidate-registry.md is {kb} KB (threshold {args.threshold_kb}) "
+                f"with {eligible[0]} note(s) + {eligible[1]} section(s) archivable — operator-run "
+                f"`python3 scripts/ops/registry-archive.py --app . --apply` rolls frozen "
                 f"history into memories/registry-archive/ (advisory; this check never writes)"
             )
         return 0
