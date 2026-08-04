@@ -2330,8 +2330,13 @@ log "Engine bin: $RESOLVED_ENGINE_BIN"
 if loop_hold_active && [ ! -f "$LOOP_ONE_SHOT_FILE" ]; then
     log "[LOOP-HOLD] Boot under mechanical hold — ALL preflight probes skipped (zero model calls, zero external calls). Waiting for the operator."
     save_state "held"
+    # Poll on a SHORT fixed interval, not LOOP_INTERVAL. Measured 2026-08-04: with
+    # LOOP_INTERVAL=1800 the loop kept sleeping for up to 30 minutes after the operator
+    # cleared the hold, which reads as "the release did not work" and invites a second,
+    # unnecessary restart. This wait makes zero model and zero external calls — a 15s
+    # file check costs nothing, and release latency is what the operator actually feels.
     while loop_hold_active && [ ! -f "$LOOP_ONE_SHOT_FILE" ]; do
-        sleep "${LOOP_INTERVAL:-60}" || true
+        sleep "${LOOP_HOLD_POLL_SECONDS:-15}" || true
     done
     log "[LOOP-HOLD] hold cleared / one-shot armed — continuing boot preflight"
 fi
