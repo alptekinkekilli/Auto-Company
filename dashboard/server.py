@@ -1483,6 +1483,7 @@ def gather_status_payload(system_name: str | None = None) -> dict[str, Any]:
         "parsed": parsed,
         "stateFile": read_state_file_pairs(),
         "consensusHead": read_text_file(CONSENSUS_FILE, "(no consensus file)")[:3000],
+        "consensusBytes": len(read_text_file(CONSENSUS_FILE, "").encode("utf-8")),
         "logTail": read_tail(LOG_FILE, lines=180),
         "directive": read_directive(),
         "cost": read_cost_summary(),
@@ -1562,6 +1563,14 @@ class DashboardHandler(BaseHTTPRequestHandler):
             return
         if path == "/api/tool-usage":
             self._json(read_tool_usage())
+            return
+        if path == "/api/consensus":
+            # The status payload carries a 3000-char HEAD only (it is polled every few
+            # seconds; shipping the whole 27KB file on every poll would be wasteful).
+            # This endpoint serves the full file for the panel's "show all" toggle —
+            # fetched on demand, never on the poll path.
+            text = read_text_file(CONSENSUS_FILE, "(no consensus file)")
+            self._json({"bytes": len(text.encode("utf-8")), "text": text})
             return
         if path == "/api/analysis":
             self._json(read_analysis())

@@ -69,12 +69,15 @@ const els = {
   btnStop: document.getElementById("btnStop"),
   btnTail: document.getElementById("btnTail"),
   btnRaw: document.getElementById("btnRaw"),
+  btnConsensusFull: document.getElementById("btnConsensusFull"),
+  consensusBadge: document.getElementById("consensusBadge"),
   autoToggle: document.getElementById("autoToggle"),
   refreshInterval: document.getElementById("refreshInterval"),
 };
 
 let timer = null;
 let rawVisible = false;
+let consensusFullShown = false;
 
 function escapeHtml(text) {
   return String(text)
@@ -277,8 +280,19 @@ async function fetchStatus() {
   renderStateList(parsed, data.stateFile || {}, data.router || {});
   setWakeAvailability(data.stateFile || {});
 
-  const consensusRaw = (data.consensusHead || parsed.consensusPreview || "(no consensus)").trim();
-  els.consensusText.innerHTML = renderMarkdown(consensusRaw);
+  // The status poll carries a 3000-char head. Do not overwrite the panel while the
+  // operator is reading the full file — that made the view silently snap back.
+  if (!consensusFullShown) {
+    const consensusRaw = (data.consensusHead || parsed.consensusPreview || "(no consensus)").trim();
+    els.consensusText.innerHTML = renderMarkdown(consensusRaw);
+    const total = data.consensusBytes || 0;
+    const shown = new TextEncoder().encode(consensusRaw).length;
+    if (els.consensusBadge) {
+      els.consensusBadge.textContent = total > shown
+        ? "head · " + shown.toLocaleString() + " of " + total.toLocaleString() + " bytes"
+        : "full · " + total.toLocaleString() + " bytes";
+    }
+  }
   els.logText.textContent = (data.logTail || parsed.recentLog || "(no logs yet)").trim();
   els.rawText.textContent = data.raw || "";
 
@@ -745,6 +759,28 @@ els.btnStart.addEventListener("click", () => runAction("start"));
 els.btnStop.addEventListener("click", () => runAction("stop"));
 els.btnWake.addEventListener("click", () => wakeLoop());
 els.btnTail.addEventListener("click", () => fetchStatus().catch(() => {}));
+els.btnConsensusFull.addEventListener("click", async () => {
+  if (consensusFullShown) {                    // collapse: let the next poll restore the head
+    consensusFullShown = false;
+    els.btnConsensusFull.textContent = "Show full file";
+    fetchStatus().catch(() => {});
+    return;
+  }
+  els.btnConsensusFull.textContent = "Loading...";
+  try {
+    const res = await fetch("/api/consensus");
+    const data = await res.json();
+    els.consensusText.innerHTML = renderMarkdown((data.text || "").trim());
+    if (els.consensusBadge) {
+      els.consensusBadge.textContent = "full · " + (data.bytes || 0).toLocaleString() + " bytes";
+    }
+    consensusFullShown = true;                 // set AFTER the render, so a poll landing
+    els.btnConsensusFull.textContent = "Show head only";  // mid-fetch cannot leave it stuck
+  } catch (err) {
+    els.btnConsensusFull.textContent = "Show full file";
+    els.consensusText.innerHTML = renderMarkdown("(could not load full consensus: " + err + ")");
+  }
+});
 els.btnRaw.addEventListener("click", () => {
   rawVisible = !rawVisible;
   els.rawText.classList.toggle("hidden", !rawVisible);
