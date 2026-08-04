@@ -573,6 +573,15 @@ You have a real browser (`browseros` MCP): `tabs navigate snapshot act read grep
 wait run` and more. It reaches public web pages a plain fetch cannot render. It is NOT a
 sandbox — it is a live browser on a VM, so these rules are not style advice.
 
+**READ-ONLY LOOKUPS GO THROUGH THE HARNESS, NOT MICRO-STEPS.** For "open page(s), wait,
+grep/read, done" — contact pages, KVKK pages, checking what a rendered page says — run
+`python3 scripts/ops/browse-extract.py <url> [url2 ...] --grep '<regex>'` as ONE bash call.
+It walks every URL in a single background tab server-side and returns a capped excerpt.
+Measured 2026-08-03: the same lookups done as raw `mcp__browseros__*` calls cost ~173
+chat turns/day, each re-billing full context. Raw MCP tools remain for INTERACTIVE flows
+only (snapshot/act/refs, forms, anything needing a decision between steps); `--keep-tab`
+hands the page id over when a lookup turns interactive.
+
 **WHEN TO REACH FOR IT.** Search returns a summary of a page; the browser returns the page.
 Use it whenever a source is public but search cannot actually read it:
 
