@@ -2102,6 +2102,31 @@ loop_hold_active() {
     [ -f "$LOOP_HOLD_FILE" ]
 }
 
+# Business-hours gate (2026-08-04). `LOOP_ACTIVE_WINDOW_UTC=HH-HH`, UTC hours,
+# start inclusive / end exclusive; `07-15` means 07:00:00–14:59:59 UTC. A window
+# whose end is <= its start wraps midnight (`22-06` = 22:00–05:59). Unset or
+# malformed returns TRUE — always active, i.e. the pre-2026-08-04 behaviour. That
+# direction is deliberate: a typo in an env var must not silently park the company
+# for a day, and unlike the mechanical hold this gate protects budget, not safety.
+_window_active() {
+    case "${LOOP_ACTIVE_WINDOW_UTC:-}" in
+        "") return 0 ;;
+        [0-9][0-9]-[0-9][0-9]) : ;;
+        *) return 0 ;;
+    esac
+    _w_start=$((10#${LOOP_ACTIVE_WINDOW_UTC%%-*}))
+    _w_end=$((10#${LOOP_ACTIVE_WINDOW_UTC##*-}))
+    _w_now=$((10#$(date -u +%H)))
+    if [ "$_w_start" -gt 23 ] || [ "$_w_end" -gt 24 ]; then
+        return 0                      # nonsense hours: fail open, same as malformed
+    fi
+    if [ "$_w_start" -lt "$_w_end" ]; then
+        [ "$_w_now" -ge "$_w_start" ] && [ "$_w_now" -lt "$_w_end" ]
+    else
+        [ "$_w_now" -ge "$_w_start" ] || [ "$_w_now" -lt "$_w_end" ]
+    fi
+}
+
 # Did THIS cycle actually run on Codex? `$ENGINE` alone is the wrong question:
 # with router alternation (or a usage-limit fallback) the configured engine stays
 # `claude` while the cycle is routed to Codex. Three other sites below already
@@ -2586,6 +2611,30 @@ while true; do
             sleep "$LOOP_INTERVAL" || true
             continue
         fi
+    fi
+
+    # Business-hours window (operator decision 2026-08-04). Checked right after the
+    # mechanical hold and BEFORE the router, the ladder and the cycle counter — like
+    # the hold, an off-hours tick must cost ZERO model calls and ZERO external calls,
+    # and select_cycle_engine is not free of them. `LOOP_ACTIVE_WINDOW_UTC=07-15`
+    # keeps the company working 07:00–15:00 UTC (Türkiye 10:00–18:00) and idle
+    # otherwise. Unset or malformed = always active: a typo must never silently stop
+    # the company, so this fails OPEN, unlike the hold which fails closed.
+    # Consequence to accept knowingly: a reply that lands at 20:00 UTC is first seen
+    # at 07:00 the next morning. The host analyst cron (04:30) is a separate process
+    # and is NOT affected by this window.
+    if ! _window_active; then
+        if [ "${_offhours_logged:-0}" != "1" ]; then
+            log "[OFF-HOURS] Outside the active window ${LOOP_ACTIVE_WINDOW_UTC} UTC (now $(date -u +%H:%M)) — no cycle, no model call, no external call. Re-checking every ${OFF_HOURS_POLL_SECONDS:-900}s."
+            _offhours_logged=1
+            save_state "idle"
+        fi
+        sleep "${OFF_HOURS_POLL_SECONDS:-900}" || true
+        continue
+    fi
+    if [ "${_offhours_logged:-0}" = "1" ]; then
+        log "[OFF-HOURS] Active window ${LOOP_ACTIVE_WINDOW_UTC} UTC opened (now $(date -u +%H:%M)) — resuming cycles."
+        _offhours_logged=0
     fi
 
     # Quota-aware router: pick this cycle's engine from headroom in both ledgers
