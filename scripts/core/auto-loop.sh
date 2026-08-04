@@ -2629,6 +2629,17 @@ while true; do
     fi
     [ -z "$_snapshot_block" ] && _snapshot_block="(snapshot unavailable this cycle — run \`python3 scripts/ops/state-snapshot.py --app .\` yourself, ONCE, before anything else)"
 
+    # IDLE = the snapshot says nothing external moved since the previous cycle. Two things
+    # key off it (2026-08-04): the post-cycle sleep length, and the discretionary-spend
+    # ledger. Measured that day: 10 cycles / $28.62 / 6h with the validation merely WAITING
+    # for a reply — the per-cycle economy was healthy (42 turns avg, 9/10 ok), the spend came
+    # from running a full cycle every 30 minutes whether or not anything needed doing.
+    # Fail-open on an unavailable snapshot: unknown state is treated as NOT idle.
+    case "$_snapshot_block" in
+        *"DELTA: none"*) _cycle_idle=1 ;;
+        *)               _cycle_idle=0 ;;
+    esac
+
     # Build prompt with consensus pre-injected
     PROMPT=$(cat "$PROMPT_FILE")
     CONSENSUS=$(cat "$CONSENSUS_FILE" 2>/dev/null || echo "No consensus file found. This is the very first cycle.")
@@ -2651,6 +2662,36 @@ while true; do
     # ends; without this, the next cycle starts blind and repeats the pattern — five
     # consecutive BLOATED cycles (66-110 turns, $4.7-$8.3 each) did exactly that. One
     # line, only when the previous cycle actually overran; an ok verdict clears it.
+    # DISCRETIONARY BUDGET (operator decision 2026-08-04, cap #1 of the two shipped that
+    # day). "Discretionary" is defined MECHANICALLY, not by asking the model to self-label:
+    # a cycle whose snapshot DELTA was `none` had no external trigger, so whatever it chose
+    # to do was self-directed. Their costs are summed per UTC day in
+    # logs/discretionary-spend.ndjson (written after each such cycle, below). Over the cap,
+    # this line lands in the prompt — the loop keeps running directive/watch work, it just
+    # stops opening new exploration. Note this is the FEEDBACK layer: the brake (skipping
+    # the model call entirely when idle AND over cap) is the separate idle-skip change.
+    _discretionary_line=""
+    _disc_cap="${DISCRETIONARY_DAILY_CAP_USD:-30}"
+    _disc_today=$(python3 - "$LOG_DIR/discretionary-spend.ndjson" 2>/dev/null <<'PYDISC' || echo 0
+import datetime as dt, json, sys
+today = dt.datetime.now(dt.timezone.utc).date().isoformat()
+total = 0.0
+try:
+    for line in open(sys.argv[1], encoding="utf-8"):
+        try:
+            row = json.loads(line)
+        except ValueError:
+            continue
+        if str(row.get("date", "")) == today:
+            total += float(row.get("cost") or 0)
+except OSError:
+    pass
+print("%.2f" % total)
+PYDISC
+)
+    if [ "$(printf '%s\n' "$_disc_today $_disc_cap" | awk '{print ($1 >= $2) ? 1 : 0}')" = "1" ]; then
+        _discretionary_line="⚠ DISCRETIONARY BUDGET SPENT — \$${_disc_today} of \$${_disc_cap} today has gone to cycles that had no external trigger. For the rest of this UTC day: NO new exploration, source-mining, scanning or feasibility reading. Allowed: Human Directive work, OPREQ handling, bridge/reply/send-gate handling, and CLOSING OUT an already-bounded task with its stop condition. If none of those has work, say so in ONE line, update consensus, and end the cycle immediately — an empty cycle is the correct output, not a reason to find something."
+    fi
     _turnfb_line=""
     if [ -f "$LOG_DIR/.last-turn-audit" ]; then
         _ta_prev=$(cat "$LOG_DIR/.last-turn-audit" 2>/dev/null || true)
@@ -2697,6 +2738,7 @@ $_snapshot_block
 This is Cycle #$loop_count.
 $_discovery_line
 $_turnfb_line
+$_discretionary_line
 Priorities, in order: (1) the Human Directive, per the rules above; (2) only the surfaces the snapshot's DELTA names as changed; (3) ONE milestone, persisted to \`memories/consensus.md\`, then end the cycle within the ~40-tool-call budget (rule 7). Act decisively.
 </cycle_orders>"
 
@@ -2752,6 +2794,7 @@ $_snapshot_block
 This is Cycle #$loop_count.
 $_discovery_line
 $_turnfb_line
+$_discretionary_line
 Priorities, in order: (1) the Human Directive, per the rules above; (2) only the surfaces the snapshot's DELTA names as changed; (3) ONE milestone, persisted to \`memories/consensus.md\`, then end the cycle within the ~40-tool-call budget (rule 7). Act decisively.
 </cycle_orders>"
     fi
@@ -3055,8 +3098,23 @@ Priorities, in order: (1) the Human Directive, per the rules above; (2) only the
 $(printf '%s' "${RESULT_TEXT:-}" | head -c 600)" >/dev/null 2>&1 || true
     fi
 
+    # Discretionary-spend ledger + idle cadence (operator decision 2026-08-04). A cycle
+    # whose snapshot DELTA was `none` had no external trigger, so its cost counts against
+    # the day's discretionary cap (read back at the next prompt build), and the next sleep
+    # stretches to IDLE_LOOP_INTERVAL. When anything DOES move — a reply, a bridge result,
+    # a new directive — DELTA names it, the cycle is not idle, and the cadence returns to
+    # LOOP_INTERVAL by itself. Best-effort: a failed ledger write never affects the loop.
+    _sleep_for="$LOOP_INTERVAL"
+    if [ "${_cycle_idle:-0}" = "1" ]; then
+        _sleep_for="${IDLE_LOOP_INTERVAL:-3600}"
+        printf '{"date":"%s","ts":"%s","cycle":%s,"cost":%s}\n' \
+            "$(date -u +%Y-%m-%d)" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$loop_count" \
+            "$(printf '%s' "${CYCLE_COST:-0}" | grep -Eo '^[0-9]+(\.[0-9]+)?' || echo 0)" \
+            >> "$LOG_DIR/discretionary-spend.ndjson" 2>/dev/null || true
+    fi
+
     save_state "idle"
-    log_cycle "$loop_count" "WAIT" "Sleeping ${LOOP_INTERVAL}s before next cycle..."
+    log_cycle "$loop_count" "WAIT" "Sleeping ${_sleep_for}s before next cycle... (idle=${_cycle_idle:-0})"
     # `|| true` is load-bearing twice over. Under `set -e` a killed sleep exits
     # non-zero and would take the whole loop down with it — the same failure
     # shape as the 2026-07-26 crash-loop. With the guard, killing this sleep
@@ -3065,5 +3123,7 @@ $(printf '%s' "${RESULT_TEXT:-}" | head -c 600)" >/dev/null 2>&1 || true
     # which starts the next cycle immediately without a rebuild, without
     # resetting loop_count, and without shortening LOOP_INTERVAL (shortening it
     # multiplies spend against the Claude window; waking on demand does not).
-    sleep "$LOOP_INTERVAL" || true
+    # NOTE (2026-08-04): after an idle cycle the argument is IDLE_LOOP_INTERVAL, so the
+    # wake-now pkill pattern is `sleep 3600` then — `pkill -f "^sleep "` covers both.
+    sleep "$_sleep_for" || true
 done
