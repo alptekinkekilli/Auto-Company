@@ -375,5 +375,66 @@ OPTED_OUT_LOG='{"Business":"X","Status":"Qualified","Email":"a@b.tr","Email subj
 contains "refuses a row whose Email log records provider-side opt-out" \
   "$(run "$OPTED_OUT_LOG" '[]' 1 1)" "opted out"
 
+echo "22. directive revision 5 §1: counts() derives SENDS (messages) from Email log 'Sent:'"
+echo "    entries, separately from EXPOSURES (rows) -- a row with two logged sends counts as 2"
+run_counts() {  # run_counts <sent-rows-json>
+    python3 - "$SCRIPT" "$1" <<'PY'
+import importlib.util, json, sys
+spec = importlib.util.spec_from_file_location("sg", sys.argv[1])
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+sent = json.loads(sys.argv[2])
+m.air = lambda path, params=None: {"records": [{"fields": f} for f in sent]}
+exp_day, exp_total, send_day, send_total = m.counts()
+print("%d|%d|%d|%d" % (exp_day, exp_total, send_day, send_total))
+PY
+}
+TWO_SENDS_ONE_ROW='[{"Last contact date":"2026-08-01","Status":"Qualified",
+  "Email log":"[2026-08-01T20:30:00.000Z] Sent: Sent (1/15 today)\n[2026-07-30T10:00:00.000Z] Sent: Sent (1/15 today)"}]'
+OUT=$(run_counts "$TWO_SENDS_ONE_ROW")
+check "one row, two logged sends -> 1 exposure, 2 sends" "$OUT" "0|1|0|2"
+
+UNPARSEABLE_LOG='[{"Last contact date":"2026-08-01","Status":"Qualified","Contact attempts":1,
+  "Email log":"garbled non-matching text"}]'
+OUT=$(run_counts "$UNPARSEABLE_LOG")
+check "unparsable log never reduces the count below Contact attempts" "$OUT" "0|1|0|1"
+
+EMPTY_LOG_NO_ATTEMPTS='[{"Last contact date":"2026-08-01","Status":"Qualified","Email log":""}]'
+OUT=$(run_counts "$EMPTY_LOG_NO_ATTEMPTS")
+check "empty log with contacted row still counts >= 1, never 0" "$OUT" "0|1|0|1"
+
+echo "23. ALLOW is refused when EITHER counter (exposures or sends) is at cap, not just rows"
+# 2 rows, but one of them logged 19 sends -> the SEND counter, not the row counter, hits the cap.
+MANY_SENDS=$(python3 -c "
+import json
+log = '\n'.join('[2026-07-%02dT10:00:00.000Z] Sent: Sent (1/15 today)' % d for d in range(1, 20))
+print(json.dumps([
+  {'Last contact date':'2026-07-01','Status':'Qualified','Email log': log},
+  {'Last contact date':'2026-08-01','Status':'Qualified','Email log':'[2026-08-01T10:00:00.000Z] Sent: Sent (1/15 today)'},
+]))")
+OUT=$(run "$OK" "$MANY_SENDS" 1)
+contains "refuses on the send counter even though only 2 rows exist" "$OUT" "REFUSE"
+contains "names both counters" "$OUT" "sends 20/20"
+
+echo "24. directive revision 5 §2: follow-up attempts derived from Email log, not trusted"
+echo "    from a blank/stale Contact attempts field (Aktur: blank field, 2 logged sends)"
+BLANK_ATTEMPTS_TWO_SENDS='{"Business":"X","Status":"Qualified","Email":"a@b.tr","Email subject":"k",
+ "Email body":"g","Last contact date":"2026-08-04",
+ "Email log":"[2026-08-04T00:05:23.000Z] Sent: Sent (1/15 today)\n[2026-08-03T12:46:46.000Z] Sent: Sent (1/15 today)"}'
+OUT=$(run "$BLANK_ATTEMPTS_TWO_SENDS" '[]' 1 1)
+contains "refused: blank Contact attempts does not hide 2 logged sends" "$OUT" "already sent on this row"
+contains "names the derived attempts" "$OUT" "derived attempts=2"
+
+BLANK_ATTEMPTS_ONE_SEND='{"Business":"X","Status":"Qualified","Email":"a@b.tr","Email subject":"k",
+ "Email body":"g","Last contact date":"2026-08-01",
+ "Email log":"[2026-08-01T20:30:00.000Z] Sent: Sent (1/15 today)"}'
+check "blank Contact attempts with exactly one logged send is ALLOWED as a follow-up" \
+  "$(run "$BLANK_ATTEMPTS_ONE_SEND" '[]' 1 1 | cut -d'|' -f1)" "ALLOW"
+
+HAND_SET_HIGHER='{"Business":"X","Status":"Qualified","Email":"a@b.tr","Email subject":"k",
+ "Email body":"g","Last contact date":"2026-08-01","Contact attempts":5,
+ "Email log":"[2026-08-01T20:30:00.000Z] Sent: Sent (1/15 today)"}'
+contains "a hand-set Contact attempts higher than the log still binds (never loosens)" \
+  "$(run "$HAND_SET_HIGHER" '[]' 1 1)" "already sent on this row"
+
 if [ "$fail" -eq 0 ]; then echo "ALL PASS"; else echo "FAILURES"; fi
 exit "$fail"

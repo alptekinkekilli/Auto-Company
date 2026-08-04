@@ -148,10 +148,54 @@ def sent_rows() -> list[dict]:
     return out
 
 
-def counts() -> tuple[int, int]:
+_SENT_LOG_RE = re.compile(r"\[(\d{4}-\d{2}-\d{2})T[^\]]*\]\s*Sent:")
+
+
+def logged_sends(fields: dict) -> tuple[int, int]:
+    """(total sends, sends today) derived from a row's own `Email log`, by counting
+    `Sent:` entries — never by trusting the row count. Directive revision 5 §1: `counts()`
+    below used to return `len(sent_rows())`, one per ROW, even though a row's `Email log` can
+    carry more than one dispatched message (a first contact plus an authorized follow-up).
+    Rayelsis and Aktur both have two logged `Sent:` entries and were counted as one each.
+
+    A log that cannot be parsed (missing/malformed) must never read as 0 — that would let a
+    real send disappear from the cap. Fall back to `max(Contact attempts, 1)` for a row that
+    HAS a `Last contact date` but whose log yields no parsable entries; this mirrors the same
+    fail-closed rule §2 requires for the follow-up guard.
+    """
+    log = fields.get("Email log") or ""
+    today = _dt.datetime.now(_dt.timezone.utc).date().isoformat()
+    dates = _SENT_LOG_RE.findall(log)
+    if dates:
+        return len(dates), sum(1 for d in dates if d == today)
+    # Unparsable / empty log on a row that was actually contacted: never let this be 0.
+    if fields.get("Last contact date"):
+        attempts = fields.get("Contact attempts") or 0
+        n = max(int(attempts), 1)
+        n_today = n if (fields.get("Last contact date") or "").startswith(today) else 0
+        return n, n_today
+    return 0, 0
+
+
+def counts() -> tuple[int, int, int, int]:
+    """Returns (exposures_today, exposures_total, sends_today, sends_total).
+
+    `exposures` = distinct firms contacted (ROW count, the old and still-useful number).
+    `sends` = MESSAGES actually dispatched (log-derived `Sent:` entries), which is what the
+    directive's 20-send / 3-per-day caps are meant to bind on. They are not the same number
+    and both must be checked — see `decide()`.
+    """
     rows = sent_rows()
     today = _dt.datetime.now(_dt.timezone.utc).date().isoformat()
-    return sum(1 for f in rows if (f.get("Last contact date") or "").startswith(today)), len(rows)
+    exp_today = sum(1 for f in rows if (f.get("Last contact date") or "").startswith(today))
+    exp_total = len(rows)
+    send_today = 0
+    send_total = 0
+    for f in rows:
+        n, n_today = logged_sends(f)
+        send_total += n
+        send_today += n_today
+    return exp_today, exp_total, send_today, send_total
 
 
 def opted_out(fields: dict) -> bool:
@@ -269,33 +313,50 @@ def decide(rec: str, app_dir: str, followup: bool = False) -> dict:
     fields = air("%s/%s" % (OUTREACH, rec)).get("fields", {})
     firm = fields.get("Business", "") or ""
     d = {"record": rec, "firm": firm[:70]}
-    day, total = counts()
-    d["sent_today"], d["sent_total"] = day, total
+    exp_day, exp_total, send_day, send_total = counts()
+    d["exposures_today"], d["exposures_total"] = exp_day, exp_total
+    d["sends_today"], d["sends_total"] = send_day, send_total
+    # Directive revision 5 §1: the caps bind on MESSAGES (sends), not on distinct firms
+    # (exposures). Whichever counter is higher / closer to cap is the binding one — check
+    # both, refuse on either.
+    day = max(exp_day, send_day)
+    total = max(exp_total, send_total)
 
     if day >= DAILY_CAP:
-        return {**d, "verdict": "REFUSE", "reason": "daily cap reached (%d/%d)" % (day, DAILY_CAP)}
+        return {**d, "verdict": "REFUSE",
+                "reason": "daily cap reached (exposures %d/%d, sends %d/%d)"
+                          % (exp_day, DAILY_CAP, send_day, DAILY_CAP)}
     if total >= TOTAL_CAP:
-        return {**d, "verdict": "REFUSE", "reason": "total cap reached (%d/%d)" % (total, TOTAL_CAP)}
+        return {**d, "verdict": "REFUSE",
+                "reason": "total cap reached (exposures %d/%d, sends %d/%d)"
+                          % (exp_total, TOTAL_CAP, send_total, TOTAL_CAP)}
     # FOLLOW-UP MODE (directive 2026-08-02 rev 4, §3): the directive authorizes "at most one
     # follow-up per already-contacted Qualified row, behind the gate" — but until this branch
     # existed, "already contacted" was an unconditional refusal with no code path for a
     # legitimate second contact at all, so the directive's own permission was unreachable.
     # This does NOT loosen "never send twice blind" — it distinguishes a genuine repeat
     # (followup=False, which stays exactly as strict as before) from an authorized, capped,
-    # single follow-up. The existing `Contact attempts` field (number, already on the schema —
-    # no migration needed) is the counter: 1 means the first send only, so a follow-up is
-    # legitimate; >=2 means a follow-up already went out, so a second one is refused exactly
-    # like a second first-contact would be. The send path is responsible for incrementing it
-    # after an actual send — this gate only reads it.
+    # single follow-up.
+    #
+    # DIRECTIVE REVISION 5 §2: `Contact attempts` alone is not trustworthy — nothing in
+    # `scripts/` ever increments it, so a row can carry a blank/stale value while its own
+    # `Email log` already shows two dispatched messages (Aktur: blank field, 2 logged sends).
+    # Derive the real attempt count from the log and take the MAX of the two, so a hand-set
+    # value higher than the log still binds (never loosens what an operator/earlier cycle
+    # deliberately recorded) but a blank/stale field can never hide a real second send.
     if followup:
         if not fields.get("Last contact date"):
             return {**d, "verdict": "REFUSE",
                     "reason": "no prior contact on this row — nothing to follow up"}
-        attempts = fields.get("Contact attempts") or 0
+        logged, _ = logged_sends(fields)
+        field_attempts = fields.get("Contact attempts") or 0
+        attempts = max(logged, int(field_attempts))
+        d["derived_attempts"] = attempts
         if attempts >= 2:
             return {**d, "verdict": "REFUSE",
-                    "reason": "a follow-up was already sent on this row (Contact attempts=%s) "
-                              "— never twice" % attempts}
+                    "reason": "a follow-up was already sent on this row (derived attempts=%d, "
+                              "logged sends=%d, Contact attempts field=%s) — never twice"
+                              % (attempts, logged, field_attempts)}
     elif fields.get("Last contact date"):
         return {**d, "verdict": "REFUSE",
                 "reason": "already contacted on %s — never send twice" % fields["Last contact date"]}
@@ -501,9 +562,13 @@ def main() -> int:
         return 2
 
     if args.report:
-        day, total = counts()
-        print("sends: %d/%d today (UTC), %d/%d total" % (day, DAILY_CAP, total, TOTAL_CAP))
-        print("remaining: %d today, %d overall" % (max(0, DAILY_CAP - day), max(0, TOTAL_CAP - total)))
+        exp_day, exp_total, send_day, send_total = counts()
+        day = max(exp_day, send_day)
+        total = max(exp_total, send_total)
+        print("exposures: %d/%d firms | sends: %d/%d messages, %d/%d today"
+              % (exp_total, TOTAL_CAP, send_total, TOTAL_CAP, send_day, DAILY_CAP))
+        print("remaining: %d today, %d overall (binding on whichever counter is higher)"
+              % (max(0, DAILY_CAP - day), max(0, TOTAL_CAP - total)))
         return 0
     if not args.record:
         print("give --record recXXXX, or --report", file=sys.stderr)
