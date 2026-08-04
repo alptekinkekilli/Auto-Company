@@ -67,7 +67,7 @@ def calls_from_ndjson(path: str) -> list[tuple[str, str]]:
 
 def categorize(calls: list[tuple[str, str]]) -> dict:
     c = {"calls": len(calls), "ctx7": 0, "airtable_r": 0, "airtable_w": 0,
-         "linear": 0, "browser": 0}
+         "linear": 0, "browser": 0, "browser_mcp": 0}
     for name, raw in calls:
         # Match on the TOOL NAME and, for bash, the COMMAND — never on arbitrary input
         # text: measured 2026-08-03, apply_patch/read calls EDITING browser-related code
@@ -91,8 +91,17 @@ def categorize(calls: list[tuple[str, str]]) -> dict:
             c[key] += 1
         if "linear" in lname or "linear-track.py" in low or "api.linear.app" in low:
             c["linear"] += 1
-        if "browseros" in lname or "site-contact-evidence" in low or "browseros" in low:
+        # TWO browser counters, because the harness A/B needs an honest denominator
+        # (added 2026-08-04 with browse-extract.py): `browser` is ALL browser-touching
+        # work — raw MCP steps, site-contact-evidence.py AND the harness — so moving work
+        # into the harness cannot fake a drop by going uncounted. `browser_mcp` counts only
+        # raw mcp__browseros__* micro-steps: that is the number the harness is supposed to
+        # reduce, and the one the pre-registered metric names.
+        if ("browseros" in lname or "browseros" in low
+                or "site-contact-evidence" in low or "browse-extract" in low):
             c["browser"] += 1
+        if lname.startswith("mcp__browseros__"):
+            c["browser_mcp"] += 1
     return c
 
 
@@ -127,19 +136,31 @@ def main() -> int:
         return 0
     new_lines = []
     for fn in files:
-        if not fn.endswith(".ndjson") or fn in processed:
+        if not fn.endswith(".ndjson"):
             continue
         path = os.path.join(nd_dir, fn)
         try:
             st = os.stat(path)
         except OSError:
             continue
+        # Dedup on (name, size, mtime) — NOT on the name alone. The loop's cycle counter
+        # restarts at 1 on every container restart, so cycle-0001.ndjson is REWRITTEN by a
+        # brand-new cycle whose filename is already in `processed`. Measured 2026-08-04:
+        # five post-restart cycles (including the first real use of the browse harness)
+        # never reached the ledger, so the cockpit panel silently under-reported the day.
+        # A file whose size or mtime moved carries different content and is audited again.
+        prev = processed.get(fn)
+        prev_size = prev if isinstance(prev, int) else (prev or {}).get("size")
+        prev_mtime = None if isinstance(prev, int) else (prev or {}).get("mtime")
+        if prev is not None and prev_size == st.st_size and (
+                prev_mtime is None or prev_mtime == int(st.st_mtime)):
+            continue
         row = categorize(calls_from_ndjson(path))
         row["file"] = fn
         row["ts"] = dt.datetime.fromtimestamp(st.st_mtime, tz=dt.timezone.utc).strftime(
             "%Y-%m-%dT%H:%M:%SZ")
         new_lines.append(json.dumps(row, separators=(",", ":")))
-        processed[fn] = st.st_size
+        processed[fn] = {"size": st.st_size, "mtime": int(st.st_mtime)}
     if not new_lines:
         return 0
     try:

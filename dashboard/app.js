@@ -495,8 +495,11 @@ async function loadToolUsage() {
       // Real table, not padded text: the cockpit's .mono class is Rajdhani (proportional),
       // so character-count alignment can never line up. Values are our own ledger's
       // numbers/ISO dates; render as numbers to keep the cells inert.
-      const cols = ["ctx7", "airtable_r", "airtable_w", "linear", "browser", "calls", "cycles"];
-      const heads = ["date", "ctx7", "air-r", "air-w", "linear", "browser", "calls", "cycles"];
+      // brw = all browser work (harness + raw MCP + site-contact-evidence); mcp = raw
+      // mcp__browseros__ micro-steps only. The harness is meant to move work from mcp into
+      // brw, so showing both is what makes the change legible instead of a mystery drop.
+      const cols = ["ctx7", "airtable_r", "airtable_w", "linear", "browser", "browser_mcp", "calls", "cycles"];
+      const heads = ["date", "ctx7", "air-r", "air-w", "linear", "brw", "brw-mcp", "calls", "cycles"];
       let html = "<table class=\"usage-table\"><thead><tr>" +
         heads.map((h) => `<th>${h}</th>`).join("") + "</tr></thead><tbody>";
       for (const d of data.days) {

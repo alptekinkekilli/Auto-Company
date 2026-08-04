@@ -605,7 +605,7 @@ def read_tool_usage() -> dict[str, Any]:
     ledger = REPO_ROOT / "logs" / "tool-usage-history.ndjson"
     days: dict[str, dict[str, int]] = {}
     updated = ""
-    keys = ("calls", "ctx7", "airtable_r", "airtable_w", "linear", "browser")
+    keys = ("calls", "ctx7", "airtable_r", "airtable_w", "linear", "browser", "browser_mcp")
     try:
         with open(ledger, encoding="utf-8") as f:
             for line in f:
@@ -620,6 +620,13 @@ def read_tool_usage() -> dict[str, Any]:
                 agg["cycles"] += 1
                 for k in keys:
                     agg[k] += int(row.get(k) or 0)
+                # Rows written before browser_mcp existed (pre-2026-08-04) have no such key.
+                # Back then every browser call WAS a raw MCP micro-step (the harness did not
+                # exist), so treat the old `browser` total as MCP. This slightly overstates
+                # historical MCP wherever site-contact-evidence.py ran — the conservative
+                # direction: it makes the harness look worse, never better.
+                if "browser_mcp" not in row:
+                    agg["browser_mcp"] += int(row.get("browser") or 0)
         import datetime as _dt
 
         updated = _dt.datetime.fromtimestamp(

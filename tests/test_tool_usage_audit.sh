@@ -32,6 +32,9 @@ tool("mcp__airtable__update_records_for_table")
 tool("mcp__airtable__get_table_schema")
 tool("bash", "python3 scripts/ops/linear-track.py --comment APP-269")
 tool("bash", "python3 scripts/ops/site-contact-evidence.py example.com")
+tool("bash", "python3 scripts/ops/browse-extract.py https://x.test --grep kvkk")
+tool("mcp__browseros__navigate")
+tool("mcp__browseros__grep")
 tool("bash", "grep -n foo /app/PROMPT.md")
 tool("read")
 ev.append({"type": "done", "model": "claude-sonnet-5"})
@@ -45,12 +48,15 @@ check() { # desc, jq-ish key, expected
     got=$(python3 -c "import json,sys;print(json.loads(sys.argv[1])[sys.argv[2]])" "$LINE" "$2")
     [ "$got" = "$3" ] && ok "$1" || bad "$1 — expected $3, got $got"
 }
-check "total calls counted"   calls      10
+check "total calls counted"   calls      13
 check "ctx7 counted"          ctx7        1
 check "airtable reads (script+mcp)" airtable_r 3
 check "airtable writes (script+mcp)" airtable_w 2
 check "linear counted"        linear      1
-check "browser counted"       browser     1
+# browser = site-contact-evidence + browse-extract harness + 2 raw MCP steps; the harness
+# must be COUNTED, otherwise moving work into it would fake a drop in the A/B.
+check "browser counts harness AND mcp" browser 4
+check "browser_mcp counts only raw MCP steps" browser_mcp 2
 
 echo "[2] idempotence: second run appends nothing"
 python3 "$TUA" --app "$TMP"
@@ -62,6 +68,22 @@ cp "$TMP/logs/cycle-ndjson/cycle-0001.ndjson" "$TMP/logs/cycle-ndjson/cycle-0002
 python3 "$TUA" --app "$TMP"
 N=$(wc -l < "$TMP/logs/tool-usage-history.ndjson" | tr -d ' ')
 [ "$N" = 2 ] && ok "second cycle appended" || bad "expected 2 lines, got $N"
+
+echo "[3b] a REWRITTEN filename is audited again (cycle counter resets on restart)"
+# The loop numbers cycles from 1 after every container restart, so cycle-0001.ndjson is
+# rewritten by a brand-new cycle. Dedup by filename alone silently dropped those cycles.
+sleep 1                                     # ensure a distinct mtime
+cat "$TMP/logs/cycle-ndjson/cycle-0001.ndjson" "$TMP/logs/cycle-ndjson/cycle-0001.ndjson" \
+    > "$TMP/logs/cycle-ndjson/cycle-0002.ndjson"
+python3 "$TUA" --app "$TMP"
+N=$(wc -l < "$TMP/logs/tool-usage-history.ndjson" | tr -d ' ')
+[ "$N" = 3 ] && ok "rewritten file re-audited" || bad "expected 3 lines, got $N"
+LAST=$(tail -1 "$TMP/logs/tool-usage-history.ndjson")
+python3 -c "import json,sys; d=json.loads(sys.argv[1]); sys.exit(0 if d['calls']==26 else 1)" "$LAST" \
+  && ok "re-audit counted the NEW content" || bad "re-audit used stale counts"
+python3 "$TUA" --app "$TMP"
+N=$(wc -l < "$TMP/logs/tool-usage-history.ndjson" | tr -d ' ')
+[ "$N" = 3 ] && ok "still idempotent when unchanged" || bad "grew to $N on unchanged rerun"
 
 echo "[4] --report prints the ledger, exit 0 without ndjson dir"
 OUT=$(python3 "$TUA" --app "$TMP" --report)
