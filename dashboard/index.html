@@ -98,10 +98,12 @@
       </div>
       <p class="muted director-hint">
         Steer the autonomous company without breaking its autonomy. Your directive becomes the
-        top priority for the next cycle's <strong>Next Action</strong>, then is marked DONE.
+        top priority for the next cycle's <strong>Next Action</strong>. It stays in effect until
+        its own completion condition is met or you replace it — a directive with no completion
+        condition (watch mode) simply runs until superseded.
       </p>
       <div class="director-templates">
-        <span class="muted">Templates — copy, paste above, Send. No editing needed: each one reads the candidate, the parked items and the blockers from the company's own records.</span>
+        <span class="muted">Templates — click one to load it into the box, then Send. No editing needed: each reads the candidate, the parked items and the blockers from the company's own records.</span>
         <span id="directiveTemplates" class="tpl-btn-row"><span class="muted mono">(loading…)</span></span>
       </div>
       <textarea id="directiveInput" class="director-input" rows="6" maxlength="20000"

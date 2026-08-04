@@ -695,7 +695,16 @@ async function loadDirectiveTemplates() {
       b.className = "tpl-btn";
       b.textContent = t.label;
       if (t.hint) b.title = t.hint;
-      b.addEventListener("click", () => copyToBtn(b, t.text));
+      // Load it straight into the box (and keep the clipboard copy as a bonus).
+      // These templates are fill-free by design, so the paste step was pure friction.
+      b.addEventListener("click", () => {
+        if (els.directiveInput) {
+          els.directiveInput.value = t.text;
+          els.directiveInput.focus();
+          els.directiveInput.scrollTop = 0;
+        }
+        copyToBtn(b, t.text);
+      });
       holder.appendChild(b);
     });
   } catch (e) {
