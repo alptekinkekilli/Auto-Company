@@ -1,33 +1,54 @@
 Status: ACTIVE
-Issued: <FILL: YYYY-MM-DD>
-Scope: Select <FILL: candidate name/# from the analyst pick or Pending Queue> as the active candidate and begin its cheapest willingness-to-pay test.
+Scope: Adopt the top-ranked pending candidate as the active one and run its cheapest willingness-to-pay test.
 
 ## Primary activity this directive sets
 
-Adopt <FILL: candidate name> (e.g. the Opportunity Analyst's recommended pick / a `## Pending Queue` entry) as the active candidate. Build ONLY the cheapest thing that can produce a real WTP signal — not the product.
+Adopt as the active candidate whichever entry the Opportunity Analyst most
+recently recommended (`memories/analysis-directive.md`) — or, if that report has
+no live recommendation, the highest-ranked entry in `## Pending Queue` of
+`memories/candidate-registry.md`. Name the one you adopted, and why, in your first
+cycle's consensus line, so the choice is auditable rather than implicit.
 
-## Active validation
+Build ONLY the cheapest thing that can produce a real WTP signal. Not the product.
 
-- Candidate: <FILL: name>. Axis: buyer <FILL> × delivery <FILL> × price <FILL>.
-- Why this one: <FILL: one line — the analyst's reasoning or the operator's call>.
-- Cheapest WTP test: <FILL: e.g. a priced fake-door landing page on Cloudflare Pages with a real checkout/waitlist CTA; measure actual checkout attempts / pre-orders>.
-- Success signal that would justify a build: <FILL: e.g. >=N priced checkout attempts or >=M pre-orders within <days>>.
-- First concrete step this cycle: <FILL: e.g. use the `cloudflare-pages-deploy` skill to ship the offer landing; use frontend-design first; verify it returns 200 live before reporting>.
+## The validation to run
+
+- Axis: take buyer × delivery shape × price point from the candidate's own
+  registry row. It must NOT overlap an axis already in Selected or Archived.
+- Cheapest WTP test: a priced offer page with a real checkout or pre-order CTA,
+  deployed with the `cloudflare-pages-deploy` skill (never Vercel, never this
+  host). Use `frontend-design` before building it. Verify it returns HTTP 200 on
+  its production URL before reporting it as live.
+- Success signal: define it BEFORE shipping, in the registry row and in consensus,
+  as a number and a deadline (how many priced checkout attempts or pre-orders, by
+  when). A signal defined afterwards is not evidence.
+- If the test returns no paid signal by its own deadline, record that and PIVOT or
+  close it. Do not build the product anyway, and do not extend the deadline more
+  than once without an operator directive.
 
 ## Blocked / Pending Work
 
-<FILL: any items still parked (e.g. Candidate #4 on HOLD), or "None." Same format as the other templates — keep the company aware of what is waiting and why.>
+Whatever the registry and `## Awaiting Operator` currently list as HOLD/WAITING
+stays parked: preserve its assets, keep its Linear track issue, do not re-propose
+its axis, no outreach/payment/delivery for it.
 
 ## How (framework-gated)
 
-- Update `memories/candidate-registry.md`: move this candidate to `## Selected` (with its Linear issue); it must be on an axis NOT overlapping an Archived entry. Keep discovering on OTHER unrepresented axes in the background if capacity allows.
-- Apply `PROJECT_EVALUATION_FRAMEWORK.md`. If the WTP test returns no paid signal, record it and PIVOT — do not build the product anyway.
+- Move the adopted candidate to `## Selected` in the registry with its Linear
+  issue. Apply `PROJECT_EVALUATION_FRAMEWORK.md` to the decision and record the
+  section numbers you relied on.
+- Keep discovering on OTHER unrepresented axes only if capacity allows and no
+  directive forbids discovery.
 
 ## Guardrails (unchanged)
 
-- HARD STOP: no product/software build before the WTP signal above exists. The only permitted build is the WTP test itself (Cloudflare Pages via `cloudflare-pages-deploy`; never Vercel or this host). Verify any deploy is live (HTTP 200) before claiming it.
-- No autonomous outreach, payment action, staging access, or delivery — human-execution gate stands. Munger veto intact.
+- HARD STOP: no product/software build before the WTP signal above actually
+  exists. The only permitted build is the WTP test itself.
+- WTP evidence means a real, settled, non-refunded payment from a real unrelated
+  buyer; test-mode transactions never count.
+- Dispatch stays behind `send-gate.py` ALLOW with its caps. Munger veto intact.
 
 ## Completion
 
-Stays in effect until the WTP test produces a terminal read (paid signal → GO to a bounded build, or no signal → PIVOT/NO-GO) or the operator issues a new directive.
+Stays in effect until the WTP test produces a terminal read (paid signal → GO to a
+bounded build; no signal → PIVOT / NO-GO) or the operator issues a new directive.

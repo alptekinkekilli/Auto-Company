@@ -1,31 +1,47 @@
 Status: ACTIVE
-Issued: <FILL: YYYY-MM-DD>
-Scope: Blocker cleared — un-HOLD <FILL: candidate name> and begin its human-run cheapest willingness-to-pay validation.
+Scope: Blocker cleared — un-HOLD the currently held candidate and run its cheapest willingness-to-pay validation.
 
 ## Primary activity this directive sets
 
-Un-HOLD <FILL: candidate name>. Its blocker is now resolved: <FILL: what changed, e.g. the $549 iyzico payment link is live at <URL>>. Move it from HOLD back to the active validation and run the bounded, human-executed WTP test.
+Un-HOLD the candidate that `memories/candidate-registry.md` currently records
+under `## Selected` with status HOLD, and move it back to the active validation.
+Its blocker is resolved; the newly available resource is whatever
+`memories/consensus.md` (`## Next Action` / the latest operator-channel note)
+records as having changed. Read those first — do not assume from memory — and
+state in your first cycle which blocker you understood to be cleared, so a
+mistaken un-hold is visible immediately instead of three cycles later.
 
-## Active validation
+## The validation to run
 
-- Candidate: <FILL: candidate name>.
-- Buyer: <FILL>.
-- Offer / price: <FILL: e.g. bounded staging QA report + one retest, $549 prepaid>.
-- Channel: <FILL: e.g. human-operated lawful personalized B2B outreach>.
-- WTP test + success gate: <FILL: e.g. >=3 settled non-refunded payments after ~50 qualified contacts within <N> business days; then repeat-payment observation>.
-- Assets to use (already built): <FILL: e.g. Airtable Staging-QA Outreach 50 rows, Sales Assets, Call Script, Intake, report template>.
-- Newly unblocked resource: <FILL: e.g. the live $549 payment link URL — put it where the offer/checkout references it>.
+Take every parameter from the candidate's own registry row and the offer material
+already built for it — buyer, offer, price, channel, the WTP test and its success
+gate, the cohort size and the time window. They were defined when the candidate
+was selected and are NOT re-opened by this directive. If a parameter is missing or
+ambiguous, stop and open an OPREQ rather than inventing one.
+
+Use the assets that already exist (Airtable outreach rows, intake, sales assets,
+call script, report template). Do not rebuild them.
 
 ## Blocked / Pending Work
 
-<FILL: any OTHER items still parked, or "None." Same format as the other templates.>
+Anything else still parked is whatever the registry and `## Awaiting Operator`
+list as HOLD/WAITING. Leave those parked, preserve their assets, do not
+re-propose their axes.
 
 ## Guardrails (unchanged)
 
-- Still human-executed: the operator (not the loop) runs outreach, sends the payment request, takes staging access, and delivers. The loop prepares/tracks only.
-- HARD STOP still applies to product BUILD: this authorizes running the paid validation, NOT building product software. No production credentials, real card data, or customer PII — staging/synthetic/test-payment paths only.
-- Registry: move this candidate to **Selected — status ACTIVE (validating)**. Munger veto intact.
+- Dispatch stays behind `send-gate.py` ALLOW with its caps; the operator's own
+  gates and the standing outreach rules are unchanged by this directive.
+- HARD STOP still applies to product BUILD: this authorises running the paid
+  validation, NOT building product software. No production credentials, real card
+  data, or customer PII — staging/synthetic/test paths only.
+- WTP evidence means a real, settled, non-refunded payment from a real unrelated
+  buyer. Test-mode transactions never count.
+- Registry: set this candidate to **Selected — status ACTIVE (validating)**.
+  Munger veto intact.
 
 ## Completion
 
-Stays in effect until this validation reaches a terminal result (GO / PIVOT / NO-GO after the cohort + repeat window) or the operator issues a new directive.
+Stays in effect until the validation reaches a terminal result (GO / PIVOT /
+NO-GO / UNKNOWN per its own pre-registered rule) or the operator issues a new
+directive. A quiet inbox is not a terminal result.

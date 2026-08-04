@@ -710,6 +710,10 @@ DIRECTIVE_TEMPLATES = [
      "hint": "A blocker cleared → un-HOLD a candidate + start its human-run cheapest WTP validation."},
     {"id": "select-and-validate", "label": "Select + Validate", "file": "04-select-and-validate.md",
      "hint": "Adopt a candidate (e.g. the Opportunity Analyst pick) + run its cheapest WTP test."},
+    {"id": "hold-and-maintain", "label": "Watch mode", "file": "05-hold-and-maintain.md",
+     "hint": "No discovery, no exploration: only directive/OPREQ work, whatever the snapshot's "
+             "DELTA names as changed, and closing out already-bounded tasks. An empty cycle is "
+             "the correct output. Use it while a validation is simply waiting."},
 ]
 
 
@@ -833,6 +837,76 @@ def _proc_ppid(pid: str) -> str:
     except OSError:
         pass
     return ""
+
+
+LOOP_HOLD_FILE = REPO_ROOT / "logs" / "LOOP_HOLD"
+HOLD_AUDIT_FILE = REPO_ROOT / "logs" / "hold-audit.log"
+
+
+def read_hold() -> dict[str, Any]:
+    """Current mechanical-hold state for the cockpit's Hold/Release control.
+
+    The hold is the only thing that actually stops the loop (a hold DIRECTIVE just
+    asks the model to be idle). Two very different things write this file: the
+    operator, and the loop itself when a budget gate latches. The panel must show
+    WHICH, because releasing an operator pause is routine while releasing a budget
+    latch means overriding a spend guard — the file's own text says it is cleared
+    'after verifying the accounting is sound'.
+    """
+    try:
+        text = LOOP_HOLD_FILE.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return {"held": False, "reason": "", "latched": "", "kind": ""}
+    reason = ""
+    latched = ""
+    for line in text.splitlines():
+        if line.startswith("reason "):
+            reason = line[len("reason "):].strip()
+        elif line.startswith("latched "):
+            latched = line[len("latched "):].strip()
+    kind = "operator" if reason.lower().startswith("operator") else "budget-or-loop"
+    return {"held": True, "reason": reason or text.strip()[:200],
+            "latched": latched, "kind": kind}
+
+
+def set_hold(arm: bool, reason: str = "") -> dict[str, Any]:
+    """Arm or release the mechanical hold, recording every transition.
+
+    Deliberately NOT symmetric with the loop's own latch: the loop writes this file
+    to stop itself on a budget breach; the cockpit writes it because a human said
+    so, and says so in the text. Both transitions append to logs/hold-audit.log —
+    a release that silently overrode a budget latch is exactly the event you want
+    to find later.
+    """
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    prev = read_hold()
+    try:
+        if arm:
+            body = (
+                f"latched {now}\n"
+                f"reason operator (cockpit): {reason or 'hold requested from the Control Deck'}\n"
+                "cleared_by operator only — release from the cockpit, or rm this file, "
+                "after verifying the accounting is sound\n"
+            )
+            LOOP_HOLD_FILE.parent.mkdir(parents=True, exist_ok=True)
+            LOOP_HOLD_FILE.write_text(body, encoding="utf-8")
+        else:
+            if not prev["held"]:
+                return {"ok": True, "held": False, "note": "already released"}
+            LOOP_HOLD_FILE.unlink(missing_ok=True)
+    except OSError as exc:
+        return {"ok": False, "error": f"could not {'arm' if arm else 'release'} the hold: {exc}"}
+    try:
+        with open(HOLD_AUDIT_FILE, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps({
+                "ts": now, "action": "arm" if arm else "release",
+                "via": "cockpit", "reason": reason,
+                "previous": {"held": prev["held"], "kind": prev["kind"],
+                             "reason": prev["reason"], "latched": prev["latched"]},
+            }, ensure_ascii=False) + "\n")
+    except OSError:
+        pass                      # the audit line is best-effort; the state change is not
+    return {"ok": True, **read_hold()}
 
 
 def wake_loop() -> dict[str, Any]:
@@ -1491,6 +1565,7 @@ def gather_status_payload(system_name: str | None = None) -> dict[str, Any]:
         "stateFile": read_state_file_pairs(),
         "consensusHead": read_text_file(CONSENSUS_FILE, "(no consensus file)")[:3000],
         "consensusBytes": len(read_text_file(CONSENSUS_FILE, "").encode("utf-8")),
+        "hold": read_hold(),
         "logTail": read_tail(LOG_FILE, lines=180),
         "directive": read_directive(),
         "cost": read_cost_summary(),
@@ -1630,6 +1705,21 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
         if path == "/api/operator-decision":
             self._handle_operator_decision()
+            return
+
+        if path in {"/api/hold", "/api/hold/release"}:
+            arm = path == "/api/hold"
+            reason = ""
+            if arm:
+                try:
+                    length = int(self.headers.get("Content-Length") or 0)
+                    if length:
+                        reason = str(json.loads(self.rfile.read(length)).get("reason") or "")[:200]
+                except (ValueError, json.JSONDecodeError):
+                    reason = ""
+            result = set_hold(arm, reason)
+            result["timestamp"] = datetime.now(timezone.utc).isoformat()
+            self._json(result, code=HTTPStatus.OK if result.get("ok") else HTTPStatus.BAD_REQUEST)
             return
 
         if path == "/api/wake":

@@ -33,8 +33,9 @@
     <section class="controls panel reveal-2">
       <div class="control-group">
         <button id="btnRefresh" class="btn btn-ghost">Refresh</button>
-        <button id="btnStart" class="btn btn-start">Start</button>
-        <button id="btnStop" class="btn btn-stop">Stop</button>
+        <button id="btnHold" class="btn btn-stop">Hold</button>
+        <button id="btnRelease" class="btn btn-start">Release</button>
+        <span id="holdBadge" class="badge">—</span>
       </div>
       <div class="control-group compact">
         <label class="toggle">
@@ -100,7 +101,7 @@
         top priority for the next cycle's <strong>Next Action</strong>, then is marked DONE.
       </p>
       <div class="director-templates">
-        <span class="muted">Templates — copy, paste above, fill &lt;FILL&gt;, Send:</span>
+        <span class="muted">Templates — copy, paste above, Send. No editing needed: each one reads the candidate, the parked items and the blockers from the company's own records.</span>
         <span id="directiveTemplates" class="tpl-btn-row"><span class="muted mono">(loading…)</span></span>
       </div>
       <textarea id="directiveInput" class="director-input" rows="6" maxlength="20000"

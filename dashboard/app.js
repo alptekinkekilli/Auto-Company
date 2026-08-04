@@ -65,8 +65,9 @@ const els = {
   btnWake: document.getElementById("btnWake"),
 
   btnRefresh: document.getElementById("btnRefresh"),
-  btnStart: document.getElementById("btnStart"),
-  btnStop: document.getElementById("btnStop"),
+  btnHold: document.getElementById("btnHold"),
+  btnRelease: document.getElementById("btnRelease"),
+  holdBadge: document.getElementById("holdBadge"),
   btnTail: document.getElementById("btnTail"),
   btnRaw: document.getElementById("btnRaw"),
   btnConsensusFull: document.getElementById("btnConsensusFull"),
@@ -78,6 +79,7 @@ const els = {
 let timer = null;
 let rawVisible = false;
 let consensusFullShown = false;
+let lastHold = null;
 
 function escapeHtml(text) {
   return String(text)
@@ -302,7 +304,8 @@ async function fetchStatus() {
 
   renderDirective(data.directive || {});
   renderCost(data.cost || {});
-  applyHostControls(data.hostKind);
+  lastHold = data.hold || { held: false };
+  renderHold(lastHold);
 
   els.lastUpdate.textContent = `Last update: ${formatTime(data.timestamp)}`;
   els.latency.textContent = `Roundtrip: ${elapsed}ms`;
@@ -368,17 +371,52 @@ function renderCcusage(cc) {
     : "—";
 }
 
-let hostControlsApplied = false;
-function applyHostControls(hostKind) {
-  if (hostControlsApplied || hostKind !== "linux") return;
-  // In the container the loop is a child of the entrypoint, managed by Coolify —
-  // Start/Stop map to a no-op here. Disable them and point at Settings → Redeploy.
-  for (const b of [els.btnStart, els.btnStop]) {
-    b.disabled = true;
-    b.title = "Managed by Coolify in the container. Use Settings → Save & Redeploy.";
-    b.classList.add("btn-disabled");
+// Start/Stop used to live here and were permanently disabled in the container (the
+// loop is a child of the entrypoint, managed by Coolify — both were no-ops). They are
+// replaced by Hold/Release, which drive logs/LOOP_HOLD: the only control that actually
+// stops the loop, and the one the operator was reaching for anyway.
+function renderHold(hold) {
+  if (!els.holdBadge) return;
+  const held = !!(hold && hold.held);
+  els.holdBadge.textContent = held
+    ? (hold.kind === "operator" ? "HELD (operator)" : "HELD (budget/loop latch)")
+    : "running";
+  els.holdBadge.className = "badge " + (held ? "badge-pending" : "badge-none");
+  els.holdBadge.title = held ? `${hold.reason || ""}${hold.latched ? " · latched " + hold.latched : ""}` : "";
+  els.btnHold.disabled = held;
+  els.btnRelease.disabled = !held;
+}
+
+async function setHold(arm) {
+  const btn = arm ? els.btnHold : els.btnRelease;
+  const hold = lastHold || {};
+  if (arm) {
+    const reason = prompt("Hold reason (recorded in logs/hold-audit.log):", "operator pause");
+    if (reason === null) return;                       // cancelled
+    var body = JSON.stringify({ reason });
+  } else if (hold.kind && hold.kind !== "operator") {
+    // Releasing a latch the LOOP wrote is not the same act as undoing your own pause:
+    // the file's own text says to clear it only after verifying the accounting.
+    if (!confirm(`This hold was NOT set from the cockpit:\n\n${hold.reason || "(no reason recorded)"}\n\nReleasing it overrides whatever latched it. Continue?`)) return;
   }
-  hostControlsApplied = true;
+  const label = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = `${label}...`;
+  try {
+    const res = await fetch(arm ? "/api/hold" : "/api/hold/release", {
+      method: "POST",
+      headers: arm ? { "Content-Type": "application/json" } : {},
+      body: arm ? body : undefined,
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || "hold change failed");
+    await fetchStatus();
+  } catch (err) {
+    alert(err instanceof Error ? err.message : String(err));
+  } finally {
+    btn.textContent = label;
+    fetchStatus().catch(() => {});
+  }
 }
 
 function renderDirective(directive) {
@@ -724,26 +762,6 @@ async function wakeLoop() {
   }
 }
 
-async function runAction(action) {
-  const btn = action === "start" ? els.btnStart : els.btnStop;
-  const label = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = `${label}...`;
-  try {
-    const res = await fetch(`/api/action/${action}`, { method: "POST" });
-    const data = await res.json();
-    if (!res.ok || !data.ok) {
-      throw new Error(data.output || `Action ${action} failed`);
-    }
-    await fetchStatus();
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    alert(msg);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = label;
-  }
-}
 
 function resetAutoTimer() {
   if (timer) {
@@ -758,8 +776,8 @@ function resetAutoTimer() {
 }
 
 els.btnRefresh.addEventListener("click", () => fetchStatus().catch(() => {}));
-els.btnStart.addEventListener("click", () => runAction("start"));
-els.btnStop.addEventListener("click", () => runAction("stop"));
+els.btnHold.addEventListener("click", () => setHold(true));
+els.btnRelease.addEventListener("click", () => setHold(false));
 els.btnWake.addEventListener("click", () => wakeLoop());
 els.btnTail.addEventListener("click", () => fetchStatus().catch(() => {}));
 els.btnConsensusFull.addEventListener("click", async () => {

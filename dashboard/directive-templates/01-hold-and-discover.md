@@ -1,38 +1,53 @@
 Status: ACTIVE
-Issued: <FILL: YYYY-MM-DD>
-Scope: HOLD <FILL: candidate name> pending <FILL: blocker>; make continuous opportunity discovery the primary activity.
+Scope: HOLD the current Active Validation; make bounded opportunity discovery the primary activity while it is parked.
 
 ## Primary activity this directive sets
 
-Continuous opportunity discovery. While the item(s) in "Blocked / Pending Work"
-below are parked, the loop's main autonomous work each cycle is bounded
-opportunity-discovery scans — NOT re-auditing the frozen item(s).
+Continuous, framework-gated opportunity discovery. While the parked item(s) below
+wait, the loop's main autonomous work each cycle is a bounded discovery scan —
+NOT re-auditing the frozen item(s).
 
-## Blocked / Pending Work (the company must know these are parked and WHY)
+## What is parked, and how to know (derive it; nothing here is filled in by hand)
 
-- <FILL: candidate name> — status **HOLD**.
-  - Blocked on: <FILL: e.g. $549 iyzico payment link>.
-  - Why: <FILL: e.g. link is in iyzico onboarding/KYC — website-criteria review + identity/contract approval, days, operator-run>.
-  - Owner to unblock: <FILL: operator / who>.
-  - Unblock when: <FILL: the concrete condition, e.g. a live hosted payment link exists>.
-  - Preserve intact (do NOT archive/dismantle/repurpose): <FILL: assets, e.g. Airtable Staging-QA Outreach + Intake + Sales Assets + Call Script, report template>.
-  - Tracking: <FILL: Linear issue, e.g. APP-226>.
-  - Registry: keep this candidate **Selected — status HOLD**; do not re-propose its axis.
-  - While HOLD: NO outreach, payment request, qualified-contact work, staging access, fulfillment, or delivery for it.
+Read the company's own records each cycle and treat THOSE as authoritative:
 
-<FILL: add more blocked items the same way, or delete this line if only one.>
+- `memories/candidate-registry.md` → `## Selected` is the Active Validation and
+  carries its status. Put it on **HOLD** and keep it there.
+- `memories/consensus.md` → `## Next Action` and `## Awaiting Operator` name what
+  it is blocked on and who unblocks it.
+- The open OPREQ register → anything waiting on an operator decision.
+
+For every parked item: preserve its assets intact (do NOT archive, dismantle or
+repurpose them), keep the Linear track issue recorded in its registry row, do not
+re-propose its axis, and run NO outreach, payment request, qualified-contact work,
+staging access, fulfillment or delivery for it while it is held.
 
 ## How discovery runs (framework-gated, every scan)
 
-- Load `memories/candidate-registry.md` FIRST. Dedup by axis = (buyer × delivery-shape × price-point). Skip any axis in Selected / Archived / Pending (the HELD candidate's axis included); LOG what you excluded and why.
-- Every surfaced candidate needs: buyer, delivery shape, price point, and the single cheapest willingness-to-pay test. Reject deadline/trend/regulation-only bets per `PROJECT_EVALUATION_FRAMEWORK.md`.
-- Add qualified new candidates to `## Pending Queue`. Let the Opportunity Analyst score them, compare against the company's own pick, and write its directive draft for operator review. Keep scanning across cycles — do not stop after one scan.
+- Load `memories/candidate-registry.md` FIRST. Dedup by axis = (buyer × delivery
+  shape × price point). Skip any axis already in Selected / Archived / Pending —
+  the held candidate's axis included — and LOG what you excluded and why. No
+  silent skipping.
+- Aim for ~10 distinct new candidates per scan. Each needs a buyer, a delivery
+  shape, a price point, and the single cheapest willingness-to-pay test. Reject
+  deadline-, trend- or regulation-only bets per `PROJECT_EVALUATION_FRAMEWORK.md`.
+- Add qualified candidates to `## Pending Queue`. The Opportunity Analyst scores
+  them, compares them against the company's own pick and drafts a directive for
+  operator review. Keep scanning across cycles — do not stop after one scan.
 
 ## Guardrails (unchanged)
 
-- HARD STOP for EVERY candidate: no product/software build before a real WTP signal (payment, pre-order, paid pilot, or priced fake-door with actual checkout attempts). Only permitted build = the cheapest WTP test (priced fake-door on Cloudflare Pages via the `cloudflare-pages-deploy` skill; never Vercel or this host).
-- No autonomous outreach, payment action, staging access, or delivery for ANY candidate. Munger veto intact. Do NOT start any candidate's build without a NEW authorizing directive.
+- HARD STOP for EVERY candidate: no product/software build before a real WTP
+  signal (payment, pre-order, paid pilot, or priced fake-door with actual checkout
+  attempts). The only permitted build is the cheapest WTP test itself (priced
+  fake-door on Cloudflare Pages via the `cloudflare-pages-deploy` skill; never
+  Vercel, never this host).
+- No autonomous outreach, payment action, staging access or delivery for ANY
+  candidate. Munger veto intact. No candidate build without a NEW authorizing
+  directive.
 
 ## Completion
 
-Stays in effect (do not mark terminally done and revert to auditing the frozen item) until the operator either (a) clears the blocker and issues an un-HOLD directive, or (b) selects a different candidate. Discover every cycle until then.
+Stays in effect until the operator issues a different directive — typically
+un-holding the parked candidate or selecting a new one. Do not mark it DONE from
+a quiet cycle or a finished scan, and do not drift back to auditing frozen work.
