@@ -80,6 +80,7 @@ let timer = null;
 let rawVisible = false;
 let consensusFullShown = false;
 let lastHold = null;
+let lastDirective = null;
 
 function escapeHtml(text) {
   return String(text)
@@ -420,6 +421,7 @@ async function setHold(arm) {
 }
 
 function renderDirective(directive) {
+  lastDirective = directive || null;
   const status = (directive.status || "NONE").toUpperCase();
   els.directiveBadge.textContent = status;
   els.directiveBadge.className = `badge badge-${status.toLowerCase()}`;
@@ -446,12 +448,25 @@ async function submitDirective() {
   els.btnDirective.textContent = "Sending...";
   els.directiveStatus.textContent = "";
   try {
-    const res = await fetch("/api/directive", {
+    const send = (allowPending) => fetch("/api/directive", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ directive: text }),
+      body: JSON.stringify(allowPending ? { directive: text, allowPending: true }
+                                        : { directive: text }),
     });
-    const data = await res.json();
+    let res = await send(false);
+    let data = await res.json();
+    // The writer REFUSES to overwrite a live PENDING directive — that gate is the
+    // point, not an error. The server has always accepted `allowPending` for the
+    // deliberate supersede; the panel just never offered it, so a refusal was a
+    // dead end here and the operator had to fall back to the CLI. Ask, then retry.
+    if ((!res.ok || !data.ok) && /PENDING/i.test(String(data.error || ""))) {
+      const cur = (lastDirective && lastDirective.updated) ? ` (last updated ${lastDirective.updated})` : "";
+      if (confirm(`The live directive is still PENDING${cur} — in-flight work.\n\n${data.error}\n\nReplace it deliberately with what is in the box?`)) {
+        res = await send(true);
+        data = await res.json();
+      }
+    }
     if (!res.ok || !data.ok) {
       throw new Error(data.error || "Failed to send directive");
     }
