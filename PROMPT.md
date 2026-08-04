@@ -1088,6 +1088,16 @@ Those archive files are read-only history: never edit them, never re-inline thei
 content, and treat a pointer line as sufficient evidence that the history exists.
 Grep the archive files only when a task genuinely needs old scan detail.
 
+Registry note format (2026-08-04, operator rule): a maintenance note whose outcome
+is NO change is exactly ONE line —
+`**Cycle N note (YYYY-MM-DD): Rule-10 PASS, bridges/cohort unchanged, no candidate/axis/status change [docs/<evidence-path>]**`
+— nothing more; the dated one-liner IS the "verification ran and found no drift"
+evidence, and the referenced doc carries the detail. The full multi-paragraph note
+format is reserved for turns where something actually CHANGED (a demotion,
+promotion, new evidence, bridge event, or status edit). Rationale: "all NOTABLE
+changes" is the entry bar (Keep a Changelog); a paragraph repeating "nothing
+happened" buries the notes that matter and bloats the analyst's input.
+
 ## CONVERGENCE RULES (MANDATORY)
 
 1. **Cycle 1:** Brainstorm; each agent proposes one idea; finish with a ranked top 3.
