@@ -49,6 +49,14 @@ Whatever the registry currently records as the Active Validation, with its own
 terminal date and stop gate. This directive does NOT change its verdict, offer,
 caps or dates — it only bounds what the loop does while that validation waits.
 
+**Dated obligations survive this directive.** Any deadline already recorded in the
+previous directive, the registry or consensus — a terminal date, a demotion
+boundary, a pre-registered outcome rule, an adjudication due date — still runs on
+its own date. Executing one is CLOSING OUT a bounded task (allowed above), not new
+work, and watch mode is never a reason to let a date pass unhandled. On the day,
+do exactly what that obligation says and record the result; do not re-open the
+decision or extend the date without an operator directive.
+
 ## If the loop was mechanically held
 
 The operator may arm the mechanical hold (`logs/LOOP_HOLD`) on top of this
