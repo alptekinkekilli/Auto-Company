@@ -57,11 +57,32 @@ else
   echo "$(ts) start ($C) [engine=jcode one-shot]" >> "$LOG"
   RUN=analyst-jcode-run
   docker rm -f "$RUN" >/dev/null 2>&1 || true
-  docker run -d --name "$RUN" --entrypoint sleep \
+  # Image resolution (2026-08-05). Why: this hardcoded `autocompany-jcode:pilot`, and
+  # that tag has now been deleted THREE times by /etc/cron.d/docker-prune-safe — its
+  # WARN branch runs `docker image prune -af` every 2h once disk >= 60%, and the keeper
+  # containers anchor 378d6a3 and r2, not `pilot`. Retagging fixes the morning and
+  # nothing else, so stop depending on one tag: prefer pilot, else fall back to whatever
+  # autocompany-jcode image the keepers are holding (newest first). A missing image is
+  # now FATAL rather than a silent `docker run` failure followed by a cascade of
+  # "No such container" execs and a report-less run.
+  IMG=autocompany-jcode:pilot
+  if ! docker image inspect "$IMG" >/dev/null 2>&1; then
+    ALT=$(docker images --format '{{.Repository}}:{{.Tag}}' autocompany-jcode 2>/dev/null | grep -v '<none>' | head -1)
+    if [ -z "$ALT" ]; then
+      echo "$(ts) FAILED — no autocompany-jcode image on host (pilot pruned, no fallback) [engine=jcode]" >> "$LOG"
+      checkin error; exit 5
+    fi
+    echo "$(ts) WARN: $IMG missing (pruned?) — falling back to $ALT [engine=jcode]" >> "$LOG"
+    IMG="$ALT"
+  fi
+  if ! docker run -d --name "$RUN" --entrypoint sleep \
     -v z12a992i3ty202zezspij2fn-ac-memories:/app/memories \
     -v z12a992i3ty202zezspij2fn-ac-logs:/app/logs \
     -v jcode-pilot-home:/home/app/.jcode \
-    -e JCODE_NO_TELEMETRY=1 -u app autocompany-jcode:pilot 7200 >/dev/null
+    -e JCODE_NO_TELEMETRY=1 -u app "$IMG" 7200 >/dev/null 2>>"$LOG"; then
+    echo "$(ts) FAILED — could not start one-shot container from $IMG [engine=jcode]" >> "$LOG"
+    checkin error; exit 6
+  fi
   # /app/docs in PROD is a symlink into the memories volume (/app/memories/_docs),
   # which this container already mounts — no copy needed, just mirror the symlink
   # over the image-baked stale docs dir. Discovered after two tar attempts failed.
