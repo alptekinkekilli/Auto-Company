@@ -795,6 +795,9 @@ function resetAutoTimer() {
   if (els.autoToggle.checked) {
     timer = setInterval(() => {
       fetchStatus().catch(() => {});
+      // Requests were fetched once at first paint only, so one filed mid-session stayed
+      // invisible (and un-notified) until a manual reload. Same cadence as the status poll.
+      loadOperatorRequests().catch(() => {});
     }, Number(els.refreshInterval.value));
   }
 }
@@ -859,12 +862,85 @@ const AUTH_LABELS = ["System", "Action", "Target", "Limit"];
 const opreqEls = {
   list: document.getElementById("opreqList"),
   badge: document.getElementById("opreqBadge"),
+  notify: document.getElementById("btnNotify"),
 };
+
+// Desktop notification for a newly filed request (2026-08-06). The panel already
+// showed a badge, but nothing polled the endpoint after first paint, so a request
+// filed mid-session stayed invisible until a manual reload — the badge was honest
+// and useless at the same time. loadOperatorRequests() now runs on the poll timer,
+// and any request ID we have not announced before raises one notification.
+//
+// Scope, stated plainly: this only fires while the cockpit tab is open (no service
+// worker, no push subscription). Telegram remains the away-from-desk channel; this
+// is for the case where the cockpit is up on a second screen.
+const NOTIFIED_KEY = "opreqNotifiedIds";
+
+function notifiedIds() {
+  try {
+    const raw = localStorage.getItem(NOTIFIED_KEY);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function rememberNotified(ids) {
+  try {
+    // Keep the last 200 so the key cannot grow without bound over months.
+    localStorage.setItem(NOTIFIED_KEY, JSON.stringify([...ids].slice(-200)));
+  } catch {
+    /* private mode / storage disabled — notifications simply repeat, never throw */
+  }
+}
+
+function renderNotifyButton() {
+  if (!opreqEls.notify) return;
+  const supported = "Notification" in window;
+  if (!supported) {
+    opreqEls.notify.textContent = "Notifications n/a";
+    opreqEls.notify.disabled = true;
+    opreqEls.notify.title = "This browser exposes no Notification API";
+    return;
+  }
+  const perm = Notification.permission;
+  opreqEls.notify.textContent =
+    perm === "granted" ? "Notifying" : perm === "denied" ? "Notifications blocked" : "Notify me";
+  opreqEls.notify.disabled = perm !== "default";
+  if (perm === "denied") {
+    opreqEls.notify.title = "Blocked in browser settings — re-allow it there, this page cannot ask again";
+  } else if (perm === "granted") {
+    opreqEls.notify.title = "You get a desktop notification for each new request, while this tab is open";
+  }
+}
+
+function announceNewRequests(open) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  const seen = notifiedIds();
+  const fresh = open.filter((r) => r && r.id && !seen.has(r.id));
+  if (!fresh.length) return;
+
+  fresh.forEach((req) => {
+    const n = new Notification(`Auto-Company: ${req.id}`, {
+      body: (req.requiredInput || "A decision is waiting on you.").slice(0, 180),
+      tag: req.id, // same request never stacks duplicates
+      requireInteraction: true, // a decision request should not vanish after 5 seconds
+    });
+    n.onclick = () => {
+      window.focus();
+      document.querySelector(".panel.opreq")?.scrollIntoView({ behavior: "smooth" });
+      n.close();
+    };
+    seen.add(req.id);
+  });
+  rememberNotified(seen);
+}
 
 function renderOperatorRequests(payload) {
   const open = (payload && payload.open) || [];
   opreqEls.badge.textContent = String(open.length);
   opreqEls.badge.className = `badge badge-${open.length ? "pending" : "none"}`;
+  announceNewRequests(open);
 
   if (!open.length) {
     opreqEls.list.innerHTML = '<p class="muted mono">Nothing waiting on you.</p>';
@@ -971,6 +1047,22 @@ async function loadOperatorRequests() {
 
 els.autoToggle.addEventListener("change", resetAutoTimer);
 els.refreshInterval.addEventListener("change", resetAutoTimer);
+
+// Permission must be requested from a user gesture — asking on page load is what gets
+// a site permanently blocked in Chrome. The first grant also announces whatever is
+// already open, so pressing the button never leaves a pending request unannounced.
+opreqEls.notify?.addEventListener("click", async () => {
+  if (!("Notification" in window)) return;
+  try {
+    await Notification.requestPermission();
+  } catch {
+    /* older browsers use the callback form; renderNotifyButton reflects reality either way */
+  }
+  renderNotifyButton();
+  loadOperatorRequests().catch(() => {});
+});
+renderNotifyButton();
+
 loadOperatorRequests().catch(() => {});
 
 fetchStatus().catch((err) => {

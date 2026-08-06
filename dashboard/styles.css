@@ -223,6 +223,21 @@ select {
   font-size: 0.9rem;
 }
 
+/* Keep the badge next to the heading and push the notify button to the right edge,
+   instead of letting space-between spread all three evenly. */
+.opreq .panel-head {
+  justify-content: flex-start;
+}
+
+.opreq .panel-head #btnNotify {
+  margin-left: auto;
+}
+
+.opreq .panel-head #btnNotify:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 .grid-cards {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
