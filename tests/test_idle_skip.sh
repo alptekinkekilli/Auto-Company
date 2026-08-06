@@ -96,12 +96,23 @@ check "note is one physical line" \
 echo "== wiring =="
 check "skip branch calls no model" \
       "$(awk '/_idle_skip_due "\$_cycle_idle"/,/^    fi$/' "$LOOP" | grep -cE 'run_engine|claude |codex ')" "0"
+# Count CODE lines only — a comment mentioning `continue` is not a branch.
 check "skip branch continues the loop" \
-      "$(awk '/_idle_skip_due "\$_cycle_idle"/,/^    fi$/' "$LOOP" | grep -c 'continue')" "1"
+      "$(awk '/_idle_skip_due "\$_cycle_idle"/,/^    fi$/' "$LOOP" \
+         | grep -v '^[[:space:]]*#' | grep -c '^[[:space:]]*continue$')" "1"
 check "stamp is written only on success" \
       "$(grep -c 'if \[ -z "\${cycle_failed_reason:-}" \]; then' "$LOOP")" "1"
 check "stamp file path agrees on both sides" \
       "$(grep -c 'last-full-cycle.date' "$LOOP")" "2"
+
+# A skipped cycle must still process an operator decision. The OPREQ ledger step lives at
+# the END of the cycle, which `continue` jumps over — so without this the operator's
+# refusal sits unprocessed while an open request keeps DELTA at `none`, skipping forever.
+check "skip branch still runs the OPREQ ledger step" \
+      "$(awk '/_idle_skip_due "\$_cycle_idle"/,/^    fi$/' "$LOOP" | grep -c 'operator_request_notify.py')" "1"
+check "OPREQ step runs BEFORE the skip sleeps" \
+      "$(awk '/_idle_skip_due "\$_cycle_idle"/,/^    fi$/' "$LOOP" \
+         | awk '/operator_request_notify.py/{n=NR} /sleep /{s=NR} END{print (n && s && n < s) ? "yes" : "no"}')" "yes"
 
 echo
 echo "passed=$pass failed=$fail"

@@ -936,11 +936,28 @@ function announceNewRequests(open) {
   rememberNotified(seen);
 }
 
+// Never redraw a card the operator is mid-answer in. The poll added on 2026-08-06 made
+// this panel refresh on a timer, and the first real use of it lost a long refusal the
+// operator had typed: the poll landed, innerHTML was rebuilt, the textarea went empty.
+// Any focus inside the panel, or any field with content in it, defers the redraw — the
+// badge and the notification still update, only the DOM the operator is typing into is
+// left alone.
+function opreqPanelBusy() {
+  const panel = document.querySelector(".panel.opreq");
+  if (!panel) return false;
+  if (panel.contains(document.activeElement)) return true;
+  return [...panel.querySelectorAll("textarea, input")].some(
+    (el) => typeof el.value === "string" && el.value.trim() !== ""
+  );
+}
+
 function renderOperatorRequests(payload) {
   const open = (payload && payload.open) || [];
   opreqEls.badge.textContent = String(open.length);
   opreqEls.badge.className = `badge badge-${open.length ? "pending" : "none"}`;
   announceNewRequests(open);
+
+  if (opreqPanelBusy()) return;
 
   if (!open.length) {
     opreqEls.list.innerHTML = '<p class="muted mono">Nothing waiting on you.</p>';

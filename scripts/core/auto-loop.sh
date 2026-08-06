@@ -2728,6 +2728,15 @@ while true; do
         python3 "$SCRIPT_DIR/../ops/idle-skip-note.py" \
             --consensus "$CONSENSUS_FILE" --day "$_today_utc" \
             --time "$(date -u +%H:%M)" >/dev/null 2>&1 || true
+        # The OPREQ ledger step normally runs at the END of a cycle (see the call near the
+        # bottom of this loop), which `continue` skips. Found live on 2026-08-06: the
+        # operator refused a request from the cockpit, and nothing processed it — an open
+        # request keeps `opreq: open=N` constant, so DELTA stays `none`, so every following
+        # cycle skips, so the decision waits for the next day's first full cycle. A decision
+        # the operator has already made must never wait on the loop having other work.
+        # Deterministic, no model call, always exits 0.
+        python3 "$SCRIPT_DIR/operator_request_notify.py" "$PROJECT_DIR" \
+            >> "$LOG_DIR/operator-requests.log" 2>&1 || true
         log_cycle "$loop_count" "IDLE-SKIP" "snapshot DELTA none and today's full cycle already ran — no model call, no external call. Sleeping ${IDLE_LOOP_INTERVAL:-3600}s."
         save_state "idle"
         sleep "${IDLE_LOOP_INTERVAL:-3600}" || true

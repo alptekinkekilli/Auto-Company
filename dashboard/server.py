@@ -505,13 +505,23 @@ def write_operator_decision(
 
     stamp = datetime.now(timezone.utc).isoformat()
     if decision == "refuse":
-        why = " ".join((reason or "").split()).strip()
+        # The REFUSE line must stay ONE physical line — operator_request_notify.py matches
+        # it with a line-anchored regex. But collapsing the whole reason into that line
+        # destroyed a long refusal's structure (observed 2026-08-06: a numbered, paragraphed
+        # rationale arrived in the ledger as a single 2,000-character run-on). So: a short
+        # machine-readable head on the REFUSE line, and the operator's text verbatim below
+        # it, where both a human and a later cycle can actually read it.
+        flat = " ".join((reason or "").split()).strip()
+        head = re.split(r"(?<=[.!?])\s", flat, maxsplit=1)[0][:200] if flat else ""
+        verbatim = (reason or "").strip()
         block = (
             f"\n## {req_id} — refused {stamp}\n\n"
             f"Resolves: {req_id}\n"
             f"Decided via: cockpit operator-decision panel\n"
-            f"REFUSE {req_id} — {why or 'refused by the operator, no reason given'}\n"
+            f"REFUSE {req_id} — {head or 'refused by the operator, no reason given'}\n"
         )
+        if verbatim and verbatim != head:
+            block += f"\nFull reasoning as written by the operator:\n\n{verbatim}\n"
     elif decision == "authorize":
         if not known[req_id]["authorizable"]:
             raise ValueError(
