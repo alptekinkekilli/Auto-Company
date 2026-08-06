@@ -29,7 +29,8 @@ awk '/^    _idle_skip_due\(\) \{/,/^    \}/' "$LOOP" | sed 's/^    //' > "$TMP/f
 STAMP="$TMP/last-full-cycle.date"
 TODAY="2026-08-06"
 
-due() { if _idle_skip_due "$1" "$STAMP" "$TODAY"; then echo yes; else echo no; fi; }
+# $2 is the enabled flag the caller resolves from runtime.env; default it to on.
+due() { if _idle_skip_due "$1" "$STAMP" "$TODAY" "${2-1}"; then echo yes; else echo no; fi; }
 
 echo "== _idle_skip_due =="
 
@@ -42,14 +43,18 @@ check "yesterday's stamp does not authorize a skip" "$(due 1)" "no"
 echo "$TODAY" > "$STAMP"
 check "idle + today's full cycle done -> skip" "$(due 1)" "yes"
 check "not idle -> full cycle even with today's stamp" "$(due 0)" "no"
-check "missing idle arg defaults to not-idle" "$(_idle_skip_due "" "$STAMP" "$TODAY" && echo yes || echo no)" "no"
+check "missing idle arg defaults to not-idle" "$(_idle_skip_due "" "$STAMP" "$TODAY" 1 && echo yes || echo no)" "no"
 
-IDLE_SKIP_ENABLED=0
-check "kill switch disables skipping" "$(due 1)" "no"
-IDLE_SKIP_ENABLED=1
-check "kill switch back on" "$(due 1)" "yes"
-unset IDLE_SKIP_ENABLED
-check "unset kill switch defaults to enabled" "$(due 1)" "yes"
+check "kill switch 0 disables skipping" "$(due 1 0)" "no"
+check "kill switch 1 re-enables it" "$(due 1 1)" "yes"
+check "blank flag defaults to enabled" "$(due 1 "")" "yes"
+check "junk flag is treated as off (fail-safe)" "$(due 1 yes)" "no"
+
+# The kill switch must be read from runtime.env, not from the loop's frozen boot env.
+check "caller reads the flag from runtime.env" \
+      "$(grep -c '_idle_skip_flag=$(_read_runtime_env_key IDLE_SKIP_ENABLED)' "$LOOP")" "1"
+check "function body never expands the env var itself" \
+      "$(awk '/^    _idle_skip_due\(\) \{/,/^    \}/' "$LOOP" | grep -c '\${IDLE_SKIP_ENABLED')" "0"
 
 printf '' > "$STAMP"
 check "empty stamp file does not authorize a skip" "$(due 1)" "no"

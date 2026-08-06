@@ -2703,8 +2703,12 @@ while true; do
     # Fail-open twice over: an unavailable snapshot is already NOT idle (above), and
     # IDLE_SKIP_ENABLED=0 disables this entirely without a redeploy.
     _idle_skip_due() {
-        # $1 = _cycle_idle, $2 = stamp file, $3 = today's UTC date
-        [ "${IDLE_SKIP_ENABLED:-1}" = "1" ] || return 1
+        # $1 = _cycle_idle, $2 = stamp file, $3 = today's UTC date, $4 = enabled flag.
+        # The flag is a PARAMETER, not an env read inside the function: the caller reads
+        # runtime.env live (the loop's own env is frozen at container boot, so an env-only
+        # kill switch would need a restart to take effect — found the hard way on
+        # 2026-08-06, when writing IDLE_SKIP_ENABLED=0 changed nothing in the running loop).
+        [ "${4:-1}" = "1" ] || return 1
         [ "${1:-0}" = "1" ] || return 1
         [ "$(cat "$2" 2>/dev/null || echo)" = "$3" ] || return 1
         return 0
@@ -2712,7 +2716,9 @@ while true; do
 
     _full_cycle_stamp="$LOG_DIR/last-full-cycle.date"
     _today_utc=$(date -u +%Y-%m-%d)
-    if _idle_skip_due "$_cycle_idle" "$_full_cycle_stamp" "$_today_utc"; then
+    _idle_skip_flag=$(_read_runtime_env_key IDLE_SKIP_ENABLED)
+    [ -z "$_idle_skip_flag" ] && _idle_skip_flag="${IDLE_SKIP_ENABLED:-1}"
+    if _idle_skip_due "$_cycle_idle" "$_full_cycle_stamp" "$_today_utc" "$_idle_skip_flag"; then
         _skip_ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
         printf '{"date":"%s","ts":"%s","cycle":%s,"reason":"delta-none-after-full-cycle"}\n' \
             "$_today_utc" "$_skip_ts" "$loop_count" \
