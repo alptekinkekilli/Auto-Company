@@ -361,3 +361,12 @@ All skills are under `.claude/skills/`. Any agent can use any skill when relevan
 - Keep communication concise and actionable.
 - Resolve disagreements with evidence; CEO makes final calls.
 - Every discussion ends with a concrete Next Action.
+
+# Summary instructions
+
+Bu konuşma özetlenirken KORUNUR: kullanıcının kararları ve gerekçeleri (birebir),
+yürürlükteki kısıtlar, uçuştaki işler ve bekleyen sorular, doğrulanmış olgu ile
+doğrulanmamış çıkarımın ayrımı.
+
+Özete SAYI taşınmaz (durum, süre, maliyet, sayaç) — bunlar
+`scripts/session-brief.py` ile yeniden ölçülür.
