@@ -85,6 +85,36 @@ python3 "$TUA" --app "$TMP"
 N=$(wc -l < "$TMP/logs/tool-usage-history.ndjson" | tr -d ' ')
 [ "$N" = 3 ] && ok "still idempotent when unchanged" || bad "grew to $N on unchanged rerun"
 
+echo "[3c] per-MCP-tool-name counts (the input a denylist trim needs)"
+FIRST=$(head -1 "$TMP/logs/tool-usage-history.ndjson")
+namecount() { python3 -c "
+import json,sys
+n=json.loads(sys.argv[1]).get('names',{})
+print(n.get(sys.argv[2], 0))" "$FIRST" "$1"; }
+[ "$(namecount mcp__airtable__update_records_for_table)" = 1 ] \
+  && ok "mcp tool name recorded" || bad "airtable write tool name missing"
+[ "$(namecount mcp__browseros__navigate)" = 1 ] \
+  && ok "browseros tool name recorded" || bad "browseros tool name missing"
+# bash dominates every cycle and is not denylist material — recording it would bloat the
+# ledger for no decision it could inform.
+[ "$(namecount bash)" = 0 ] && ok "non-MCP tools are not name-recorded" || bad "bash leaked into names"
+NKEYS=$(python3 -c "
+import json,sys; print(len(json.loads(sys.argv[1]).get('names',{})))" "$FIRST")
+[ "$NKEYS" = 4 ] && ok "exactly the 4 distinct MCP tools" || bad "expected 4 name keys, got $NKEYS"
+
+OUT=$(python3 "$TUA" --app "$TMP" --names)
+printf '%s' "$OUT" | grep -q "LEDGER (durable)" && ok "--names reports the ledger" || bad "no ledger section"
+printf '%s' "$OUT" | grep -q "TRANSCRIPTS ON DISK" \
+  && ok "--names keeps transcripts separate from the ledger" || bad "no transcript section"
+printf '%s' "$OUT" | grep -q "mcp__airtable__update_records_for_table" \
+  && ok "--names lists tool names" || bad "tool names missing from report"
+printf '%s' "$OUT" | grep -qi "were denied" \
+  && ok "--names warns that absence is not evidence of disuse" || bad "missing denylist caveat"
+BEFORE=$(wc -l < "$TMP/logs/tool-usage-history.ndjson" | tr -d ' ')
+python3 "$TUA" --app "$TMP" --names >/dev/null
+AFTER=$(wc -l < "$TMP/logs/tool-usage-history.ndjson" | tr -d ' ')
+[ "$BEFORE" = "$AFTER" ] && ok "--names writes nothing" || bad "--names mutated the ledger"
+
 echo "[4] --report prints the ledger, exit 0 without ndjson dir"
 OUT=$(python3 "$TUA" --app "$TMP" --report)
 printf '%s' "$OUT" | grep -q '"ctx7":1' && ok "report shows counts" || bad "report missing counts"

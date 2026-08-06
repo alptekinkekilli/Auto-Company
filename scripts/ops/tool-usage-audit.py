@@ -67,7 +67,7 @@ def calls_from_ndjson(path: str) -> list[tuple[str, str]]:
 
 def categorize(calls: list[tuple[str, str]]) -> dict:
     c = {"calls": len(calls), "ctx7": 0, "airtable_r": 0, "airtable_w": 0,
-         "linear": 0, "browser": 0, "browser_mcp": 0}
+         "linear": 0, "browser": 0, "browser_mcp": 0, "names": {}}
     for name, raw in calls:
         # Match on the TOOL NAME and, for bash, the COMMAND — never on arbitrary input
         # text: measured 2026-08-03, apply_patch/read calls EDITING browser-related code
@@ -102,6 +102,15 @@ def categorize(calls: list[tuple[str, str]]) -> dict:
             c["browser"] += 1
         if lname.startswith("mcp__browseros__"):
             c["browser_mcp"] += 1
+
+        # Per-TOOL-NAME counts for MCP tools (2026-08-06). The category counters above
+        # answer "how much Airtable", never "which Airtable tools" — so a proposal to trim
+        # a server to "the ~4 tools actually used" had no way to name those four, and the
+        # first such proposal (OPREQ-INFRA-MCP-DENYLIST-001) argued from a ledger that
+        # began AFTER the tools in question were already denied. Names are recorded only
+        # for mcp__ tools: bash/edit/read dominate the count and are not denylist material.
+        if lname.startswith("mcp__"):
+            c["names"][name] = c["names"].get(name, 0) + 1
     return c
 
 
@@ -109,6 +118,9 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--app", default="/app")
     ap.add_argument("--report", action="store_true")
+    ap.add_argument("--names", action="store_true",
+                    help="per-MCP-tool-name totals (ledger + transcripts still on disk); "
+                         "read-only, writes nothing")
     args = ap.parse_args()
     app = os.path.abspath(args.app)
     nd_dir = os.path.join(app, NDJSON_DIR)
@@ -121,6 +133,63 @@ def main() -> int:
                 sys.stdout.write(line)
         except OSError:
             print("no ledger yet")
+        return 0
+
+    if args.names:
+        # Two sources, kept apart on purpose. The LEDGER is durable and grows from here;
+        # the TRANSCRIPTS on disk are a rotating window (~20 cycles) that happens to be
+        # readable right now. Reporting them merged would hide that the ledger's own
+        # coverage starts today, which is exactly the mistake being corrected here.
+        led_names, led_rows, led_span = {}, 0, []
+        try:
+            for line in open(ledger, encoding="utf-8"):
+                try:
+                    row = json.loads(line)
+                except ValueError:
+                    continue
+                led_rows += 1
+                if row.get("ts"):
+                    led_span.append(row["ts"])
+                for k, v in (row.get("names") or {}).items():
+                    led_names[k] = led_names.get(k, 0) + v
+        except OSError:
+            pass
+
+        tr_names, tr_files = {}, 0
+        try:
+            for fn in sorted(os.listdir(nd_dir)):
+                if not fn.endswith(".ndjson"):
+                    continue
+                tr_files += 1
+                for k, v in categorize(calls_from_ndjson(
+                        os.path.join(nd_dir, fn)))["names"].items():
+                    tr_names[k] = tr_names.get(k, 0) + v
+        except OSError:
+            pass
+
+        def dump(title, data, note):
+            print(f"\n== {title} ==")
+            print(f"   {note}")
+            if not data:
+                print("   (no MCP tool calls recorded)")
+                return
+            for name, n in sorted(data.items(), key=lambda kv: (-kv[1], kv[0])):
+                print(f"   {n:6d}  {name}")
+            servers = {}
+            for name, n in data.items():
+                servers[name.split("__")[1] if "__" in name else "?"] = (
+                    servers.get(name.split("__")[1] if "__" in name else "?", 0) + n)
+            print("   per server: " + ", ".join(
+                f"{s}={n}" for s, n in sorted(servers.items(), key=lambda kv: -kv[1])))
+
+        span = f"{min(led_span)} .. {max(led_span)}" if led_span else "empty"
+        dump("LEDGER (durable)", led_names,
+             f"{led_rows} rows, {span} — name data only exists for rows written after 2026-08-06")
+        dump("TRANSCRIPTS ON DISK (rotating window)", tr_names,
+             f"{tr_files} cycle transcripts currently present; older ones are already rotated away")
+        print("\nA server absent from BOTH lists was not called in the window covered above.")
+        print("That is not evidence it is unused: check whether its tools were denied")
+        print("(JCODE_TOOLS_DENY in scripts/core/auto-loop.sh) before concluding anything.")
         return 0
 
     state = {}
