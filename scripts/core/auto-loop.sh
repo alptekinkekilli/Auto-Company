@@ -2689,6 +2689,45 @@ while true; do
         *)               _cycle_idle=0 ;;
     esac
 
+    # IDLE-SKIP (operator-approved 2026-08-06). Measured on the first watch-mode day:
+    # 8 cycles / $9.48, of which 6 were idle and cost $6.35 to conclude that nothing had
+    # moved. Those six each burned 4-6 tool calls and ~600k cached prompt tokens to
+    # re-read an unchanged world, so end an idle cycle mechanically instead.
+    #
+    # The blindness insurance is the stamp file, NOT a counter: the FIRST cycle of each
+    # UTC day always runs a full model cycle (the stamp is yesterday's or absent), so a
+    # DELTA computation that silently goes blind is still caught within a day rather than
+    # never. This is deliberately weaker-but-simpler than "every Nth cycle" — one guaranteed
+    # full look per day is the property that matters, and it needs no counter to persist.
+    #
+    # Fail-open twice over: an unavailable snapshot is already NOT idle (above), and
+    # IDLE_SKIP_ENABLED=0 disables this entirely without a redeploy.
+    _idle_skip_due() {
+        # $1 = _cycle_idle, $2 = stamp file, $3 = today's UTC date
+        [ "${IDLE_SKIP_ENABLED:-1}" = "1" ] || return 1
+        [ "${1:-0}" = "1" ] || return 1
+        [ "$(cat "$2" 2>/dev/null || echo)" = "$3" ] || return 1
+        return 0
+    }
+
+    _full_cycle_stamp="$LOG_DIR/last-full-cycle.date"
+    _today_utc=$(date -u +%Y-%m-%d)
+    if _idle_skip_due "$_cycle_idle" "$_full_cycle_stamp" "$_today_utc"; then
+        _skip_ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+        printf '{"date":"%s","ts":"%s","cycle":%s,"reason":"delta-none-after-full-cycle"}\n' \
+            "$_today_utc" "$_skip_ts" "$loop_count" \
+            >> "$LOG_DIR/idle-skip.ndjson" 2>/dev/null || true
+        # Best-effort: a failed note never blocks the skip, and the ndjson above is the
+        # trail that must survive regardless.
+        python3 "$SCRIPT_DIR/../ops/idle-skip-note.py" \
+            --consensus "$CONSENSUS_FILE" --day "$_today_utc" \
+            --time "$(date -u +%H:%M)" >/dev/null 2>&1 || true
+        log_cycle "$loop_count" "IDLE-SKIP" "snapshot DELTA none and today's full cycle already ran — no model call, no external call. Sleeping ${IDLE_LOOP_INTERVAL:-3600}s."
+        save_state "idle"
+        sleep "${IDLE_LOOP_INTERVAL:-3600}" || true
+        continue
+    fi
+
     # Build prompt with consensus pre-injected
     PROMPT=$(cat "$PROMPT_FILE")
     CONSENSUS=$(cat "$CONSENSUS_FILE" 2>/dev/null || echo "No consensus file found. This is the very first cycle.")
@@ -3153,6 +3192,15 @@ $(printf '%s' "${RESULT_TEXT:-}" | head -c 600)" >/dev/null 2>&1 || true
     # stretches to IDLE_LOOP_INTERVAL. When anything DOES move — a reply, a bridge result,
     # a new directive — DELTA names it, the cycle is not idle, and the cadence returns to
     # LOOP_INTERVAL by itself. Best-effort: a failed ledger write never affects the loop.
+    # Stamp the day's full model-run cycle — this is what IDLE-SKIP (above) reads to
+    # decide whether today has already had its guaranteed full look. Only a cycle that
+    # actually SUCCEEDED counts: after a timeout or a crash the day must not be treated
+    # as covered, so the next cycle runs the model again rather than skipping on the
+    # strength of a run that produced nothing.
+    if [ -z "${cycle_failed_reason:-}" ]; then
+        date -u +%Y-%m-%d > "$LOG_DIR/last-full-cycle.date" 2>/dev/null || true
+    fi
+
     _sleep_for="$LOOP_INTERVAL"
     if [ "${_cycle_idle:-0}" = "1" ]; then
         _sleep_for="${IDLE_LOOP_INTERVAL:-3600}"
