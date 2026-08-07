@@ -3,14 +3,14 @@ name: snapog-ci
 on:
   pull_request:
     paths:
-      - "projects/snapog/**"
-      - ".github/workflows/snapog-ci.yml"
+      - "projects/_archive/snapog/**"
+      - "projects/_archive/ci/snapog-ci.yml"
   push:
     branches:
       - main
     paths:
-      - "projects/snapog/**"
-      - ".github/workflows/snapog-ci.yml"
+      - "projects/_archive/snapog/**"
+      - "projects/_archive/ci/snapog-ci.yml"
 
 permissions:
   contents: read
