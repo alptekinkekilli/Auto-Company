@@ -10,20 +10,31 @@ Her kalemde SAHİBİ ve varsa mutlak tarih olsun.
       `z12a992i3ty202zezspij2fn-144411171194`, image `ea3b394` (= o anki HEAD),
       `[LOOP-HOLD]` ile güvenli açıldı (persistent volume'daki hold'u devraldı, sıfır
       model çağrısı), 30/30 test geçti. Konteyner şu an HELD, RELEASE operatörden.
-- [ ] **Konteynerin 2026-08-06T13:00:01'de neden yeniden yaratıldığı** hâlâ tam
-      açıklanamadı. Kesinleşen: gerçek bir Coolify build+deploy'du (image 12:59:00'da
-      taze build edilmiş, `journalctl -u ssh`'te Coolify Cloud IP'sinden 12:57-13:01
-      arası yoğun SSH oturum patlaması var — Coolify Cloud'un deploy IP'si diğer
-      günlerde de tekli "ping" oturumlarıyla görünüyor, o burst farklı). Ama bir PUSH'a
-      tepki DEĞİLDİ — o güne kadarki son push 08-04'teydi, 4 saat önce değil 2 gün önce.
-      Zamanlanmış bir Coolify işi mi, panelden manuel bir tık mı ayırt edilemedi (Coolify
-      API'sinde deployment audit-log endpoint'i bulunamadı). Sahibi: operatör (Coolify
-      panelinden kim/ne tetikledi kontrol edebilir) veya ben, sonraki oturum.
-- [ ] **GitHub repo `alptekinkekilli/Auto-Company` PUBLIC** (`gh api .../--jq .private`
-      → `false`, 2026-08-06 tespit). Git geçmişinde hızlı sır taraması yapıldı, gerçek
-      bir sızıntı bulunmadı (3 eşleşme hepsi placeholder: AWS'in kendi örnek anahtarı,
-      Slack'in örnek `xoxb-12345`, ve `CLAUDE_CODE_OAUTH_TOKEN` bir değişken adı olarak)
-      — ama bu tam bir tarama değil. Hafızadaki iki bekleyen token sızıntısı (08-01 ps
-      leak, 08-03 transcript leak, ikisi de "beklesin" kararıyla rotasyonsuz) repo public
-      olduğu için daha riskli olabilir. Sahibi: operatör — private'a almak mı, yoksa
-      bilerek mi public tutuluyor, karar operatörün.
+- [x] **Konteynerin 2026-08-06T13:00:01'de neden yeniden yaratıldığı** — KAPANDI
+      2026-08-07, operatörün Coolify panelinden yapıştırdığı deploy kaydıyla: Success,
+      12:57:26→13:00:33 UTC (SSH-burst penceremle birebir örtüşüyor), commit `440875a`.
+      O commit'in gerçek push zamanı (GitHub API'den doğrulandı): 2026-08-04T18:00:36Z —
+      deploy'dan TAM 2 GÜN ÖNCE. Yani gerçek, panelde görünen, başarılı bir deploy, ama
+      push'a tepki değil (kim/ne panelden tetikledi önemsiz kaldı — mekanizma sıradan,
+      rogue değil).
+- [x] **GitHub repo `alptekinkekilli/Auto-Company` PUBLIC — TAM tarama yapıldı** (gitleaks
+      8.30.1, 2026-08-07: working-tree 17 eşleşme + 763 commit'lik git-history taraması 6
+      eşleşme). Önceki "hızlı regex, gerçek sızıntı yok" değerlendirmesi YANLIŞTI —
+      gitleaks gerçek bir bulgu çıkardı:
+      - **GERÇEK, CANLI, HÂLÂ AÇIK sızıntı: 3 adet SnapOG `msk_...` API anahtarı**
+        (`docs/qa/evidence/snapog/register-{free,pro,business}-response.html`) — kendi
+        SnapOG ürünümüzün backend'inin QA test kayıtlarına gerçekten bastığı anahtarlar,
+        placeholder değil. Repo'yu private yapmak bunu GERİYE DÖNÜK silmez (zaten public
+        geçirdiği süre boyunca taranmış/indekslenmiş olabilir) — **rotasyon/iptal, görünürlük
+        kararından BAĞIMSIZ ve daha öncelikli bir aksiyon**. Sahibi: operatör veya ben
+        (SnapOG backend'ine nasıl erişileceği belli olursa).
+      - Geri kalan 17-6 eşleşmenin hepsi doğrulanan yanlış pozitif: `claimToken=...` bir
+        Cloudflare claim linki ama 2026-07-21'de 60 dakikalık pencereyle sınırlıydı, çoktan
+        süresi doldu; `bridge_leak_scan.py`'daki "sızıntı" kendi test fixture'ı (dosyanın
+        kendi docstring'i bunu doğruluyor); `security-audit` skill'indeki jwt-secret
+        dokümantasyon örneği (`c3VwZXJzZWNyZXQ=` = base64 "supersecret"); wrangler KV
+        namespace-id bir kimlik, sır değil; `ANTHROPIC_API_KEY=` bir değişken ADI, değer
+        değil.
+      - Repo private/public kararı hâlâ operatörün — ama artık gerçek bulgularla: SnapOG
+        anahtarları rotasyon gerektiriyor GÖRÜNÜRLÜKTEN BAĞIMSIZ; hafızadaki iki eski
+        token sızıntısı (08-01 ps leak, 08-03 transcript leak) hâlâ rotasyonsuz duruyor.
