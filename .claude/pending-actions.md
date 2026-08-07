@@ -17,24 +17,26 @@ Her kalemde SAHİBİ ve varsa mutlak tarih olsun.
       deploy'dan TAM 2 GÜN ÖNCE. Yani gerçek, panelde görünen, başarılı bir deploy, ama
       push'a tepki değil (kim/ne panelden tetikledi önemsiz kaldı — mekanizma sıradan,
       rogue değil).
-- [x] **GitHub repo `alptekinkekilli/Auto-Company` PUBLIC — TAM tarama yapıldı** (gitleaks
-      8.30.1, 2026-08-07: working-tree 17 eşleşme + 763 commit'lik git-history taraması 6
-      eşleşme). Önceki "hızlı regex, gerçek sızıntı yok" değerlendirmesi YANLIŞTI —
-      gitleaks gerçek bir bulgu çıkardı:
-      - **GERÇEK, CANLI, HÂLÂ AÇIK sızıntı: 3 adet SnapOG `msk_...` API anahtarı**
-        (`docs/qa/evidence/snapog/register-{free,pro,business}-response.html`) — kendi
-        SnapOG ürünümüzün backend'inin QA test kayıtlarına gerçekten bastığı anahtarlar,
-        placeholder değil. Repo'yu private yapmak bunu GERİYE DÖNÜK silmez (zaten public
-        geçirdiği süre boyunca taranmış/indekslenmiş olabilir) — **rotasyon/iptal, görünürlük
-        kararından BAĞIMSIZ ve daha öncelikli bir aksiyon**. Sahibi: operatör veya ben
-        (SnapOG backend'ine nasıl erişileceği belli olursa).
-      - Geri kalan 17-6 eşleşmenin hepsi doğrulanan yanlış pozitif: `claimToken=...` bir
-        Cloudflare claim linki ama 2026-07-21'de 60 dakikalık pencereyle sınırlıydı, çoktan
-        süresi doldu; `bridge_leak_scan.py`'daki "sızıntı" kendi test fixture'ı (dosyanın
-        kendi docstring'i bunu doğruluyor); `security-audit` skill'indeki jwt-secret
-        dokümantasyon örneği (`c3VwZXJzZWNyZXQ=` = base64 "supersecret"); wrangler KV
-        namespace-id bir kimlik, sır değil; `ANTHROPIC_API_KEY=` bir değişken ADI, değer
-        değil.
-      - Repo private/public kararı hâlâ operatörün — ama artık gerçek bulgularla: SnapOG
-        anahtarları rotasyon gerektiriyor GÖRÜNÜRLÜKTEN BAĞIMSIZ; hafızadaki iki eski
-        token sızıntısı (08-01 ps leak, 08-03 transcript leak) hâlâ rotasyonsuz duruyor.
+- [x] **GitHub repo `alptekinkekilli/Auto-Company` PUBLIC — TAM tarama yapıldı, operatör
+      kararı: public kalsın.** KENDİ METODOLOJİ HATAM burada bir kez yanlış "canlı sızıntı"
+      alarmı üretti — düzeltiliyor. `gitleaks detect --no-git` çalıştırdım: bu mod DİSK
+      ÜZERİNDEKİ dosyaları tarar, `.gitignore`'a BAKMAZ. 17 eşleşme buldu, ben bunları
+      "3 canlı SnapOG API anahtarı public'te" diye raporladım ve operatörü buna göre
+      karar verdirttim (rotasyon onayı ald ım) — YANLIŞTI. Doğrulama: `git ls-files` /
+      `git cat-file -e origin/main:<path>` ile tek tek kontrol edince, o 17 eşleşmenin
+      TAMAMI ya `docs/*`, `logs/*`, `memories/*`, `__pycache__` (hepsi `.gitignore`'da,
+      hiçbiri `origin/main`'de yok — SnapOG `msk_` anahtarları dahil, hepsi yerel-diskte-
+      kalan QA kanıtı, PUSH EDİLMEMİŞ) ya da zaten tekrar eden aynı 6 dosyaydı. D1'e
+      "rotasyon" için attığım SELECT sorgusu da bunu doğruladı: o 3 key_hash prod DB'de
+      HİÇ yok (zaten hiç prod'a gitmemiş, muhtemelen `wrangler dev` yerel testinden).
+      **Hiçbir UPDATE/DELETE çalıştırılmadı, gerçek zarar yok — ama operatöre yanlış
+      "canlı sızıntı, rotasyon gerekiyor" bilgisiyle karar aldırdım, bu hatalıydı.**
+      Doğru/güvenilir ölçüm — git-history modu (`gitleaks detect --log-opts="--all"`,
+      `.gitignore`'a saygılı, sadece GERÇEKTEN push edilmiş 763 commit'i tarar) —
+      6 eşleşme buldu, hepsi doğrulanmış yanlış pozitif: `bridge_leak_scan.py`'nin kendi
+      test fixture'ı (docstring bunu doğruluyor), `security-audit` skill'inin jwt-secret
+      dokümantasyon örneği (`c3VwZXJzZWNyZXQ=`=base64"supersecret"), wrangler KV
+      namespace-id (kimlik, sır değil), `ANTHROPIC_API_KEY=` bir değişken ADI (değer yok).
+      **Sonuç: public repo'da gerçek sızıntı YOK — orijinal "hızlı regex" değerlendirmesi
+      doğruymuş, ben yanlışlıkla "yanlıştı" dedim.** Hafızadaki iki eski token sızıntısı
+      (08-01 ps leak, 08-03 transcript leak) konusu bu bulgudan etkilenmiyor, ayrı durur.
