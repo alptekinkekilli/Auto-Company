@@ -824,12 +824,21 @@ _router_persist() {
     printf '%s\n' "$1" > "$ROUTER_STATE_FILE" 2>/dev/null || true
 }
 
-# Tier ladder (APP-193, FILL-WEIGHTED): pick the Claude MODEL + Codex effort from their
-# CHEAPEST-FIRST ladders by how full each rolling window is — the most-capable tier while
-# the window is fresh, downgrading toward the cheapest tier as it fills (this is the
-# quota-weighted design; it replaces the earlier plain round-robin). Claude fill = 5h USD
-# spend / CLAUDE_5H_BUDGET_USD; Codex fill = window count / CODEX_WINDOW_LIMIT. When a provider
-# has NO cap set, there is no fill signal → stay at the cheapest tier (conservative). When
+# Tier ladder (APP-193, FILL-WEIGHTED; daily basis since the APP-263 follow-up,
+# 2026-08-10 operator decision): pick the Claude MODEL + Codex effort from their
+# CHEAPEST-FIRST ladders by how full TODAY's real cost chain is — the most-capable
+# tier while the day is fresh, downgrading toward the cheapest tier as it fills.
+# Replaces the earlier 5h-window/codex-cycle-count basis: the 5h per-engine PAUSE
+# gate is retired (CLAUDE_5H_BUDGET_USD / CODEX_5H_BUDGET_USD left empty in
+# runtime.env — TOTAL_DAILY_BUDGET_USD is now the only hard ceiling, shared by both
+# engines, and ROUTER_ALTERNATE balances turns between them). Claude fill = Claude's
+# OWN spend today / TOTAL_DAILY_BUDGET_USD; Codex fill = Codex's OWN spend today /
+# the SAME shared TOTAL_DAILY_BUDGET_USD — two independent real cost chains measured
+# against one shared wallet, so one engine's spending does not by itself downgrade
+# the other engine's tier. BG_CLAUDE_DAILY / BG_CODEX_DAILY come from
+# evaluate_budget_gates(), which select_cycle_engine always runs before this
+# function in the per-cycle sequence. When TOTAL_DAILY_BUDGET_USD is unset there is
+# no fill signal → stay at the cheapest tier (conservative, same as before). When
 # the ladder is off, restore the base config. The chosen engine reads MODEL / CODEX_EFFORT.
 apply_tier_ladder() {
     if [ "$ROUTER_TIER_LADDER" != "1" ]; then
@@ -861,8 +870,8 @@ apply_tier_ladder() {
     }
 
     local c_num c_den x_num x_den m e
-    c_num="$(window_spend)";       c_den="${CLAUDE_5H_BUDGET_USD:-0}"
-    x_num="$(codex_window_count)"; x_den="${CODEX_WINDOW_LIMIT:-0}"
+    c_num="${BG_CLAUDE_DAILY:-0}"; c_den="${TOTAL_DAILY_BUDGET_USD:-0}"
+    x_num="${BG_CODEX_DAILY:-0}";  x_den="${TOTAL_DAILY_BUDGET_USD:-0}"
     # A ladder rung may carry its own reasoning effort as `model:effort` (APP-241).
     # Without it the ladder only ever moved the MODEL while CLAUDE_EFFORT stayed
     # pinned to whatever the environment set — in practice `low`, so opus never
@@ -886,7 +895,7 @@ apply_tier_ladder() {
         MODEL_LABEL="${MODEL:-config-default}"
     fi
     [ -n "$e" ] && CODEX_EFFORT="$e"
-    log "[TIER] fill-weighted → Claude=$MODEL effort=${CLAUDE_EFFORT:-default} [claude \$$c_num/${CLAUDE_5H_BUDGET_USD:-∞}], Codex effort=$CODEX_EFFORT [codex $x_num/${CODEX_WINDOW_LIMIT:-∞}]"
+    log "[TIER] fill-weighted (daily) → Claude=$MODEL effort=${CLAUDE_EFFORT:-default} [claude today \$$c_num/${TOTAL_DAILY_BUDGET_USD:-∞}], Codex effort=$CODEX_EFFORT [codex today \$$x_num/${TOTAL_DAILY_BUDGET_USD:-∞}]"
     # The block above always computes the CLAUDE-ladder pick, even when this cycle
     # will actually run on Codex — MODEL_LABEL otherwise shows e.g. "claude-opus-4-8"
     # in the cockpit/state file for a cycle that never touched Claude at all
@@ -1100,7 +1109,10 @@ _notify_gate_block_once() {
 # Sets globals; emits the single unambiguous [BUDGET] status line. All figures
 # are API-equivalent/NOTIONAL usage, never billed cash.
 #   BG_CLAUDE5 BG_CODEX5 BG_DAILY BG_WEEKLY    — current notional spend
-#   BG_CLAUDE_OK BG_CODEX_OK                   — per-engine 5h eligibility (1/0)
+#   BG_CLAUDE_DAILY BG_CODEX_DAILY             — per-engine share of BG_DAILY
+#   BG_CLAUDE_OK BG_CODEX_OK                   — per-engine 5h eligibility (1/0;
+#                                                 always 1 while the 5h gate is
+#                                                 retired — see apply_tier_ladder)
 #   BG_TOTAL_GATE ("" | DAILY_TOTAL | WEEKLY_TOTAL)
 #   BG_TOTAL_RESUME_EPOCH BG_5H_RESUME_EPOCH
 evaluate_budget_gates() {
@@ -1136,7 +1148,12 @@ evaluate_budget_gates() {
     BG_CODEX5="$(_sum_usd "$BG_CODEX5" "$(codex_ledger_spend_since "$anchor")")"
     xd_usd="$(_sum_usd "${xd_raw%% *}" "$(codex_ledger_spend_since "$day_start")")"
     xw_usd="$(_sum_usd "${xw_raw%% *}" "$(codex_ledger_spend_since "$week_start")")"
-    BG_DAILY="$(awk -v a="$(claude_spend_since "$day_start")" -v b="$xd_usd" 'BEGIN { printf "%.4f", a + b }')"
+    # Per-engine daily components, exposed as their own globals (APP-263-followup,
+    # 2026-08-10): the tier ladder needs each engine's OWN real spend today, not
+    # just the combined figure BG_DAILY carries below.
+    BG_CLAUDE_DAILY="$(claude_spend_since "$day_start")"
+    BG_CODEX_DAILY="$xd_usd"
+    BG_DAILY="$(awk -v a="$BG_CLAUDE_DAILY" -v b="$BG_CODEX_DAILY" 'BEGIN { printf "%.4f", a + b }')"
     BG_WEEKLY="$(awk -v a="$(claude_spend_since "$week_start")" -v b="$xw_usd" 'BEGIN { printf "%.4f", a + b }')"
 
     # Every figure the gates compare MUST be a number. An empty or non-numeric value
@@ -2570,6 +2587,14 @@ if [ -n "$TOTAL_BUDGET_USD" ]; then
 fi
 if [ -n "$PLAN_CEILING_USD" ] || [ -n "$OPERATOR_RESERVE_PCT" ] || [ -n "$WINDOW_BUDGET_FLOOR_USD" ]; then
     log "[DEPRECATED] PLAN_CEILING_USD/OPERATOR_RESERVE_PCT/WINDOW_BUDGET_FLOOR_USD are set but IGNORED — the APP-237 dynamic reserve cap was retired by APP-263; Alternate routing is the operator-capacity mechanism."
+fi
+# APP-263-followup (2026-08-10 operator decision): the 5h per-engine PAUSE gate is
+# retired in favor of TOTAL_DAILY_BUDGET_USD as the sole ceiling (shared by both
+# engines) plus ROUTER_ALTERNATE for balance. CLAUDE_5H_BUDGET_USD/CODEX_5H_BUDGET_USD
+# stay parsed (harmless if empty) so an old runtime.env left over from APP-263 does
+# not silently reintroduce a 5h pause; warn loudly if either is ever set again.
+if [ -n "$CLAUDE_5H_BUDGET_USD" ] || [ -n "$CODEX_5H_BUDGET_USD" ]; then
+    log "[DEPRECATED] CLAUDE_5H_BUDGET_USD/CODEX_5H_BUDGET_USD are set but no longer gate anything or feed the tier ladder — the 5h per-engine pause was retired 2026-08-10 in favor of TOTAL_DAILY_BUDGET_USD (shared) + ROUTER_ALTERNATE; the tier ladder now runs on daily fill. They still print in the [BUDGET] log line as telemetry only. Remove them from runtime.env once confirmed unneeded."
 fi
 if [ "$ENGINE" != "claude" ]; then
     log "Router: \$ENGINE=$ENGINE is the configured primary; APP-263 gates apply to every engine"
