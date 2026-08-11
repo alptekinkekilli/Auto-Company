@@ -146,16 +146,28 @@ def fmt_money(x: float) -> str:
 
 
 def build_report(app: str, days: int) -> str:
-    today = time.strftime("%Y-%m-%d", time.gmtime())
+    # OPREQ-INFRA-COSTAUDIT-WINDOW-001, Option B (operator-authorized 2026-08-11):
+    # this script runs on a 04:30 UTC cron, BEFORE that day's LOOP_ACTIVE_WINDOW_UTC
+    # (07-15) opens — so a "today" figure would always read zero cycles, zero
+    # turn-audit rows, zero jcode-session data, by construction, on every single
+    # run. §§2-4 report on the PREVIOUS completed UTC day instead — the one whose
+    # cycles have actually finished by the time this runs — never the current,
+    # still-open day. §1 (the multi-day ledger trend) is unaffected: it already
+    # windows on `days` and was never "today"-scoped.
+    generated_at = time.strftime("%Y-%m-%d %H:%M", time.gmtime())
+    report_day = time.strftime("%Y-%m-%d", time.gmtime(time.time() - 86400))
     logs = os.path.join(app, "logs")
     ledger = read_ledger(os.path.join(logs, "spend-total.log"), days)
-    loop = read_loop_log(os.path.join(logs, "auto-loop.log"), today)
-    jc = read_jcode_log(os.path.join(logs, ".jcode", "logs", f"jcode-{today}.log"))
+    loop = read_loop_log(os.path.join(logs, "auto-loop.log"), report_day)
+    jc = read_jcode_log(os.path.join(logs, ".jcode", "logs", f"jcode-{report_day}.log"))
     inventory = read_tool_inventory(os.path.join(logs, ".jcode", "mcp-schema-cache.json"))
 
-    L = [f"# Cost audit — {today} (UTC, generated deterministically)", ""]
+    L = [f"# Cost audit — reporting on {report_day} (UTC, previous completed day; "
+         f"generated {generated_at} UTC)", ""]
     L.append("Every number below is read from a file; nothing here is estimated by a model.")
     L.append("Budget figures are notional/API-equivalent (subscription), not billed cash.")
+    L.append(f"§§2-4 below cover **{report_day}** (the previous completed UTC day), not the "
+             "day this report was generated on — see OPREQ-INFRA-COSTAUDIT-WINDOW-001.")
     L.append("")
 
     # --- 1. Ledger trend
@@ -172,8 +184,8 @@ def build_report(app: str, days: int) -> str:
         L.append(f"**{ledger['malformed']} malformed ledger row(s)** — the weekly walk aborts on these.")
     L.append("")
 
-    # --- 2. Today's cycles + provenance
-    L.append("## 2. Today's cycles and how each price was obtained")
+    # --- 2. Previous day's cycles + provenance
+    L.append(f"## 2. {report_day}'s cycles and how each price was obtained")
     L.append("")
     if loop.get("error"):
         L.append(f"NOT MEASURED — {loop['error']}")
@@ -202,7 +214,7 @@ def build_report(app: str, days: int) -> str:
         L.append(f"- Conservative-row (phantom) total: **{fmt_money(phantom)}**"
                  + ("  ← inflates the 5h window without matching real usage" if phantom else ""))
         if loop["timeouts"]:
-            L.append(f"- Timeouts today: {len(loop['timeouts'])} "
+            L.append(f"- Timeouts on {report_day}: {len(loop['timeouts'])} "
                      f"({', '.join(t['time'] for t in loop['timeouts'])}) — a killed cycle "
                      "loses its work AND its calibrated price.")
     L.append("")
@@ -222,7 +234,8 @@ def build_report(app: str, days: int) -> str:
             L.append(f"**{len(bad)} cycle(s) flagged CHATTY/BLOATED** — context grew past the "
                      "point where a cycle should have persisted findings and ended.")
     else:
-        L.append("No [TURN-AUDIT] lines today (no jcode-claude cycle yet, or the hook is absent).")
+        L.append(f"No [TURN-AUDIT] lines on {report_day} (no jcode-claude cycle that day, "
+                 "or the hook is absent).")
     L.append("")
 
     # --- 4. Per-turn overhead
@@ -237,7 +250,8 @@ def build_report(app: str, days: int) -> str:
         L.append("Every turn re-reads this prefix. A 20-turn cycle pays the tool-definition "
                  "line ~20 times.")
     else:
-        L.append("NOT MEASURED — no jcode session in today's log (e.g. all cycles ran on the CLI).")
+        L.append(f"NOT MEASURED — no jcode session in {report_day}'s log "
+                 "(e.g. all cycles that day ran on the CLI).")
     L.append("")
 
     # --- 5. Tool surface
@@ -245,7 +259,7 @@ def build_report(app: str, days: int) -> str:
     L.append("")
     if inventory:
         used = jc.get("tools", {})
-        L.append("| server | advertised | called today | never called |")
+        L.append(f"| server | advertised | called on {report_day} | never called |")
         L.append("|---|---|---|---|")
         for srv, names in sorted(inventory.items()):
             called = {n for n in used if n.startswith(f"mcp__{srv}__")}
