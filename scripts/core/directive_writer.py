@@ -57,6 +57,31 @@ NOTIFY = APP / "scripts" / "core" / "telegram-notify.sh"
 
 STATUS_RE = re.compile(r"^## Status\s*\n(\S+)\s*$", re.MULTILINE)
 
+# OPREQ-GOV-DIRECTIVE-BODY-001 (operator-authorized 2026-08-11 via the cockpit
+# operator-decision panel — memories/operator-decisions.md). Two consecutive
+# directive revisions shipped structurally broken: revision 11 referenced §6
+# (twice) and §7 (three times) with neither section defined anywhere in its own
+# body, which made its Completion condition (e) unsatisfiable and froze it in
+# PENDING with no company-reachable exit. This check catches exactly that shape
+# before a body is ever written: every "§N" REFERENCE must have a matching
+# "## §N" HEADER somewhere in the same body. It is intentionally narrow — it
+# says nothing about whether the section's CONTENT is correct, only whether the
+# number it points at exists at all.
+SECTION_HEADER_RE = re.compile(r"^##\s*§(\d+)\b", re.MULTILINE)
+SECTION_REF_RE = re.compile(r"§(\d+)\b")
+
+
+def undefined_section_refs(body: str) -> list[str]:
+    """Section numbers referenced via '§N' with no matching '## §N' header.
+
+    Sorted numerically, empty when the body is clean. Pure text check, no I/O,
+    no live-state dependency, no judgment of policy content — see the OPREQ
+    comment above.
+    """
+    defined = {m.group(1) for m in SECTION_HEADER_RE.finditer(body)}
+    referenced = {m.group(1) for m in SECTION_REF_RE.finditer(body)}
+    return sorted(referenced - defined, key=int)
+
 
 def now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -283,6 +308,22 @@ def cmd_write(args) -> int:
     if not body.strip():
         print("refused: empty directive body", file=sys.stderr)
         return 2
+
+    missing = undefined_section_refs(body)
+    if missing:
+        refs = ", ".join(f"§{n}" for n in missing)
+        print(
+            f"refused: directive body references {refs} but defines no matching "
+            f"'## §{missing[0]}'-style header for {'it' if len(missing) == 1 else 'them'} "
+            "anywhere in the body (OPREQ-GOV-DIRECTIVE-BODY-001). A referenced-but-"
+            "undefined section makes any Completion clause that depends on it "
+            "unsatisfiable and freezes the directive in PENDING with no exit — exactly "
+            "what happened to revision 11. Add the missing section(s) or remove the "
+            "reference(s), then retry. Nothing was written.",
+            file=sys.stderr,
+        )
+        return 2
+
     live, live_sha, live_status = read_live()
 
     if live_status == "PENDING" and not args.allow_pending:
