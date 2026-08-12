@@ -50,7 +50,7 @@ def repo_report(root):
 
 def main() -> int:
     roots = [os.getcwd()] + [r for r in os.environ.get("PREFLIGHT_ROOTS", "").split(":") if r]
-    L = [f"# Compact ön-kontrolü — {dt.datetime.now().strftime('%Y-%m-%d %H:%M')}", ""]
+    L = [f"# Compact ön-kontrolü — {dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%d %H:%M')} UTC", ""]
     risk = 0
     for r in roots:
         s, x = repo_report(r)

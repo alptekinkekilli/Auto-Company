@@ -25,7 +25,7 @@ def sh(args, cwd=None):
 
 def main() -> int:
     kok = os.getcwd()
-    L = [f"## Oturum brifingi (ölçüldü {dt.datetime.now().strftime('%H:%M')})",
+    L = [f"## Oturum brifingi (ölçüldü {dt.datetime.now(dt.timezone.utc).strftime('%H:%M')} UTC)",
          "Aşağıdakiler İDDİA DEĞİL, şu anki ölçüm. Özet metniyle çelişirse ÖLÇÜM haklıdır."]
 
     dal = sh(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=kok) or "?"
