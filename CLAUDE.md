@@ -162,7 +162,10 @@ This rule is mechanically enforced by a PreToolUse tripwire
 unless `.claude/.prod-change-approved` exists and is <120 min old — create that
 marker only AFTER explicit operator approval. It is a tripwire against unplanned
 changes, not a security boundary (Bash-level edits bypass it; container cycles
-are exempt and governed by PROMPT.md instead).
+are exempt and governed by PROMPT.md instead). Adding a surface to the list
+above requires updating the guard script in the same commit — drift is detected
+automatically (`--check-sync` runs in every session brief and in
+`tests/test_prod_mechanism_guard.sh`).
 
 ## Collaboration Workflows
 

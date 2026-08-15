@@ -95,4 +95,16 @@ if [ -f "$PA" ]; then
   echo "- **bekleyen dış aksiyon**: ${OPEN:-0} (bkz. .claude/pending-actions.md)"
 fi
 
+# Prod-mekanizma tripwire kapsam senkronu: CLAUDE.md'nin kural bölümünde anılan
+# her yüzeyi guard gerçekten koruyor mu? Temizken sessiz (brifing gürültü
+# felsefesi); kayma varsa ⚠ satırı — kurala yüzey ekleyip script'i unutma
+# hatasını her oturum başında yakalar.
+GUARD="$(dirname "$0")/../scripts/prod-mechanism-guard.py"
+if [ -f "$GUARD" ]; then
+  SYNC_OUT=$(python3 "$GUARD" --check-sync 2>&1)
+  if [ $? -ne 0 ]; then
+    echo "- ⚠ **prod-guard kapsam kayması**: ${SYNC_OUT} — CLAUDE.md kuralı ile scripts/prod-mechanism-guard.py listesi aynı commit'te güncellenmeli"
+  fi
+fi
+
 exit 0

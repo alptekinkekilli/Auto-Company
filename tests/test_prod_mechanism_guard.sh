@@ -56,6 +56,37 @@ check "9 container no-op" "$r" 0
 r=$(run "$(payload Bash "$SB/scripts/core/auto-loop.sh")" "$SB")
 check "10 Edit-disi tool'a dokunmaz" "$r" 0
 
+# --check-sync: CLAUDE.md kural bölümü <-> PROTECTED_* listesi kayma tespiti
+r=$(python3 "$SRC" --check-sync CLAUDE.md >/dev/null 2>&1; echo $?)
+check "11 gercek CLAUDE.md senkron" "$r" 0
+
+cat > "$SB/drift.md" <<'EOF'
+## Prod-Mechanism Change Rule (interactive sessions)
+
+- `scripts/core/auto-loop.sh` — budget gates
+- `scripts/core/yeni-fren.sh` — henuz guard'a eklenmemis YENI yuzey
+
+## Sonraki bolum
+EOF
+out=$(python3 "$SRC" --check-sync "$SB/drift.md" 2>/dev/null); rc=$?
+check "12 eksik yuzey kaymayi yakalar" "$rc" 1
+case "$out" in *yeni-fren.sh*) check "12b kayan yuzeyi adlandirir" ok ok ;; *) check "12b kayan yuzeyi adlandirir" "$out" "DRIFT: ...yeni-fren.sh..." ;; esac
+
+cat > "$SB/clean.md" <<'EOF'
+## Prod-Mechanism Change Rule (interactive sessions)
+
+- `scripts/core/auto-loop.sh` ve `scripts/ops/send-gate.py`, ayrica `runtime.env`.
+Enforced by `scripts/prod-mechanism-guard.py` and `.claude/.prod-change-approved`.
+Testler: `tests/test_*.{sh,py}` gecmeli.
+
+## Sonraki bolum
+EOF
+r=$(python3 "$SRC" --check-sync "$SB/clean.md" >/dev/null 2>&1; echo $?)
+check "13 mekanizma-tokenlarini yanlis-pozitif yapmaz" "$r" 0
+
+r=$(python3 "$SRC" --check-sync "$SB/yok.md" >/dev/null 2>&1; echo $?)
+check "14 bolumsuz/eksik dosya fail-closed" "$r" 1
+
 echo
 if [ "$fail" = "0" ]; then
   echo "ALL PASS"
