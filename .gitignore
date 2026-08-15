@@ -185,6 +185,7 @@ docs/*
 docs/*/*
 !docs/*/.gitkeep
 !docs/windows-setup.md
+!docs/team-architecture.md
 !docs/devops/phase-6-runbook.md
 # Adjudication packs are the audit trail of every judgement call the company
 # did not make on its own. They are written to be verified by someone who has
@@ -204,3 +205,6 @@ scratchpad-loop.out
 
 # Claude Code prod-mekanizma guard marker (tripwire onayi, 120 dk TTL)
 .claude/.prod-change-approved
+
+# Claude Code yerel katman (makineye ozel, paylasilmaz)
+CLAUDE.local.md

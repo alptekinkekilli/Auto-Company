@@ -120,46 +120,11 @@ rule is dormant — but the principle still holds the moment such a project is a
 
 ## Team Architecture
 
-14 AI agents, each modeled on top-tier expert thinking. Full definitions are in `.claude/agents/`.
-
-### Strategy Layer
-
-| Agent | Persona | When to Use |
-|-------|------|----------|
-| `ceo-bezos` | Jeff Bezos | New product/feature evaluation, business model and pricing direction, major strategic choices, resource allocation, priority setting |
-| `cto-vogels` | Werner Vogels | Architecture design, technical selection, reliability/performance decisions, technical debt review |
-| `critic-munger` | Charlie Munger | Challenge feasibility, identify fatal flaws, prevent group delusion, inversion, pre-mortem. **Required before major decisions** |
-
-### Product Layer
-
-| Agent | Persona | When to Use |
-|-------|------|----------|
-| `product-norman` | Don Norman | Product feature definition, usability review, user confusion/churn analysis, usability testing plans |
-| `ui-duarte` | Matias Duarte | Layout and visual style, design system updates, color/typography, motion and transitions |
-| `interaction-cooper` | Alan Cooper | User flow and navigation design, persona definition, interaction patterns, user-centric feature prioritization |
-
-### Engineering Layer
-
-| Agent | Persona | When to Use |
-|-------|------|----------|
-| `fullstack-dhh` | DHH | Code implementation, technical implementation choices, code review and refactor, dev workflow optimization |
-| `qa-bach` | James Bach | Test strategy, release quality checks, bug analysis and classification, quality risk assessment |
-| `devops-hightower` | Kelsey Hightower | Deployment pipelines, CI/CD configuration, infrastructure operations (Workers/Pages/KV/D1/R2), observability, production incident response |
-
-### Business Layer
-
-| Agent | Persona | When to Use |
-|-------|------|----------|
-| `marketing-godin` | Seth Godin | Positioning and differentiation, marketing strategy, content direction, brand building |
-| `operations-pg` | Paul Graham | Zero-to-one user growth, retention improvements, community operations, operational metrics analysis |
-| `sales-ross` | Aaron Ross | Pricing strategy, sales model choices, conversion optimization, CAC analysis |
-| `cfo-campbell` | Patrick Campbell | Pricing strategy, financial model building, unit economics, cost control, revenue metric tracking |
-
-### Intelligence Layer
-
-| Agent | Persona | When to Use |
-|-------|------|----------|
-| `research-thompson` | Ben Thompson | Market research, competitor analysis, trend analysis, business model decomposition, demand validation |
+14 AI agents, each modeled on top-tier expert thinking. Full definitions are in
+`.claude/agents/` (each agent's frontmatter states when to use it). The
+role → persona → when-to-use selection map lives in `docs/team-architecture.md`.
+One rule worth repeating here: `critic-munger` is **required before major
+decisions**.
 
 ## Decision Principles
 
@@ -214,24 +179,9 @@ Team composition rules: `.claude/skills/team/SKILL.md`.
 
 ## Documentation Map
 
-Each agent stores outputs under `docs/<role>/`:
-
-| Agent | Directory | Typical Outputs |
-|-------|------|----------|
-| `ceo-bezos` | `docs/ceo/` | PR/FAQ, strategic memos, decision records |
-| `cto-vogels` | `docs/cto/` | ADRs, system design, technical selection notes |
-| `critic-munger` | `docs/critic/` | Inversion reports, pre-mortems, veto logs |
-| `product-norman` | `docs/product/` | Product specs, personas, usability analysis |
-| `ui-duarte` | `docs/ui/` | Design systems, visual guidelines, color systems |
-| `interaction-cooper` | `docs/interaction/` | Interaction flows, personas, navigation structures |
-| `fullstack-dhh` | `docs/fullstack/` | implementation notes, code docs, refactor logs |
-| `qa-bach` | `docs/qa/` | Test strategies, bug reports, quality assessments |
-| `devops-hightower` | `docs/devops/` | Deployment configs, runbooks, monitoring design |
-| `marketing-godin` | `docs/marketing/` | Positioning, content strategy, campaign plans |
-| `operations-pg` | `docs/operations/` | Growth experiments, retention analysis, ops metrics |
-| `sales-ross` | `docs/sales/` | Funnel analysis, conversion plans, pricing playbooks |
-| `cfo-campbell` | `docs/cfo/` | Financial models, pricing analyses, unit economics |
-| `research-thompson` | `docs/research/` | Market/competitor/trend intelligence |
+Each agent stores outputs under `docs/<role>/` — the mapping is mechanical
+(`ceo-bezos` → `docs/ceo/`, `research-thompson` → `docs/research/`, etc.); the
+full table with typical outputs per role is in `docs/team-architecture.md`.
 
 ## Tooling
 
@@ -270,16 +220,14 @@ version-accurate documentation for external libraries and frameworks.
 - A separate `scripts/ops/` REST-fallback script exists for Context7 outside the MCP
   path — report that usage as "REST fallback", never as "MCP", in consensus.
 
-### Linear / Airtable — write-capable on both engines, different setups (2026-07-25)
+### Linear / Airtable — write-capable on both engines (2026-07-25)
 
-Codex holds write-capable Linear (`https://mcp.linear.app/mcp`) and Airtable
-(`https://mcp.airtable.com/mcp`) access through official HTTP MCPs with curated
-enabled-tool allowlists. Claude retains its existing write-capable community `npx`
-servers in `.mcp.json` (`airtable-mcp-server`, `@tacticlaunch/mcp-linear`); it has
-functional write capability but not the same transport or a mechanical allowlist — the
-installed community packages technically register more (e.g. `delete_records`,
-`linear_deleteComment`, `linear_archiveIssue`), restricted only by policy, not removed.
-Both share the same `LINEAR_API_KEY` / `AIRTABLE_API_KEY` (from `/app/logs/runtime.env`).
+Codex: official HTTP MCPs (`mcp.linear.app` / `mcp.airtable.com`) with curated
+enabled-tool allowlists. Claude: community `npx` servers in `.mcp.json` —
+functionally write-capable, but the extra destructive tools they register
+(e.g. `delete_records`, `linear_deleteComment`) are restricted by policy, not
+removed. Both share `LINEAR_API_KEY` / `AIRTABLE_API_KEY` from
+`/app/logs/runtime.env`.
 Both engines remain bound by `PROMPT.md`'s EXTERNAL-SYSTEM WRITE AUTHORITY rule: read the
 exact target first, write only explicitly-authorized fields, read back the result, and log
 server/tool/target/authority/before-after in consensus. Destructive/admin actions are
@@ -361,30 +309,17 @@ kullan.
 
 ### Deploy / Redeploy (prod — Coolify Cloud)
 
-- Prod uygulama UUID: `z12a992i3ty202zezspij2fn` (host `powerupp-ts` üzerinde, container
-  adı `z12a992…-<deployHash>` — her deploy'da hash değişir).
-- Redeploy tetikleme (`autocompany-coolify-deploy` Keychain token'ı, deploy-scoped):
-  ```
-  T=$(security find-generic-password -w -a "$(whoami)" -s autocompany-coolify-deploy)
-  curl -s -X POST -H "Authorization: Bearer $T" -H "User-Agent: Mozilla/5.0" \
-    "https://app.coolify.io/api/v1/deploy?uuid=z12a992i3ty202zezspij2fn"
-  ```
-  `User-Agent: Mozilla/5.0` **zorunlu** — Cloudflare varsayılan curl UA'sını 1010 ile
-  reddediyor. Redeploy dakikalar sürebilir; yeni container adının hash'i değişene kadar
-  bekle, sadece "Up" durumuna bakma.
-- Hold/Release (cockpit, container-içi, port 8787 dışa açık değil):
-  ```
-  ssh powerupp-ts 'C=$(docker ps --filter "name=z12a992i3ty202zezspij2fn" \
-    --format "{{.Names}}" | head -1); docker exec -u app "$C" curl -s -X POST \
-    http://127.0.0.1:8787/api/hold -d "{\"reason\":\"...\"}"'
-  ```
-  Release için `/api/hold/release`. `logs/LOOP_HOLD` operator-only — model bu dosyayı
-  hiçbir yönde yazmaz/silmez.
-- Redeploy'u yalnızca loop uykudayken tetikle (`[WAIT] Sleeping` log satırı) veya önce
-  hold uygula — yeni container ilk cycle'ı boot'tan saniyeler sonra başlatır, deploy
-  SONRASI bir sakinlik penceresi YOKTUR.
-- Şirket ürünleri (landing/MVP) için ayrı akış — bkz. yukarıdaki "Deploy targets":
-  `wrangler` ile Cloudflare Pages/Workers, asla Vercel, asla bu host.
+- Politika: redeploy'u YALNIZCA loop uykudayken (`[WAIT] Sleeping`) tetikle veya
+  önce hold uygula — yeni container ilk cycle'ı boot'tan saniyeler sonra
+  başlatır, deploy SONRASI sakinlik penceresi YOKTUR. "Up" durumu kanıt değil:
+  yeni container hash'ini VE commit'e özgü bir string'i doğrula
+  (committed ≠ deployed).
+- Mekanik (host, UUID, Keychain token, curl/ssh tek-satırlıkları):
+  `CLAUDE.local.md` (operatör makinesi, git dışı) ve `/hold` `/release`
+  `/redeploy` slash komutları.
+- `logs/LOOP_HOLD` operator-only — model bu dosyayı hiçbir yönde yazmaz/silmez.
+- Şirket ürünleri (landing/MVP) için ayrı akış — bkz. yukarıdaki "Deploy
+  targets": `wrangler` ile Cloudflare Pages/Workers, asla Vercel, asla bu host.
 
 ### Diğer
 
@@ -395,48 +330,12 @@ kullan.
 
 ## Skills Arsenal
 
-All skills are under `.claude/skills/`. Any agent can use any skill when relevant.
-
-### Research and Intelligence
-
-- `deep-research`, `web-scraping`, `websh`, `deep-reading-analyst`, `competitive-intelligence-analyst`, `github-explorer`
-
-### Strategy and Business
-
-- `product-strategist`, `market-sizing-analysis`, `startup-business-models`, `micro-saas-launcher`
-
-### Finance and Pricing
-
-- `startup-financial-modeling`, `financial-unit-economics`, `pricing-strategy`
-
-### Critical Thinking and Risk
-
-- `premortem`, `scientific-critical-thinking`, `deep-analysis`
-
-### Engineering and Security
-
-- `code-review-security`, `security-audit`, `devops`, `tailwind-v4-shadcn`
-
-### UX and Experience
-
-- `frontend-design`, `ux-audit-rethink`, `user-persona-creation`, `user-research-synthesis`
-
-### Marketing and Growth
-
-- `seo-content-strategist`, `content-strategy`, `seo-audit`, `email-sequence`, `ph-community-outreach`, `community-led-growth`, `cold-email-sequence-generator`
-
-### Quality
-
-- `senior-qa`
-
-### Cost and Efficiency
-
-- `cost-measurement` — measure before optimizing; the residual-cost model and the traps that have already produced wrong answers here
-- `enforceable-guardrails` — write rules that change behavior instead of rules that read well and get ignored
-
-### Internal Utilities
-
-- `team`, `find-skills`, `skill-creator`, `agent-browser`
+All skills are under `.claude/skills/` — the directory itself is the inventory
+(~44 skills spanning research, strategy, finance, risk, engineering/security,
+UX, marketing/growth, quality, internal utilities). Any agent can use any skill
+when relevant; discover with the `find-skills` skill. Two operational anchors
+worth naming: `cost-measurement` (measure before optimizing) and
+`enforceable-guardrails` (rules that change behavior, not prose that reads well).
 
 **Principle:** Skills are tools, agents are operators. Combine skills when tasks cross domains.
 
