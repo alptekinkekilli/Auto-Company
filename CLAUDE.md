@@ -301,6 +301,66 @@ excluded from Codex's allowlist mechanically and forbidden by policy on both eng
   WTP evidence — this has been reaffirmed multiple times and is not up for
   reinterpretation just because the surrounding infrastructure looks more "real."
 
+## Sık Kullanılan Komutlar
+
+### Test
+
+- Tek bir test dosyası (her `tests/test_*.sh` bağımsız, opsiyonel path argümanıyla
+  gerçek script'i hedefler — varsayılan zaten doğru dosyayı gösterir):
+  `bash tests/test_budget_gates.sh` / `bash tests/test_tier_ladder_daily.sh` / vb.
+- Python testleri de aynı şekilde tek dosya çalıştırılır: `python3 -m pytest
+  tests/test_dashboard_server.py` veya `python3 tests/test_operator_request_notify.py`.
+- **Birleşik bir runner yok** — `npm test`/`pytest tests/` tüm dizini taramaz; hangi
+  değişikliği test ettiğini bilerek ilgili `test_*.sh`/`test_*.py` dosyasını seç.
+  `package.json`'da script yok, `Makefile`'da test hedefi yok — bu bilinçli, dağınıklık
+  değil.
+
+### Loop (yerel/manuel çalıştırma — prod Coolify'da otomatik boot eder)
+
+- `make start` — loop'u foreground'da başlat (`ENGINE=claude|codex`)
+- `make status` / `make last` / `make cycles` / `make monitor` — durum, son cycle,
+  geçmiş, canlı log
+- `make dashboard` — yerel cockpit sunucusu (`dashboard/server.py`)
+- `make stop` — loop'u düzgün durdur (`scripts/core/stop-loop.sh`)
+- `make install` / `make uninstall` — daemon kur/kaldır (launchd/systemd)
+- `make pause` / `make resume` — daemon'u duraklat/devam ettir
+- `make team ENGINE=claude|codex` — seçili motorla interaktif oturum
+- `make help` — tüm hedeflerin listesi
+
+### Deploy / Redeploy (prod — Coolify Cloud)
+
+- Prod uygulama UUID: `z12a992i3ty202zezspij2fn` (host `powerupp-ts` üzerinde, container
+  adı `z12a992…-<deployHash>` — her deploy'da hash değişir).
+- Redeploy tetikleme (`autocompany-coolify-deploy` Keychain token'ı, deploy-scoped):
+  ```
+  T=$(security find-generic-password -w -a "$(whoami)" -s autocompany-coolify-deploy)
+  curl -s -X POST -H "Authorization: Bearer $T" -H "User-Agent: Mozilla/5.0" \
+    "https://app.coolify.io/api/v1/deploy?uuid=z12a992i3ty202zezspij2fn"
+  ```
+  `User-Agent: Mozilla/5.0` **zorunlu** — Cloudflare varsayılan curl UA'sını 1010 ile
+  reddediyor. Redeploy dakikalar sürebilir; yeni container adının hash'i değişene kadar
+  bekle, sadece "Up" durumuna bakma.
+- Hold/Release (cockpit, container-içi, port 8787 dışa açık değil):
+  ```
+  ssh powerupp-ts 'C=$(docker ps --filter "name=z12a992i3ty202zezspij2fn" \
+    --format "{{.Names}}" | head -1); docker exec -u app "$C" curl -s -X POST \
+    http://127.0.0.1:8787/api/hold -d "{\"reason\":\"...\"}"'
+  ```
+  Release için `/api/hold/release`. `logs/LOOP_HOLD` operator-only — model bu dosyayı
+  hiçbir yönde yazmaz/silmez.
+- Redeploy'u yalnızca loop uykudayken tetikle (`[WAIT] Sleeping` log satırı) veya önce
+  hold uygula — yeni container ilk cycle'ı boot'tan saniyeler sonra başlatır, deploy
+  SONRASI bir sakinlik penceresi YOKTUR.
+- Şirket ürünleri (landing/MVP) için ayrı akış — bkz. yukarıdaki "Deploy targets":
+  `wrangler` ile Cloudflare Pages/Workers, asla Vercel, asla bu host.
+
+### Diğer
+
+- **Lint/typecheck**: repo'da ayrı bir lint/typecheck konfigürasyonu yok (ruff/eslint/mypy
+  dosyası yok) — doğrulama `tests/test_*.sh`/`test_*.py` suite'i üzerinden yapılır; bir
+  script değiştiğinde önce ilgili testi çalıştır.
+- **Lokal geliştirme sunucusu**: `make dashboard` (cockpit, `http://localhost:8787`).
+
 ## Skills Arsenal
 
 All skills are under `.claude/skills/`. Any agent can use any skill when relevant.
