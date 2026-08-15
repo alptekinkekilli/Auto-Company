@@ -173,6 +173,25 @@ rule is dormant — but the principle still holds the moment such a project is a
 8. **Framework-gated ideas** - both when selecting/filtering ideas and when validating the chosen one, apply `PROJECT_EVALUATION_FRAMEWORK.md`. A regulation, deadline, or trend is NOT demand; never pick or scale an idea without the cheapest possible willingness-to-pay test first.
 9. **Search where you can win** - for newly proposed axes only, apply `PROMPT.md → SEARCH REGIME`. It does not re-evaluate Selected/Pending candidates or modify WTP and authorization gates.
 
+## Prod-Mechanism Change Rule (interactive sessions)
+
+"Ship > Plan > Discuss" applies to PRODUCT decisions, not to changes that touch
+the company's own operating machinery. Before modifying any of these surfaces,
+enter Plan Mode (EnterPlanMode), present the plan + estimated impact, and wait
+for operator approval:
+
+- `scripts/core/auto-loop.sh` — budget gates, tier ladder, router
+- `scripts/core/directive_writer.py` and the directive/OPREQ flow
+- `scripts/ops/send-gate.py` and anything on the send path
+- Deploy pipeline / Coolify config / `runtime.env`
+- `dashboard/server.py` hold/decision endpoints
+
+After an approved plan is implemented, do not report "done" until the relevant
+`tests/test_*.{sh,py}` files have been run and pass. Autonomous cycles are
+already covered by PROMPT.md's OPREQ/authorization machinery — this section
+binds operator-side interactive sessions, where the same brake was previously
+enforced only by the operator remembering to say "don't implement autonomously."
+
 ## Collaboration Workflows
 
 Team composition rules: `.claude/skills/team/SKILL.md`.
@@ -302,6 +321,12 @@ excluded from Codex's allowlist mechanically and forbidden by policy on both eng
   reinterpretation just because the surrounding infrastructure looks more "real."
 
 ## Sık Kullanılan Komutlar
+
+Slash komutlar (`.claude/commands/`): `/durum` (şirket durumu), `/hold` ve
+`/release` (prod loop hold), `/redeploy` (güvenli deploy runbook'u),
+`/reconcile` (Linear doğrulama), `/sor` (salt-okunur codebase Q&A). Aşağıdaki
+ham komutların operasyonel sarmalayıcılarıdır — tekrar eden işlerde önce bunları
+kullan.
 
 ### Test
 
