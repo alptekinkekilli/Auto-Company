@@ -201,3 +201,6 @@ memories/*
 
 dashboard.out
 scratchpad-loop.out
+
+# Claude Code prod-mekanizma guard marker (tripwire onayi, 120 dk TTL)
+.claude/.prod-change-approved

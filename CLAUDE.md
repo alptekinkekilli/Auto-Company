@@ -192,6 +192,13 @@ already covered by PROMPT.md's OPREQ/authorization machinery — this section
 binds operator-side interactive sessions, where the same brake was previously
 enforced only by the operator remembering to say "don't implement autonomously."
 
+This rule is mechanically enforced by a PreToolUse tripwire
+(`scripts/prod-mechanism-guard.py`): edits to the surfaces above are blocked
+unless `.claude/.prod-change-approved` exists and is <120 min old — create that
+marker only AFTER explicit operator approval. It is a tripwire against unplanned
+changes, not a security boundary (Bash-level edits bypass it; container cycles
+are exempt and governed by PROMPT.md instead).
+
 ## Collaboration Workflows
 
 Team composition rules: `.claude/skills/team/SKILL.md`.
