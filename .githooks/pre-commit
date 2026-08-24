@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Graft kartları bayatken commit'i durdurur.
+#
+# NEDEN: graft/*.md kartları versiyonlanıyor. Kaynak kod değişip kartlar
+# tazelenmezse depo YANLIŞ bir sistem anlatımı taşır — ve bu sessizce olur.
+# Kartların değeri doğru olmalarına bağlı; bayat kart yokluktan kötüdür.
+#
+# Atlamak için:  git commit --no-verify
+# Kurulum:       git config core.hooksPath .githooks   (install.sh bunu yapar)
+set -uo pipefail
+
+GRAFT_VERSION="${GRAFT_VERSION:-0.10.1}"
+
+# 1) Graft'ın indekslediği türde bir dosya staged mı? Değilse hızlıca çık.
+staged="$(git diff --cached --name-only --diff-filter=ACMR)"
+[ -n "$staged" ] || exit 0
+
+if ! grep -qE '\.(py|ts|tsx|js|jsx|mjs|cjs|go|java|rb|rs|sh)$' <<<"$staged"; then
+  exit 0
+fi
+
+# 2) Tazelik kontrolü.
+#    DİKKAT 1: `graft check` bayatlık BULDUĞUNDA da non-zero döner. Exit kodunu
+#    "çalıştırılamadı" sanmak hook'u işlevsiz bırakır (bu hata bir kez yaşandı).
+#    Bu yüzden ayrım çıktıya bakılarak yapılır: graft konuştuysa çalışmıştır.
+#
+#    DİKKAT 2: iki farklı başlık basıyor — deep katmanı kuruluysa "graft check:",
+#    yalnızca wiring varsa "graph check:". Sadece birini aramak, deep kurulmamış bir
+#    depoda hook'u sessizce açık bırakır (bu da bir kez yaşandı; testte yakalandı).
+out="$(npx -y "@nanonets/graft@$GRAFT_VERSION" check 2>&1)"
+
+if ! grep -qE "(graft|graph) check:" <<<"$out"; then
+  # Graft hiç konuşmadı -> altyapı arızası (ağ yok, npx başarısız). ENGELLEME.
+  echo "graft: tazelik kontrolü çalıştırılamadı — commit'e izin veriliyor." >&2
+  head -3 <<<"$out" >&2
+  exit 0
+fi
+
+grep -q "STALE" <<<"$out" || exit 0
+
+# 3) Bayat.
+cat >&2 <<MSG
+
+  ✗ Graft kartları bayat — commit durduruldu.
+
+$(sed 's/^/    /' <<<"$out" | head -12)
+
+  Kartlar (graft/*.md) bu depoda versiyonlanıyor; kaynak değişip kart
+  tazelenmezse depo yanlış bir sistem anlatımı taşır.
+
+  Düzeltme:
+    ./.graft-kit/bin/graft-build.sh --deep
+    git add graft && git commit ...
+
+  Bilinçli atlamak için:  git commit --no-verify
+
+MSG
+exit 1

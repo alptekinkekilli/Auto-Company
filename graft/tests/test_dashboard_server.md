@@ -1,0 +1,47 @@
+# tests/test_dashboard_server.py · [[dashboard-server]]
+
+Test suite for the dashboard server module, covering status parsing, action dispatch, engine runtime parsing, window cutoff, and file tail reading.
+
+- DashboardServerTests · class · L27-L210 — Tests that parse_status_output maps raw status text to normalized state dicts and that run_dashboard_action dispatches to the right runner per host.
+- test_windows_not_running_maps_to_stopped · method · L28-L52 — Verifies Windows status text with a stopped guardian maps to stopped/not_configured states with no PID.
+- test_windows_not_installed_daemon_maps_correctly · method · L54-L74 — Verifies Windows status text with a running guardian and not-installed daemon maps to running/not_installed states with PIDs.
+- test_macos_active_configured_running_maps_correctly · method · L76-L112 — Verifies macOS status text maps running/active/configured states with PIDs and engine metadata.
+- test_macos_inactive_configured_stopped_and_guardian_without_caffeinate · method · L114-L135 — Verifies macOS status text maps stopped/inactive/configured states when the guardian runs without caffeinate.
+- test_macos_not_installed_maps_correctly · method · L137-L157 — Verifies macOS status text maps not_installed/not_configured/stopped states when nothing is set up.
+- test_windows_start_uses_powershell_runner · method · L159-L169 — Verifies the start action on Windows dispatches to run_powershell_script with the Windows start script.
+- test_macos_stop_uses_shell_runner_with_pause_daemon · method · L171-L183 — Verifies the stop action on macOS dispatches to run_shell_script with the pause-daemon flag.
+- test_refresh_uses_status_script · method · L185-L194 — Verifies the refresh action on macOS dispatches to run_shell_script with the status script.
+- test_invalid_log_tail_lines_fall_back_to_default · method · L196-L199 — Verifies parse_positive_int falls back to the default for non-numeric or negative input.
+- test_unsupported_host_raises · method · L201-L210 — Verifies detect_host_kind resolves Linux/Windows/Darwin and raises for unsupported hosts.
+- EngineRuntimeParsingTests · class · L235-L368 — Tests that read_engine_runtime reflects the latest boot line and correctly reports routed engine/effort and settings sources.
+- _run · method · L238-L243 — Helper that runs read_engine_runtime with a fake file reader returning router-state or log text.
+- fake_read · function · L239-L240 — Returns router-state for the router-state file and log text otherwise.
+- test_claude_cycle_reports_its_effort · method · L245-L253 — Verifies a Claude cycle reports the routed effort and model from the latest boot.
+- test_codex_cycle_still_reports_codex_effort · method · L255-L259 — Verifies a Codex cycle reports codex effort while still surfacing the Claude ladder pick.
+- test_window_budget_and_ladders_take_the_latest_boot · method · L261-L271 — Verifies window budget, interval, and ladders come from the latest boot, not the first match.
+- test_legacy_tier_line_without_claude_effort_still_parses · method · L273-L284 — Verifies legacy tier lines without claude effort still parse without falling back to an older line.
+- _settings · method · L292-L296 — Helper that runs read_settings with a fake file reader and controlled environment.
+- test_settings_source_runtime_env_wins · method · L298-L303 — Verifies runtime.env values win over container environment for settings.
+- test_settings_source_container_when_absent_from_file · method · L305-L310 — Verifies container environment is the source when the knob is absent from runtime.env.
+- test_settings_source_default_when_nowhere · method · L312-L315 — Verifies the default source is used when a knob is set nowhere.
+- _runtime · method · L332-L340 — Helper that runs read_engine_runtime with a fake reader for router-state and log tail.
+- fake_read · function · L333-L334 — Returns the engine for router-state files and log text otherwise.
+- test_escalated_cycle_reports_the_escalated_model · method · L342-L348 — Verifies an escalated cycle reports the escalated model/effort while keeping the ladder pick separate.
+- test_escalation_before_the_tier_line_is_ignored · method · L350-L363 — Verifies a consumed escalation from an earlier cycle does not leak into the current one.
+- test_codex_cycle_ignores_escalation_entirely · method · L365-L368 — Verifies escalation is ignored entirely on a Codex cycle.
+- WindowCutoffTests · class · L371-L432 — Tests that _window_cutoff_epoch anchors spend on ccusage blockStart and falls back to rolling when stale.
+- setUp · method · L379-L386 — Creates a temp logdir and patches LOG_FILE for the test.
+- tearDown · method · L388-L390 — Stops the LOG_FILE patch and cleans up the temp directory.
+- _write · method · L392-L396 — Writes a usage payload to the temp file, optionally backdating its mtime.
+- test_fresh_blockstart_anchors_the_window · method · L398-L404 — Verifies a fresh blockStart anchors the cutoff to blockStart rather than rolling.
+- test_stale_usage_file_falls_back_to_rolling · method · L406-L414 — Verifies a stale usage file falls back to the rolling cutoff.
+- test_blockstart_older_than_rolling_never_widens_the_window · method · L416-L421 — Verifies a blockStart older than rolling never widens the window.
+- test_missing_or_unparseable_file_falls_back · method · L423-L432 — Verifies a missing or unparseable usage file falls back to the rolling cutoff.
+- ReadTextFileTailTests · class · L439-L497 — Tests read_text_file_tail behavior including truncation, multibyte safety, and fallback.
+- _tmp · method · L444-L449 — Creates a temp file with the given bytes content.
+- test_returns_whole_file_when_smaller_than_window · method · L451-L455 — Verifies the whole file is returned when it is smaller than the tail window.
+- test_truncates_to_the_tail_and_drops_the_partial_first_line · method · L457-L464 — Verifies the tail truncates to the window and drops a partial first line.
+- test_multibyte_seek_does_not_produce_replacement_junk · method · L466-L470 — Verifies multibyte seek does not produce replacement junk characters.
+- test_missing_file_returns_fallback · method · L472-L475 — Verifies a missing file returns the fallback value.
+- test_engine_runtime_falls_back_to_full_file_when_banner_is_out_of_window · method · L477-L497 — Verifies engine runtime falls back to the full file when the banner is out of the tail window.
+- fake_read · function · L488-L489 — Returns the log text for any path in the fallback test.

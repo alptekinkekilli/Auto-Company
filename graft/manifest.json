@@ -1,0 +1,916 @@
+{
+  "version": 1,
+  "model": "openai:deepseek-ai/DeepSeek-V4-Flash-0731",
+  "repoDigest": "dbafe3406ec19a00bd1efcc3089b7c521c5e148216423526d7a6bf94270a02a1",
+  "files": [
+    {
+      "path": "dashboard/app.js",
+      "hash": "96f503ea5d6c678db76dbf8202fa8d454492bc3d403fef01f433b8a6b52f1c44"
+    },
+    {
+      "path": "dashboard/sentry_client.py",
+      "hash": "96977bb6701f18064edb69c783e53bdb73c930c8ddadcd1caf47583b42700df4"
+    },
+    {
+      "path": "dashboard/server.py",
+      "hash": "5e7425fc121da8f9caa5984a58b4a28043aec41633ce896f4f371977ccc498ea"
+    },
+    {
+      "path": "docker-entrypoint.sh",
+      "hash": "fbc2010d8d1d9dda2bc7ebd72fba1d674136624f968ff2f453bf7bbb894de017"
+    },
+    {
+      "path": "docs/operations/north-star-metric-query.sql",
+      "hash": "0ef7a67fdb263a3fb09f795cc5a35372721265b7ef1f6200c5ccc369109f7ac6"
+    },
+    {
+      "path": "projects/_archive/snapog-landing/functions/api/waitlist.ts",
+      "hash": "49b5d66187a49f386d4bee50c1c01042d595e5ebbd5b27c061f1fba4cffeefa0"
+    },
+    {
+      "path": "projects/_archive/snapog/migrations/0001_init.sql",
+      "hash": "5a2ecc41dbff948e5d8f895feb80ae4145864f3703776f737cda73c84fec8623"
+    },
+    {
+      "path": "projects/_archive/snapog/migrations/0002_waitlist.sql",
+      "hash": "541f4f76f6f87aab342fe067acbcc746587f600d1e76028fe97a4c67c8b3202a"
+    },
+    {
+      "path": "projects/_archive/snapog/migrations/0003_cache_key_tracking.sql",
+      "hash": "a672bc9c2f87bedb83312ef869d3ea29305f96bcca7241131ce1130edcb4ee75"
+    },
+    {
+      "path": "projects/_archive/snapog/sample/alerts-dry-run.sh",
+      "hash": "fabd322c673a2e7f93273116221eac10392cdbf3d6cd8eb5457e6c960b67797c"
+    },
+    {
+      "path": "projects/_archive/snapog/sample/cache-cap-test.sh",
+      "hash": "c11830b054136c0d367415ca1a62bc16312be6ec69c45fc217b2fda9bf8a67bc"
+    },
+    {
+      "path": "projects/_archive/snapog/sample/smoke-test.sh",
+      "hash": "0a140d23218574add9c22c524d6ff03aea85a205f4806261fc0791a4b73c144f"
+    },
+    {
+      "path": "projects/_archive/snapog/src/alerts/check.ts",
+      "hash": "fa0fdacdc3a2b495e86f2e70be76d1cadba5f829c78f39010a53d479eb5192c4"
+    },
+    {
+      "path": "projects/_archive/snapog/src/alerts/graphql.ts",
+      "hash": "a8559345be8a04feec2111b7af71ba3158a630457b91af9fe39620b1008fa9d2"
+    },
+    {
+      "path": "projects/_archive/snapog/src/alerts/index.ts",
+      "hash": "d65033194377f0ea1537c03e0dbe39571fbb24cd551c9993c20a0167284f2820"
+    },
+    {
+      "path": "projects/_archive/snapog/src/alerts/thresholds.ts",
+      "hash": "4331a806e43a7f426bd69778ffaafb0324ab5237ef6f12f16e2f730c724087d2"
+    },
+    {
+      "path": "projects/_archive/snapog/src/alerts/webhook.ts",
+      "hash": "518ec45652bc5010bbd34856e527e2dc9c2dfa525aea151ff467f3a802c9da81"
+    },
+    {
+      "path": "projects/_archive/snapog/src/dashboard/pages.ts",
+      "hash": "6a33d1b6152ee8ea3ee6f5617105ce757c915627156072dd9cb1f3b78e32b4af"
+    },
+    {
+      "path": "projects/_archive/snapog/src/index.ts",
+      "hash": "c484536a0f66188fa0ac986f34c605540b32efb599ec1ae08d091b89a20d2954"
+    },
+    {
+      "path": "projects/_archive/snapog/src/og/render.ts",
+      "hash": "c74a09fcf98afae74090c3b72b8b4c7f84252e7f0aca090d1418352cd48d8094"
+    },
+    {
+      "path": "projects/_archive/snapog/src/og/templates.ts",
+      "hash": "bfc8c9e61038224564b61c55c627b2d86d9ba2514dd47f64a717e94f0be8b810"
+    },
+    {
+      "path": "projects/_archive/snapog/src/types.ts",
+      "hash": "1551e13c618a1b8ceaa8b5189318810934889c1d4e822425cb830e7efb45bc15"
+    },
+    {
+      "path": "projects/auto-company-site/functions/listeden-cik.js",
+      "hash": "7da883b7faec5b5065d071608172ca1d8effa6a3e255bc1cd658181000936229"
+    },
+    {
+      "path": "projects/auto-company-site/functions/randevu.js",
+      "hash": "680f4267bf50111c0d6d05e9068a837e04e46dc3a7cac7d549eb3e7a35c708bb"
+    },
+    {
+      "path": "projects/headinspect/migrations/0001_hits.sql",
+      "hash": "651c37d5aafbcd41932f5307a9080183fd953c8b5968f3dd2921bf1c379af022"
+    },
+    {
+      "path": "projects/headinspect/src/index.ts",
+      "hash": "2c4962e89d06e9fb5bf12aad7cdd08634974a4f57f59cceaa6dca9c98e771499"
+    },
+    {
+      "path": "projects/headinspect/src/inspect.ts",
+      "hash": "778af3f3556aa953b9e4409c1dee1c52f7fc773639a4e8b2cee22ac8390c75c6"
+    },
+    {
+      "path": "projects/headinspect/src/render.ts",
+      "hash": "3792b2bd4004ee751d9ae6647d0fc58d9708ef758ad6bfda6beb0a4314bd8883"
+    },
+    {
+      "path": "scripts/analyst/codex-skill/autocompany-opportunity-director/scripts/context7_docs.sh",
+      "hash": "79198378c25b2ff21cf5e4e2eda13f55c29ac806bd7f9d2bb0cba11a6268c447"
+    },
+    {
+      "path": "scripts/analyst/jcode-pilot-smoke.sh",
+      "hash": "354473b12623cdd65b47b0245f7d2fe85e03182998cc3d114f5dd419ba944d99"
+    },
+    {
+      "path": "scripts/analyst/merge_registry.py",
+      "hash": "55719338148054fff06780400062453a037e4bf10fe5817f04536b5c85ade7d1"
+    },
+    {
+      "path": "scripts/analyst/opportunity-analyst-jcode.sh",
+      "hash": "efc35f40b38b1b6430f80ca300088d4d14adbe07a6333a7a6bef744ced9eb5d1"
+    },
+    {
+      "path": "scripts/analyst/opportunity-analyst.sh",
+      "hash": "a0a766435a1f9e501b97cca96bb30314440de72fd569313488d3b80d5f9c55a5"
+    },
+    {
+      "path": "scripts/analyst/promote_directive.py",
+      "hash": "9c45147f1730fc30545b94a30428d54e0bd40f04506aa3db00614880ec93d677"
+    },
+    {
+      "path": "scripts/compact-preflight.py",
+      "hash": "e05718ceddc1954b8cefcea9ad00d143d0adb92d0d5547b55fe3916e5fbdb0b3"
+    },
+    {
+      "path": "scripts/context-watch.py",
+      "hash": "e9aa872c3ee33e6f175760da5b09d5cddda1ffdab5ac78c667547e492910bf96"
+    },
+    {
+      "path": "scripts/core/auto-loop.sh",
+      "hash": "b7375f132f3e571151b83d045a7716b07dc7f6fa9ea37d0788c49606d992f842"
+    },
+    {
+      "path": "scripts/core/bridge_leak_scan.py",
+      "hash": "e5b7b7ecf614217b79e93037d780bdd0314f4953d8e6308939a49fe5b5b92bcf"
+    },
+    {
+      "path": "scripts/core/decision_text_hash.py",
+      "hash": "790b22fa08940d8d4c5418ec441c98f9d119b33eb718b7cfde81c01c71d94922"
+    },
+    {
+      "path": "scripts/core/directive_writer.py",
+      "hash": "447057795ab4776c589695bd00450009df0af8fff481fa7a68c89244ca93a9a3"
+    },
+    {
+      "path": "scripts/core/engine-usage-cost.py",
+      "hash": "845b4b8bb9293058e19f610185ec25544170dd0adba7323520f2402ecc499a59"
+    },
+    {
+      "path": "scripts/core/jcode-final-text.py",
+      "hash": "8913ac57b8ca910581f28286fbdfb665674ee1a1273a477b39f39d1b02bf4215"
+    },
+    {
+      "path": "scripts/core/jcode-mcp-config.py",
+      "hash": "69e213cd234def194fee047d846a0c29f3c11edb07d7c7421fde188d1f75121c"
+    },
+    {
+      "path": "scripts/core/jcode-mcp-probe.py",
+      "hash": "60fdd2addf2f53741d03e21002a00b6ee9d8895af1fae9746a51308e67672b67"
+    },
+    {
+      "path": "scripts/core/monitor.sh",
+      "hash": "9a104b2efb99c2712cbff51c614b1dc964f3a8be29ba7bc990c3d63d7c58bd03"
+    },
+    {
+      "path": "scripts/core/operator_request_notify.py",
+      "hash": "520c01aa1d79e0b5137c42b7ac4fac92b3d0b34e53f2e6cded13dae8a046c92a"
+    },
+    {
+      "path": "scripts/core/sentry-heartbeat.sh",
+      "hash": "874eccbdbde7e82f3b3f97f023c1503321380b2c7a28754386d1fb7b366ac12f"
+    },
+    {
+      "path": "scripts/core/stop-loop.sh",
+      "hash": "4ea7f4b5ce31ce14039bf5cedd3c6a9718e2357906fe289906d06debe11f3fe3"
+    },
+    {
+      "path": "scripts/core/telegram-notify.sh",
+      "hash": "a6b475c3d6e94b205066d93a4054681477be96876b0f8eac60b47f13ab2573ef"
+    },
+    {
+      "path": "scripts/linux/noop-action.sh",
+      "hash": "0f0aaa7c6c79e6c7844c7528a253084811b9a9b7277f557a1a60a8011347f4d9"
+    },
+    {
+      "path": "scripts/linux/status-linux.sh",
+      "hash": "1dc4a455fe8ffdd5e1696608d50d02311afd701906d80ee26d5708374d3947d8"
+    },
+    {
+      "path": "scripts/macos/install-daemon.sh",
+      "hash": "21f1e9576d7552530f20812f04232c75a2dadb4a7f5e3819045a35dec10037e9"
+    },
+    {
+      "path": "scripts/macos/status-mac.sh",
+      "hash": "ba8bc08141ca80245bea6ccb35984221942d6a855ce856e5a492a38c4c151418"
+    },
+    {
+      "path": "scripts/ops/airtable-read.py",
+      "hash": "148f66145510c90e03256b7b37853122bcd892d51cba67f095ce700a0895e3e2"
+    },
+    {
+      "path": "scripts/ops/airtable-write.py",
+      "hash": "888d408c392193511145e11dfbe73841a6d7e3e743e396ab8c8fee8b9507ab7c"
+    },
+    {
+      "path": "scripts/ops/bloat-trend.py",
+      "hash": "f74441749dee8335f3eb7b9fa4626fcde6b9903cf0006019a261e8c35115fe26"
+    },
+    {
+      "path": "scripts/ops/browse-extract.py",
+      "hash": "ec67b37ee0a24df3eb9d5b06f16e7172c456153e7c7b8bd61edc2b54f7543aa1"
+    },
+    {
+      "path": "scripts/ops/budget-calibration-report.py",
+      "hash": "4773ab252d5a928ff27a3bb15b9df63d086258a96e76d0d679ebeba49985be21"
+    },
+    {
+      "path": "scripts/ops/context7-check.py",
+      "hash": "4687b776e558caf660fad0d984e405c6a9498525648273569ac9a5feb544797e"
+    },
+    {
+      "path": "scripts/ops/cost-audit.py",
+      "hash": "b6f0b059bb983b0383176fbcc261b517f3777238e66aa8624b5a9a2481c0f7a7"
+    },
+    {
+      "path": "scripts/ops/directive-rule-sweep.py",
+      "hash": "7284bd834ff1cf86bcc5f6d104cf23388bf9258dcc827b681f578e6ce7172c57"
+    },
+    {
+      "path": "scripts/ops/directive-staleness-watch.py",
+      "hash": "6597a8a3666b54131d1b782a8d8ee308e705e33dbed83429da857f9b1f0360fd"
+    },
+    {
+      "path": "scripts/ops/docker-prune-safe.sh",
+      "hash": "7f22912e40c9235114d147f0fb3949880a970ed7104ffcee964c37b187a1cb1d"
+    },
+    {
+      "path": "scripts/ops/extract-axis-evidence.py",
+      "hash": "3f3d55a2a285cd52ab3b0d286b1f908b877283bfde69b03e442d10758080f567"
+    },
+    {
+      "path": "scripts/ops/g4-check.py",
+      "hash": "719fa86c0e307ef71bf0bce8f49e2baab2bb522aec732b784b39c8f2d788aba8"
+    },
+    {
+      "path": "scripts/ops/idle-skip-note.py",
+      "hash": "1d4f853b19cdc9ee94c0fd1136ea67393d04deb36a7563e2720ef15a0631ec98"
+    },
+    {
+      "path": "scripts/ops/kik-decision-read.py",
+      "hash": "4f2060cbaaa784433de9720f1e9a3bfb3ba6c06cab00fae0efa0a426e5c926de"
+    },
+    {
+      "path": "scripts/ops/linear-track.py",
+      "hash": "5a0cc4bf3713dd3351302a4e9ed446432c92217afdbefd6fa9ee87a9ccd4f730"
+    },
+    {
+      "path": "scripts/ops/operator-usage-report.sh",
+      "hash": "c469a1b0ab7be7c2c839b0ba0cf5a73d755ffd7f6e3d9891f924e61f1428eb4b"
+    },
+    {
+      "path": "scripts/ops/opportunity-analyst-cron.sh",
+      "hash": "c9528c3c886526e331f350d771be52e2e29ed85299416da9b337599e373180c9"
+    },
+    {
+      "path": "scripts/ops/registry-archive.py",
+      "hash": "125be575d2da1c70effa433e2eabe55e5e7e7851fc89719651a1520bb76ee651"
+    },
+    {
+      "path": "scripts/ops/registry-queue-watch.py",
+      "hash": "0ef6723d089c54ee8272050eb2776ce81af9de986e8f6dc15b065b7bbd913497"
+    },
+    {
+      "path": "scripts/ops/reply-watch.py",
+      "hash": "110e009b20f709db9dda31e2e17af9fb061696a869901bd389dddedca9294070"
+    },
+    {
+      "path": "scripts/ops/send-gate.py",
+      "hash": "6acd746a20aff7267d711d61350ac14d8fa0c17a1af95341625aa2bfd9a63f92"
+    },
+    {
+      "path": "scripts/ops/site-contact-evidence.py",
+      "hash": "008b4735e6133445eff667f840f9c7faaeef8013b1363f6555b602a9d6fd048c"
+    },
+    {
+      "path": "scripts/ops/state-snapshot.py",
+      "hash": "8db4260218451d0fa83946abf89e9aafc0bee7f5d852f8adc989f6255c02b108"
+    },
+    {
+      "path": "scripts/ops/tool-usage-audit.py",
+      "hash": "1e21a81523cfbf8e4c6b9b1ee7782201c293b73feebe7494fd91494587ec9a4e"
+    },
+    {
+      "path": "scripts/ops/turn-audit.py",
+      "hash": "006e9aac95a503a1e158d1c6f03a7bdf98f44322805509d886c627e74d4d41d0"
+    },
+    {
+      "path": "scripts/ops/verify-mcp-keys.py",
+      "hash": "a35c1f35481876cedc5bb4cf0c7fd4eceaea1c85e57d3c28e87560b3f9f342db"
+    },
+    {
+      "path": "scripts/ops/web-research-cost.py",
+      "hash": "24d7735b6dc6defa0f80e75aeee37a13a40d4df43e9b38539be02df6fe23cbf2"
+    },
+    {
+      "path": "scripts/prod-mechanism-guard.py",
+      "hash": "df90f44c6e799ee5505f180b9c47889d0ebfe295a0fd99b661438f51a8dd6bf2"
+    },
+    {
+      "path": "scripts/session-brief.py",
+      "hash": "a6cd13941a50d768403e080d89e484683b33ec725c6ce151e4447074b784cea4"
+    },
+    {
+      "path": "scripts/wsl/install-wsl-daemon.sh",
+      "hash": "2b1d8ba1d5064ade6c138f43bd573d49b659b8bf9f5729d3d339a2ace4ee919b"
+    },
+    {
+      "path": "scripts/wsl/uninstall-wsl-daemon.sh",
+      "hash": "9a3367f7cbb052a83488d12ed50a81a8d09ff2a5c04ac7620b213b9f052936e3"
+    },
+    {
+      "path": "scripts/wsl/wsl-daemon-status.sh",
+      "hash": "55fb93df7f080f48a322d005e6b1f76ec2de1c5283de176883b0644d69f39a6a"
+    },
+    {
+      "path": "tests/fixtures/mock_mcp_server.py",
+      "hash": "e5124ccf90e18331b1e81557000a0bf0cc13e1fd7f0412250c5f37fb08e23021"
+    },
+    {
+      "path": "tests/test_active_window.sh",
+      "hash": "fcd17dad9794b155cb623d85a88dd74bf10c12961df71a37f446f030958135fd"
+    },
+    {
+      "path": "tests/test_airtable_read.sh",
+      "hash": "f1c8fbb1b495e922c52d041bac7edbae8f100ab57606ebd987179783265325df"
+    },
+    {
+      "path": "tests/test_airtable_write.sh",
+      "hash": "a51c25001935da566cca4a450cfc0906827eb332779f2b454b12d547b7a0e6e0"
+    },
+    {
+      "path": "tests/test_analyst_engine.sh",
+      "hash": "d4c762d2c85a4dbbeea39462739b8cb7a56b8f3cdcc4f88aa2ebbb4018d1f531"
+    },
+    {
+      "path": "tests/test_browse_extract.sh",
+      "hash": "37b269657d3077acf85e81540cd0355f9e97b432f0e6e1d973c2dfc170a887a6"
+    },
+    {
+      "path": "tests/test_budget_gates.sh",
+      "hash": "8d96846319108d7f4c41477e346d7ae803743be23e0bc4ca6de30e9f117e99c9"
+    },
+    {
+      "path": "tests/test_ccusage_failclosed.sh",
+      "hash": "366b96bee74416db05cc9752919b04304a49f5121d5802920a26641b196ef706"
+    },
+    {
+      "path": "tests/test_codex_spend_sources.sh",
+      "hash": "38e285a908cfdba71566f50ec2429fed8dc40ccdaaf68886e24e27399bba5bef"
+    },
+    {
+      "path": "tests/test_context7_check.sh",
+      "hash": "d4fc93cf6b456038f23e1e756019a7fa1b47a344b0385bc5cd3d3a5536834733"
+    },
+    {
+      "path": "tests/test_cost_model_hint.sh",
+      "hash": "c17d1daedaa46cd803aa562c933e2a0d75aa6f2a5f7e059fd47fa8961847f743"
+    },
+    {
+      "path": "tests/test_cycle_metadata.sh",
+      "hash": "66a21f12ac379be58cda6db2e98c410b11104c0fc2c2d8c6efdffd422dcd3988"
+    },
+    {
+      "path": "tests/test_dashboard_server.py",
+      "hash": "5af6c4f462552608f0f6d47fcab10935ceba1edfa0741d94c5081ba35a3b7e66"
+    },
+    {
+      "path": "tests/test_directive_section_refs.sh",
+      "hash": "413742241d956ae77feb01e20780757ee86fa63f3699e3926a2ddeea81a53a71"
+    },
+    {
+      "path": "tests/test_discretionary_budget.sh",
+      "hash": "32b2f12385f1bf8cc0984fc89d1181074406a1726028d2705d2224759cf6de7e"
+    },
+    {
+      "path": "tests/test_escalation.sh",
+      "hash": "51d700c7d869599d1a6d48913b0097143e7b0c93a520123dd7cf3bb5c8c874fc"
+    },
+    {
+      "path": "tests/test_g4_check.sh",
+      "hash": "426129aa4d430db932523139037190cd1c5106394e917a10fc73e29b823bc4d2"
+    },
+    {
+      "path": "tests/test_idle_skip.sh",
+      "hash": "13ce9f0b8801b94a1bc896bd2db53f2fc68c2984b45db8372050ca760e1edb53"
+    },
+    {
+      "path": "tests/test_jcode_mcp_config.sh",
+      "hash": "d6e5f312040010b657623eed1bd3a7b2b30bdd004870c9dc69e0d63b4d4a5d33"
+    },
+    {
+      "path": "tests/test_mcp_key_fallback.sh",
+      "hash": "21c4be05f1922a08fa185aaa94f73941a785d5f380b7770431bdee7bf78115d6"
+    },
+    {
+      "path": "tests/test_mcp_probe.sh",
+      "hash": "07482a8311b81667003a304c3741feed20e311f1e28263a5bb3bcc5599e962ce"
+    },
+    {
+      "path": "tests/test_mixed_harness.sh",
+      "hash": "bd8a1f81df957e0bfdfacf44982a2274a58809d5f9bd8618c64c3efeecb868cc"
+    },
+    {
+      "path": "tests/test_operator_request_notify.py",
+      "hash": "2a4ea48a200b3d54e86f5345da91ab5784cc693b6c15991835a485c677ac05c2"
+    },
+    {
+      "path": "tests/test_prod_mechanism_guard.sh",
+      "hash": "1c8df67eca679e21cbbe4ea2daac7f761fc952f17b25f99d2673a4782ffa6824"
+    },
+    {
+      "path": "tests/test_prompt_assembly.sh",
+      "hash": "0cd8e397ee0db20d70eac066f7542b6dbabfec6bdd6d031cdc0e378da04876d6"
+    },
+    {
+      "path": "tests/test_prompt_transport.sh",
+      "hash": "c5df34a0acc0d09b63a231df392960370ab146ceea135b5bcace427223300501"
+    },
+    {
+      "path": "tests/test_refusal_format.sh",
+      "hash": "11bf5e9869e2e573b4a897e4df84053e4f58d759d3073a9e058705482cc31ef5"
+    },
+    {
+      "path": "tests/test_registry_archive.sh",
+      "hash": "4ca1be679dfb4867f1e05625b59c587e0a40e525f53c35404d535f93017e5c76"
+    },
+    {
+      "path": "tests/test_registry_queue_watch.sh",
+      "hash": "0c823a0b115d8fb57d7a64e25cb89f725943078e58504a22aa5306a416ac6668"
+    },
+    {
+      "path": "tests/test_reply_watch.sh",
+      "hash": "a1291856a346b22fd46c2d1179ae6602778674b7f930d53c4216e449e286b67f"
+    },
+    {
+      "path": "tests/test_send_gate.sh",
+      "hash": "4d0f03bd1b3e73a289e87cf0a56b25499b131e48fac01098b3f1d81755cb190d"
+    },
+    {
+      "path": "tests/test_seteshape_lint.py",
+      "hash": "c75dd121edbe7aed5432f718bdfff952149464b77f9ab22baced3682261ebc98"
+    },
+    {
+      "path": "tests/test_state_snapshot.sh",
+      "hash": "de95734c6466b9dd5db4617b7162a891227571a70b39c72aa9b6fea0e05bd8a4"
+    },
+    {
+      "path": "tests/test_tier_ladder_daily.sh",
+      "hash": "d0bfb4ace48e1fa9665e17059be3f618b46fda0dcf432544a6bb16c07a3ed8db"
+    },
+    {
+      "path": "tests/test_tool_usage_audit.sh",
+      "hash": "827e85f8e8e61beb4d2796204a7343d06479be42ced46e66c27c8582f231f2f2"
+    },
+    {
+      "path": "tests/test_turn_audit.sh",
+      "hash": "ce3eb2af3fea266a763a0ca266f3c658f8498b604570c229141654d685f6c9e8"
+    }
+  ],
+  "nodes": [
+    {
+      "slug": "airtable-ops",
+      "name": "Airtable Ops",
+      "type": "system",
+      "sources": [
+        "tests/test_airtable_read.sh",
+        "tests/test_airtable_write.sh"
+      ],
+      "sourcesDigest": "f36a07c38e3cd5b13c9c5c2ebd4240613fd28de5db52e96debd23170ea040e77"
+    },
+    {
+      "slug": "analyst-engine",
+      "name": "Analyst Engine",
+      "type": "system",
+      "sources": [
+        "tests/test_analyst_engine.sh"
+      ],
+      "sourcesDigest": "3caff833918f15ba83b196b29e5fd07a3e9feb83c002de94bbf8fa3549432094"
+    },
+    {
+      "slug": "analyst-skill-tooling",
+      "name": "Analyst skill tooling",
+      "type": "system",
+      "sources": [
+        "scripts/analyst/codex-skill/autocompany-opportunity-director/scripts/context7_docs.sh",
+        "scripts/analyst/jcode-pilot-smoke.sh"
+      ],
+      "sourcesDigest": "86629429e8f655505e4d89df93ce8d4c5c5f8b8226a9c68464bda6fca19518fc"
+    },
+    {
+      "slug": "auto-company-site-functions",
+      "name": "Auto-company site functions",
+      "type": "system",
+      "sources": [
+        "projects/auto-company-site/functions/listeden-cik.js",
+        "projects/auto-company-site/functions/randevu.js"
+      ],
+      "sourcesDigest": "d765296cba06e0858b94642f9c57598b0a01dbdbf1099116ab94c5ce24458b9c"
+    },
+    {
+      "slug": "auto-loop-core",
+      "name": "Auto-Loop Core",
+      "type": "system",
+      "sources": [
+        "scripts/core/auto-loop.sh",
+        "tests/test_active_window.sh",
+        "tests/test_budget_gates.sh",
+        "tests/test_ccusage_failclosed.sh",
+        "tests/test_codex_spend_sources.sh",
+        "tests/test_cycle_metadata.sh",
+        "tests/test_discretionary_budget.sh",
+        "tests/test_escalation.sh",
+        "tests/test_idle_skip.sh",
+        "tests/test_mixed_harness.sh",
+        "tests/test_prompt_assembly.sh",
+        "tests/test_prompt_transport.sh",
+        "tests/test_seteshape_lint.py",
+        "tests/test_tier_ladder_daily.sh"
+      ],
+      "sourcesDigest": "36a531a7115121afcc3d5bfcf3f0f4dfc5b1be4b9d9de44fc5cfe1be44eb5e6c"
+    },
+    {
+      "slug": "autonomous-loop",
+      "name": "Autonomous loop",
+      "type": "system",
+      "sources": [
+        "scripts/core/auto-loop.sh"
+      ],
+      "sourcesDigest": "4c6c77833f44a2de7965557f13f6803d56cd1b8d4453d991d55e0c715e787f33"
+    },
+    {
+      "slug": "budget-spend-accounting",
+      "name": "Budget & Spend Accounting",
+      "type": "system",
+      "sources": [
+        "tests/test_budget_gates.sh",
+        "tests/test_ccusage_failclosed.sh",
+        "tests/test_codex_spend_sources.sh",
+        "tests/test_discretionary_budget.sh",
+        "tests/test_tier_ladder_daily.sh"
+      ],
+      "sourcesDigest": "277061fac132ba9be3f24fea9cd7d06fcbdd82414ad6299ebbce5aff73075e2a"
+    },
+    {
+      "slug": "cockpit-dashboard-server",
+      "name": "Cockpit dashboard server",
+      "type": "system",
+      "sources": [
+        "dashboard/server.py"
+      ],
+      "sourcesDigest": "d557631a825dfa537342464999f5f5dd0408b904823178b6b638e449dfdd1609"
+    },
+    {
+      "slug": "cockpit-dashboard-ui",
+      "name": "Cockpit dashboard UI",
+      "type": "system",
+      "sources": [
+        "dashboard/app.js"
+      ],
+      "sourcesDigest": "6615bd5ca9dec72f7ec6d40af96a5864ec9fca878a10df4898794f2497b83adf"
+    },
+    {
+      "slug": "compact-preflight",
+      "name": "Compact preflight",
+      "type": "file",
+      "sources": [
+        "scripts/compact-preflight.py"
+      ],
+      "sourcesDigest": "8209b0e705f42296e979b77c5e321a326f8eb906c9d9dbc38000f6403c23136c"
+    },
+    {
+      "slug": "container-entrypoint",
+      "name": "Container entrypoint",
+      "type": "system",
+      "sources": [
+        "docker-entrypoint.sh"
+      ],
+      "sourcesDigest": "4859f8b1dfb24f857df1d999107a7d92d7c4d14a2c247976ae81cbb021029d23"
+    },
+    {
+      "slug": "content-hash-provenance",
+      "name": "Content-hash provenance",
+      "type": "concept",
+      "sources": [
+        "scripts/core/decision_text_hash.py"
+      ],
+      "sourcesDigest": "837c6e521378bcf965cbfcc5891b481682400ecc60b202a8af12f5fc90600758"
+    },
+    {
+      "slug": "context-watch-hook",
+      "name": "Context-watch hook",
+      "type": "file",
+      "sources": [
+        "scripts/context-watch.py"
+      ],
+      "sourcesDigest": "e120476879431ac8f01406f0c7056c596e84ad05a3bdffa80c27718e3d312c80"
+    },
+    {
+      "slug": "cost-accounting-adapter",
+      "name": "Cost accounting adapter",
+      "type": "file",
+      "sources": [
+        "scripts/core/engine-usage-cost.py"
+      ],
+      "sourcesDigest": "6ee6a7bfcdad67740cc3e9c82b68d36bdd80cf963fef48f593806b0c3ca5a41c"
+    },
+    {
+      "slug": "cost-model-hint",
+      "name": "Cost Model Hint",
+      "type": "system",
+      "sources": [
+        "tests/test_cost_model_hint.sh"
+      ],
+      "sourcesDigest": "7afc86ccc7eae6f8ebe4bb686a81caa44d50be47b23abca036d8985e85ae897b"
+    },
+    {
+      "slug": "dashboard-server",
+      "name": "Dashboard Server",
+      "type": "system",
+      "sources": [
+        "tests/test_dashboard_server.py",
+        "tests/test_refusal_format.sh"
+      ],
+      "sourcesDigest": "bbcabfc7048b8096e1169a982b202ffaa7677920ad844ef9bf69505797915b6d"
+    },
+    {
+      "slug": "directive-writer",
+      "name": "Directive writer",
+      "type": "file",
+      "sources": [
+        "scripts/core/directive_writer.py",
+        "tests/test_directive_section_refs.sh"
+      ],
+      "sourcesDigest": "a925e7afda2d83caf94d4cc6796cb4d415c637387d9929d279253111ad4f6b09"
+    },
+    {
+      "slug": "engine-adapters",
+      "name": "Engine Adapters",
+      "type": "system",
+      "sources": [
+        "tests/test_cost_model_hint.sh",
+        "tests/test_cycle_metadata.sh",
+        "tests/test_mixed_harness.sh",
+        "tests/test_prompt_transport.sh"
+      ],
+      "sourcesDigest": "7e3a0eb7f26b819e2b1dd55ce42ee645b207e17bd2c8f021a107169de6632f65"
+    },
+    {
+      "slug": "fail-closed-measurement",
+      "name": "Fail-Closed Measurement",
+      "type": "concept",
+      "sources": [
+        "tests/test_ccusage_failclosed.sh",
+        "tests/test_jcode_mcp_config.sh",
+        "tests/test_mcp_probe.sh",
+        "tests/test_send_gate.sh"
+      ],
+      "sourcesDigest": "a213e8e93bad22b3b05eebae58e00731948a5d2e61ac57a8881e06123bbeec37"
+    },
+    {
+      "slug": "headinspect-header-inspector",
+      "name": "HeadInspect header inspector",
+      "type": "system",
+      "sources": [
+        "projects/headinspect/migrations/0001_hits.sql",
+        "projects/headinspect/src/index.ts",
+        "projects/headinspect/src/inspect.ts",
+        "projects/headinspect/src/render.ts"
+      ],
+      "sourcesDigest": "cb61b3ccfe05c907fe9c1d45e555e1e03b1607816df1e7ac11b12c3268891960"
+    },
+    {
+      "slug": "idle-skip",
+      "name": "Idle Skip",
+      "type": "system",
+      "sources": [
+        "tests/test_idle_skip.sh"
+      ],
+      "sourcesDigest": "62054a522d1d44a646c3044dc19f96a3436690842bf64fa02eb59498b202e615"
+    },
+    {
+      "slug": "mcp-configuration",
+      "name": "MCP Configuration",
+      "type": "system",
+      "sources": [
+        "tests/test_jcode_mcp_config.sh",
+        "tests/test_mcp_key_fallback.sh"
+      ],
+      "sourcesDigest": "65e211f4830d9aa9e9ff86947017aaa949b226bf5dd1b691eb118d051bf52d05"
+    },
+    {
+      "slug": "mcp-probe",
+      "name": "MCP Probe",
+      "type": "system",
+      "sources": [
+        "tests/fixtures/mock_mcp_server.py",
+        "tests/test_mcp_probe.sh"
+      ],
+      "sourcesDigest": "55559e8980b6126104d7b33c4e78709bbf95de3c057c135a2c2f2488aff7567f"
+    },
+    {
+      "slug": "operator-escalation",
+      "name": "Operator Escalation",
+      "type": "system",
+      "sources": [
+        "tests/test_escalation.sh"
+      ],
+      "sourcesDigest": "6a902fd619f9d64596e8b04b7acbcda328cabd71b0a221d5b58a19c669c27e6f"
+    },
+    {
+      "slug": "opportunity-analyst-pipeline",
+      "name": "Opportunity analyst pipeline",
+      "type": "system",
+      "sources": [
+        "scripts/analyst/opportunity-analyst-jcode.sh",
+        "scripts/analyst/opportunity-analyst.sh"
+      ],
+      "sourcesDigest": "881c0d2223de3a50b3cf13b878fa98af59cd376ccddb3141459586f3af286ba1"
+    },
+    {
+      "slug": "ops-scripts",
+      "name": "Ops Scripts",
+      "type": "system",
+      "sources": [
+        "tests/test_browse_extract.sh",
+        "tests/test_context7_check.sh",
+        "tests/test_g4_check.sh",
+        "tests/test_operator_request_notify.py",
+        "tests/test_refusal_format.sh",
+        "tests/test_registry_archive.sh",
+        "tests/test_registry_queue_watch.sh",
+        "tests/test_reply_watch.sh",
+        "tests/test_send_gate.sh",
+        "tests/test_state_snapshot.sh",
+        "tests/test_tool_usage_audit.sh",
+        "tests/test_turn_audit.sh"
+      ],
+      "sourcesDigest": "fb8f5d2d611f6c2155a61c8c997f16753814d41c50e4a5a5328b83a11f736b4b"
+    },
+    {
+      "slug": "prod-mechanism-guard",
+      "name": "Prod-Mechanism Guard",
+      "type": "system",
+      "sources": [
+        "scripts/prod-mechanism-guard.py",
+        "tests/test_prod_mechanism_guard.sh"
+      ],
+      "sourcesDigest": "85f695b540190c148b455d6cc63e72dbb881bcb53a6cf3d680c51a434fc47b16"
+    },
+    {
+      "slug": "promotion-gate",
+      "name": "Promotion gate",
+      "type": "file",
+      "sources": [
+        "scripts/analyst/promote_directive.py"
+      ],
+      "sourcesDigest": "529774ce95135d20964e1d42a6242cf44c9928383f17eac44213ac8385a782b9"
+    },
+    {
+      "slug": "registry-merge-tool",
+      "name": "Registry merge tool",
+      "type": "file",
+      "sources": [
+        "scripts/analyst/merge_registry.py"
+      ],
+      "sourcesDigest": "5ff39050e2ffebfcb89290b663b10deb8e198c076c45e5893acf920e54d83301"
+    },
+    {
+      "slug": "sentry-reporter",
+      "name": "Sentry reporter",
+      "type": "file",
+      "sources": [
+        "dashboard/sentry_client.py"
+      ],
+      "sourcesDigest": "d14955d1810e44ac017b77743809ea9e510da96b9f40c625eb3bfe88e5d2372d"
+    },
+    {
+      "slug": "session-brief",
+      "name": "Session Brief",
+      "type": "system",
+      "sources": [
+        "scripts/session-brief.py"
+      ],
+      "sourcesDigest": "77a08c55273fd8415d52a44771613fd9b92c20dead94083ce126b831c87145a6"
+    },
+    {
+      "slug": "session-leak-scanner",
+      "name": "Session-leak scanner",
+      "type": "file",
+      "sources": [
+        "scripts/core/bridge_leak_scan.py"
+      ],
+      "sourcesDigest": "b640af07b633d17a562a8a5f854a19c94a33c6169c66e46291f8978bc47e1945"
+    },
+    {
+      "slug": "set-e-safety",
+      "name": "set -e Safety",
+      "type": "concept",
+      "sources": [
+        "tests/test_prompt_assembly.sh",
+        "tests/test_seteshape_lint.py"
+      ],
+      "sourcesDigest": "e8ab37db2c203d6fd9efb02ce90da3390e76554204c3c71fa7f70f6eb9adeb7f"
+    },
+    {
+      "slug": "snapog-cost-alerting",
+      "name": "SnapOG cost alerting",
+      "type": "system",
+      "sources": [
+        "projects/_archive/snapog/src/alerts/check.ts",
+        "projects/_archive/snapog/src/alerts/graphql.ts",
+        "projects/_archive/snapog/src/alerts/index.ts",
+        "projects/_archive/snapog/src/alerts/thresholds.ts",
+        "projects/_archive/snapog/src/alerts/webhook.ts"
+      ],
+      "sourcesDigest": "fe1d8fd6fcb0f308eb0c4072f436e2986ea169f87521e188c20ca981540b20fa"
+    },
+    {
+      "slug": "snapog-og-image-service",
+      "name": "SnapOG OG image service",
+      "type": "system",
+      "sources": [
+        "projects/_archive/snapog/src/dashboard/pages.ts",
+        "projects/_archive/snapog/src/index.ts",
+        "projects/_archive/snapog/src/og/render.ts",
+        "projects/_archive/snapog/src/og/templates.ts",
+        "projects/_archive/snapog/src/types.ts"
+      ],
+      "sourcesDigest": "d4343ceffc68f713a6dcfc6ae45ec31bd030d35d94d34d04ef9190c816f7239c"
+    },
+    {
+      "slug": "snapog-schema-waitlist",
+      "name": "SnapOG schema & waitlist",
+      "type": "system",
+      "sources": [
+        "docs/operations/north-star-metric-query.sql",
+        "projects/_archive/snapog-landing/functions/api/waitlist.ts",
+        "projects/_archive/snapog/migrations/0001_init.sql",
+        "projects/_archive/snapog/migrations/0002_waitlist.sql",
+        "projects/_archive/snapog/migrations/0003_cache_key_tracking.sql"
+      ],
+      "sourcesDigest": "e3008462b75195f4275d8a4c60696876b06033d7548a78343388471d159f023c"
+    },
+    {
+      "slug": "snapog-smoke-tests",
+      "name": "SnapOG smoke tests",
+      "type": "system",
+      "sources": [
+        "projects/_archive/snapog/sample/alerts-dry-run.sh",
+        "projects/_archive/snapog/sample/cache-cap-test.sh",
+        "projects/_archive/snapog/sample/smoke-test.sh"
+      ],
+      "sourcesDigest": "ce9cb2a773c1290423006a58fe8d649723cb56a07022127ba072ed0d87b79c56"
+    },
+    {
+      "slug": "test-by-extraction",
+      "name": "Test-by-Extraction",
+      "type": "concept",
+      "sources": [
+        "tests/test_active_window.sh",
+        "tests/test_budget_gates.sh",
+        "tests/test_cycle_metadata.sh",
+        "tests/test_escalation.sh",
+        "tests/test_idle_skip.sh",
+        "tests/test_mixed_harness.sh",
+        "tests/test_prompt_assembly.sh",
+        "tests/test_prompt_transport.sh",
+        "tests/test_seteshape_lint.py",
+        "tests/test_tier_ladder_daily.sh"
+      ],
+      "sourcesDigest": "0f8ae981b28d19a0a68220c41ac8e76bb6160312003dffa3725fb79a69d198dc"
+    },
+    {
+      "slug": "wsl-daemon-management",
+      "name": "WSL Daemon Management",
+      "type": "system",
+      "sources": [
+        "scripts/wsl/install-wsl-daemon.sh",
+        "scripts/wsl/uninstall-wsl-daemon.sh",
+        "scripts/wsl/wsl-daemon-status.sh"
+      ],
+      "sourcesDigest": "9492ae8c037a012dbfdfbe959108c9028822a628598cab08029dd84ec43e3b99"
+    }
+  ]
+}

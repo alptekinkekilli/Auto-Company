@@ -1,0 +1,43 @@
+# tests/test_operator_request_notify.py · [[ops-scripts]]
+
+Test suite for the operator_request_notify script, covering notification dedup, retry, and type-specific resolution verification.
+
+- make_send_fn · function · L40-L50 — Builds a fake Telegram send function that records calls and returns scripted (ok, err) results in order.
+- _send · function · L44-L47 — Records each sent message and returns the next scripted result, repeating the last one.
+- block_text · function · L53-L70 — Renders a markdown request block with configurable fields for building test fixtures.
+- OperatorRequestNotifyTests · class · L73-L734 — Test case class exercising notification, dedup, retry, and resolution-verification behavior of the operator request notifier.
+- setUp · method · L74-L87 — Creates a temp app dir with memory files and stubs the Telegram environment for each test.
+- tearDown · method · L89-L91 — Stops the environment patch and cleans up the temp directory.
+- write_requests · method · L93-L96 — Writes the given request blocks into the operator-requests file under the template header.
+- noop_sleep · method · L98-L99 — No-op sleep stub to keep retry loops fast in tests.
+- test_new_request_notified_once · method · L102-L118 — Verifies a new request is notified exactly once and marked notified in state.
+- test_unchanged_request_not_renotified · method · L121-L126 — Verifies an unchanged request is not renotified on a second run.
+- test_timestamp_only_change_does_not_renotify · method · L129-L138 — Verifies a timestamp-only change does not trigger a new notification because the fingerprint is unchanged.
+- test_material_change_renotifies_once · method · L141-L155 — Verifies a material content change renotifies exactly once and a third identical run does not.
+- test_ordinary_hold_type_never_notifies · method · L158-L177 — Verifies hold/informational/research-result request types never notify or appear in consensus.
+- test_telegram_failure_not_marked_notified_then_recovers · method · L180-L195 — Verifies a Telegram failure is not recorded as notified and a later success is.
+- test_document_procurement_resolution_verifies_checksum_then_disappears · method · L202-L244 — Verifies a document-procurement request resolves only when a checksum-matched evidence file exists, then disappears from consensus.
+- test_document_procurement_resolution_blocks_on_checksum_mismatch · method · L248-L279 — Verifies a tampered evidence file with a wrong checksum keeps the request OPEN and logs a checksum mismatch.
+- test_document_procurement_resolution_blocks_path_outside_evidence_dir · method · L283-L308 — Verifies an evidence path outside the evidence directory is refused rather than checksummed.
+- test_credential_resolution_requires_pass_log_without_secrets · method · L312-L353 — Verifies a credential request resolves only with a PASS log that contains no secret-shaped content.
+- test_credential_resolution_blocks_if_log_contains_secret_shaped_token · method · L355-L400 — Verifies a credential request stays OPEN when its log contains a secret-shaped token.
+- test_legal_decision_resolution_requires_structured_decision_line · method · L405-L435 — Verifies a legal-decision request resolves only when the operator wrote a structured Decision line in the directive.
+- test_adjudication_pending_resolution_requires_structured_decision_line · method · L441-L480 — Verifies an adjudication-pending request resolves only with a structured decision line.
+- test_expenditure_resolution_requires_structured_authorization_block · method · L485-L523 — Verifies an expenditure request resolves only with a structured authorization block.
+- test_dedup_state_persists_across_process_reinstantiation · method · L528-L538 — Verifies dedup state persists across process reinstantiation so no renotification occurs.
+- _must_not_be_called · function · L534-L535 — Send stub that fails the test if invoked, proving no renotification happens.
+- test_requests_md_write_failure_does_not_lose_notified_state · method · L544-L565 — Verifies a write failure to requests.md does not lose the notified state.
+- test_authorization_complete_block_passes · method · L585-L588 — Verifies a complete authorization block passes validation.
+- test_authorization_blank_field_does_not_borrow_next_line · method · L590-L598 — Verifies a blank authorization field does not borrow the next line's value.
+- test_authorization_missing_field_reported · method · L600-L604 — Verifies a missing authorization field is reported.
+- _refuse_run · method · L613-L621 — Runs the notifier against a directive and request blocks to test refusal handling.
+- test_refuse_closes_the_request_as_refused_not_resolved · method · L623-L631 — Verifies a refuse directive closes the request as refused, not resolved.
+- test_refuse_works_without_an_authorization_block · method · L633-L640 — Verifies refusal works without an authorization block since declining cannot supply one.
+- test_prose_mentioning_refusal_does_not_close_anything · method · L642-L651 — Verifies prose merely mentioning refusal does not close any request.
+- test_bare_refuse_with_two_requests_fails_closed · method · L653-L661 — Verifies a bare refuse with two requests fails closed rather than closing one arbitrarily.
+- test_named_refuse_targets_only_that_request · method · L663-L673 — Verifies a named refuse targets only the specified request.
+- _evidence · method · L683-L689 — Writes an evidence file for a request and returns its path and digest.
+- test_evidence_files_in_the_directive_resolves · method · L691-L699 — Verifies evidence files listed in the directive resolve the request.
+- test_evidence_files_in_the_request_block_still_resolves · method · L701-L713 — Verifies evidence files listed in the request block still resolve the request.
+- test_directive_entry_with_a_wrong_checksum_is_rejected · method · L715-L723 — Verifies a directive entry with a wrong checksum is rejected.
+- test_directive_entry_cannot_escape_the_evidence_directory · method · L725-L734 — Verifies a directive entry cannot escape the evidence directory.

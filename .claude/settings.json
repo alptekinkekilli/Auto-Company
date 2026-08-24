@@ -1,7 +1,15 @@
 {
   "permissions": {
     "defaultMode": "bypassPermissions",
-    "allow": ["WebSearch", "Bash", "Edit", "Write", "WebFetch", "NotebookEdit", "Skill"],
+    "allow": [
+      "WebSearch",
+      "Bash",
+      "Edit",
+      "Write",
+      "WebFetch",
+      "NotebookEdit",
+      "Skill"
+    ],
     "ask": [],
     "deny": []
   },
@@ -28,6 +36,14 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/scripts/session-brief.py"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.graft-kit/bin/gitignore-guard.py \"$CLAUDE_PROJECT_DIR\""
           }
         ]
       }
@@ -59,6 +75,16 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/scripts/context-watch.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.graft-kit/bin/gitignore-guard.py \"$CLAUDE_PROJECT_DIR\""
           }
         ]
       }

@@ -61,7 +61,6 @@ __pycache__
 *.egg
 MANIFEST
 
-
 # Virtual environments
 venv
 env/
@@ -208,3 +207,7 @@ scratchpad-loop.out
 
 # Claude Code yerel katman (makineye ozel, paylasilmaz)
 CLAUDE.local.md
+
+# graft: cache ve grafik yeniden üretilebilir; KARTLAR (graft/*.md) versiyonlanır
+graft/.cache/
+graft/.graph/
