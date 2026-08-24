@@ -44,7 +44,11 @@
 set -uo pipefail
 
 APP="${APP_DIR:-/app}"
-SKILL_MD="$APP/scripts/analyst/codex-skill/autocompany-opportunity-director/SKILL.md"
+# 2026-08-24 Wowcar re-charter: the analyst is retargeted from the (frozen) Tender
+# Track to the Wowcar 2.0 program. Old skill dir kept as history; runner no longer
+# reads it. Registry merge (old pass-2) and directive promotion (old pass-3) are
+# RETIRED in this mode — the auditor writes nothing and produces no directive.
+SKILL_MD="$APP/scripts/analyst/codex-skill/${ANALYST_SKILL:-wowcar-program-auditor}/SKILL.md"
 REGISTRY="$APP/memories/candidate-registry.md"
 CONSENSUS="$APP/memories/consensus.md"
 OUT_DIRECTIVE="$APP/memories/analysis-directive.md"
@@ -70,7 +74,7 @@ log() { printf '%s\n' "$1" >> "$PROGRESS"; }
 fail() { log "[$STAMP] ANALYST_FAILED: $1"; echo "ANALYST_FAILED: $1" >&2; exit 1; }
 
 # --- preconditions ---
-for f in "$REGISTRY" "$CONSENSUS" "$SKILL_MD"; do [ -f "$f" ] || fail "missing input: $f"; done
+for f in "$APP/memories/human-directive.md" "$CONSENSUS" "$SKILL_MD"; do [ -f "$f" ] || fail "missing input: $f"; done
 [ -x "$JCODE_BIN" ] || fail "jcode not found"
 # Auth is PROVIDER-SHAPED, not one rule:
 #   openai -> a jcode login file (measured gate 4, 2026-07-31: `jcode login openai`
@@ -149,26 +153,22 @@ fi
 read -r -d '' PROMPT <<EOF
 FIRST, read $SKILL_MD in full and adopt it as your operating skill for this task —
 including any files under its references/ directory that it tells you to consult.
-Then, following that skill exactly, independently interrogate Auto Company's Tender
-Track and produce the decision report.
+Then, following that skill exactly, independently AUDIT Auto Company's Wowcar 2.0
+establishment program and produce the audit report.
 
 Inputs are in this workspace ($APP) — find them with rg:
-- memories/candidate-registry.md     (read the LIVE span: ## Selected -> ## Archived; dedup key is axis = buyer × delivery × price)
-- memories/human-directive.md        (the operator's standing instruction — it outranks your judgment on scope)
-- memories/consensus.md              (Auto Company's own current reading + state)
-- memories/cost-audit.md             (TODAY's deterministic cost/turn-economy measurements — interpret these, never recompute them; if the file is missing or stale, say so instead of estimating)
-- PROJECT_EVALUATION_FRAMEWORK.md
-- docs/research/                     (tender-track reports, qualification passes, primary-source notes)
+- memories/human-directive.md   (ANA DİREKTİF — the charter; outranks your judgment on scope)
+- memories/consensus.md         (the company's own current reading + Program State)
+- projects/wowcar/              (the five source documents, SHA-256s recorded in the directive)
+- docs/operations/              (receipts, ledgers, weekly reports, gate artifacts)
+- memories/cost-audit.md        (TODAY's deterministic cost measurements — interpret, never recompute; if missing or stale, say so)
 
-PORTFOLIO SCOPE (standing operator directive, 2026-07-28): the portfolio was consolidated
-to the Tender Track. 176-R is terminated; the entire non-tender registry is archived;
-## Selected is empty; company-side discovery is OFF. The ONLY live axes are the EKAP /
-Turkish public-tender ones under ## Deferred / HOLD index (215-TF-B and the 247-* .. 262-*
-families). docs/research/opportunity-scan.md still exists on disk but is HISTORICAL —
-never nominate, requeue, or rank any candidate from it. Doing so violates the directive
-and makes the report worthless.
+STANDING SCOPE (operator re-charter, 2026-08-24): the company's ONLY mission is the
+Wowcar 2.0 program. The Tender Track and the candidate registry are FROZEN HISTORICAL
+STATE — never analyze, rank, revive, or summarize them beyond noting they are frozen.
+You never produce a paste-ready directive; steering is the operator's alone.
 
-Do NOT write or modify any files yourself — output your full decision report as your final message, following the skill's output order.
+Do NOT write or modify any files yourself — output your full audit report as your final message, following the skill's output order.
 EOF
 
 # Budget-exclusion ledger (jcode side). Failure records nothing — an uncaptured
@@ -280,81 +280,17 @@ msg_p, out_p, prog, stamp, model, effort, provider = sys.argv[1:8]
 report = open(msg_p, encoding="utf-8").read().strip()
 if len(report) < 200:
     open(prog,"a",encoding="utf-8").write(f"[{stamp}] ANALYST_FAILED: report too short ({len(report)} chars)\n"); sys.exit(1)
-doc = (f"# Opportunity Analyst — {stamp}\n\n"
-       f"*Engine: jcode/{provider} `{model}` · effort `{effort}` · skill `autocompany-opportunity-director` (read from repo) · registry-write: PENDING*\n\n"
+doc = (f"# Wowcar Program Audit — {stamp}\n\n"
+       f"*Engine: jcode/{provider} `{model}` · effort `{effort}` · skill `wowcar-program-auditor` (read from repo) · mode: AUDIT-ONLY (no registry write, no promotion)*\n\n"
        f"---\n\n{report}\n")
 open(out_p,"w",encoding="utf-8").write(doc)
 open(prog,"a",encoding="utf-8").write(f"[{stamp}] REPORT OK | engine=jcode/{provider} model={model} effort={effort} | report={len(report)}c\n")
 print("REPORT_OK")
 PY
 
-# --- PASS 2: registry live-span diff (same single-boundary design as codex variant;
-# see opportunity-analyst.sh for the E2BIG and journal-loss history that shaped it) ---
-REG_EFFORT="${ANALYST_REGISTRY_EFFORT:-medium}"
-REG_MSG="$WORK/reg.txt"; REG_PROMPT_FILE="$WORK/reg_prompt.txt"
-LIVE_SPAN_FILE="$WORK/registry-live-span.md"
+# --- PASS 2 (registry merge) and PASS 3 (directive promotion): RETIRED 2026-08-24.
+# The Wowcar auditor writes nothing and never produces a promotable directive, so both
+# disposal passes are gone with the Tender Track. Their history lives in git; restoring
+# them is a deliberate operator decision, not a flag flip.
 
-python3 "$APP/scripts/analyst/merge_registry.py" --extract-live-span "$REGISTRY" \
-  > "$LIVE_SPAN_FILE" 2>"$WORK/extract_err"
-extract_rc=$?
-if [ "$extract_rc" -ne 0 ]; then
-    reg_written="skipped (could not isolate live span: $(cat "$WORK/extract_err" 2>/dev/null | tr '\n' ' '))"
-fi
-
-if [ -z "${reg_written:-}" ]; then
-    python3 - "$OUT_DIRECTIVE" "$LIVE_SPAN_FILE" > "$REG_PROMPT_FILE" <<'PY'
-import sys
-report_path, live_span_path = sys.argv[1:3]
-print("You are updating the LIVE portion of Auto Company's candidate registry from an "
-      "analyst decision report. Output ONLY a single ```json code block and nothing else.\n\n"
-      f"Read the COMPLETE current live registry span at: {live_span_path}\n"
-      "(this file starts with the line '## Selected' and contains, in order: '## Selected', "
-      "'## Pending shortlist', '## Deferred / HOLD index', and '## Archived' — it is NOT the "
-      "whole registry file, only its live-decision-state span. Do not invent other sections.)\n"
-      f"Read the COMPLETE analyst decision report (verdicts + Auto-Company-vs-analyst selection) at: {report_path}\n\n"
-      "Produce: {\"registry_live_span\":\"<the COMPLETE updated live span, starting with '## Selected' "
-      "and ending at the last line of the Archived section (do not include '## Exhausted patterns / "
-      "lessons' or anything after it). Keep the exact same four headers and table/bullet formats "
-      "as the input span. Apply the report's verdicts: ACTIVE/CONDITIONAL GO/QUEUED -> Selected or "
-      "Pending shortlist; HOLD/research-only -> Deferred / HOLD index; NO-GO or de-selected -> "
-      "Archived. Dedup by axis (buyer x delivery x price). Every candidate ID present in the input "
-      "span MUST still appear somewhere in the output span - moving between subsections is fine, "
-      "silently dropping one is not.>\"}\n"
-      "Valid JSON, newlines escaped as \\n.")
-PY
-
-    run_jcode "$REG_EFFORT" "$(cat "$REG_PROMPT_FILE")" "$WORK/ev2.ndjson" "$REG_MSG"
-    REG_RC=$?
-    log_run_cost "$WORK/ev2.ndjson" "pass-2"
-    REG_DEBUG="$APP/logs/analyst-reg-debug.log"
-    mkdir -p "$(dirname "$REG_DEBUG")" 2>/dev/null || true
-    {
-      echo "[$STAMP] (jcode) pass-2 rc=$REG_RC prompt_bytes=$(wc -c < "$REG_PROMPT_FILE" 2>/dev/null) msg_bytes=$(wc -c < "$REG_MSG" 2>/dev/null || echo 0)"
-      tail -c 4000 "$WORK/ev2.ndjson.err" 2>/dev/null
-      echo "---"
-    } >> "$REG_DEBUG" 2>/dev/null || true
-
-    MERGE_SCRIPT="$APP/scripts/analyst/merge_registry.py"
-    if [ -f "$MERGE_SCRIPT" ]; then
-        reg_written="$(python3 "$MERGE_SCRIPT" "$REGISTRY" "$REG_MSG" "$REGISTRY" 2>&1)"
-    else
-        reg_written="skipped (merge_registry.py not found)"
-    fi
-fi
-log "[$STAMP] REGISTRY pass-2 (effort=$REG_EFFORT): $reg_written"
-python3 - "$OUT_DIRECTIVE" "$reg_written" <<'PY' 2>/dev/null || true
-import sys
-p,rw=sys.argv[1],sys.argv[2]
-t=open(p,encoding="utf-8").read().replace("registry-write: PENDING",f"registry-write: {rw}",1)
-open(p,"w",encoding="utf-8").write(t)
-PY
-
-# --- PASS 3: deterministic directive-promotion gate (unchanged — no model call) ---
-PROMOTE_SCRIPT="$APP/scripts/analyst/promote_directive.py"
-promotion_result="skipped (promote_directive.py not found)"
-if [ -f "$PROMOTE_SCRIPT" ]; then
-    promotion_result="$(python3 "$PROMOTE_SCRIPT" "$OUT_DIRECTIVE" 2>&1 || echo "BLOCKED: promote_directive.py errored")"
-fi
-log "[$STAMP] PROMOTION (narrow v1): $promotion_result"
-
-echo "Opportunity Analyst (jcode) run complete ($STAMP) — registry: $reg_written — promotion: $promotion_result."
+echo "Wowcar Program Auditor (jcode) run complete ($STAMP) — report written to $OUT_DIRECTIVE."

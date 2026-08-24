@@ -712,18 +712,14 @@ DIRECTIVE_TEMPLATES_DIR = REPO_ROOT / "dashboard" / "directive-templates"
 # Copy-to-clipboard directive templates shown as buttons in the Director panel.
 # Order + labels here; body text lives in dashboard/directive-templates/*.md.
 DIRECTIVE_TEMPLATES = [
-    {"id": "hold-and-discover", "label": "Hold + Discover", "file": "01-hold-and-discover.md",
-     "hint": "Park a candidate on a named blocker (keep its machine intact) + make discovery the primary activity."},
-    {"id": "continuous-discovery", "label": "Discovery", "file": "02-continuous-discovery.md",
-     "hint": "No new hold; force continuous discovery + carry the standing blocked/pending register."},
-    {"id": "unhold-and-validate", "label": "Un-hold + Validate", "file": "03-unhold-and-validate.md",
-     "hint": "A blocker cleared → un-HOLD a candidate + start its human-run cheapest WTP validation."},
-    {"id": "select-and-validate", "label": "Select + Validate", "file": "04-select-and-validate.md",
-     "hint": "Adopt a candidate (e.g. the Opportunity Analyst pick) + run its cheapest WTP test."},
-    {"id": "hold-and-maintain", "label": "Watch mode", "file": "05-hold-and-maintain.md",
-     "hint": "No discovery, no exploration: only directive/OPREQ work, whatever the snapshot's "
-             "DELTA names as changed, and closing out already-bounded tasks. An empty cycle is "
-             "the correct output. Use it while a validation is simply waiting."},
+    # 2026-08-24 Wowcar re-charter: the five discovery/tender-era templates moved to
+    # directive-templates/_archive/ — restore by moving one back and re-listing it here.
+    {"id": "wowcar-gate-advance", "label": "Gate işi", "file": "06-wowcar-gate-advance.md",
+     "hint": "Mevcut gate'in kanıt işini ilerlet: ledger/mutabakat/SOP + OPREQ + haftalık "
+             "rapor. §15 sponsor-kapılı eylemler ve gate-pass iddiası yasak."},
+    {"id": "wowcar-hold-and-document", "label": "Watch mode", "file": "07-wowcar-hold-and-document.md",
+     "hint": "Yeni gate işi yok: yalnız DELTA'nın adlandırdığı değişiklik, OPREQ çözümleri "
+             "ve vadesi gelen haftalık rapor. Boş cycle doğru çıktıdır."},
 ]
 
 

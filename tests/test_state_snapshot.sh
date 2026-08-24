@@ -1,6 +1,7 @@
 #!/bin/bash
 # Offline tests for scripts/ops/state-snapshot.py (--skip-network path + DELTA logic).
-# Network fields (bridges/sends/replies) are covered by the live loop itself; what must
+# All fields are LOCAL since the 2026-08-24 Wowcar re-charter (bridge/send/reply
+# fields retired with the Tender Track); what must
 # never regress silently is the local parsing (directive status/sha, OPREQ OPEN blocks)
 # and the DELTA semantics (first-run, none, named-change, error-exclusion).
 set -euo pipefail
@@ -29,7 +30,9 @@ SHA=$(python3 -c "import hashlib;print(hashlib.sha256(open('$TMP/memories/human-
 expect_contains "sha16 matches file" "$OUT" "sha16=$SHA"
 expect_contains "only OPEN block counted" "$OUT" "opreq: open=1 ids=OPREQ-TEST-OPEN-001"
 expect_contains "first-run delta" "$OUT" "DELTA: first snapshot"
-expect_contains "network fields skipped" "$OUT" "registry_pending=SKIPPED"
+expect_contains "auditor field present" "$OUT" "auditor: "
+expect_contains "wowcar field present" "$OUT" "wowcar: "
+expect_contains "decisions field present" "$OUT" "decisions: "
 
 echo "[2] unchanged world: DELTA none"
 OUT=$(python3 "$SNAP" --app "$TMP" --skip-network)

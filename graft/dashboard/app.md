@@ -1,4 +1,4 @@
-# dashboard/app.js · [[cockpit-dashboard-ui]]
+# dashboard/app.js
 
 Dashboard front-end that polls the status API and renders live system state, controls, and operator request decisions.
 

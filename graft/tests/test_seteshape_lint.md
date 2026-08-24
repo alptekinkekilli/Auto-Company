@@ -1,4 +1,4 @@
-# tests/test_seteshape_lint.py · [[auto-loop-core]] [[set-e-safety]] [[test-by-extraction]]
+# tests/test_seteshape_lint.py · [[set-e-lint]]
 
 Lint test that flags `[ test ] && action` shapes which, under `set -e`, return 1 when the test is false and kill an unguarded caller.
 

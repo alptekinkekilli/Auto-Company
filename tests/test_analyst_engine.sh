@@ -25,10 +25,10 @@ contains() { case "$2" in *"$3"*) echo "  PASS $1" ;; *) echo "  FAIL $1: '$3' n
 
 mk_app() { # builds a minimal fake /app; prints its path
   local A; A="$(mktemp -d)"
-  mkdir -p "$A/memories" "$A/logs" "$A/scripts/analyst/codex-skill/autocompany-opportunity-director" "$A/scripts/core"
-  echo "## Selected" > "$A/memories/candidate-registry.md"
+  mkdir -p "$A/memories" "$A/logs" "$A/scripts/analyst/codex-skill/wowcar-program-auditor" "$A/scripts/core"
+  printf '## Status\nPENDING\n' > "$A/memories/human-directive.md"
   echo "state" > "$A/memories/consensus.md"
-  echo "brief" > "$A/scripts/analyst/codex-skill/autocompany-opportunity-director/SKILL.md"
+  echo "brief" > "$A/scripts/analyst/codex-skill/wowcar-program-auditor/SKILL.md"
   # the script calls these helpers; give them honest minimal stand-ins
   printf 'import sys\nprint(open(sys.argv[1]).read())\n' > "$A/scripts/core/jcode-final-text.py"
   printf 'import sys\nprint("$0.00 (stub)")\n' > "$A/scripts/core/engine-usage-cost.py"

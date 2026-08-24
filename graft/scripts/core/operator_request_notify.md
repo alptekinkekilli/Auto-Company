@@ -1,4 +1,4 @@
-# scripts/core/operator_request_notify.py
+# scripts/core/operator_request_notify.py · [[escalation-and-operator-requests]] [[operator-escalation-notification]]
 
 Deterministic operator-escalation gate that dedups, notifies, and resolves OPREQ ledger requests, and regenerates the consensus.md Awaiting Operator projection.
 

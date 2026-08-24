@@ -1,4 +1,4 @@
-# scripts/ops/tool-usage-audit.py
+# scripts/ops/tool-usage-audit.py · [[jcode-event-stream-utilities]] [[tool-usage-audit]]
 
 Durable per-cycle ledger of tool-consultation counts (ctx7/Airtable/Linear/Browser) appended from finished cycle ndjson, idempotent via a state file, so the cockpit's Tool Analytics panel can show multi-day usage.
 

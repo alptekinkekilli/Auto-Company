@@ -1,4 +1,4 @@
-# scripts/ops/site-contact-evidence.py
+# scripts/ops/site-contact-evidence.py · [[fail-closed-determinism]] [[outreach-eligibility-gate]]
 
 Finds a firm's published contact email across escalating sources, ensuring an unrendered fetch is reported as inconclusive rather than negative.
 

@@ -64,3 +64,16 @@ Each agent stores outputs under `docs/<role>/`:
 | `sales-ross` | `docs/sales/` | Funnel analysis, conversion plans, pricing playbooks |
 | `cfo-campbell` | `docs/cfo/` | Financial models, pricing analyses, unit economics |
 | `research-thompson` | `docs/research/` | Market/competitor/trend intelligence |
+
+## Tarihsel — Tender/discovery-çağı workflow'ları (2026-08-24'te CLAUDE.md'den taşındı)
+
+Wowcar 2.0 re-charter'ı ile bu workflow'lar aktif kullanımdan kalktı; kayıt için:
+
+1. New Product Evaluation: research-thompson → ceo-bezos → critic-munger → product-norman → cto-vogels → cfo-campbell
+2. Feature Development: interaction-cooper → ui-duarte → fullstack-dhh → qa-bach → devops-hightower
+3. Product Launch: qa-bach → devops-hightower → marketing-godin → sales-ross → operations-pg → ceo-bezos
+4. Pricing and Monetization: research-thompson → cfo-campbell → sales-ross → critic-munger → ceo-bezos
+5. Weekly Review: operations-pg → sales-ross → cfo-campbell → qa-bach → ceo-bezos
+6. Opportunity Discovery: research-thompson → ceo-bezos → critic-munger → cfo-campbell
+
+Workflows 1 & 6 `PROJECT_EVALUATION_FRAMEWORK.md` üzerinden koşardı (dormant arşiv).

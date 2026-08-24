@@ -1,4 +1,4 @@
-# scripts/ops/cost-audit.py
+# scripts/ops/cost-audit.py · [[cost-budget-reporting]]
 
 Deterministic daily cost audit script that reads on-disk logs and writes memories/cost-audit.md so the Opportunity Analyst interprets measured numbers rather than computing them.
 

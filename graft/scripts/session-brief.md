@@ -1,4 +1,4 @@
-# scripts/session-brief.py · [[session-brief]]
+# scripts/session-brief.py · [[secret-hygiene]] [[session-and-wsl-daemon-tooling]]
 
 SessionStart hook that injects a measured, non-stale session briefing into the context, never blocking the session.
 

@@ -2,34 +2,38 @@
 """One-call cycle state snapshot — collapses the per-cycle probe fan-out into a single turn.
 
 WHY THIS EXISTS (2026-08-03 bloat audit). Cycles #18–#25 ran 60–110 turns and every one
-of them was flagged CHATTY/BLOATED. A large share of those turns was the same opening
-ritual, performed as 10–20 SEPARATE tool calls: read the directive status, grep the OPREQ
-ledger, query the Registry Bridge, query the EKAP Bridge, run send-gate --report, run
-reply-watch. Each tool round-trip re-bills the entire ~180K-token context (~$0.055/turn
-at sonnet cache-read rates), so the ritual alone cost $0.50–$1.00 per cycle before any
-real work started. This script answers ALL of it in ONE call, and adds a DELTA line
-against the previous snapshot so an unchanged world can be dismissed in one glance.
+of them was flagged CHATTY/BLOATED; a large share was the same opening ritual performed
+as 10–20 separate tool calls. This script answers ALL of it in ONE call, and adds a DELTA
+line against the previous snapshot so an unchanged world can be dismissed in one glance.
+
+2026-08-24 (Wowcar re-charter): the tender-era fields (bridge queues, send-gate counters,
+reply outcomes) are retired with the Tender Track — their tools are no longer run per
+cycle. The watched set is now fully LOCAL (no network), and includes the program-auditor
+report hash (implements the operator-authorized OPREQ-INFRA-ANALYST-ROUTING-001 Option B:
+analyst findings become DELTA-visible), the Wowcar source-set hash (the operator dropping
+a new/updated source document wakes the loop), and the operator-decisions hash (a cockpit
+panel answer becomes DELTA-visible the moment it lands).
 
 WHAT IT PRINTS (compact, grep-friendly):
   directive:  Status + sha16 of memories/human-directive.md. The sha is for CHANGE
-              DETECTION only — when the directive changed (or you have no record of its
-              content in consensus), you still read the file itself; it stays canonical.
+              DETECTION only — when it changed, you still read the file; it stays canonical.
   opreq:      count + ids of blocks in memories/operator-requests.md with `- Status: OPEN`.
-  bridges:    PENDING row counts in the Registry Bridge and EKAP Bridge tables.
-  sends:      send-gate.py --report verbatim (caps and counters).
-  replies:    reply-watch.py --dry-run summary tail (dry-run: never touches its state).
+  auditor:    sha16 of memories/analysis-directive.md (the independent program-auditor
+              report) or ABSENT.
+  wowcar:     sha16 over the sorted per-file sha256 set of projects/wowcar/* (source docs).
+  decisions:  sha16 of memories/operator-decisions.md or ABSENT.
   DELTA:      none | changed=<fields> versus logs/state-snapshot-last.json.
 
 DELTA semantics: "none" means none of the above moved since the previous snapshot — do
 not re-probe any of it, and do not re-verify past cycles' work through these surfaces.
 It does NOT mean "nothing to do": the directive's standing orders still apply.
 
-Advisory + read-only toward the world: never writes to Airtable, never edits memories/.
-Its only write is its own state file under logs/. Exit 0 always (a state probe must not
-kill the calling cycle); failures are printed inline as ERROR so they are visible, and an
-errored field never participates in DELTA (it can neither hide a change nor invent one).
+Advisory + read-only toward the world: its only write is its own state file under logs/.
+Exit 0 always (a state probe must not kill the calling cycle); failures are printed
+inline as ERROR and an errored field never participates in DELTA.
 
-  state-snapshot.py [--app /app] [--skip-network]   # --skip-network: tests/offline
+  state-snapshot.py [--app /app] [--skip-network]   # --skip-network kept for interface
+                                                    # compat; all fields are local now.
 """
 from __future__ import annotations
 
@@ -38,15 +42,8 @@ import hashlib
 import json
 import os
 import re
-import subprocess
-import sys
-import urllib.parse
-import urllib.request
 from datetime import datetime, timezone
 
-BASE = "appPLc31jSlgulX3D"
-T_REGISTRY_BRIDGE = "tblREW6MtTMTP5h5N"
-T_EKAP_BRIDGE = "tblrQfg4nS3htetcE"
 STATE = "logs/state-snapshot-last.json"
 
 STATUS_RE = re.compile(r"^## Status\s*\n(\S+)\s*$", re.MULTILINE)
@@ -54,17 +51,14 @@ OPREQ_HEAD_RE = re.compile(r"^## (OPREQ-[A-Za-z0-9_-]+)\s*$", re.MULTILINE)
 OPREQ_OPEN_RE = re.compile(r"^- Status:\s*OPEN\b", re.MULTILINE)
 
 
-def api_key(app: str) -> str:
-    key = os.environ.get("AIRTABLE_API_KEY", "")
-    if key:
-        return key
+def file_sha16(path: str) -> str | None:
+    """sha256[:16] of a file, None on unreadable, 'ABSENT' on missing."""
+    if not os.path.exists(path):
+        return "ABSENT"
     try:
-        for line in open(os.path.join(app, "logs", "runtime.env"), encoding="utf-8", errors="replace"):
-            if line.startswith("AIRTABLE_API_KEY="):
-                return line.split("=", 1)[1].strip().strip('"').strip("'")
+        return hashlib.sha256(open(path, "rb").read()).hexdigest()[:16]
     except OSError:
-        pass
-    return ""
+        return None
 
 
 def directive_state(app: str) -> tuple[str, str]:
@@ -93,68 +87,36 @@ def opreq_open(app: str) -> list[str] | None:
     return open_ids
 
 
-def bridge_pending(table: str, key: str) -> int | str:
-    """PENDING count via pageSize=1 pages carrying record ids only — same narrow-read
-    discipline as airtable-read.py, without a subprocess per table."""
-    count, offset = 0, None
-    while True:
-        params = {
-            "filterByFormula": "{status}='PENDING'",
-            "fields[]": "request_id",
-            "pageSize": "100",
-        }
-        if offset:
-            params["offset"] = offset
-        url = f"https://api.airtable.com/v0/{BASE}/{table}?" + urllib.parse.urlencode(params)
-        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {key}"})
-        try:
-            with urllib.request.urlopen(req, timeout=30) as r:
-                data = json.load(r)
-        except Exception as e:  # noqa: BLE001 — any transport/auth failure prints, never raises
-            return f"ERROR {type(e).__name__}: {e}"
-        count += len(data.get("records", []))
-        offset = data.get("offset")
-        if not offset:
-            return count
-
-
-def run_tool(app: str, rel: str, extra: list[str]) -> str:
+def wowcar_sources(app: str) -> str | None:
+    """sha16 over the sorted (name, sha256) set of the Wowcar source documents.
+    A new or changed file under projects/wowcar/ changes this hash → DELTA fires."""
+    root = os.path.join(app, "projects", "wowcar")
+    if not os.path.isdir(root):
+        return "ABSENT"
+    entries = []
     try:
-        p = subprocess.run(
-            [sys.executable, os.path.join(app, rel), "--app", app] + extra,
-            capture_output=True, text=True, timeout=90,
-        )
-        out = (p.stdout or "").strip() or (p.stderr or "").strip()
-        return out if out else f"ERROR rc={p.returncode} no output"
-    except Exception as e:  # noqa: BLE001
-        return f"ERROR {type(e).__name__}: {e}"
+        for name in sorted(os.listdir(root)):
+            p = os.path.join(root, name)
+            if os.path.isfile(p):
+                entries.append(name + ":" + hashlib.sha256(open(p, "rb").read()).hexdigest())
+    except OSError:
+        return None
+    return hashlib.sha256("\n".join(entries).encode()).hexdigest()[:16]
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--app", default="/app")
     ap.add_argument("--skip-network", action="store_true",
-                    help="local files only (tests/offline) — network fields print SKIPPED")
+                    help="deprecated no-op: every field is local since 2026-08-24")
     args = ap.parse_args()
     app = os.path.abspath(args.app)
 
     d_status, d_sha = directive_state(app)
     opreqs = opreq_open(app)
-
-    if args.skip_network:
-        reg = ekap = "SKIPPED"
-        sends = replies = "SKIPPED"
-    else:
-        key = api_key(app)
-        if key:
-            reg = bridge_pending(T_REGISTRY_BRIDGE, key)
-            ekap = bridge_pending(T_EKAP_BRIDGE, key)
-        else:
-            reg = ekap = "ERROR no AIRTABLE_API_KEY"
-        sends = run_tool(app, "scripts/ops/send-gate.py", ["--report"])
-        # --dry-run so this observation never consumes reply-watch's own once-per-outcome state.
-        rw = run_tool(app, "scripts/ops/reply-watch.py", ["--dry-run"])
-        replies = " | ".join(rw.splitlines()[-2:]) if rw else "ERROR empty"
+    auditor = file_sha16(os.path.join(app, "memories", "analysis-directive.md"))
+    wowcar = wowcar_sources(app)
+    decisions = file_sha16(os.path.join(app, "memories", "operator-decisions.md"))
 
     print("=== STATE SNAPSHOT (one call — do NOT re-probe these individually) ===")
     print(f"directive: status={d_status} sha16={d_sha}")
@@ -162,23 +124,19 @@ def main() -> int:
         print("opreq: ERROR ledger unreadable")
     else:
         print(f"opreq: open={len(opreqs)}" + (f" ids={','.join(opreqs)}" if opreqs else ""))
-    print(f"bridges: registry_pending={reg} ekap_pending={ekap}")
-    _sends_disp = " | ".join(str(sends).splitlines())
-    if _sends_disp.startswith("sends: "):
-        _sends_disp = _sends_disp[len("sends: "):]
-    print(f"sends: {_sends_disp}")
-    print(f"replies: {replies}")
+    print(f"auditor: {auditor if auditor else 'ERROR unreadable'}")
+    print(f"wowcar: {wowcar if wowcar else 'ERROR unreadable'}")
+    print(f"decisions: {decisions if decisions else 'ERROR unreadable'}")
 
-    # DELTA — errored/skipped fields are excluded from comparison on BOTH sides, so a
-    # transient Airtable failure neither reports a phantom change nor masks a real one.
+    # DELTA — errored fields (None) are excluded from comparison on BOTH sides, so a
+    # transient read failure neither reports a phantom change nor masks a real one.
     current = {
-        "directive_status": d_status,
-        "directive_sha16": d_sha,
+        "directive_status": d_status if d_status != "ERROR" else None,
+        "directive_sha16": d_sha if d_status != "ERROR" else None,
         "opreq_open": sorted(opreqs) if opreqs is not None else None,
-        "registry_pending": reg if isinstance(reg, int) else None,
-        "ekap_pending": ekap if isinstance(ekap, int) else None,
-        "sends": str(sends) if "ERROR" not in str(sends) and sends != "SKIPPED" else None,
-        "replies": replies if "ERROR" not in str(replies) and replies != "SKIPPED" else None,
+        "auditor_hash": auditor,
+        "wowcar_sources": wowcar,
+        "operator_decisions": decisions,
     }
     state_path = os.path.join(app, STATE)
     prev = {}
@@ -209,4 +167,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

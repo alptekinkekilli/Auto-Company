@@ -2,7 +2,15 @@
 
 ## Mission
 
-**Make money legally.** Find real demand, build valuable products, deploy, and generate revenue. This is the only goal.
+**Wowcar 2.0 — şirket kuruluş programı (re-charter 2026-08-24).** The company's mission
+is to convert the Wowcar 2.0 investment and operating plan into a legally verified,
+financially reconciled, operable and auditable company system — governed by the ANA
+DİREKTİF (`memories/human-directive.md`, DIRECTIVE-WOWCAR-2.0-2026-08-24) and the
+`## WOWCAR 2.0 — STANDING FOCUS` section of `PROMPT.md`. Progress is evidence-gated
+(G0–G7); every externally-visible act (registration, capital, banking, contracts,
+investor funding, hiring, customer data, regulatory filings) is SPONSOR-GATED per
+directive §15. The former mission (product discovery / "make money legally" via WTP
+tests) and the Tender Track are FROZEN HISTORICAL STATE — records preserved, no work.
 
 ## Operating Mode
 
@@ -135,8 +143,10 @@ decisions**.
 5. **Ramen profitability first** - revenue before vanity growth.
 6. **Boring technology first** - use proven tech unless new tech gives clear 10x upside.
 7. **Monolith first** - get it running first, split only when needed.
-8. **Framework-gated ideas** - both when selecting/filtering ideas and when validating the chosen one, apply `PROJECT_EVALUATION_FRAMEWORK.md`. A regulation, deadline, or trend is NOT demand; never pick or scale an idea without the cheapest possible willingness-to-pay test first.
-9. **Search where you can win** - for newly proposed axes only, apply `PROMPT.md → SEARCH REGIME`. It does not re-evaluate Selected/Pending candidates or modify WTP and authorization gates.
+8. **Evidence-gated progression** - no Wowcar gate (G0–G7) is declared passed without
+   evidence artifacts and `critic-munger` review; no "done" without the relevant test,
+   document, or official record. (The Tender-era framework/SEARCH REGIME rules are
+   dormant history — `PROJECT_EVALUATION_FRAMEWORK.md` is retained as archive only.)
 
 ## Prod-Mechanism Change Rule (interactive sessions)
 
@@ -171,14 +181,14 @@ automatically (`--check-sync` runs in every session brief and in
 
 Team composition rules: `.claude/skills/team/SKILL.md`.
 
-1. **New Product Evaluation**: `research-thompson` -> `ceo-bezos` -> `critic-munger` -> `product-norman` -> `cto-vogels` -> `cfo-campbell`
-2. **Feature Development**: `interaction-cooper` -> `ui-duarte` -> `fullstack-dhh` -> `qa-bach` -> `devops-hightower`
-3. **Product Launch**: `qa-bach` -> `devops-hightower` -> `marketing-godin` -> `sales-ross` -> `operations-pg` -> `ceo-bezos`
-4. **Pricing and Monetization**: `research-thompson` -> `cfo-campbell` -> `sales-ross` -> `critic-munger` -> `ceo-bezos`
-5. **Weekly Review**: `operations-pg` -> `sales-ross` -> `cfo-campbell` -> `qa-bach` -> `ceo-bezos`
-6. **Opportunity Discovery**: `research-thompson` -> `ceo-bezos` -> `critic-munger` -> `cfo-campbell`
+1. **Belge/Model Mutabakatı (G0–G2)**: `research-thompson` -> `cfo-campbell` -> `critic-munger` -> `ceo-bezos` — kaynak haritası, formül/mutabakat, çelişki kaydı, karar belgeleri.
+2. **Hukuk/Mevzuat Araştırması (G1)**: `research-thompson` -> `operations-pg` -> `critic-munger` -> `ceo-bezos` — birincil kaynak, madde referanslı yükümlülük matrisi, "counsel teyidi gerekli mi" işareti.
+3. **SOP/Runbook Üretimi (G3)**: `interaction-cooper` -> `fullstack-dhh` -> `qa-bach` -> `operations-pg` — direktif §11 şablonuyla süreç, kontrol, test senaryosu.
+4. **Haftalık Rapor + Gate Review**: `operations-pg` -> `cfo-campbell` -> `qa-bach` -> `critic-munger` -> `ceo-bezos` — direktif §16 raporu; gate-pass iddiası Munger incelemesiz ASLA.
 
-> **Workflows 1 & 6 run through `PROJECT_EVALUATION_FRAMEWORK.md`.** Opportunity Discovery uses it to filter and rank ideas (kill deadline/trend/regulation-only bets); New Product Evaluation uses its 14-section report + GO/CONDITIONAL GO/PIVOT/NO-GO/HOLD decision, gated on the cheapest willingness-to-pay test before any build.
+> Tender-çağı workflow'ları (New Product Evaluation, Opportunity Discovery vb.) tarihsel
+> kayıt olarak `docs/team-architecture.md`'ye taşındı; `PROJECT_EVALUATION_FRAMEWORK.md`
+> dormant arşivdir, Wowcar işi onun üzerinden koşmaz.
 
 ## Documentation Map
 
@@ -254,29 +264,14 @@ excluded from Codex's allowlist mechanically and forbidden by policy on both eng
   empty. Report the true status (e.g. "deployed, cert still provisioning") — never
   overstate. Use the production `<project>.pages.dev` URL, not a preview hash URL.
 
-### Payment rails (infrastructure fact, not a WTP-standard change)
+### Payment rails (tarihsel altyapı notu — Tender/discovery çağından)
 
-- **Stripe direct LIVE accounts are not obtainable for Turkey-based merchants** —
-  confirmed 2026-07-26. Stripe **test-mode** keys remain available and are wired for
-  checkout-plumbing verification (`STRIPE_SECRET_TEST_KEY`/`STRIPE_PUBLISHABLE_TEST_KEY`
-  in `runtime.env`) — this proves the integration works, nothing more.
-- **Paddle** (Merchant-of-Record) is the real path being set up for an actual LIVE,
-  WTP-capable payment rail reachable from Turkey. Paddle's business-verification
-  (KYB) requires a live domain with visible Terms/Refund/Privacy policy pages before
-  it will process an application.
-- That prerequisite site now exists: **`https://auto.appricode.tr`** (Cloudflare
-  Pages, `projects/auto-company-site/`) — Auto-Company's corporate front, built for
-  this purpose. Its Terms/Privacy/Refund pages carry a placeholder "Company
-  Information" section until a registered legal entity is finalized (operator is
-  deciding between two renameable dormant shelf companies, UK and Romania, or a
-  fresh UK Ltd incorporation) — do not treat those pages as legally final until that
-  section is filled in.
-- **This does not change the WTP evidence bar.** Whichever processor ends up live
-  (Paddle, or a future LIVE Stripe key), the standing rule is unchanged: only a real
-  payment from a real, unrelated buyer counts as WTP evidence (see `PROMPT.md`'s WTP
-  HARD STOP). Test-mode transactions, however the rail is provisioned, are never
-  WTP evidence — this has been reaffirmed multiple times and is not up for
-  reinterpretation just because the surrounding infrastructure looks more "real."
+Stripe LIVE Türkiye'den alınamıyor (2026-07-26); test-mode anahtarlar `runtime.env`'de
+duruyor. Paddle KYB hazırlığı için kurulan kurumsal site `https://auto.appricode.tr`
+(Cloudflare Pages, `projects/auto-company-site/`) yayında; Terms/Privacy sayfalarındaki
+"Company Information" placeholder'ı tüzel kişilik netleşene dek geçici. Wowcar 2.0'da
+ödeme/tahsilat mimarisi direktifin kendi kapsamındadır (banka/havuz hesapları, §15
+sponsor onayıyla) — bu bölüm yalnız eski altyapının kaydıdır.
 
 ## Sık Kullanılan Komutlar
 

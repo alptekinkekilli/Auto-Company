@@ -211,3 +211,5 @@ CLAUDE.local.md
 # graft: cache ve grafik yeniden üretilebilir; KARTLAR (graft/*.md) versiyonlanır
 graft/.cache/
 graft/.graph/
+!docs/tender-archive/
+!docs/tender-archive/*.md
