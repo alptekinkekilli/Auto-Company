@@ -44,6 +44,10 @@ const els = {
   costEngine: document.getElementById("costEngine"),
   codexWindow: document.getElementById("codexWindow"),
   ccusageBlock: document.getElementById("ccusageBlock"),
+  costTotalLabel: document.getElementById("costTotalLabel"),
+  costAllTotal: document.getElementById("costAllTotal"),
+  costAllCycles: document.getElementById("costAllCycles"),
+  costAllLimits: document.getElementById("costAllLimits"),
   ccusageRange: document.getElementById("ccusageRange"),
   ccTotal: document.getElementById("ccTotal"),
   ccTotalLabel: document.getElementById("ccTotalLabel"),
@@ -318,13 +322,20 @@ function renderCost(cost) {
   els.costWindowLabel.textContent = cost.windowBudget
     ? `5h window / $${cost.windowBudget} cap`
     : "5h window";
-  els.costTotal.textContent = usd(cost.totalUsd);
+  // Haftalık pencere (Pzt 00:00 UTC'de sıfırlanır) — manşet değerler; all-time alt satırda.
+  els.costTotal.textContent = usd(cost.weekUsd ?? cost.totalUsd);
+  if (els.costTotalLabel) {
+    els.costTotalLabel.textContent = cost.weekStart ? `Bu hafta (${cost.weekStart} →)` : "Bu hafta";
+  }
   els.costLast.textContent = usd(cost.lastUsd);
-  els.costCycles.textContent = cost.cycles ?? 0;
-  els.costLimits.textContent = cost.limitHits ?? 0;
-  els.costFallbacks.textContent = cost.fallbackHits ?? 0;
-  els.costOffloads.textContent = cost.budgetOffloads ?? 0;
-  els.costBudget.textContent = cost.budgetPauses ?? 0;
+  els.costCycles.textContent = cost.weekCycles ?? cost.cycles ?? 0;
+  els.costLimits.textContent = cost.weekLimitHits ?? 0;
+  els.costFallbacks.textContent = cost.weekFallbacks ?? 0;
+  els.costOffloads.textContent = cost.weekOffloads ?? 0;
+  els.costBudget.textContent = cost.weekGatePauses ?? 0;
+  if (els.costAllTotal) els.costAllTotal.textContent = usd(cost.totalUsd);
+  if (els.costAllCycles) els.costAllCycles.textContent = cost.cycles ?? 0;
+  if (els.costAllLimits) els.costAllLimits.textContent = cost.limitHits ?? 0;
   els.costEngine.textContent = (cost.engine || "—").toUpperCase();
   els.codexWindow.textContent = cost.codexWindow ?? 0;
 
@@ -360,7 +371,7 @@ function renderCcusage(cc) {
   }
   els.ccusageBlock.hidden = false;
   els.ccTotal.textContent = usd(cc.totalCost);
-  els.ccTotalLabel.textContent = cc.days ? `Total (${cc.days}d)` : "Total";
+  els.ccTotalLabel.textContent = cc.days ? `Hafta (${cc.days}g)` : "Hafta";
   els.ccClaude.textContent = usd(cc.claudeCost);
   els.ccCodex.textContent = usd(cc.codexCost);
   els.ccusageRange.textContent = cc.today && cc.today.date
@@ -551,8 +562,8 @@ async function loadToolUsage() {
       // brw = all browser work (harness + raw MCP + site-contact-evidence); mcp = raw
       // mcp__browseros__ micro-steps only. The harness is meant to move work from mcp into
       // brw, so showing both is what makes the change legible instead of a mystery drop.
-      const cols = ["ctx7", "airtable_r", "airtable_w", "linear", "browser", "browser_mcp", "calls", "cycles"];
-      const heads = ["date", "ctx7", "air-r", "air-w", "linear", "brw", "brw-mcp", "calls", "cycles"];
+      const cols = ["ctx7", "airtable_r", "airtable_w", "linear", "browser", "browser_mcp", "graft", "calls", "cycles"];
+      const heads = ["date", "ctx7", "air-r", "air-w", "linear", "brw", "brw-mcp", "graft", "calls", "cycles"];
       let html = "<table class=\"usage-table\"><thead><tr>" +
         heads.map((h) => `<th>${h}</th>`).join("") + "</tr></thead><tbody>";
       for (const d of data.days) {

@@ -5,22 +5,19 @@ type: system
 sources:
   - path: scripts/core/jcode-final-text.py
     hash: 8913ac57b8ca910581f28286fbdfb665674ee1a1273a477b39f39d1b02bf4215
+  - path: scripts/ops/context7-check.py
+    hash: 4687b776e558caf660fad0d984e405c6a9498525648273569ac9a5feb544797e
   - path: scripts/ops/tool-usage-audit.py
-    hash: 1e21a81523cfbf8e4c6b9b1ee7782201c293b73feebe7494fd91494587ec9a4e
+    hash: 73a75d68bab3e0b42e31ad3d268b44a8c7ac168b91c6a8d1b2f1b3cd4cdba975
   - path: scripts/ops/turn-audit.py
     hash: 006e9aac95a503a1e158d1c6f03a7bdf98f44322805509d886c627e74d4d41d0
-sources_digest: 4dfa17211fdde790194debd985d6de5069d111a03a4cc31361b0514971169261
+sources_digest: abdd4bc39eccdd8b14ff239eda058e6a67a4db17e25b504250ef6bd24972f74a
 links:
-  - to: cost-budget-reporting
-    relation: produces
-    description: >-
-      turn-audit verdict lines and tool-usage ledger feed cost-audit and
-      bloat-trend.
-  - to: mcp-boot-config-generation
+  - to: jcode-mcp-config-probe
     relation: uses
     description: >-
-      turn-audit and tool-usage-audit parse the same jcode log format that
-      jcode-mcp-config/probe generate and verify.
+      Both read the same jcode log/ndjson formats; the probe validates the MCP
+      servers these tools' tool-call counts depend on.
 generator:
   version: 1
 covers:
@@ -30,18 +27,33 @@ covers:
   - symbol: main
     kind: function
     at: 'scripts/core/jcode-final-text.py:L51-L61'
+  - symbol: externals
+    kind: function
+    at: 'scripts/ops/context7-check.py:L59-L75'
+  - symbol: scan
+    kind: function
+    at: 'scripts/ops/context7-check.py:L78-L108'
+  - symbol: walk_calls
+    kind: function
+    at: 'scripts/ops/context7-check.py:L111-L122'
+  - symbol: verdict
+    kind: function
+    at: 'scripts/ops/context7-check.py:L125-L138'
+  - symbol: main
+    kind: function
+    at: 'scripts/ops/context7-check.py:L141-L170'
   - symbol: calls_from_ndjson
     kind: function
     at: 'scripts/ops/tool-usage-audit.py:L43-L65'
   - symbol: categorize
     kind: function
-    at: 'scripts/ops/tool-usage-audit.py:L68-L114'
+    at: 'scripts/ops/tool-usage-audit.py:L68-L121'
   - symbol: main
     kind: function
-    at: 'scripts/ops/tool-usage-audit.py:L117-L244'
+    at: 'scripts/ops/tool-usage-audit.py:L124-L251'
   - symbol: dump
     kind: function
-    at: 'scripts/ops/tool-usage-audit.py:L170-L183'
+    at: 'scripts/ops/tool-usage-audit.py:L177-L190'
   - symbol: ts_of
     kind: function
     at: 'scripts/ops/turn-audit.py:L74-L78'
@@ -61,12 +73,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-CLI tools that parse jcode's NDJSON event streams and logs to extract reliable signals: final assistant text (preferring concatenated text_delta over unreliable done.text), per-session turn economics, and tool-call census. All read with errors='replace' and tolerate malformed lines, and all deliberately prefer measured/derived facts over self-reported fields because jcode redacts tokens and truncates done.text on tool-using runs.
+A family of CLI tools that parse jcode's NDJSON event streams and logs to extract facts the agent cannot trust from done.text or from the raw log alone. They share the invariant that concatenated text_delta payloads are preferred over done.text (which can silently truncate on tool-using runs), and that malformed lines are tolerated via errors='replace' and non-JSON skipping.
 
 ## Related
 
-- produces [[cost-budget-reporting]] — turn-audit verdict lines and tool-usage ledger feed cost-audit and bloat-trend.
-- uses [[mcp-boot-config-generation]] — turn-audit and tool-usage-audit parse the same jcode log format that jcode-mcp-config/probe generate and verify.
+- uses [[jcode-mcp-config-probe]] — Both read the same jcode log/ndjson formats; the probe validates the MCP servers these tools' tool-call counts depend on.
 <!-- context:generated:end -->
 
 ## Notes

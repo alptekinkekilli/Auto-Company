@@ -9,24 +9,20 @@ sources:
     hash: a6b475c3d6e94b205066d93a4054681477be96876b0f8eac60b47f13ab2573ef
   - path: scripts/ops/directive-staleness-watch.py
     hash: 6597a8a3666b54131d1b782a8d8ee308e705e33dbed83429da857f9b1f0360fd
-  - path: scripts/ops/operator-usage-report.sh
-    hash: c469a1b0ab7be7c2c839b0ba0cf5a73d755ffd7f6e3d9891f924e61f1428eb4b
   - path: scripts/ops/registry-queue-watch.py
     hash: 0ef6723d089c54ee8272050eb2776ce81af9de986e8f6dc15b065b7bbd913497
   - path: scripts/ops/reply-watch.py
     hash: 110e009b20f709db9dda31e2e17af9fb061696a869901bd389dddedca9294070
-sources_digest: 9ce589be694283a9a830a01cf9387bec578615dde774dcbf0fb66eafda21613e
+sources_digest: 003095b6a34e3336fb901876b93e1f86e9f3a8d833a67fd27dbc3e6cd68286a1
 links:
-  - to: cost-budget-reporting
-    relation: produces
-    description: >-
-      operator-usage-report pushes operator spend data consumed by the
-      calibration report.
-  - to: mcp-boot-config-generation
+  - to: loop-lifecycle-monitoring
+    relation: uses
+    description: Sends alerts via the same Telegram channel and reads runtime.env secrets.
+  - to: outreach-eligibility-g4-verification
     relation: uses
     description: >-
-      operator_request_notify and the watchers shell out to telegram-notify.sh
-      for delivery.
+      Consumes G4/attribution outcomes and outreach rows to decide what to
+      escalate.
 generator:
   version: 1
 covers:
@@ -169,12 +165,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Deterministic gates that escalate to a human operator via Telegram and keep the operator-request ledger authoritative. operator_request_notify is the sole writer of notification state and the 'Awaiting Operator' projection, enforcing resolution verification (checksummed evidence, PASS logs, human-directive references). The shell notifiers are deliberately non-intrusive: they never return non-zero and no-op when credentials are unset, so callers can invoke them unconditionally.
+Deterministic escalation and alerting to the human operator. operator_request_notify.py is the sole writer of notification state and the consensus 'Awaiting Operator' projection, deduplicating via content fingerprints and enforcing resolution verification (checksummed evidence, PASS logs, human-directive references). telegram-notify.sh is a safe-to-call-always channel that no-ops when unset and never returns non-zero. reply-watch.py, registry-queue-watch.py, and directive-staleness-watch.py are advisory watchers that alert on Airtable replies, MERSİS queue backlogs, and stale PENDING directives, each throttled by a local state file.
 
 ## Related
 
-- produces [[cost-budget-reporting]] — operator-usage-report pushes operator spend data consumed by the calibration report.
-- uses [[mcp-boot-config-generation]] — operator_request_notify and the watchers shell out to telegram-notify.sh for delivery.
+- uses [[loop-lifecycle-monitoring]] — Sends alerts via the same Telegram channel and reads runtime.env secrets.
+- uses [[outreach-eligibility-g4-verification]] — Consumes G4/attribution outcomes and outreach rows to decide what to escalate.
 <!-- context:generated:end -->
 
 ## Notes

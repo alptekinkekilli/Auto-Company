@@ -14,7 +14,7 @@ import shlex
 import subprocess
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -615,7 +615,7 @@ def read_tool_usage() -> dict[str, Any]:
     ledger = REPO_ROOT / "logs" / "tool-usage-history.ndjson"
     days: dict[str, dict[str, int]] = {}
     updated = ""
-    keys = ("calls", "ctx7", "airtable_r", "airtable_w", "linear", "browser", "browser_mcp")
+    keys = ("calls", "ctx7", "airtable_r", "airtable_w", "linear", "browser", "browser_mcp", "graft")
     try:
         with open(ledger, encoding="utf-8") as f:
             for line in f:
@@ -1028,10 +1028,20 @@ _CCUSAGE_REFRESHING = {"v": False}
 _CCUSAGE_TTL = int(os.environ.get("CCUSAGE_TTL_SECONDS", "600"))
 
 
+def _week_start_epoch() -> float:
+    """Monday 00:00 UTC of the current ISO week — the weekly cost-display reset
+    boundary (operator decision 2026-08-24: panel counters restart weekly; the
+    underlying logs and budget-gate ledgers are never touched)."""
+    now = datetime.now(timezone.utc)
+    monday = (now - timedelta(days=now.weekday())).replace(
+        hour=0, minute=0, second=0, microsecond=0)
+    return monday.timestamp()
+
+
 def _ccusage_compute() -> dict[str, Any]:
     cmd_str = os.environ.get("CCUSAGE_CMD", "ccusage")
-    days = int(os.environ.get("CCUSAGE_WINDOW_DAYS", "30"))
-    since = datetime.fromtimestamp(time.time() - days * 86400, timezone.utc).strftime("%Y%m%d")
+    # Weekly reset semantics: the estimate window starts at Monday 00:00 UTC.
+    since = datetime.fromtimestamp(_week_start_epoch(), timezone.utc).strftime("%Y%m%d")
     base = shlex.split(cmd_str) + ["daily", "--json", "--since", since]
 
     def _run(extra: list[str]) -> str | None:
@@ -1245,6 +1255,44 @@ def read_cost_summary() -> dict[str, Any]:
         except ValueError:
             pass
 
+    # Weekly view (operator decision 2026-08-24): headline counters restart every
+    # Monday 00:00 UTC. Computed from the SAME log in one line pass — nothing is
+    # rotated or deleted; a line whose timestamp cannot be parsed stays in the
+    # all-time totals only (fail-safe: the weekly figure never over-counts).
+    week_cut = _week_start_epoch()
+    week_usd = 0.0
+    week_cycles = week_limits = week_fallbacks = week_offloads = week_gate_pauses = 0
+    _ts_re = re.compile(r"^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]")
+    _cost_re = re.compile(r"\(cost:\s*([0-9]+(?:\.[0-9]+)?)")
+    for line in text.splitlines():
+        tm = _ts_re.match(line)
+        if not tm:
+            continue
+        try:
+            ts = datetime.strptime(tm.group(1), "%Y-%m-%d %H:%M:%S").replace(
+                tzinfo=timezone.utc).timestamp()
+        except ValueError:
+            continue
+        if ts < week_cut:
+            continue
+        cm = _cost_re.search(line)
+        if cm:
+            try:
+                week_usd += float(cm.group(1))
+                week_cycles += 1
+            except ValueError:
+                pass
+        if "[LIMIT]" in line:
+            week_limits += 1
+        if "[FALLBACK]" in line:
+            week_fallbacks += 1
+        if "offloading to Codex" in line or "[BUDGET-CODEX]" in line:
+            week_offloads += 1
+        # A REAL pause, not the hourly "[BUDGET]" status line the old counter
+        # mislabeled as pauses (487 status lines read as 487 pauses).
+        if "[GATE]" in line and "paus" in line.lower():
+            week_gate_pauses += 1
+
     credit_reason = ""
     try:
         cj = Path.home() / ".claude.json"
@@ -1312,6 +1360,14 @@ def read_cost_summary() -> dict[str, Any]:
         "budgetOffloads": budget_offloads,
         "engine": engine,
         "codexWindow": codex_window,
+        # Weekly window (resets Monday 00:00 UTC) — the panel's headline figures.
+        "weekUsd": round(week_usd, 4),
+        "weekCycles": week_cycles,
+        "weekLimitHits": week_limits,
+        "weekFallbacks": week_fallbacks,
+        "weekOffloads": week_offloads,
+        "weekGatePauses": week_gate_pauses,
+        "weekStart": datetime.fromtimestamp(week_cut, timezone.utc).strftime("%Y-%m-%d"),
         "ccusage": read_ccusage(),
     }
 

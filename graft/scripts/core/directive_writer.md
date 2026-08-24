@@ -1,4 +1,4 @@
-# scripts/core/directive_writer.py
+# scripts/core/directive_writer.py · [[directive-writer-and-promotion-gate]]
 
 Single locked pipeline for writing the human directive file, enforcing in-flight protection and body immutability via atomic writes, backups, and audit.
 

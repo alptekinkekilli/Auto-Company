@@ -1,4 +1,4 @@
-# scripts/ops/site-contact-evidence.py · [[fail-closed-determinism]] [[outreach-eligibility-gate]]
+# scripts/ops/site-contact-evidence.py · [[fail-closed-verification-invariant]] [[outreach-eligibility-g4-verification]]
 
 Finds a firm's published contact email across escalating sources, ensuring an unrendered fetch is reported as inconclusive rather than negative.
 

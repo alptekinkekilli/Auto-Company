@@ -1,4 +1,4 @@
-# projects/_archive/snapog/src/index.ts
+# projects/_archive/snapog/src/index.ts · [[snapog-og-image-service]]
 
 - sha256 · function · L21-L29 — Hashes raw API keys to SHA-256 hex so only hashes are stored and compared in the DB.
 - generateRawKey · function · L31-L35 — Generates a random 32-byte API key prefixed with sk_ for issuance to users.

@@ -495,3 +495,50 @@ class ReadTextFileTailTests(unittest.TestCase):
         # Recovered from the full file rather than silently losing the fields.
         self.assertEqual(out["windowBudget"], "40")
         self.assertEqual(out["claudeLadder"], ["claude-sonnet-5:low"])
+
+
+class WeeklyCostWindowTests(unittest.TestCase):
+    """Haftalık görüntü sıfırlaması (operatör kararı 2026-08-24): manşet sayaçlar
+    Pazartesi 00:00 UTC'den başlar; all-time toplamlar aynen korunur; damgasız
+    satır haftalığa asla sayılmaz (fail-safe)."""
+
+    def _summary_for(self, log_text: str):
+        with mock.patch.object(dashboard_server, "read_text_file",
+                               lambda p, d="": log_text if p == dashboard_server.LOG_FILE else ""), \
+             mock.patch.object(dashboard_server, "read_ccusage", lambda: {"available": False}):
+            return dashboard_server.read_cost_summary()
+
+    @staticmethod
+    def _stamp(dt):
+        return dt.strftime("[%Y-%m-%d %H:%M:%S]")
+
+    def test_week_window_splits_old_and_new_costs(self):
+        now = datetime.now(timezone.utc)
+        monday = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+        old = monday - timedelta(days=3)     # geçen hafta
+        new = monday + timedelta(hours=1)    # bu hafta
+        log = "\n".join([
+            f"{self._stamp(old)} Cycle #1 [OK] Completed (cost: 5.0, subtype: success)",
+            f"{self._stamp(old)} [LIMIT] hit",
+            f"{self._stamp(new)} Cycle #2 [OK] Completed (cost: 2.5, subtype: success)",
+            f"{self._stamp(new)} [GATE] Daily TOTAL exceeded — pausing BOTH engines",
+            f"{self._stamp(new)} [BUDGET] Claude 5h $0/$∞",
+        ])
+        out = self._summary_for(log)
+        self.assertEqual(out["totalUsd"], 7.5)          # all-time: her iki hafta
+        self.assertEqual(out["weekUsd"], 2.5)           # yalnız bu hafta
+        self.assertEqual(out["weekCycles"], 1)
+        self.assertEqual(out["weekLimitHits"], 0)       # LIMIT geçen haftadaydı
+        self.assertEqual(out["weekGatePauses"], 1)      # gerçek pause sayılır
+        # [BUDGET] durum satırı pause DEĞİLDİR — eski 487'lik yanılgının testi:
+        self.assertEqual(out["weekStart"], monday.strftime("%Y-%m-%d"))
+
+    def test_unstamped_cost_line_counts_all_time_only(self):
+        now = datetime.now(timezone.utc)
+        log = "\n".join([
+            "Cycle #9 [OK] Completed (cost: 3.0, subtype: success)",  # damgasız (eski biçim)
+            f"{self._stamp(now)} Cycle #10 [OK] Completed (cost: 1.0, subtype: success)",
+        ])
+        out = self._summary_for(log)
+        self.assertEqual(out["totalUsd"], 4.0)
+        self.assertEqual(out["weekUsd"], 1.0)

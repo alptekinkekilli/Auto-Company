@@ -1,6 +1,6 @@
 # dashboard/server.py · [[dashboard-server]]
 
-Local dashboard HTTP server for the Auto Company that exposes status, directive, operator-request, settings, and analyst-trigger endpoints across Windows/WSL/macOS hosts.
+Local dashboard HTTP server for the Auto Company that exposes status, directive, operator-request, and cost views across Windows/WSL/macOS/Linux hosts.
 
 - ps_quote · function · L123-L124 — Escapes a string for safe embedding as a single-quoted PowerShell argument by doubling embedded single quotes.
 - detect_host_kind · function · L127-L137 — Maps the OS platform name to the internal host kind (windows/macos/linux) and rejects unsupported hosts.
@@ -19,7 +19,7 @@ Local dashboard HTTP server for the Auto Company that exposes status, directive,
 - write_operator_decision · function · L486-L572 — Writes an operator decision for a request into the decisions ledger, validating the answer shape per request type and auditing it.
 - _parse_env_file · function · L575-L587 — Parses a runtime.env file into a key/value dict.
 - read_ideas · function · L590-L608 — Reads the candidate-registry ideas file into a structured payload.
-- read_tool_usage · function · L611-L648 — Reads and aggregates tool-usage statistics for display.
+- read_tool_usage · function · L611-L648 — Parses the engine log tail to extract per-tool usage counts for the dashboard.
 - read_analysis · function · L651-L669 — Reads the analysis-directive file into a structured payload.
 - analyst_trigger_state · function · L672-L679 — Reports the on-demand analyst trigger state from the RUNNING/LAST_TRIGGER marker files.
 - analyst_run_now · function · L682-L708 — Writes an ANALYST_RUN_REQUEST file to trigger the host-side analyst watcher on demand.
@@ -32,38 +32,39 @@ Local dashboard HTTP server for the Auto Company that exposes status, directive,
 - set_hold · function · L878-L915 — Arms or disarms the loop hold with a reason.
 - wake_loop · function · L918-L976 — Wakes the autonomous loop from a hold.
 - trigger_redeploy · function · L979-L1015 — Triggers a redeploy of the app.
-- _ccusage_compute · function · L1031-L1086 — Computes Claude/Codex usage by running the ccusage CLI and parsing its output.
-- _run · function · L1037-L1045 — Runs the ccusage CLI with extra args and returns its stdout.
-- _is_codex · function · L1060-L1062 — Determines whether a ccusage entry name refers to Codex.
-- read_ccusage · function · L1089-L1109 — Reads ccusage data, computing it in a background thread to avoid blocking the status poll.
-- _bg · function · L1101-L1106 — Background worker that computes ccusage and caches the result.
-- read_engine_runtime · function · L1112-L1201 — Parses the engine runtime log tail to extract banner, router, and tier state for the current engine.
-- _window_cutoff_epoch · function · L1204-L1232 — Computes the epoch cutoff for a rolling spend window.
-- read_cost_summary · function · L1235-L1316 — Aggregates cost/budget summary from ccusage and runtime data.
-- read_tail · function · L1319-L1326 — Reads the last N lines of a file as text.
-- parse_sections · function · L1329-L1344 — Splits raw status output into named sections.
-- parse_int · function · L1347-L1351 — Parses a string to int or None.
-- parse_positive_int · function · L1354-L1359 — Parses a string to a positive int, falling back to a default.
-- parse_key_values · function · L1362-L1369 — Parses rows of key: value lines into a dict.
-- blank_parsed · function · L1372-L1396 — Returns a blank/empty parsed status structure.
-- parse_windows_status_output · function · L1399-L1481 — Parses Windows status script output into a structured status dict.
-- parse_macos_status_output · function · L1484-L1520 — Parses macOS/Linux status script output into a structured status dict.
-- read_state_file_pairs · function · L1523-L1531 — Reads state file key/value pairs.
-- run_status_command · function · L1534-L1537 — Runs the status script for the detected host and returns its result.
-- run_dashboard_action · function · L1540-L1552 — Runs a start/stop dashboard action for the detected host.
-- parse_status_output · function · L1555-L1557 — Dispatches status output parsing to the host-appropriate parser.
-- gather_status_payload · function · L1560-L1579 — Assembles the full status payload combining host status, state files, and runtime data.
-- DashboardHandler · class · L1582-L1887 — HTTP request handler serving the dashboard UI and JSON API endpoints.
-- _json · method · L1583-L1590 — Writes a JSON response with the given status code.
-- _text · method · L1592-L1601 — Writes a plain-text response with the given status code and content type.
-- _serve_file · method · L1603-L1607 — Serves a static file with the given content type.
-- do_GET · method · L1609-L1614 — Dispatches GET requests to the internal handler.
-- _do_GET · method · L1616-L1682 — Routes GET requests to the appropriate data endpoint or static file.
-- _read_body · method · L1684-L1691 — Reads the request body up to a size limit.
-- do_POST · method · L1693-L1698 — Dispatches POST requests to the internal handler.
-- _do_POST · method · L1700-L1763 — Routes POST requests to the appropriate action endpoint.
-- _handle_operator_decision · method · L1765-L1805 — Handles a POST to record an operator decision.
-- _handle_directive · method · L1807-L1853 — Handles a POST to write a new human directive.
-- _handle_settings · method · L1855-L1884 — Handles a POST to update settings.
-- log_message · method · L1886-L1887 — Suppresses default request logging.
-- main · function · L1890-L1912 — Entry point that parses args and starts the dashboard HTTP server.
+- _week_start_epoch · function · L1031-L1038 — Computes the epoch of the start of the current UTC week for rolling budget windows.
+- _ccusage_compute · function · L1041-L1096 — Computes cost/usage summary from the ccusage data for the dashboard.
+- _run · function · L1047-L1055 — Runs the ccusage CLI with extra args and returns its stdout.
+- _is_codex · function · L1070-L1072 — Determines whether a ccusage entry name refers to Codex.
+- read_ccusage · function · L1099-L1119 — Reads ccusage data, computing it in a background thread to avoid blocking the status poll.
+- _bg · function · L1111-L1116 — Background worker that computes ccusage and caches the result.
+- read_engine_runtime · function · L1122-L1211 — Parses the engine runtime log tail to extract banner, router, and tier state for the current engine.
+- _window_cutoff_epoch · function · L1214-L1242 — Computes the epoch cutoff for a rolling spend window.
+- read_cost_summary · function · L1245-L1372 — Reads and aggregates cost summary data for the dashboard.
+- read_tail · function · L1375-L1382 — Reads the last N lines of a file as text.
+- parse_sections · function · L1385-L1400 — Splits raw status output into named sections.
+- parse_int · function · L1403-L1407 — Parses a string to int or None.
+- parse_positive_int · function · L1410-L1415 — Parses a string to a positive int, falling back to a default.
+- parse_key_values · function · L1418-L1425 — Parses rows of key: value lines into a dict.
+- blank_parsed · function · L1428-L1452 — Returns a blank/empty parsed status structure.
+- parse_windows_status_output · function · L1455-L1537 — Parses Windows status script output into a structured status dict.
+- parse_macos_status_output · function · L1540-L1576 — Parses macOS/Linux status script output into a structured status dict.
+- read_state_file_pairs · function · L1579-L1587 — Reads state file key/value pairs.
+- run_status_command · function · L1590-L1593 — Runs the status script for the detected host and returns its result.
+- run_dashboard_action · function · L1596-L1608 — Runs a start/stop dashboard action for the detected host.
+- parse_status_output · function · L1611-L1613 — Dispatches status output parsing to the host-appropriate parser.
+- gather_status_payload · function · L1616-L1635 — Assembles the full status payload combining host status, state files, and runtime data.
+- DashboardHandler · class · L1638-L1943 — HTTP request handler serving the dashboard UI and JSON API endpoints.
+- _json · method · L1639-L1646 — Writes a JSON response with the given status code.
+- _text · method · L1648-L1657 — Writes a plain-text response with the given status code and content type.
+- _serve_file · method · L1659-L1663 — Serves a static file with the given content type.
+- do_GET · method · L1665-L1670 — Dispatches GET requests to the internal handler.
+- _do_GET · method · L1672-L1738 — Routes GET requests to the appropriate data endpoint or static file.
+- _read_body · method · L1740-L1747 — Reads the request body up to a size limit.
+- do_POST · method · L1749-L1754 — Dispatches POST requests to the internal handler.
+- _do_POST · method · L1756-L1819 — Routes POST requests to the appropriate action endpoint.
+- _handle_operator_decision · method · L1821-L1861 — Handles a POST to record an operator decision.
+- _handle_directive · method · L1863-L1909 — Handles a POST to write a new human directive.
+- _handle_settings · method · L1911-L1940 — Handles a POST to update settings.
+- log_message · method · L1942-L1943 — Suppresses default request logging.
+- main · function · L1946-L1968 — Entry point that parses args and starts the dashboard HTTP server.

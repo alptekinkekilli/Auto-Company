@@ -67,7 +67,7 @@ def calls_from_ndjson(path: str) -> list[tuple[str, str]]:
 
 def categorize(calls: list[tuple[str, str]]) -> dict:
     c = {"calls": len(calls), "ctx7": 0, "airtable_r": 0, "airtable_w": 0,
-         "linear": 0, "browser": 0, "browser_mcp": 0, "names": {}}
+         "linear": 0, "browser": 0, "browser_mcp": 0, "graft": 0, "names": {}}
     for name, raw in calls:
         # Match on the TOOL NAME and, for bash, the COMMAND — never on arbitrary input
         # text: measured 2026-08-03, apply_patch/read calls EDITING browser-related code
@@ -102,6 +102,13 @@ def categorize(calls: list[tuple[str, str]]) -> dict:
             c["browser"] += 1
         if lname.startswith("mcp__browseros__"):
             c["browser_mcp"] += 1
+        # Graft kartı danışması (2026-08-24): kartlar dosya olarak okunur, bu yüzden
+        # bash komutundaki YOL kalıplarıyla sayılır — çıplak "graft" kelimesi DEĞİL
+        # ("grafting" gibi metinler yanlış-pozitif olurdu). Ölçüm amacı: kartlara
+        # yatırım geri dönüyor mu (graft-kit README'nin kendi etiği: ölçmeden iddia etme).
+        if ("graft/" in low or ".graft-kit" in low
+                or "graft ask" in low or "graft callers" in low):
+            c["graft"] += 1
 
         # Per-TOOL-NAME counts for MCP tools (2026-08-06). The category counters above
         # answer "how much Airtable", never "which Airtable tools" — so a proposal to trim

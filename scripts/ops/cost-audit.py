@@ -156,6 +156,12 @@ def build_report(app: str, days: int) -> str:
     # windows on `days` and was never "today"-scoped.
     generated_at = time.strftime("%Y-%m-%d %H:%M", time.gmtime())
     report_day = time.strftime("%Y-%m-%d", time.gmtime(time.time() - 86400))
+    # Haftalık görüntü sıfırlaması (operatör kararı 2026-08-24): raporlar güncel
+    # haftayla konuşur. Pazartesi 00:00 UTC sınırı — ledger dosyalarına dokunulmaz.
+    _now = time.gmtime()
+    _week_start = time.time() - ((_now.tm_wday * 86400) + _now.tm_hour * 3600
+                                 + _now.tm_min * 60 + _now.tm_sec)
+    week_start_day = time.strftime("%Y-%m-%d", time.gmtime(_week_start))
     logs = os.path.join(app, "logs")
     ledger = read_ledger(os.path.join(logs, "spend-total.log"), days)
     loop = read_loop_log(os.path.join(logs, "auto-loop.log"), report_day)
@@ -168,6 +174,15 @@ def build_report(app: str, days: int) -> str:
     L.append("Budget figures are notional/API-equivalent (subscription), not billed cash.")
     L.append(f"§§2-4 below cover **{report_day}** (the previous completed UTC day), not the "
              "day this report was generated on — see OPREQ-INFRA-COSTAUDIT-WINDOW-001.")
+    _wk_usd, _wk_rows = 0.0, 0
+    for _d, _rows in ledger.get("by_day", {}).items():
+        if _d >= week_start_day:
+            for _r in _rows:
+                _wk_usd += _r[3]
+                _wk_rows += 1
+    L.append(f"CURRENT WEEK ({week_start_day} Mon 00:00 UTC →): "
+             f"${_wk_usd:.2f} across {_wk_rows} ledger rows — the weekly display "
+             "window the cockpit resets on; history is never truncated.")
     L.append("")
 
     # --- 1. Ledger trend

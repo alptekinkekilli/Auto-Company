@@ -1,4 +1,4 @@
-# scripts/ops/linear-track.py · [[linear-workstream-discipline]] [[secret-handling]]
+# scripts/ops/linear-track.py · [[ki-k-linear-workstream-tooling]] [[secret-handling-discipline]]
 
 CLI that appends checklist items to a long-lived workstream issue instead of opening separate Linear issues, inverting the cost so filing under an existing track is the cheap default and a new issue requires written justification.
 

@@ -1,4 +1,4 @@
-# scripts/ops/state-snapshot.py · [[atomic-state-writes]] [[cost-budget-reporting]]
+# scripts/ops/state-snapshot.py · [[atomic-write-read-back-verification]] [[state-snapshot-idle-skip-audit-trail]]
 
 One-call cycle state snapshot that collapses the per-cycle probe fan-out into a single turn, printing local state hashes plus a DELTA line against the previous snapshot so an unchanged world can be dismissed in one glance.
 

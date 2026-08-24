@@ -1,6 +1,6 @@
-# tests/test_dashboard_server.py · [[dashboard-server]]
+# tests/test_dashboard_server.py
 
-Test suite for the dashboard server module, covering status parsing, action dispatch, engine runtime parsing, window cutoff, and file tail reading.
+Test suite for the dashboard server module, covering status parsing, action dispatch, engine runtime parsing, and spend-window logic.
 
 - DashboardServerTests · class · L27-L210 — Tests that parse_status_output maps raw status text to normalized state dicts and that run_dashboard_action dispatches to the right runner per host.
 - test_windows_not_running_maps_to_stopped · method · L28-L52 — Verifies Windows status text with a stopped guardian maps to stopped/not_configured states with no PID.
@@ -45,3 +45,8 @@ Test suite for the dashboard server module, covering status parsing, action disp
 - test_missing_file_returns_fallback · method · L472-L475 — Verifies a missing file returns the fallback value.
 - test_engine_runtime_falls_back_to_full_file_when_banner_is_out_of_window · method · L477-L497 — Verifies engine runtime falls back to the full file when the banner is out of the tail window.
 - fake_read · function · L488-L489 — Returns the log text for any path in the fallback test.
+- WeeklyCostWindowTests · class · L500-L544 — Verifies the dashboard's weekly cost window splits old and new cost lines correctly.
+- _summary_for · method · L505-L509 — Helper that runs the weekly cost summary parser against a given log text.
+- _stamp · method · L512-L513 — Helper that formats a datetime into the log's timestamp prefix.
+- test_week_window_splits_old_and_new_costs · method · L515-L534 — Asserts that cost lines inside the week window are counted while older ones are excluded.
+- test_unstamped_cost_line_counts_all_time_only · method · L536-L544 — Asserts that a cost line without a timestamp is counted only in the all-time total.

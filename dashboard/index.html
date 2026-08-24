@@ -135,17 +135,17 @@
       </div>
       <div class="cost-grid">
         <div class="cost-stat"><span class="cost-num" id="costWindow">$0</span><span class="muted" id="costWindowLabel">5h window</span></div>
-        <div class="cost-stat"><span class="cost-num" id="costTotal">$0</span><span class="muted">Total (this log)</span></div>
+        <div class="cost-stat"><span class="cost-num" id="costTotal">$0</span><span class="muted" id="costTotalLabel">Bu hafta</span></div>
         <div class="cost-stat"><span class="cost-num" id="costLast">$0</span><span class="muted">Last cycle</span></div>
-        <div class="cost-stat"><span class="cost-num" id="costCycles">0</span><span class="muted">Costed cycles</span></div>
+        <div class="cost-stat"><span class="cost-num" id="costCycles">0</span><span class="muted">Cycle (hafta)</span></div>
       </div>
       <p class="muted cost-foot">
         Engine now <b id="costEngine">—</b> · Codex cycles this window <b id="codexWindow">0</b>
-        <br>Since this log began (persists across redeploys) — Limit hits <b id="costLimits">0</b> · Codex fallbacks <b id="costFallbacks">0</b> · Budget→Codex <b id="costOffloads">0</b> · Budget pauses <b id="costBudget">0</b>
-      </p>
+        <br>Bu hafta — Limit hits <b id="costLimits">0</b> · Codex fallbacks <b id="costFallbacks">0</b> · Budget→Codex <b id="costOffloads">0</b> · Gate pauses <b id="costBudget">0</b>
+        <br>All-time (bu log, redeploy'larda kalıcı) — Total <b id="costAllTotal">$0</b> · <b id="costAllCycles">0</b> cycles · Limit hits <b id="costAllLimits">0</b></p>
       <div class="cost-ccusage" id="ccusageBlock" hidden>
         <div class="cost-ccusage-head">
-          <span>ccusage estimate <span class="muted">· API-equivalent, not billed</span></span>
+          <span>ccusage estimate <span class="muted">· bu hafta · API-equivalent, not billed</span></span>
           <span class="muted" id="ccusageRange">—</span>
         </div>
         <div class="cost-grid cost-grid-3">

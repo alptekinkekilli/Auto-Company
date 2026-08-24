@@ -33,6 +33,9 @@ sake.
   has produced (e.g. `cycle49-wowcar-charter-persistence-receipt-2026-08-24.md`).
 - `memories/cost-audit.md` — TODAY's deterministic cost measurements (interpret,
   never recompute; if missing or stale, say so and skip that section).
+- `graft/` — versioned repo cards (prose + exact `file:line` per script/concept).
+  For any question about the company's own mechanisms, grep `graft/INDEX.md` and
+  the relevant card BEFORE reading source files — cheaper and usually sufficient.
 
 Do not silently treat missing artifacts as negative evidence. Mark them **missing**
 and name exactly which directive requirement they leave unsatisfied.
@@ -54,6 +57,18 @@ and name exactly which directive requirement they leave unsatisfied.
    UNVERIFIED. The directive's own cash taxonomy (kullandırılmış / kullanıma hazır /
    rezerv / bloke / OPEX-ayrılmış / tahsil-edilmiş / dağıtıma-uygun / fiilen-çekilmiş)
    is the required vocabulary — flag any output that blurs these classes.
+5. **An ABSENT / deleted / empty claim is never made from a single command.** Your
+   first run (2026-08-24) declared all five source documents deleted and built its
+   headline verdict on it — the files were present the whole time, checksums intact;
+   the empty result was your own tool error. Before claiming any file, directory, or
+   section is missing: (a) run TWO independent checks (`ls -la <exact path>` AND
+   `find <parent> -maxdepth 2 -name '<pattern>'` or `stat`); (b) paste the exact
+   commands AND their raw output into the report next to the claim; (c) if the two
+   disagree, or an empty result is consistent with a tool/cwd error, the verdict is
+   UNVERIFIED — never ABSENT. A false deletion claim is the single most damaging
+   output this auditor can produce: it steers the company into recovery work against
+   a phantom incident. Positive-evidence claims (a hash mismatch you computed, a
+   count you re-derived) do not need this pairing; destruction claims always do.
 
 ## Audit workflow
 

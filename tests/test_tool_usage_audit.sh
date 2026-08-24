@@ -37,6 +37,9 @@ tool("mcp__browseros__navigate")
 tool("mcp__browseros__grep")
 tool("bash", "grep -n foo /app/PROMPT.md")
 tool("read")
+tool("bash", "grep -n send_gate graft/INDEX.md graft/scripts/ops/send-gate.md")
+tool("bash", "bash .graft-kit/bin/graft-build.sh")
+tool("bash", "echo engrafting is a word but not a card path")
 ev.append({"type": "done", "model": "claude-sonnet-5"})
 open(sys.argv[1], "w").write("\n".join(json.dumps(e) for e in ev) + "\n")
 PY
@@ -48,7 +51,7 @@ check() { # desc, jq-ish key, expected
     got=$(python3 -c "import json,sys;print(json.loads(sys.argv[1])[sys.argv[2]])" "$LINE" "$2")
     [ "$got" = "$3" ] && ok "$1" || bad "$1 — expected $3, got $got"
 }
-check "total calls counted"   calls      13
+check "total calls counted"   calls      16
 check "ctx7 counted"          ctx7        1
 check "airtable reads (script+mcp)" airtable_r 3
 check "airtable writes (script+mcp)" airtable_w 2
@@ -57,6 +60,7 @@ check "linear counted"        linear      1
 # must be COUNTED, otherwise moving work into it would fake a drop in the A/B.
 check "browser counts harness AND mcp" browser 4
 check "browser_mcp counts only raw MCP steps" browser_mcp 2
+check "graft card reads + kit wrapper counted" graft 2
 
 echo "[2] idempotence: second run appends nothing"
 python3 "$TUA" --app "$TMP"
@@ -79,7 +83,7 @@ python3 "$TUA" --app "$TMP"
 N=$(wc -l < "$TMP/logs/tool-usage-history.ndjson" | tr -d ' ')
 [ "$N" = 3 ] && ok "rewritten file re-audited" || bad "expected 3 lines, got $N"
 LAST=$(tail -1 "$TMP/logs/tool-usage-history.ndjson")
-python3 -c "import json,sys; d=json.loads(sys.argv[1]); sys.exit(0 if d['calls']==26 else 1)" "$LAST" \
+python3 -c "import json,sys; d=json.loads(sys.argv[1]); sys.exit(0 if d['calls']==32 else 1)" "$LAST" \
   && ok "re-audit counted the NEW content" || bad "re-audit used stale counts"
 python3 "$TUA" --app "$TMP"
 N=$(wc -l < "$TMP/logs/tool-usage-history.ndjson" | tr -d ' ')

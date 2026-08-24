@@ -110,6 +110,11 @@ outranks everything in this section; this is the standing summary.
 - **TENDER TRACK = FROZEN HISTORICAL STATE.** No tender work of any kind: no cohort
   or registry mutation, no send-path use, no bridge queues, no firm-level G1–G4
   gates. Records stay untouched as the audit trail.
+- **CODEBASE QUESTIONS → GRAFT CARDS FIRST.** For any question about the company's
+  own scripts/mechanisms ("how does X work", "who calls Y"), grep `graft/INDEX.md`
+  and the per-file/concept cards under `graft/` BEFORE opening source files — each
+  card carries prose plus exact `file:line`, so one card read replaces re-reading a
+  3,000-line script. Open a source file only to edit the named span.
 - **PERSISTENCE RULE (learned 2026-08-24):** canonical persistence lives in the
   REPO. In-container edits to `CLAUDE.md`/`PROMPT.md` are wiped by every redeploy —
   cycle 49's charter persistence was lost exactly this way. Never re-persist
