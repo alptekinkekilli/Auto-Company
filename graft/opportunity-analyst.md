@@ -1,8 +1,11 @@
 ---
-name: Opportunity Analyst pipeline
-slug: opportunity-analyst-pipeline
+name: Opportunity Analyst
+slug: opportunity-analyst
 type: system
 sources:
+  - path: >-
+      scripts/analyst/codex-skill/autocompany-opportunity-director/scripts/context7_docs.sh
+    hash: 79198378c25b2ff21cf5e4e2eda13f55c29ac806bd7f9d2bb0cba11a6268c447
   - path: scripts/analyst/merge_registry.py
     hash: 55719338148054fff06780400062453a037e4bf10fe5817f04536b5c85ade7d1
   - path: scripts/analyst/opportunity-analyst-jcode.sh
@@ -11,18 +14,21 @@ sources:
     hash: a0a766435a1f9e501b97cca96bb30314440de72fd569313488d3b80d5f9c55a5
   - path: scripts/analyst/promote_directive.py
     hash: 9c45147f1730fc30545b94a30428d54e0bd40f04506aa3db00614880ec93d677
-sources_digest: 071c9f328960ee67ae19f853525bb1d8bfb86f721ce9304758def36d40560290
+sources_digest: c010151f753a62a451cf1c77b03eebce7e2458b48fd5ab21542c2ab59250be2a
 links:
-  - to: directive-writer-and-promotion-gate
+  - to: directive-writer
     relation: uses
+    description: Uses directive_writer.py for safe snapshot/restore of human-directive.md.
+  - to: promotion-gate
+    relation: implements
     description: >-
-      The promotion pass calls promote_directive.py which uses
-      directive_writer.py's snapshot/restore and write semantics.
-  - to: engine-usage-cost-adapter
-    relation: uses
+      promote_directive.py is the deterministic fail-closed gate deciding
+      whether the report may overwrite human-directive.md.
+  - to: registry-merge-invariants
+    relation: implements
     description: >-
-      log_run_cost uses engine-usage-cost.py for cost visibility and
-      budget-exclusion ledgering.
+      merge_registry.py enforces the live-span-only edit and candidate-identity
+      invariants.
 generator:
   version: 1
 covers:
@@ -87,12 +93,13 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-An independent 'second-brain' (APP-221) that invokes Codex or jcode with the autocompany-opportunity-director skill to analyze the Tender Track portfolio and produce a decision report plus a candidate-registry update. Orchestrates three passes: write report draft (never auto-applied), splice only the live span of candidate-registry.md via merge_registry.py with invariant checks, and run the deterministic promotion gate. Never auto-applies directives, records thread/session IDs for budget exclusion, and fails closed on missing inputs.
+An independent 'second-brain' (APP-221) that invokes Codex or jcode with the autocompany-opportunity-director skill to analyze the Tender Track portfolio and produce a decision report plus a candidate-registry update. Runs three passes: writes a draft report (never auto-applied), extracts and splices only the live span of candidate-registry.md via merge_registry.py with invariant checks, and runs a deterministic promotion gate (promote_directive.py) before any directive text may be applied. Never auto-applies directives; records session IDs to a budget-exclusion ledger.
 
 ## Related
 
-- uses [[directive-writer-and-promotion-gate]] — The promotion pass calls promote_directive.py which uses directive_writer.py's snapshot/restore and write semantics.
-- uses [[engine-usage-cost-adapter]] — log_run_cost uses engine-usage-cost.py for cost visibility and budget-exclusion ledgering.
+- uses [[directive-writer]] — Uses directive_writer.py for safe snapshot/restore of human-directive.md.
+- implements [[promotion-gate]] — promote_directive.py is the deterministic fail-closed gate deciding whether the report may overwrite human-directive.md.
+- implements [[registry-merge-invariants]] — merge_registry.py enforces the live-span-only edit and candidate-identity invariants.
 <!-- context:generated:end -->
 
 ## Notes

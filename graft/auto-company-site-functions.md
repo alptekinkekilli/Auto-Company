@@ -1,6 +1,6 @@
 ---
-name: Auto-company site branded endpoints
-slug: auto-company-site-branded-endpoints
+name: Auto-Company Site Functions
+slug: auto-company-site-functions
 type: system
 sources:
   - path: projects/auto-company-site/functions/listeden-cik.js
@@ -28,7 +28,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Cloudflare Pages Functions that keep cold B2B outreach links on the company's own domain: /randevu issues a 302 to the operator's Google Calendar (delegating all booking logic, never guessing a redirect, 503 with Turkish fallback if unset), and /listeden-cik proxies the email opt-out to the Twilio comms service with no local suppression store so upstream remains the single source of truth. Both set no-store/no-referrer and preserve existing signatures/params.
+Cloudflare Pages Functions for the auto-company marketing site: a branded presentation-layer proxy for the email opt-out flow (forwarding to the Twilio comms service, deliberately with no local suppression store so upstream remains the single source of truth) and a booking endpoint that issues a 302 to Google Calendar with no booking logic. Both keep links on the company's own domain for trust in cold B2B outreach, return no-store/no-referrer headers, and never fabricate success on upstream failure.
 <!-- context:generated:end -->
 
 ## Notes

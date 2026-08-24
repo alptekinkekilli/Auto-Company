@@ -1,43 +1,25 @@
 ---
-name: Directive writer and promotion gate
-slug: directive-writer-and-promotion-gate
-type: system
+name: Directive Writer
+slug: directive-writer
+type: file
 sources:
-  - path: scripts/analyst/promote_directive.py
-    hash: 9c45147f1730fc30545b94a30428d54e0bd40f04506aa3db00614880ec93d677
   - path: scripts/core/directive_writer.py
     hash: 447057795ab4776c589695bd00450009df0af8fff481fa7a68c89244ca93a9a3
-sources_digest: 80bcd9b54e94bacab9f99b576ff830a746c81dc97fac9a15783db037508fad38
+sources_digest: f4f863d4df3fc313e0dd21bd4e126bc92b8f46cf056589dd04f736eba34c9ebd
 links:
-  - to: dashboard-server
+  - to: cockpit-dashboard
+    relation: implements
+    description: >-
+      server.py routes all directive writes through this module to enforce the
+      PENDING-clobber and immutability rules.
+  - to: opportunity-analyst
     relation: uses
     description: >-
-      server.py routes directive writes through directive_writer.py to enforce
-      locking and prevent clobbering a PENDING directive.
-  - to: opportunity-analyst-pipeline
-    relation: uses
-    description: >-
-      promote_directive.py is the deterministic gate that decides whether the
-      analyst's report may overwrite the directive, running after the report is
-      written and before memory updates.
+      opportunity-analyst.sh uses directive_writer.py for safe snapshot/restore
+      of human-directive.md.
 generator:
   version: 1
 covers:
-  - symbol: sha256
-    kind: function
-    at: 'scripts/analyst/promote_directive.py:L91-L92'
-  - symbol: audit
-    kind: function
-    at: 'scripts/analyst/promote_directive.py:L95-L98'
-  - symbol: blocked
-    kind: function
-    at: 'scripts/analyst/promote_directive.py:L101-L104'
-  - symbol: notify
-    kind: function
-    at: 'scripts/analyst/promote_directive.py:L107-L113'
-  - symbol: main
-    kind: function
-    at: 'scripts/analyst/promote_directive.py:L116-L225'
   - symbol: undefined_section_refs
     kind: function
     at: 'scripts/core/directive_writer.py:L74-L83'
@@ -111,12 +93,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The sole writer for memories/human-directive.md, enforcing two fail-closed rules: in-flight PENDING directives are never clobbered without --allow-pending, and the directive body is immutable after acceptance (only ## Status changes via compare-and-swap on the body hash). Every write goes through lock → read → in-flight gate → backup → atomic rename → verify → audit → notify, with exit codes distinguishing gate refusals (2) from I/O failures (3).
+The sole writer for memories/human-directive.md, enforcing two fail-closed rules: in-flight PENDING directives are never clobbered without --allow-pending, and the directive body is immutable after acceptance (only ## Status can change, via compare-and-swap verifying the body hash). Every write goes through lock → read → in-flight gate → backup → atomic rename → verify → audit → notify. Exit codes distinguish gate refusals (2) from I/O failures (3).
 
 ## Related
 
-- uses [[dashboard-server]] — server.py routes directive writes through directive_writer.py to enforce locking and prevent clobbering a PENDING directive.
-- uses [[opportunity-analyst-pipeline]] — promote_directive.py is the deterministic gate that decides whether the analyst's report may overwrite the directive, running after the report is written and before memory updates.
+- implements [[cockpit-dashboard]] — server.py routes all directive writes through this module to enforce the PENDING-clobber and immutability rules.
+- uses [[opportunity-analyst]] — opportunity-analyst.sh uses directive_writer.py for safe snapshot/restore of human-directive.md.
 <!-- context:generated:end -->
 
 ## Notes

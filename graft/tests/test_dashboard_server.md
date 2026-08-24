@@ -1,6 +1,6 @@
-# tests/test_dashboard_server.py
+# tests/test_dashboard_server.py · [[dashboard-runtime-telemetry]]
 
-Test suite for the dashboard server module, covering status parsing, action dispatch, engine runtime parsing, and spend-window logic.
+Test suite for the dashboard server module, covering status parsing, action dispatch, engine runtime parsing, settings resolution, and window cutoff logic.
 
 - DashboardServerTests · class · L27-L210 — Tests that parse_status_output maps raw status text to normalized state dicts and that run_dashboard_action dispatches to the right runner per host.
 - test_windows_not_running_maps_to_stopped · method · L28-L52 — Verifies Windows status text with a stopped guardian maps to stopped/not_configured states with no PID.
@@ -50,3 +50,6 @@ Test suite for the dashboard server module, covering status parsing, action disp
 - _stamp · method · L512-L513 — Helper that formats a datetime into the log's timestamp prefix.
 - test_week_window_splits_old_and_new_costs · method · L515-L534 — Asserts that cost lines inside the week window are counted while older ones are excluded.
 - test_unstamped_cost_line_counts_all_time_only · method · L536-L544 — Asserts that a cost line without a timestamp is counted only in the all-time total.
+- LiveBudgetGateDisplayTests · class · L547-L581 — Verifies the dashboard surfaces the most recent budget-gate banner from the log rather than an earlier one.
+- test_engine_runtime_parses_live_gate_banner_last_match · method · L553-L565 — Asserts read_engine_runtime picks the last budget-gate banner line so the live gate state reflects the latest boot.
+- test_cost_summary_carries_last_budget_gate_line · method · L567-L581 — Asserts the cost summary carries the last budget-gate line from the log.

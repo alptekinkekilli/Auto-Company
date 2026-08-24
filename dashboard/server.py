@@ -1204,6 +1204,14 @@ def read_engine_runtime() -> dict[str, Any]:
     mb = re.findall(r"Window budget: \$([0-9.]+) per (\d+)s", text)
     if mb:
         out["windowBudget"] = mb[-1][0]
+    # APP-263 sonrası CANLI gate'ler boot bannerında "Budget gates ...: ... Daily
+    # TOTAL $500 ... Weekly TOTAL $2500" olarak basılır. Eski "Window budget"
+    # kalıbı 2026-07-30'da emekli oldu ama kalıcı logdaki Temmuz satırı yüzünden
+    # panel "$40 cap" fosilini gösteriyordu (operatör yakaladı, 2026-08-24).
+    gates = re.findall(
+        r"Budget gates.*?Daily TOTAL \$([0-9.]+).*?Weekly TOTAL \$([0-9.]+)", text)
+    if gates:
+        out["dailyBudget"], out["weeklyBudget"] = gates[-1]
     itv = re.findall(r"Interval: (\d+)s", text)
     if itv:
         out["interval"] = itv[-1]
@@ -1368,8 +1376,23 @@ def read_cost_summary() -> dict[str, Any]:
         "weekOffloads": week_offloads,
         "weekGatePauses": week_gate_pauses,
         "weekStart": datetime.fromtimestamp(week_cut, timezone.utc).strftime("%Y-%m-%d"),
+        # Canlı gate görünümü: loop'un kendi [BUDGET] satırının SON hali —
+        # "Daily TOTAL $10.63/$500 | Weekly TOTAL $28.46/$2500". Gate'i uygulayan
+        # bileşenle aynı sayı; panel artık emekli 5h penceresini değil bunu gösterir.
+        **_last_budget_gate(text),
         "ccusage": read_ccusage(),
     }
+
+
+def _last_budget_gate(text: str) -> dict[str, Any]:
+    m = re.findall(
+        r"\[BUDGET\].*?Daily TOTAL \$([0-9.]+)/\$([0-9.]+)"
+        r".*?Weekly TOTAL \$([0-9.]+)/\$([0-9.]+)", text)
+    if not m:
+        return {}
+    d_used, d_cap, w_used, w_cap = m[-1]
+    return {"gateDailyUsd": float(d_used), "gateDailyCap": float(d_cap),
+            "gateWeeklyUsd": float(w_used), "gateWeeklyCap": float(w_cap)}
 
 
 def read_tail(path: Path, lines: int = 120) -> str:

@@ -232,7 +232,9 @@ function renderStateList(parsed, stateFile, router) {
     ? router.routedModel + (router.routedEffort ? ` · effort ${router.routedEffort}` : "")
     : "-";
   const ladder = (arr) => (Array.isArray(arr) && arr.length ? arr.join(" → ") : "-");
-  const budgetInterval = `$${router.windowBudget || "-"} cap · ${router.interval || "-"}s`;
+  const budgetInterval = (router.dailyBudget || router.weeklyBudget)
+    ? `Daily $${router.dailyBudget || "-"} · Weekly $${router.weeklyBudget || "-"} · ${router.interval || "-"}s`
+    : `$${router.windowBudget || "-"} cap · ${router.interval || "-"}s`;
 
   const rows = [
     ["Active engine (routed)", routed || "-"],
@@ -318,10 +320,15 @@ async function fetchStatus() {
 
 function renderCost(cost) {
   const usd = (n) => `$${(Number(n) || 0).toFixed(2)}`;
-  els.costWindow.textContent = usd(cost.windowUsd);
-  els.costWindowLabel.textContent = cost.windowBudget
-    ? `5h window / $${cost.windowBudget} cap`
-    : "5h window";
+  if (cost.gateDailyCap) {
+    els.costWindow.textContent = usd(cost.gateDailyUsd);
+    els.costWindowLabel.textContent = `Bugün / $${cost.gateDailyCap} cap (gate)`;
+  } else {
+    els.costWindow.textContent = usd(cost.windowUsd);
+    els.costWindowLabel.textContent = cost.windowBudget
+      ? `5h window / $${cost.windowBudget} cap`
+      : "5h window";
+  }
   // Haftalık pencere (Pzt 00:00 UTC'de sıfırlanır) — manşet değerler; all-time alt satırda.
   els.costTotal.textContent = usd(cost.weekUsd ?? cost.totalUsd);
   if (els.costTotalLabel) {

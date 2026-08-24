@@ -1,6 +1,6 @@
 ---
-name: HeadInspect header inspector
-slug: headinspect-header-inspector
+name: HeadInspect Service
+slug: headinspect-service
 type: system
 sources:
   - path: projects/headinspect/migrations/0001_hits.sql
@@ -12,7 +12,12 @@ sources:
   - path: projects/headinspect/src/render.ts
     hash: 3792b2bd4004ee751d9ae6647d0fc58d9708ef758ad6bfda6beb0a4314bd8883
 sources_digest: cb61b3ccfe05c907fe9c1d45e555e1e03b1607816df1e7ac11b12c3268891960
-links: []
+links:
+  - to: headinspect-privacy-invariant
+    relation: implements
+    description: >-
+      The hit counter stores only hostname, never the full URL, to prevent
+      query-string PII leaks.
 generator:
   version: 1
 covers:
@@ -125,7 +130,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A Cloudflare Worker that fetches a user-supplied URL and reports on its response headers, with strict SSRF protections (rejecting non-HTTPS, localhost, private IP ranges, cloud metadata endpoints), manual redirect following up to five hops, body draining, and a 10-second AbortController timeout. The badge endpoint always returns HTTP 200 with edge caching so broken embeds never render as broken images.
+A Cloudflare Worker that fetches a user-supplied URL and reports on its response headers, with strict SSRF protections (rejecting non-HTTPS, localhost, private IP ranges, and cloud metadata endpoints), manual redirect following (up to 5), body draining, and a 10s AbortController timeout. Pure header-categorization and grading logic is isolated in inspect.ts (no I/O), and all pages/badges are server-rendered with no client framework. The badge endpoint always returns 200 with edge caching so broken embeds never render as broken images.
+
+## Related
+
+- implements [[headinspect-privacy-invariant]] — The hit counter stores only hostname, never the full URL, to prevent query-string PII leaks.
 <!-- context:generated:end -->
 
 ## Notes

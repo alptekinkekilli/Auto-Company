@@ -1,6 +1,6 @@
 ---
-name: Session hygiene and context-window guards
-slug: session-hygiene-and-context-window-guards
+name: Context Watch & Compact Preflight
+slug: context-watch-compact-preflight
 type: system
 sources:
   - path: scripts/compact-preflight.py
@@ -8,7 +8,10 @@ sources:
   - path: scripts/context-watch.py
     hash: e9aa872c3ee33e6f175760da5b09d5cddda1ffdab5ac78c667547e492910bf96
 sources_digest: 36e2492447e7ec5e61486860d79762b85b2182f8f99c57081cc7b63ff3b1804c
-links: []
+links:
+  - to: autonomous-loop
+    relation: configures
+    description: These hooks run inside agent sessions driven by the loop.
 generator:
   version: 1
 covers:
@@ -31,7 +34,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Hook scripts that keep agent sessions measurable and safe: context-watch.py monitors context-window fullness from the transcript, emitting a warning at 50% and a compact-ritual directive at 60% (state persisted per session so each threshold fires once, re-armed below 40%); compact-preflight.py counts open items (unpushed commits, uncommitted changes, stashes) that would be lost on compaction, always exiting 0 so it never blocks the compact.
+Claude Code hook scripts that make the compact ritual measurable. context-watch.py monitors context-window fullness from the transcript's usage field, emitting a warning at 50% and a compact-ritual directive at 60%, with per-session state so each threshold fires once and re-arms below 40%. compact-preflight.py counts open items (unpushed commits, uncommitted changes, stashes) that would be lost on compaction, writing a report for session-brief.py to read after compact. Both are fail-open and stdlib-only.
+
+## Related
+
+- configures [[autonomous-loop]] — These hooks run inside agent sessions driven by the loop.
 <!-- context:generated:end -->
 
 ## Notes

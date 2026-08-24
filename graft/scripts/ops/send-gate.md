@@ -1,4 +1,4 @@
-# scripts/ops/send-gate.py · [[fail-closed-verification-invariant]] [[outreach-eligibility-g4-verification]]
+# scripts/ops/send-gate.py · [[fail-closed-verification-invariant]] [[outreach-eligibility-g4-verification]] [[outreach-send-gating]]
 
 Fail-closed gate that decides from live evidence whether a firm may be emailed, enforcing caps, no-duplicate, opt-out, and live G4 verification with the operator out of the loop.
 

@@ -1,4 +1,4 @@
-# tests/test_operator_request_notify.py
+# tests/test_operator_request_notify.py · [[operator-request-lifecycle]]
 
 Test suite for the operator_request_notify script, covering notification dedup, retry, and type-specific resolution verification.
 

@@ -1,8 +1,14 @@
 ---
-name: SnapOG OG image service
-slug: snapog-og-image-service
+name: SnapOG Service
+slug: snapog-service
 type: system
 sources:
+  - path: projects/_archive/snapog/migrations/0001_init.sql
+    hash: 5a2ecc41dbff948e5d8f895feb80ae4145864f3703776f737cda73c84fec8623
+  - path: projects/_archive/snapog/migrations/0002_waitlist.sql
+    hash: 541f4f76f6f87aab342fe067acbcc746587f600d1e76028fe97a4c67c8b3202a
+  - path: projects/_archive/snapog/migrations/0003_cache_key_tracking.sql
+    hash: a672bc9c2f87bedb83312ef869d3ea29305f96bcca7241131ce1130edcb4ee75
   - path: projects/_archive/snapog/src/dashboard/pages.ts
     hash: 6a33d1b6152ee8ea3ee6f5617105ce757c915627156072dd9cb1f3b78e32b4af
   - path: projects/_archive/snapog/src/index.ts
@@ -13,16 +19,16 @@ sources:
     hash: bfc8c9e61038224564b61c55c627b2d86d9ba2514dd47f64a717e94f0be8b810
   - path: projects/_archive/snapog/src/types.ts
     hash: 1551e13c618a1b8ceaa8b5189318810934889c1d4e822425cb830e7efb45bc15
-sources_digest: d4343ceffc68f713a6dcfc6ae45ec31bd030d35d94d34d04ef9190c816f7239c
+sources_digest: 1a87b4cdfd1718b1eebb0e73565e7b10f1b9a8ec214fa5402635453e12a9d026
 links:
-  - to: snapog-cost-alerting-cron
+  - to: snapog-cost-alerts
     relation: uses
-    description: The scheduled handler invokes runCostAlertCheck from ./alerts.
-  - to: snapog-d1-schema
-    relation: depends_on
     description: >-
-      Relies on the D1 tables (users, api_keys, usage_events,
-      api_key_cache_keys) for persistence and rate limiting.
+      The scheduled cron handler invokes runCostAlertCheck from the alerts
+      module.
+  - to: snapog-north-star-metric
+    relation: produces
+    description: The usage_events and api_keys tables feed the WAP queries.
 generator:
   version: 1
 covers:
@@ -126,12 +132,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A Hono-based Cloudflare Worker that generates Open Graph images on demand, with D1 persistence (users, API keys, usage events, cache-key tracking) and R2 image caching. Hashes API keys before storage, counts usage even on cache hits, enforces a free-tier watermark, and caps distinct cache keys per key per month (beyond which /og still renders but skips R2 put and returns X-Cache: BYPASSED) to prevent unique-URL storage abuse. Uses waitUntil for fire-and-forget operations.
+A Hono-based Cloudflare Worker that generates Open Graph images on demand, with D1 persistence (users, api_keys, usage_events, cache-key tracking) and R2 caching. Hashes API keys before storage, counts usage even on cache hits, enforces a per-key monthly cache-key cap (beyond which /og still renders but skips R2 writes and returns X-Cache: BYPASSED), and uses waitUntil for fire-and-forget operations. Includes a scheduled cost-alert cron and a server-rendered landing/dashboard.
 
 ## Related
 
-- uses [[snapog-cost-alerting-cron]] — The scheduled handler invokes runCostAlertCheck from ./alerts.
-- depends on [[snapog-d1-schema]] — Relies on the D1 tables (users, api_keys, usage_events, api_key_cache_keys) for persistence and rate limiting.
+- uses [[snapog-cost-alerts]] — The scheduled cron handler invokes runCostAlertCheck from the alerts module.
+- produces [[snapog-north-star-metric]] — The usage_events and api_keys tables feed the WAP queries.
 <!-- context:generated:end -->
 
 ## Notes

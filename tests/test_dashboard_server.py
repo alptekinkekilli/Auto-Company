@@ -542,3 +542,40 @@ class WeeklyCostWindowTests(unittest.TestCase):
         out = self._summary_for(log)
         self.assertEqual(out["totalUsd"], 4.0)
         self.assertEqual(out["weekUsd"], 1.0)
+
+
+class LiveBudgetGateDisplayTests(unittest.TestCase):
+    """'Budget / interval: $40 cap' fosili (operatör buldu, 2026-08-24): eski
+    'Window budget' satırı 07-30'da emekli oldu ama kalıcı logdaki Temmuz satırı
+    paneli besliyordu. Canlı 'Budget gates' bannerı ve [BUDGET] gate satırı
+    parse edilmeli; fosil yalnız fallback."""
+
+    def test_engine_runtime_parses_live_gate_banner_last_match(self):
+        log = (
+            "[2026-07-22 10:00:00] Window budget: $40 per 18000s\n"
+            "[2026-08-24 09:46:36] Interval: 3600s | Timeout: 1200s\n"
+            "[2026-08-24 09:46:36] Budget gates (all notional): Claude 5h $∞ | "
+            "Codex 5h $∞ | Daily TOTAL $500 (UTC day) | Weekly TOTAL $2500 (rolling)\n"
+        )
+        with mock.patch.object(dashboard_server, "read_text_file",
+                               lambda p, d="": log if p == dashboard_server.LOG_FILE else ""):
+            out = dashboard_server.read_engine_runtime()
+        self.assertEqual(out["dailyBudget"], "500")
+        self.assertEqual(out["weeklyBudget"], "2500")
+        self.assertEqual(out["windowBudget"], "40")  # fosil yalnız fallback alanı
+
+    def test_cost_summary_carries_last_budget_gate_line(self):
+        now = datetime.now(timezone.utc)
+        stamp = now.strftime("[%Y-%m-%d %H:%M:%S]")
+        log = (
+            f"{stamp} [BUDGET] Claude 5h $0/$∞ | Codex 5h $1/$∞ | "
+            "Daily TOTAL $10.6360/$500 | Weekly TOTAL $28.4601/$2500\n"
+            f"{stamp} Cycle #1 [OK] Completed (cost: 1.0, subtype: success)\n"
+        )
+        with mock.patch.object(dashboard_server, "read_text_file",
+                               lambda p, d="": log if p == dashboard_server.LOG_FILE else ""), \
+             mock.patch.object(dashboard_server, "read_ccusage", lambda: {"available": False}):
+            out = dashboard_server.read_cost_summary()
+        self.assertEqual(out["gateDailyUsd"], 10.636)
+        self.assertEqual(out["gateDailyCap"], 500.0)
+        self.assertEqual(out["gateWeeklyCap"], 2500.0)

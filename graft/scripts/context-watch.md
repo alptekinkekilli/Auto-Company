@@ -1,4 +1,4 @@
-# scripts/context-watch.py · [[session-hygiene-and-context-window-guards]]
+# scripts/context-watch.py · [[context-watch-compact-preflight]]
 
 A Claude Code hook that watches context-window fullness from the last assistant message's usage and emits warning/compact-ritual messages at 50%/60% thresholds, once per session, re-arming after a compact.
 

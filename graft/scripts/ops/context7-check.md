@@ -1,4 +1,4 @@
-# scripts/ops/context7-check.py · [[jcode-event-stream-utilities]]
+# scripts/ops/context7-check.py · [[context-directive-integrity]] [[jcode-event-stream-utilities]]
 
 CLI check that audits cycle ndjson logs to flag cycles that wrote code importing an external library without calling Context7, reporting to the log rather than blocking.
 

@@ -1,6 +1,6 @@
-# dashboard/app.js · [[dashboard-browser-cockpit]]
+# dashboard/app.js · [[cockpit-dashboard]]
 
-Client-side dashboard controller that polls the status API and renders live system state, controls, and cost/usage panels.
+The dashboard's client-side controller: polls /api/status, renders live guardian/daemon/loop/autostart state, cost, directive, and hold controls, and wires all cockpit buttons.
 
 - escapeHtml · function · L89-L96 — Escapes HTML special characters in text to prevent injection when rendering user/API content.
 - renderInlineMarkdown · function · L98-L105 — Converts inline markdown (links, code, bold, italic) into safe HTML for display.
@@ -10,38 +10,38 @@ Client-side dashboard controller that polls the status API and renders live syst
 - classForState · function · L191-L213 — Maps a component kind and state to a CSS status class (good/warn/bad) for the dashboard cards.
 - applyCardState · function · L215-L218 — Applies the status class to a card element, clearing previous status classes.
 - formatTime · function · L220-L226 — Formats an ISO timestamp as a localized string, falling back to the raw text on parse failure.
-- renderStateList · function · L228-L255 — Builds the state summary list rows from parsed status, state file, and router data.
+- renderStateList · function · L228-L257 — Builds the key/value state summary table from parsed status, state file, and router data, including the routed engine/model and budget ladder.
 - ladder · function · L234-L234 — Joins a model ladder array into a display string, or a dash when empty.
-- fetchStatus · function · L257-L317 — Polls the status API and updates every dashboard panel, health pulse, and derived controls.
-- renderCost · function · L319-L362 — Renders cost panel values and sets the credit badge based on whether overflow credits are off or a credit reason is present.
-- usd · function · L320-L320 — Formats a number as a two-decimal USD string.
-- renderCcusage · function · L364-L384 — Renders the ccusage cost block, failing open (hiding it) when ccusage data is unavailable.
-- usd · function · L366-L366 — Formats a number as a two-decimal USD string.
-- renderHold · function · L390-L400 — Renders the hold/release badge and button states based on whether the loop is held.
-- setHold · function · L402-L432 — Arms or releases a loop hold via the API, prompting for a reason and guarding non-operator latches.
-- renderDirective · function · L434-L449 — Renders the current directive text and status badge, or a none placeholder.
-- submitDirective · function · L451-L494 — Submits a new directive, and on a PENDING refusal asks the operator to deliberately supersede it.
-- send · function · L462-L467 — POSTs a directive to the API, optionally allowing pending overwrite.
-- renderSettings · function · L496-L516 — Renders settings form fields from the loaded settings object.
-- gatherSettings · function · L518-L525 — Collects current settings form values into an object for saving.
-- loadIdeas · function · L528-L548 — Fetches and renders the ideas list from the API.
-- loadToolUsage · function · L551-L586 — Loads and renders per-tool usage data from the API into the tool usage panel.
-- loadAnalysis · function · L590-L614 — Fetches and renders the analyst analysis output.
-- renderAnalystTrigger · function · L618-L631 — Renders the analyst trigger state and enables/disables the run-now button.
-- runAnalystNow · function · L633-L650 — Triggers an analyst run via the API and reports the result.
-- extractDirective · function · L656-L668 — Extracts the directive text from markdown content.
-- copyToBtn · function · L670-L678 — Copies text to the clipboard and gives button feedback.
-- loadDirectiveTemplates · function · L692-L724 — Loads and renders directive templates from the API.
-- loadSettings · function · L727-L735 — Fetches settings and renders them into the form.
-- saveSettings · function · L737-L766 — Saves settings via the API, optionally triggering a redeploy.
-- setWakeAvailability · function · L772-L779 — Enables or disables the wake button based on whether the loop is held.
-- wakeLoop · function · L781-L798 — Wakes the loop via the API and refreshes status.
-- resetAutoTimer · function · L801-L814 — Resets the auto-refresh timer to the configured interval.
-- notifiedIds · function · L890-L897 — Reads the set of already-notified operator request IDs from storage.
-- rememberNotified · function · L899-L906 — Persists the set of notified operator request IDs to storage.
-- renderNotifyButton · function · L908-L926 — Renders the notify button state based on pending operator requests.
-- announceNewRequests · function · L928-L948 — Alerts the operator to newly arrived operator requests that haven't been notified yet.
-- opreqPanelBusy · function · L956-L963 — Returns whether the operator request panel is currently busy with a request.
-- renderOperatorRequests · function · L965-L1024 — Renders the operator request list and decision buttons from the payload.
-- submitDecision · function · L1026-L1065 — Submits an operator's approve/reject decision for a request via the API.
-- loadOperatorRequests · function · L1067-L1074 — Fetches and renders the operator request list from the API.
+- fetchStatus · function · L259-L319 — Polls the status API and updates every dashboard panel, health pulse, and derived controls.
+- renderCost · function · L321-L369 — Renders cost panel values, choosing between gated daily cap and 5h window display, weekly headline figures, and the credit-badge state.
+- usd · function · L322-L322 — Formats a number as a two-decimal USD string.
+- renderCcusage · function · L371-L391 — Renders the ccusage cost block, failing open (hiding it) when ccusage data is unavailable.
+- usd · function · L373-L373 — Formats a number as a two-decimal USD string.
+- renderHold · function · L397-L407 — Renders the hold/release badge and button states based on whether the loop is held.
+- setHold · function · L409-L439 — Arms or releases a loop hold via the API, prompting for a reason and guarding non-operator latches.
+- renderDirective · function · L441-L456 — Renders the current directive text and status badge, or a none placeholder.
+- submitDirective · function · L458-L501 — Submits a new directive, and on a PENDING refusal asks the operator to deliberately supersede it.
+- send · function · L469-L474 — POSTs a directive to the API, optionally allowing pending overwrite.
+- renderSettings · function · L503-L523 — Renders settings form fields from the loaded settings object.
+- gatherSettings · function · L525-L532 — Collects current settings form values into an object for saving.
+- loadIdeas · function · L535-L555 — Fetches and renders the ideas list from the API.
+- loadToolUsage · function · L558-L593 — Loads and renders per-tool usage data from the API into the tool usage panel.
+- loadAnalysis · function · L597-L621 — Fetches and renders the analyst analysis output.
+- renderAnalystTrigger · function · L625-L638 — Renders the analyst trigger state and enables/disables the run-now button.
+- runAnalystNow · function · L640-L657 — Triggers an analyst run via the API and reports the result.
+- extractDirective · function · L663-L675 — Extracts the directive text from markdown content.
+- copyToBtn · function · L677-L685 — Copies text to the clipboard and gives button feedback.
+- loadDirectiveTemplates · function · L699-L731 — Loads and renders directive templates from the API.
+- loadSettings · function · L734-L742 — Fetches settings and renders them into the form.
+- saveSettings · function · L744-L773 — Saves settings via the API, optionally triggering a redeploy.
+- setWakeAvailability · function · L779-L786 — Enables or disables the wake button based on whether the loop is held.
+- wakeLoop · function · L788-L805 — Wakes the loop via the API and refreshes status.
+- resetAutoTimer · function · L808-L821 — Resets the auto-refresh timer to the configured interval.
+- notifiedIds · function · L897-L904 — Reads the set of already-notified operator request IDs from storage.
+- rememberNotified · function · L906-L913 — Persists the set of notified operator request IDs to storage.
+- renderNotifyButton · function · L915-L933 — Renders the notify button state based on pending operator requests.
+- announceNewRequests · function · L935-L955 — Alerts the operator to newly arrived operator requests that haven't been notified yet.
+- opreqPanelBusy · function · L963-L970 — Returns whether the operator request panel is currently busy with a request.
+- renderOperatorRequests · function · L972-L1031 — Renders the operator request list and decision buttons from the payload.
+- submitDecision · function · L1033-L1072 — Submits an operator's approve/reject decision for a request via the API.
+- loadOperatorRequests · function · L1074-L1081 — Fetches and renders the operator request list from the API.

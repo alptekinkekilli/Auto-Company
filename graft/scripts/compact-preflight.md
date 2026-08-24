@@ -1,4 +1,4 @@
-# scripts/compact-preflight.py · [[session-hygiene-and-context-window-guards]]
+# scripts/compact-preflight.py · [[context-watch-compact-preflight]]
 
 Pre-compact hook that measures what would be lost in a compact and writes a report to /tmp for the post-compact session-brief to carry forward.
 

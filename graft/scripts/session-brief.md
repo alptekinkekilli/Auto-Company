@@ -1,4 +1,4 @@
-# scripts/session-brief.py
+# scripts/session-brief.py · [[session-context-injection]]
 
 SessionStart hook that injects a measured, non-stale session briefing into the context, never blocking the session.
 

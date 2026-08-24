@@ -1,4 +1,4 @@
-# scripts/ops/idle-skip-note.py · [[atomic-write-read-back-verification]] [[state-snapshot-idle-skip-audit-trail]]
+# scripts/ops/idle-skip-note.py · [[atomic-write-read-back-verification]] [[state-snapshot-idle-detection]] [[state-snapshot-idle-skip-audit-trail]]
 
 Records a model-free idle-skip as one line per UTC day in consensus.md, updated in place and written atomically, so the loop leaves auditable 'checked, nothing moved' evidence without bloating the prompt.
 

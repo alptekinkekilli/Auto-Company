@@ -1,6 +1,6 @@
 ---
-name: SnapOG cost-alerting cron
-slug: snapog-cost-alerting-cron
+name: SnapOG Cost Alerts
+slug: snapog-cost-alerts
 type: system
 sources:
   - path: projects/_archive/snapog/src/alerts/check.ts
@@ -15,9 +15,9 @@ sources:
     hash: 518ec45652bc5010bbd34856e527e2dc9c2dfa525aea151ff467f3a802c9da81
 sources_digest: fe1d8fd6fcb0f308eb0c4072f436e2986ea169f87521e188c20ca981540b20fa
 links:
-  - to: snapog-og-image-service
+  - to: snapog-service
     relation: part_of
-    description: Triggered by the scheduled handler in the same Worker.
+    description: The cron entry point is wired into the Worker's scheduled handler.
 generator:
   version: 1
 covers:
@@ -67,11 +67,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A six-hourly cron pipeline that runs five independent cost checks against D1 (D1 writes/day, 14-day cache hit rate, new signups, active users, R2 storage via a thin GraphQL client) and posts fired alerts to a webhook, falling back to log-only mode when ALERT_WEBHOOK_URL is unset. Checks are deliberately isolated—a thrown error is treated as no alert to prevent false positives—and thresholds live in one file so the CFO can revise them without touching check logic.
+A six-hourly cron pipeline that runs five independent cost checks against D1 (D1 writes/day, 14-day cache hit rate, new signups, active users, R2 storage via a thin GraphQL client to the Cloudflare Analytics API) and posts fired alerts to a webhook, falling back to log-only mode when ALERT_WEBHOOK_URL is unset. Thresholds are isolated in one file sourced from the CFO cost model so they can be revised without touching check logic. Checks are deliberately isolated — a thrown error is treated as no alert to prevent false positives.
 
 ## Related
 
-- part of [[snapog-og-image-service]] — Triggered by the scheduled handler in the same Worker.
+- part of [[snapog-service]] — The cron entry point is wired into the Worker's scheduled handler.
 <!-- context:generated:end -->
 
 ## Notes
