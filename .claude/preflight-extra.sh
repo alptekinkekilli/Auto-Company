@@ -31,7 +31,12 @@ docker exec -u app "$C" sh -c "
   else
     echo HOLD=released
   fi
+  # state-snapshot.py state dosyasini YAZAR ve DELTA tuketir - loop bir sonraki
+  # cycle degisikligi goremez olur; cevresinde save/restore zorunlu.
+  # 2026-08-24: KARAR-001 deltasini bu satir iki kez tuketti.
+  cp logs/state-snapshot-last.json /tmp/ss-preflight-bak 2>/dev/null
   timeout 6 python3 scripts/ops/state-snapshot.py --app /app 2>/dev/null | grep -E \"^opreq:\"
+  [ -f /tmp/ss-preflight-bak ] && mv /tmp/ss-preflight-bak logs/state-snapshot-last.json
   echo COCKPIT=\$(curl -s -o /dev/null -w \"%{http_code}\" -m5 http://127.0.0.1:8787/api/status)
 "
 ' 2>/dev/null)
