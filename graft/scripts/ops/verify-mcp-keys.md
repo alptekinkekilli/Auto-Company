@@ -1,4 +1,4 @@
-# scripts/ops/verify-mcp-keys.py · [[jcode-mcp-config-probe]] [[secret-handling-discipline]]
+# scripts/ops/verify-mcp-keys.py · [[mcp-boot-config]] [[secret-handling]]
 
 Post-deploy check that each MCP server's key is present and well-shaped in the loop process's own environment, without ever printing a secret.
 

@@ -1,4 +1,4 @@
-# scripts/ops/extract-axis-evidence.py · [[fail-closed-verification-invariant]] [[registry-directive-hygiene]]
+# scripts/ops/extract-axis-evidence.py · [[fail-closed-verification-invariant]] [[registry-directive-maintenance]]
 
 Extracts every screened axis heading with its body from discovery scan markdown files and writes an evidence pack, failing closed if any heading has an empty body or counts mismatch.
 

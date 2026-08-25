@@ -78,6 +78,7 @@ else
   if ! docker run -d --name "$RUN" --entrypoint sleep \
     -v z12a992i3ty202zezspij2fn-ac-memories:/app/memories \
     -v z12a992i3ty202zezspij2fn-ac-logs:/app/logs \
+    -v z12a992i3ty202zezspij2fn-ac-projects:/app/projects:ro \
     -v jcode-pilot-home:/home/app/.jcode \
     -e JCODE_NO_TELEMETRY=1 -u app "$IMG" 7200 >/dev/null 2>>"$LOG"; then
     echo "$(ts) FAILED — could not start one-shot container from $IMG [engine=jcode]" >> "$LOG"

@@ -1,4 +1,4 @@
-# scripts/core/jcode-mcp-probe.py · [[fail-closed-verification-invariant]] [[jcode-mcp-config-probe]] [[mcp-config-key-handling]]
+# scripts/core/jcode-mcp-probe.py · [[fail-closed-verification-invariant]] [[mcp-boot-config]] [[mcp-config-key-handling]]
 
 Deterministic MCP boot probe that speaks the MCP protocol itself to verify config/manifest parity, tool reachability, destructive-tool denylist coverage, and a real read-only call per server, failing closed on any mismatch.
 

@@ -1,5 +1,5 @@
 ---
-name: Loop lifecycle & monitoring
+name: loop lifecycle & monitoring
 slug: loop-lifecycle-monitoring
 type: system
 sources:
@@ -13,22 +13,15 @@ sources:
     hash: 0f0aaa7c6c79e6c7844c7528a253084811b9a9b7277f557a1a60a8011347f4d9
   - path: scripts/linux/status-linux.sh
     hash: 1dc4a455fe8ffdd5e1696608d50d02311afd701906d80ee26d5708374d3947d8
-  - path: scripts/macos/install-daemon.sh
-    hash: 21f1e9576d7552530f20812f04232c75a2dadb4a7f5e3819045a35dec10037e9
   - path: scripts/macos/status-mac.sh
     hash: ba8bc08141ca80245bea6ccb35984221942d6a855ce856e5a492a38c4c151418
-sources_digest: 70f5124c9f4a6e9fe9a49ad0f8ac9841733a80e231959a056c0bf40e73807226
+sources_digest: f880e71455c50baed0b45c470cb71718ba08261b03ed3e9ba876f142465c9baf
 links:
-  - to: cost-budget-calibration
-    relation: produces
-    description: >-
-      The loop's logs and state files are the inputs the cost-audit and
-      budget-calibration scripts parse.
-  - to: operator-escalation-notification
+  - to: macos-daemon-install
     relation: uses
     description: >-
-      Sentry heartbeat and status reports feed the same operator-facing
-      channels.
+      status-mac and monitor inspect the launchd LaunchAgent installed by
+      install-daemon.sh.
 generator:
   version: 1
 covers: []
@@ -36,12 +29,11 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-The background-loop control plane: graceful stop (signal file plus SIGTERM), pause/resume of the macOS launchd daemon, live operator monitoring (status, last cycle, cycle history), and a Sentry heartbeat that proves the process tree is alive to catch crash-loops that app-level error reporting misses. Platform-specific status scripts emit the same Key=Value format the dashboard parses, with the Linux/container variant marking sleep guard not_applicable and deferring lifecycle to Coolify.
+Bash scripts that manage and observe the background auto-loop: graceful stop, live monitor, sentry heartbeat, and platform-specific status reports. Coordinate via shared runtime artifacts (.auto-loop.pid, .auto-loop-paused, .auto-loop-state) and the consensus memory file.
 
 ## Related
 
-- produces [[cost-budget-calibration]] — The loop's logs and state files are the inputs the cost-audit and budget-calibration scripts parse.
-- uses [[operator-escalation-notification]] — Sentry heartbeat and status reports feed the same operator-facing channels.
+- uses [[macos-daemon-install]] — status-mac and monitor inspect the launchd LaunchAgent installed by install-daemon.sh.
 <!-- context:generated:end -->
 
 ## Notes

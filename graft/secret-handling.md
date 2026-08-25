@@ -1,25 +1,25 @@
 ---
-name: Secret handling discipline
-slug: secret-handling-discipline
+name: secret handling
+slug: secret-handling
 type: concept
 sources:
   - path: scripts/core/jcode-mcp-config.py
     hash: 69e213cd234def194fee047d846a0c29f3c11edb07d7c7421fde188d1f75121c
-  - path: scripts/ops/airtable-read.py
-    hash: 148f66145510c90e03256b7b37853122bcd892d51cba67f095ce700a0895e3e2
+  - path: scripts/core/telegram-notify.sh
+    hash: a6b475c3d6e94b205066d93a4054681477be96876b0f8eac60b47f13ab2573ef
   - path: scripts/ops/airtable-write.py
     hash: 888d408c392193511145e11dfbe73841a6d7e3e743e396ab8c8fee8b9507ab7c
-  - path: scripts/ops/docker-prune-safe.sh
-    hash: 7f22912e40c9235114d147f0fb3949880a970ed7104ffcee964c37b187a1cb1d
   - path: scripts/ops/linear-track.py
     hash: 5a0cc4bf3713dd3351302a4e9ed446432c92217afdbefd6fa9ee87a9ccd4f730
   - path: scripts/ops/verify-mcp-keys.py
     hash: a35c1f35481876cedc5bb4cf0c7fd4eceaea1c85e57d3c28e87560b3f9f342db
-sources_digest: 32749d56cba22a841096270cc377ad29c11f370be1f9b405c8cc5bcca8a79484
+sources_digest: 4234347187a5483a287872819d1d63f25bf364da7e318b46af5c679d9a2b24ae
 links:
-  - to: atomic-write-read-back-verification
-    relation: uses
-    description: Secret-bearing state files are written atomically to avoid partial reads.
+  - to: mcp-boot-config
+    relation: implements
+    description: >-
+      verify-mcp-keys and config generation embody the no-argv, no-print secret
+      rules.
 generator:
   version: 1
 covers:
@@ -35,36 +35,6 @@ covers:
   - symbol: main
     kind: function
     at: 'scripts/core/jcode-mcp-config.py:L151-L258'
-  - symbol: Refusal
-    kind: class
-    at: 'scripts/ops/airtable-read.py:L68-L69'
-  - symbol: load_env
-    kind: function
-    at: 'scripts/ops/airtable-read.py:L72-L92'
-  - symbol: load_keychain
-    kind: function
-    at: 'scripts/ops/airtable-read.py:L95-L111'
-  - symbol: build_params
-    kind: function
-    at: 'scripts/ops/airtable-read.py:L114-L173'
-  - symbol: encode
-    kind: function
-    at: 'scripts/ops/airtable-read.py:L176-L183'
-  - symbol: to_body
-    kind: function
-    at: 'scripts/ops/airtable-read.py:L186-L198'
-  - symbol: request
-    kind: function
-    at: 'scripts/ops/airtable-read.py:L201-L217'
-  - symbol: fetch
-    kind: function
-    at: 'scripts/ops/airtable-read.py:L220-L239'
-  - symbol: clip
-    kind: function
-    at: 'scripts/ops/airtable-read.py:L242-L248'
-  - symbol: main
-    kind: function
-    at: 'scripts/ops/airtable-read.py:L251-L343'
   - symbol: load_env
     kind: function
     at: 'scripts/ops/airtable-write.py:L46-L62'
@@ -123,11 +93,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Secrets are never passed as argv (to avoid ps leaks), never printed, and loaded from runtime.env or the macOS Keychain, with a GUI-launched-process fallback because interactive-shell env vars are absent. jcode-mcp-config keeps header secrets unexpanded in argv; airtable-read/write and linear-track load from env or Keychain; verify-mcp-keys inspects /proc/<pid>/environ rather than a fresh docker exec shell; docker-prune-safe avoids dot-sourcing runtime.env because its values contain '|'.
+Secrets are never passed as argv (to avoid ps leaks), never printed, and loaded from env, logs/runtime.env, or macOS Keychain. Config generation keeps header secrets unexpanded in argv; verify-mcp-keys reads /proc/<pid>/environ rather than a fresh shell; telegram-notify.sh no-ops when tokens are unset.
 
 ## Related
 
-- uses [[atomic-write-read-back-verification]] — Secret-bearing state files are written atomically to avoid partial reads.
+- implements [[mcp-boot-config]] — verify-mcp-keys and config generation embody the no-argv, no-print secret rules.
 <!-- context:generated:end -->
 
 ## Notes

@@ -1,4 +1,4 @@
-# scripts/ops/cost-audit.py · [[cost-budget-calibration]]
+# scripts/ops/cost-audit.py · [[cost-budget-reporting]] [[policy-cutover-splitting]]
 
 Deterministic daily cost audit that reads on-disk logs and writes memories/cost-audit.md so the Opportunity Analyst interprets measured numbers instead of computing them.
 

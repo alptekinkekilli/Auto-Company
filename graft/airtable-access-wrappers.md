@@ -1,22 +1,21 @@
 ---
-name: Airtable ops wrappers
-slug: airtable-ops-wrappers
+name: Airtable access wrappers
+slug: airtable-access-wrappers
 type: system
 sources:
   - path: scripts/ops/airtable-read.py
     hash: 148f66145510c90e03256b7b37853122bcd892d51cba67f095ce700a0895e3e2
   - path: scripts/ops/airtable-write.py
     hash: 888d408c392193511145e11dfbe73841a6d7e3e743e396ab8c8fee8b9507ab7c
-sources_digest: 43a42c7621b93d8e35ed7813326f7b761e954384d076a4d1b176afa770c1b952
+  - path: scripts/ops/send-gate.py
+    hash: 6acd746a20aff7267d711d61350ac14d8fa0c17a1af95341625aa2bfd9a63f92
+sources_digest: 216a016c643b30a46b250287e6b0f6b77a79494d30f855f4e0b12206add12ec2
 links:
-  - to: jcode-mcp-config-probe
-    relation: uses
-    description: Shares the Airtable API key and base id that the probe verifies.
-  - to: outreach-eligibility-g4-verification
+  - to: operator-escalation-notification
     relation: uses
     description: >-
-      send-gate.py and g4-check.py read the same Registry/Outreach tables
-      through these wrappers.
+      send-gate decides whether outreach rows may be emailed; reply-watch then
+      watches those rows.
 generator:
   version: 1
 covers:
@@ -68,16 +67,51 @@ covers:
   - symbol: main
     kind: function
     at: 'scripts/ops/airtable-write.py:L145-L202'
+  - symbol: phase_of
+    kind: function
+    at: 'scripts/ops/send-gate.py:L66-L91'
+  - symbol: body_claims
+    kind: function
+    at: 'scripts/ops/send-gate.py:L94-L101'
+  - symbol: load_key
+    kind: function
+    at: 'scripts/ops/send-gate.py:L104-L122'
+  - symbol: air
+    kind: function
+    at: 'scripts/ops/send-gate.py:L125-L135'
+  - symbol: sent_rows
+    kind: function
+    at: 'scripts/ops/send-gate.py:L138-L148'
+  - symbol: logged_sends
+    kind: function
+    at: 'scripts/ops/send-gate.py:L154-L177'
+  - symbol: counts
+    kind: function
+    at: 'scripts/ops/send-gate.py:L180-L198'
+  - symbol: opted_out
+    kind: function
+    at: 'scripts/ops/send-gate.py:L201-L215'
+  - symbol: body_leak_scan
+    kind: function
+    at: 'scripts/ops/send-gate.py:L236-L244'
+  - symbol: g4_live
+    kind: function
+    at: 'scripts/ops/send-gate.py:L247-L309'
+  - symbol: decide
+    kind: function
+    at: 'scripts/ops/send-gate.py:L312-L544'
+  - symbol: main
+    kind: function
+    at: 'scripts/ops/send-gate.py:L547-L583'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-Scoped, auditable access to Airtable outside the MCP cycle. airtable-read.py refuses unscoped reads (which cost $2.41 in context re-reads) and paginates with a POST fallback past a URL-length threshold; airtable-write.py is a single-record PATCH path with dry-run default, read-back verification, and guards against clearing or replacing substantial content. Both load secrets from runtime.env or the macOS Keychain, never argv.
+Scoped, auditable Airtable access: a read wrapper that refuses unscoped reads, a single-record write wrapper with dry-run default and data-loss guards, and the send-gate eligibility brake. Enforce that cycles never pull whole tables and writes are one-record, verified, and reversible.
 
 ## Related
 
-- uses [[jcode-mcp-config-probe]] — Shares the Airtable API key and base id that the probe verifies.
-- uses [[outreach-eligibility-g4-verification]] — send-gate.py and g4-check.py read the same Registry/Outreach tables through these wrappers.
+- uses [[operator-escalation-notification]] — send-gate decides whether outreach rows may be emailed; reply-watch then watches those rows.
 <!-- context:generated:end -->
 
 ## Notes

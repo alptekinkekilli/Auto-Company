@@ -1,6 +1,6 @@
 ---
-name: jcode MCP config & probe
-slug: jcode-mcp-config-probe
+name: MCP boot & config
+slug: mcp-boot-config
 type: system
 sources:
   - path: scripts/core/jcode-mcp-config.py
@@ -11,16 +11,11 @@ sources:
     hash: a35c1f35481876cedc5bb4cf0c7fd4eceaea1c85e57d3c28e87560b3f9f342db
 sources_digest: 25e5b115257e521f78f7ce4c017495308aefca86986825f521f62a663e14ff0c
 links:
-  - to: airtable-ops-wrappers
-    relation: configures
-    description: >-
-      The probe verifies Airtable/Linear/Context7 keys and tool surfaces that
-      the ops wrappers rely on.
   - to: jcode-event-stream-utilities
     relation: produces
     description: >-
-      The probe's evidence and config gate what MCP tools the event-stream tools
-      can count.
+      The boot gate's config and probe evidence determine which cycle ndjson
+      logs the audit tools later parse.
 generator:
   version: 1
 covers:
@@ -91,12 +86,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Generates and verifies jcode's MCP server configuration. jcode-mcp-config.py rewrites a project .mcp.json into ~/.jcode/mcp.json, wrapping HTTP/SSE servers in the mcp-remote stdio bridge and keeping header secrets unexpanded in argv to avoid ps leaks. jcode-mcp-probe.py then speaks JSON-RPC 2.0 over stdio to each server, enforcing five fail-closed gates (server-set match, handshake timeout, destructive-tool match, denylist coverage, and a mandatory read-only tools/call) and writing atomic evidence for the canary audit.
+Generates the jcode MCP server config from .mcp.json, probes servers at boot with a fail-closed protocol handshake, and verifies deployed API keys. Enforces that the config, manifest, and live server set all agree before the loop is allowed to run.
 
 ## Related
 
-- configures [[airtable-ops-wrappers]] — The probe verifies Airtable/Linear/Context7 keys and tool surfaces that the ops wrappers rely on.
-- produces [[jcode-event-stream-utilities]] — The probe's evidence and config gate what MCP tools the event-stream tools can count.
+- produces [[jcode-event-stream-utilities]] — The boot gate's config and probe evidence determine which cycle ndjson logs the audit tools later parse.
 <!-- context:generated:end -->
 
 ## Notes

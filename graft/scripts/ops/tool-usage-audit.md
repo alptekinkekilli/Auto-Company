@@ -1,4 +1,4 @@
-# scripts/ops/tool-usage-audit.py · [[jcode-event-stream-utilities]] [[tool-usage-audit]]
+# scripts/ops/tool-usage-audit.py · [[atomic-state-writes]] [[jcode-event-stream-utilities]] [[tool-usage-audit]]
 
 Durable per-cycle ledger of tool-consultation counts (ctx7/Airtable/Linear/Browser/graft) appended from finished cycle ndjson, idempotent via a state file, with read-only report and per-MCP-name modes.
 

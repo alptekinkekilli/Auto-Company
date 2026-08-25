@@ -1,5 +1,5 @@
 ---
-name: Fail-closed verification invariant
+name: fail-closed verification invariant
 slug: fail-closed-verification-invariant
 type: concept
 sources:
@@ -15,9 +15,9 @@ sources:
     hash: 008b4735e6133445eff667f840f9c7faaeef8013b1363f6555b602a9d6fd048c
 sources_digest: 899b7727590c913dcdd5c5b6e36bdcd918d32b16feef795435fc1e1445fde092
 links:
-  - to: outreach-eligibility-g4-verification
+  - to: airtable-access-wrappers
     relation: implements
-    description: The gatekeeping layer is the primary embodiment of this invariant.
+    description: send-gate's REFUSE-on-incomplete is the canonical instance.
 generator:
   version: 1
 covers:
@@ -151,11 +151,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A cross-cutting design rule: any check that cannot complete is a REFUSE/error, never an ALLOW or silent success. It appears in send-gate (incomplete check = REFUSE), site-contact-evidence (non-rendered fetch = inconclusive, never negative), extract-axis-evidence (any mismatch exits non-zero), registry-archive (invariant violation writes nothing), and the MCP probe's five fail-closed gates. The rationale is that a false ALLOW or a silently-omitted finding is worse than a false block.
+Across the codebase, any check that cannot complete is a REFUSE/error, never an ALLOW or silent success: send-gate refuses on incomplete checks, site-contact-evidence treats unrendered fetches as inconclusive, extract-axis-evidence fails on empty bodies, registry-archive verifies via SHA-256 before writing, and probe gates fail closed. The pattern is that absence of evidence is never treated as evidence of absence.
 
 ## Related
 
-- implements [[outreach-eligibility-g4-verification]] — The gatekeeping layer is the primary embodiment of this invariant.
+- implements [[airtable-access-wrappers]] — send-gate's REFUSE-on-incomplete is the canonical instance.
 <!-- context:generated:end -->
 
 ## Notes

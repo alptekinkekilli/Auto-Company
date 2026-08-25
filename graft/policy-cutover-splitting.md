@@ -1,7 +1,7 @@
 ---
-name: Cost & budget calibration
-slug: cost-budget-calibration
-type: system
+name: policy cutover splitting
+slug: policy-cutover-splitting
+type: concept
 sources:
   - path: scripts/ops/bloat-trend.py
     hash: f74441749dee8335f3eb7b9fa4626fcde6b9903cf0006019a261e8c35115fe26
@@ -9,18 +9,11 @@ sources:
     hash: 4773ab252d5a928ff27a3bb15b9df63d086258a96e76d0d679ebeba49985be21
   - path: scripts/ops/cost-audit.py
     hash: f861b3352eb593e372a5a81bdaa068411ec3c7aa179e78df814b68dafffd08f7
-  - path: scripts/ops/operator-usage-report.sh
-    hash: c469a1b0ab7be7c2c839b0ba0cf5a73d755ffd7f6e3d9891f924e61f1428eb4b
-sources_digest: 4ddbcce6351c9cc1bbbb160a5c067d01d2288edd941b2d50deb531426001786c
+sources_digest: a7de95e6ae47c5ade03f1de2a4f7e5613041ab1419ddd9d9f4b164786859b1cd
 links:
-  - to: loop-lifecycle-monitoring
-    relation: uses
-    description: >-
-      Parses auto-loop.log, spend-total.log, and operator-usage.json produced by
-      the loop.
-  - to: operator-escalation-notification
-    relation: uses
-    description: bloat-trend.py and budget reports alert via telegram-notify.sh.
+  - to: cost-budget-reporting
+    relation: implements
+    description: The cutover constants live in these reporting scripts.
 generator:
   version: 1
 covers:
@@ -103,12 +96,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Deterministic cost accounting and budget reporting that never estimates or modifies thresholds. cost-audit.py writes a six-section markdown report on the previous completed UTC day (a 'today' figure would always be zero at its 04:30 run), classifying findings as company-fixable vs infra OPREQs. budget-calibration-report.py splits pre/post data at CUTOVER_EPOCH (2026-08-10) to avoid blending two pause-gate policies. bloat-trend.py recomputes stored verdicts from raw numbers using current thresholds so comparisons measure cycles, not the ruler. operator-usage-report.sh pushes the operator's ccusage block into the container, its mtime being the freshness signal.
+Several reporting scripts hardcode cutover epochs (CUTOVER_EPOCH 2026-08-10 for the 5-hour gate, 2026-08-02 for turn thresholds) and split pre/post data so comparisons measure cycles, not the ruler. Stored verdicts are recomputed from raw numbers using current thresholds.
 
 ## Related
 
-- uses [[loop-lifecycle-monitoring]] — Parses auto-loop.log, spend-total.log, and operator-usage.json produced by the loop.
-- uses [[operator-escalation-notification]] — bloat-trend.py and budget reports alert via telegram-notify.sh.
+- implements [[cost-budget-reporting]] — The cutover constants live in these reporting scripts.
 <!-- context:generated:end -->
 
 ## Notes

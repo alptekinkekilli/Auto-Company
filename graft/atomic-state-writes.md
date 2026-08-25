@@ -1,27 +1,27 @@
 ---
-name: Atomic write & read-back verification
-slug: atomic-write-read-back-verification
+name: atomic state writes
+slug: atomic-state-writes
 type: concept
 sources:
   - path: scripts/core/jcode-mcp-config.py
     hash: 69e213cd234def194fee047d846a0c29f3c11edb07d7c7421fde188d1f75121c
   - path: scripts/core/operator_request_notify.py
     hash: 520c01aa1d79e0b5137c42b7ac4fac92b3d0b34e53f2e6cded13dae8a046c92a
-  - path: scripts/ops/airtable-write.py
-    hash: 888d408c392193511145e11dfbe73841a6d7e3e743e396ab8c8fee8b9507ab7c
   - path: scripts/ops/idle-skip-note.py
     hash: 1d4f853b19cdc9ee94c0fd1136ea67393d04deb36a7563e2720ef15a0631ec98
   - path: scripts/ops/registry-archive.py
     hash: 125be575d2da1c70effa433e2eabe55e5e7e7851fc89719651a1520bb76ee651
   - path: scripts/ops/state-snapshot.py
     hash: 3112f4632b64a6b531b215ea81ba82b2ceb6436942511f816de94ced3171bfe8
-sources_digest: 0c72ed96664311cf46d30e12a7e36a510487b5b656263279a1862909771ccd4e
+  - path: scripts/ops/tool-usage-audit.py
+    hash: 73a75d68bab3e0b42e31ad3d268b44a8c7ac168b91c6a8d1b2f1b3cd4cdba975
+sources_digest: 1d17ab28d57635714c014832c1a068fbb4bf9fb2143575c2cf598813c4888e2a
 links:
   - to: fail-closed-verification-invariant
     relation: implements
     description: >-
-      Atomic writes are the mechanism that makes fail-closed behavior
-      crash-safe.
+      Atomic writes are the mechanism that makes fail-closed verification safe
+      to rerun.
 generator:
   version: 1
 covers:
@@ -133,24 +133,6 @@ covers:
   - symbol: main
     kind: function
     at: 'scripts/core/operator_request_notify.py:L944-L956'
-  - symbol: load_env
-    kind: function
-    at: 'scripts/ops/airtable-write.py:L46-L62'
-  - symbol: load_keychain
-    kind: function
-    at: 'scripts/ops/airtable-write.py:L65-L80'
-  - symbol: call
-    kind: function
-    at: 'scripts/ops/airtable-write.py:L83-L92'
-  - symbol: guard
-    kind: function
-    at: 'scripts/ops/airtable-write.py:L98-L133'
-  - symbol: show
-    kind: function
-    at: 'scripts/ops/airtable-write.py:L136-L142'
-  - symbol: main
-    kind: function
-    at: 'scripts/ops/airtable-write.py:L145-L202'
   - symbol: build_line
     kind: function
     at: 'scripts/ops/idle-skip-note.py:L26-L34'
@@ -199,15 +181,27 @@ covers:
   - symbol: main
     kind: function
     at: 'scripts/ops/state-snapshot.py:L107-L166'
+  - symbol: calls_from_ndjson
+    kind: function
+    at: 'scripts/ops/tool-usage-audit.py:L43-L65'
+  - symbol: categorize
+    kind: function
+    at: 'scripts/ops/tool-usage-audit.py:L68-L121'
+  - symbol: main
+    kind: function
+    at: 'scripts/ops/tool-usage-audit.py:L124-L251'
+  - symbol: dump
+    kind: function
+    at: 'scripts/ops/tool-usage-audit.py:L177-L190'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-A pervasive durability pattern: writes go to a temp file in the same directory then os.replace, and state files are read back or SHA-verified before being trusted. Used by jcode-mcp-config (temp-file rename), the probe's evidence file, operator_request_notify (atomic state with read-back), idle-skip-note, state-snapshot, registry-archive (SHA-256 before write), and airtable-write (read-back after PATCH). This guarantees crash-safe reruns and prevents partial configs or corrupted state from being observed.
+Nearly every script writes its state via temp-file + os.replace (or temp rename) with read-back verification, and many add mtime compare-and-swap to prevent concurrent edits. This guarantees crash-safe reruns and idempotent dedup (keyed on filename+size+mtime, not name alone, because the cycle counter restarts on container restart).
 
 ## Related
 
-- implements [[fail-closed-verification-invariant]] — Atomic writes are the mechanism that makes fail-closed behavior crash-safe.
+- implements [[fail-closed-verification-invariant]] — Atomic writes are the mechanism that makes fail-closed verification safe to rerun.
 <!-- context:generated:end -->
 
 ## Notes

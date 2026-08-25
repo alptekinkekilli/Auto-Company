@@ -1,22 +1,49 @@
 ---
-name: KİK & Linear workstream tooling
-slug: ki-k-linear-workstream-tooling
+name: workstream & outreach tooling
+slug: workstream-outreach-tooling
 type: system
 sources:
+  - path: scripts/ops/browse-extract.py
+    hash: ec67b37ee0a24df3eb9d5b06f16e7172c456153e7c7b8bd61edc2b54f7543aa1
   - path: scripts/ops/kik-decision-read.py
     hash: 4f2060cbaaa784433de9720f1e9a3bfb3ba6c06cab00fae0efa0a426e5c926de
   - path: scripts/ops/linear-track.py
     hash: 5a0cc4bf3713dd3351302a4e9ed446432c92217afdbefd6fa9ee87a9ccd4f730
-sources_digest: d3e2f6dbe011cf22e28742acea93fc0a1a4170d3d1a27ea034bf85793b5ef6a5
+sources_digest: 6f544ef40b3412b4560c23ef784fbabf3a691be0a7a069ed7f671e26605109ff
 links:
-  - to: outreach-eligibility-g4-verification
+  - to: g4-identity-attribution-evidence
     relation: uses
-    description: >-
-      KİK decisions and Linear tracks carry evidence used in G4/attribution and
-      escalation.
+    description: kik-decision-read shares the decision_text_hash module with the bridge.
 generator:
   version: 1
 covers:
+  - symbol: Gateway
+    kind: class
+    at: 'scripts/ops/browse-extract.py:L45-L83'
+  - symbol: __init__
+    kind: method
+    at: 'scripts/ops/browse-extract.py:L46-L49'
+  - symbol: post
+    kind: method
+    at: 'scripts/ops/browse-extract.py:L51-L67'
+  - symbol: call
+    kind: method
+    at: 'scripts/ops/browse-extract.py:L69-L77'
+  - symbol: handshake
+    kind: method
+    at: 'scripts/ops/browse-extract.py:L79-L83'
+  - symbol: clip
+    kind: function
+    at: 'scripts/ops/browse-extract.py:L86-L91'
+  - symbol: extract
+    kind: function
+    at: 'scripts/ops/browse-extract.py:L94-L119'
+  - symbol: ToolError
+    kind: class
+    at: 'scripts/ops/browse-extract.py:L122-L123'
+  - symbol: main
+    kind: function
+    at: 'scripts/ops/browse-extract.py:L126-L201'
   - symbol: _hasher
     kind: function
     at: 'scripts/ops/kik-decision-read.py:L45-L51'
@@ -72,11 +99,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Single-call fetchers and workstream discipline tools. kik-decision-read.py pulls a Turkish procurement decision page in one curl call (urllib fails TLS on macOS), parsing exact header patterns and dropping quoted legislation so a quoted article is never mistaken for a real exclusion. linear-track.py enforces appending checklist items to long-lived track issues instead of opening new issues, refusing ambiguous cmd_done matches and only creating real issues for three hardcoded justifications.
+Linear track discipline (append checklist items to long-lived issues) and browser/extraction harnesses that collapse multi-turn workflows into single calls (browse-extract, kik-decision-read). Enforce hardcoded justifications for new issues and read-only-by-design extraction.
 
 ## Related
 
-- uses [[outreach-eligibility-g4-verification]] — KİK decisions and Linear tracks carry evidence used in G4/attribution and escalation.
+- uses [[g4-identity-attribution-evidence]] — kik-decision-read shares the decision_text_hash module with the bridge.
 <!-- context:generated:end -->
 
 ## Notes

@@ -1,21 +1,21 @@
 ---
-name: Registry & directive hygiene
-slug: registry-directive-hygiene
+name: registry & directive maintenance
+slug: registry-directive-maintenance
 type: system
 sources:
   - path: scripts/ops/directive-rule-sweep.py
     hash: 7284bd834ff1cf86bcc5f6d104cf23388bf9258dcc827b681f578e6ce7172c57
+  - path: scripts/ops/directive-staleness-watch.py
+    hash: 6597a8a3666b54131d1b782a8d8ee308e705e33dbed83429da857f9b1f0360fd
   - path: scripts/ops/extract-axis-evidence.py
     hash: 3f3d55a2a285cd52ab3b0d286b1f908b877283bfde69b03e442d10758080f567
   - path: scripts/ops/registry-archive.py
     hash: 125be575d2da1c70effa433e2eabe55e5e7e7851fc89719651a1520bb76ee651
-sources_digest: 52f5f2ef401cbc5fc72f21d9a1d1431f48a781ec656d8397b404908218423988
+sources_digest: 851263f33bec13bf12c370da7df4454b529cbbdd032cf4ecfbfc4ed061b62afe
 links:
   - to: operator-escalation-notification
     relation: uses
-    description: >-
-      Directive staleness and rule-sweep findings route to operator
-      notifications.
+    description: directive-staleness-watch notifies via telegram-notify.sh.
 generator:
   version: 1
 covers:
@@ -25,6 +25,15 @@ covers:
   - symbol: covered
     kind: function
     at: 'scripts/ops/directive-rule-sweep.py:L55-L68'
+  - symbol: read_directive
+    kind: function
+    at: 'scripts/ops/directive-staleness-watch.py:L40-L56'
+  - symbol: last_line_matching
+    kind: function
+    at: 'scripts/ops/directive-staleness-watch.py:L59-L66'
+  - symbol: main
+    kind: function
+    at: 'scripts/ops/directive-staleness-watch.py:L69-L165'
   - symbol: die
     kind: function
     at: 'scripts/ops/registry-archive.py:L55-L57'
@@ -56,11 +65,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Maintenance and compliance tooling for the registry and directive files. registry-archive.py deterministically moves stale registry history into monthly archives, enforcing byte-identical protected regions and SHA-256 verification before any write. directive-rule-sweep.py audits which rule-like statements exist only in ephemeral directives and are not backed by standing docs, using a canary fixture to verify its heuristic. extract-axis-evidence.py rebuilds an evidence pack from discovery scans, failing closed on any heading/body mismatch.
+Maintenance and compliance scripts for the candidate registry and human directive: archive stale registry history with SHA-256-verified reconstruction, sweep directive rules for standing-doc coverage, and watch directive staleness. All fail closed and never write outside their own outputs.
 
 ## Related
 
-- uses [[operator-escalation-notification]] — Directive staleness and rule-sweep findings route to operator notifications.
+- uses [[operator-escalation-notification]] — directive-staleness-watch notifies via telegram-notify.sh.
 <!-- context:generated:end -->
 
 ## Notes

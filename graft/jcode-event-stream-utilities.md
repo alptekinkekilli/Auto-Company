@@ -13,11 +13,11 @@ sources:
     hash: 006e9aac95a503a1e158d1c6f03a7bdf98f44322805509d886c627e74d4d41d0
 sources_digest: abdd4bc39eccdd8b14ff239eda058e6a67a4db17e25b504250ef6bd24972f74a
 links:
-  - to: jcode-mcp-config-probe
+  - to: mcp-boot-config
     relation: uses
     description: >-
-      Both read the same jcode log/ndjson formats; the probe validates the MCP
-      servers these tools' tool-call counts depend on.
+      tool-usage-audit and context7-check parse cycle ndjson produced by the
+      jcode MCP cycle.
 generator:
   version: 1
 covers:
@@ -73,11 +73,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A family of CLI tools that parse jcode's NDJSON event streams and logs to extract facts the agent cannot trust from done.text or from the raw log alone. They share the invariant that concatenated text_delta payloads are preferred over done.text (which can silently truncate on tool-using runs), and that malformed lines are tolerated via errors='replace' and non-JSON skipping.
+CLI tools that parse jcode's --ndjson event stream and daily logs to extract assistant text, measure turn economics, and audit tool usage. They share the same NDJSON format and the same failure-mode awareness (done.text truncation, redacted tokens, malformed lines).
 
 ## Related
 
-- uses [[jcode-mcp-config-probe]] — Both read the same jcode log/ndjson formats; the probe validates the MCP servers these tools' tool-call counts depend on.
+- uses [[mcp-boot-config]] — tool-usage-audit and context7-check parse cycle ndjson produced by the jcode MCP cycle.
 <!-- context:generated:end -->
 
 ## Notes

@@ -1,4 +1,4 @@
-# scripts/ops/browse-extract.py · [[browse-extract-harness]]
+# scripts/ops/browse-extract.py · [[workstream-outreach-tooling]]
 
 One-shot CLI that walks a list of URLs in a single background browser tab, waits for render, greps rendered text, and returns a capped excerpt, replacing multi-turn MCP micro-step chains.
 

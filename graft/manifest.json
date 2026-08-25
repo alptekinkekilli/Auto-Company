@@ -1,7 +1,7 @@
 {
   "version": 1,
   "model": "openai:deepseek-ai/DeepSeek-V4-Flash-0731",
-  "repoDigest": "5eb044c4e2125f20750940ddf9ebf6890ab472e8eced53024b735ae0afb62911",
+  "repoDigest": "fde5230a26696cd51acb26b24744fd13a65ea49bc51f3e87cc828d31f9a07c05",
   "files": [
     {
       "path": "dashboard/app.js",
@@ -281,7 +281,7 @@
     },
     {
       "path": "scripts/ops/opportunity-analyst-cron.sh",
-      "hash": "c9528c3c886526e331f350d771be52e2e29ed85299416da9b337599e373180c9"
+      "hash": "57b25b2a7db84a5155d3a56c2cbca69f949cbc56883de0d0d52c2dbf87c63b4e"
     },
     {
       "path": "scripts/ops/registry-archive.py",
@@ -502,28 +502,29 @@
       "sourcesDigest": "2021356891ac463bde76a17510d6206598905cc15d804b9b867e92529075e85e"
     },
     {
-      "slug": "airtable-ops-wrappers",
-      "name": "Airtable ops wrappers",
+      "slug": "airtable-access-wrappers",
+      "name": "Airtable access wrappers",
       "type": "system",
       "sources": [
         "scripts/ops/airtable-read.py",
-        "scripts/ops/airtable-write.py"
+        "scripts/ops/airtable-write.py",
+        "scripts/ops/send-gate.py"
       ],
-      "sourcesDigest": "43a42c7621b93d8e35ed7813326f7b761e954384d076a4d1b176afa770c1b952"
+      "sourcesDigest": "216a016c643b30a46b250287e6b0f6b77a79494d30f855f4e0b12206add12ec2"
     },
     {
-      "slug": "atomic-write-read-back-verification",
-      "name": "Atomic write & read-back verification",
+      "slug": "atomic-state-writes",
+      "name": "atomic state writes",
       "type": "concept",
       "sources": [
         "scripts/core/jcode-mcp-config.py",
         "scripts/core/operator_request_notify.py",
-        "scripts/ops/airtable-write.py",
         "scripts/ops/idle-skip-note.py",
         "scripts/ops/registry-archive.py",
-        "scripts/ops/state-snapshot.py"
+        "scripts/ops/state-snapshot.py",
+        "scripts/ops/tool-usage-audit.py"
       ],
-      "sourcesDigest": "0c72ed96664311cf46d30e12a7e36a510487b5b656263279a1862909771ccd4e"
+      "sourcesDigest": "1d17ab28d57635714c014832c1a068fbb4bf9fb2143575c2cf598813c4888e2a"
     },
     {
       "slug": "auto-company-site-functions",
@@ -561,15 +562,6 @@
         "scripts/core/bridge_leak_scan.py"
       ],
       "sourcesDigest": "b640af07b633d17a562a8a5f854a19c94a33c6169c66e46291f8978bc47e1945"
-    },
-    {
-      "slug": "browse-extract-harness",
-      "name": "browse-extract harness",
-      "type": "file",
-      "sources": [
-        "scripts/ops/browse-extract.py"
-      ],
-      "sourcesDigest": "7514f4be06d24fc6714b50b6a7ae6ea56f424c1b9ce6bc87210364785a9290f3"
     },
     {
       "slug": "budget-spend-accounting",
@@ -647,8 +639,8 @@
       "sourcesDigest": "6ee6a7bfcdad67740cc3e9c82b68d36bdd80cf963fef48f593806b0c3ca5a41c"
     },
     {
-      "slug": "cost-budget-calibration",
-      "name": "Cost & budget calibration",
+      "slug": "cost-budget-reporting",
+      "name": "cost & budget reporting",
       "type": "system",
       "sources": [
         "scripts/ops/bloat-trend.py",
@@ -678,17 +670,19 @@
       "sourcesDigest": "f4f863d4df3fc313e0dd21bd4e126bc92b8f46cf056589dd04f736eba34c9ebd"
     },
     {
-      "slug": "docker-host-disk-guard",
-      "name": "Docker & host disk guard",
+      "slug": "docker-host-hygiene",
+      "name": "docker & host hygiene",
       "type": "system",
       "sources": [
+        "scripts/linux/noop-action.sh",
+        "scripts/linux/status-linux.sh",
         "scripts/ops/docker-prune-safe.sh"
       ],
-      "sourcesDigest": "e24fe28b77d7c48047aeb9d7f3037b12372488dca9bbcb6208518f1e5efa731d"
+      "sourcesDigest": "e3f55730d6ac1970da9988e83d072ad210149ea3a9d7a432ea79d466b690ac2e"
     },
     {
       "slug": "fail-closed-verification-invariant",
-      "name": "Fail-closed verification invariant",
+      "name": "fail-closed verification invariant",
       "type": "concept",
       "sources": [
         "scripts/core/jcode-mcp-probe.py",
@@ -698,6 +692,17 @@
         "scripts/ops/site-contact-evidence.py"
       ],
       "sourcesDigest": "899b7727590c913dcdd5c5b6e36bdcd918d32b16feef795435fc1e1445fde092"
+    },
+    {
+      "slug": "g4-identity-attribution-evidence",
+      "name": "G4 identity-attribution evidence",
+      "type": "system",
+      "sources": [
+        "scripts/ops/g4-check.py",
+        "scripts/ops/kik-decision-read.py",
+        "scripts/ops/site-contact-evidence.py"
+      ],
+      "sourcesDigest": "517c58378c9ee58eac3d0571c1178988a45ed92ee8d2e6b903fe9a97cb450ad3"
     },
     {
       "slug": "g4-verification-entity-matching",
@@ -731,6 +736,15 @@
       "sourcesDigest": "cb61b3ccfe05c907fe9c1d45e555e1e03b1607816df1e7ac11b12c3268891960"
     },
     {
+      "slug": "idle-skip-audit-trail",
+      "name": "idle-skip audit trail",
+      "type": "file",
+      "sources": [
+        "scripts/ops/idle-skip-note.py"
+      ],
+      "sourcesDigest": "fbdec8360c46d903ea73260434f53bcab29a4624612d37a127ac69496f0acc48"
+    },
+    {
       "slug": "jcode-event-stream-utilities",
       "name": "jcode event-stream utilities",
       "type": "system",
@@ -743,17 +757,6 @@
       "sourcesDigest": "abdd4bc39eccdd8b14ff239eda058e6a67a4db17e25b504250ef6bd24972f74a"
     },
     {
-      "slug": "jcode-mcp-config-probe",
-      "name": "jcode MCP config & probe",
-      "type": "system",
-      "sources": [
-        "scripts/core/jcode-mcp-config.py",
-        "scripts/core/jcode-mcp-probe.py",
-        "scripts/ops/verify-mcp-keys.py"
-      ],
-      "sourcesDigest": "25e5b115257e521f78f7ce4c017495308aefca86986825f521f62a663e14ff0c"
-    },
-    {
       "slug": "jcode-pilot-smoke-test",
       "name": "jcode Pilot Smoke Test",
       "type": "file",
@@ -763,18 +766,8 @@
       "sourcesDigest": "580997342635860ff744d27a36e889c902bd03a27837c94edb20c5bb745f01b5"
     },
     {
-      "slug": "ki-k-linear-workstream-tooling",
-      "name": "KİK & Linear workstream tooling",
-      "type": "system",
-      "sources": [
-        "scripts/ops/kik-decision-read.py",
-        "scripts/ops/linear-track.py"
-      ],
-      "sourcesDigest": "d3e2f6dbe011cf22e28742acea93fc0a1a4170d3d1a27ea034bf85793b5ef6a5"
-    },
-    {
       "slug": "loop-lifecycle-monitoring",
-      "name": "Loop lifecycle & monitoring",
+      "name": "loop lifecycle & monitoring",
       "type": "system",
       "sources": [
         "scripts/core/monitor.sh",
@@ -782,10 +775,29 @@
         "scripts/core/stop-loop.sh",
         "scripts/linux/noop-action.sh",
         "scripts/linux/status-linux.sh",
-        "scripts/macos/install-daemon.sh",
         "scripts/macos/status-mac.sh"
       ],
-      "sourcesDigest": "70f5124c9f4a6e9fe9a49ad0f8ac9841733a80e231959a056c0bf40e73807226"
+      "sourcesDigest": "f880e71455c50baed0b45c470cb71718ba08261b03ed3e9ba876f142465c9baf"
+    },
+    {
+      "slug": "macos-daemon-install",
+      "name": "macOS daemon install",
+      "type": "system",
+      "sources": [
+        "scripts/macos/install-daemon.sh"
+      ],
+      "sourcesDigest": "65656d723a2d52e25953da5035c862691c3124ce59e53f8e71d4827e72e2e064"
+    },
+    {
+      "slug": "mcp-boot-config",
+      "name": "MCP boot & config",
+      "type": "system",
+      "sources": [
+        "scripts/core/jcode-mcp-config.py",
+        "scripts/core/jcode-mcp-probe.py",
+        "scripts/ops/verify-mcp-keys.py"
+      ],
+      "sourcesDigest": "25e5b115257e521f78f7ce4c017495308aefca86986825f521f62a663e14ff0c"
     },
     {
       "slug": "mcp-config-key-handling",
@@ -813,7 +825,7 @@
     },
     {
       "slug": "operator-escalation-notification",
-      "name": "Operator escalation & notification",
+      "name": "operator escalation & notification",
       "type": "system",
       "sources": [
         "scripts/core/operator_request_notify.py",
@@ -849,24 +861,14 @@
       "sourcesDigest": "c010151f753a62a451cf1c77b03eebce7e2458b48fd5ab21542c2ab59250be2a"
     },
     {
-      "slug": "opportunity-analyst-cron",
-      "name": "Opportunity Analyst cron",
+      "slug": "opportunity-analyst-orchestration",
+      "name": "opportunity analyst orchestration",
       "type": "system",
       "sources": [
-        "scripts/ops/opportunity-analyst-cron.sh"
+        "scripts/ops/opportunity-analyst-cron.sh",
+        "scripts/ops/state-snapshot.py"
       ],
-      "sourcesDigest": "598186fea5b3f94add7c555b80936614ca3a51ff9c8eb67cd658783fd562ca23"
-    },
-    {
-      "slug": "outreach-eligibility-g4-verification",
-      "name": "Outreach eligibility & G4 verification",
-      "type": "system",
-      "sources": [
-        "scripts/ops/g4-check.py",
-        "scripts/ops/send-gate.py",
-        "scripts/ops/site-contact-evidence.py"
-      ],
-      "sourcesDigest": "b7dc1d90f990039e354257bad12db6d0a979c8a2a2ab43cc83f70d9f5f392920"
+      "sourcesDigest": "34a93427a43ac8e365fe5883356f5ecd4213bf787b1e74bcbedbf09b601594d6"
     },
     {
       "slug": "outreach-send-gating",
@@ -879,6 +881,17 @@
         "tests/test_send_gate.sh"
       ],
       "sourcesDigest": "e774e14338d178843b669f4842456566b52f147dc82ef1a33e4df0c7aa78e522"
+    },
+    {
+      "slug": "policy-cutover-splitting",
+      "name": "policy cutover splitting",
+      "type": "concept",
+      "sources": [
+        "scripts/ops/bloat-trend.py",
+        "scripts/ops/budget-calibration-report.py",
+        "scripts/ops/cost-audit.py"
+      ],
+      "sourcesDigest": "a7de95e6ae47c5ade03f1de2a4f7e5613041ab1419ddd9d9f4b164786859b1cd"
     },
     {
       "slug": "prod-mechanism-guard",
@@ -920,15 +933,16 @@
       "sourcesDigest": "b0a1706e8620bb1087ab074cacb8ebf1a3dec5910df6dff7b0e9274d66d4b276"
     },
     {
-      "slug": "registry-directive-hygiene",
-      "name": "Registry & directive hygiene",
+      "slug": "registry-directive-maintenance",
+      "name": "registry & directive maintenance",
       "type": "system",
       "sources": [
         "scripts/ops/directive-rule-sweep.py",
+        "scripts/ops/directive-staleness-watch.py",
         "scripts/ops/extract-axis-evidence.py",
         "scripts/ops/registry-archive.py"
       ],
-      "sourcesDigest": "52f5f2ef401cbc5fc72f21d9a1d1431f48a781ec656d8397b404908218423988"
+      "sourcesDigest": "851263f33bec13bf12c370da7df4454b529cbbdd032cf4ecfbfc4ed061b62afe"
     },
     {
       "slug": "registry-merge-invariants",
@@ -952,18 +966,17 @@
       "sourcesDigest": "041be21891feded98c7048c108896acfbcd3843d06da6b28a7a6e7581bddea17"
     },
     {
-      "slug": "secret-handling-discipline",
-      "name": "Secret handling discipline",
+      "slug": "secret-handling",
+      "name": "secret handling",
       "type": "concept",
       "sources": [
         "scripts/core/jcode-mcp-config.py",
-        "scripts/ops/airtable-read.py",
+        "scripts/core/telegram-notify.sh",
         "scripts/ops/airtable-write.py",
-        "scripts/ops/docker-prune-safe.sh",
         "scripts/ops/linear-track.py",
         "scripts/ops/verify-mcp-keys.py"
       ],
-      "sourcesDigest": "32749d56cba22a841096270cc377ad29c11f370be1f9b405c8cc5bcca8a79484"
+      "sourcesDigest": "4234347187a5483a287872819d1d63f25bf364da7e318b46af5c679d9a2b24ae"
     },
     {
       "slug": "sentry-reporter",
@@ -1056,16 +1069,6 @@
       "sourcesDigest": "4cd8f958c15e5cb5afda42aee615989ace41e86301c47174bf2e30439e222b0b"
     },
     {
-      "slug": "state-snapshot-idle-skip-audit-trail",
-      "name": "State snapshot & idle-skip audit trail",
-      "type": "system",
-      "sources": [
-        "scripts/ops/idle-skip-note.py",
-        "scripts/ops/state-snapshot.py"
-      ],
-      "sourcesDigest": "969b98e16ebbe3d3801d138dc83ce3416bc6952d1607957662c7a2f13a1e0234"
-    },
-    {
       "slug": "tool-usage-audit",
       "name": "Tool usage audit",
       "type": "system",
@@ -1101,6 +1104,17 @@
         "scripts/ops/web-research-cost.py"
       ],
       "sourcesDigest": "976169f8b29d99a352d9d4f4c66e56549da87c6f434116f4dfa18807078391d7"
+    },
+    {
+      "slug": "workstream-outreach-tooling",
+      "name": "workstream & outreach tooling",
+      "type": "system",
+      "sources": [
+        "scripts/ops/browse-extract.py",
+        "scripts/ops/kik-decision-read.py",
+        "scripts/ops/linear-track.py"
+      ],
+      "sourcesDigest": "6f544ef40b3412b4560c23ef784fbabf3a691be0a7a069ed7f671e26605109ff"
     },
     {
       "slug": "wsl-daemon-lifecycle",

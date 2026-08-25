@@ -1,5 +1,5 @@
 ---
-name: Operator escalation & notification
+name: operator escalation & notification
 slug: operator-escalation-notification
 type: system
 sources:
@@ -15,14 +15,16 @@ sources:
     hash: 110e009b20f709db9dda31e2e17af9fb061696a869901bd389dddedca9294070
 sources_digest: 003095b6a34e3336fb901876b93e1f86e9f3a8d833a67fd27dbc3e6cd68286a1
 links:
-  - to: loop-lifecycle-monitoring
-    relation: uses
-    description: Sends alerts via the same Telegram channel and reads runtime.env secrets.
-  - to: outreach-eligibility-g4-verification
+  - to: airtable-access-wrappers
     relation: uses
     description: >-
-      Consumes G4/attribution outcomes and outreach rows to decide what to
-      escalate.
+      reply-watch and registry-queue-watch read Airtable tables via the REST
+      API.
+  - to: mcp-boot-config
+    relation: uses
+    description: >-
+      operator_request_notify regenerates the Awaiting Operator section of
+      consensus.md that the loop reads.
 generator:
   version: 1
 covers:
@@ -165,12 +167,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Deterministic escalation and alerting to the human operator. operator_request_notify.py is the sole writer of notification state and the consensus 'Awaiting Operator' projection, deduplicating via content fingerprints and enforcing resolution verification (checksummed evidence, PASS logs, human-directive references). telegram-notify.sh is a safe-to-call-always channel that no-ops when unset and never returns non-zero. reply-watch.py, registry-queue-watch.py, and directive-staleness-watch.py are advisory watchers that alert on Airtable replies, MERSİS queue backlogs, and stale PENDING directives, each throttled by a local state file.
+Deterministic gates that escalate to a human operator via Telegram: operator-request processing with evidence verification, reply/registry/queue watchers, and the shared telegram-notify.sh channel. All are advisory and fail-closed, never writing back to Airtable.
 
 ## Related
 
-- uses [[loop-lifecycle-monitoring]] — Sends alerts via the same Telegram channel and reads runtime.env secrets.
-- uses [[outreach-eligibility-g4-verification]] — Consumes G4/attribution outcomes and outreach rows to decide what to escalate.
+- uses [[airtable-access-wrappers]] — reply-watch and registry-queue-watch read Airtable tables via the REST API.
+- uses [[mcp-boot-config]] — operator_request_notify regenerates the Awaiting Operator section of consensus.md that the loop reads.
 <!-- context:generated:end -->
 
 ## Notes

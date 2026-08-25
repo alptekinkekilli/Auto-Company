@@ -1,4 +1,4 @@
-# scripts/core/operator_request_notify.py · [[atomic-write-read-back-verification]] [[operator-escalation-notification]] [[operator-request-lifecycle]]
+# scripts/core/operator_request_notify.py · [[atomic-state-writes]] [[operator-escalation-notification]] [[operator-request-lifecycle]]
 
 Deterministic operator-escalation gate that dedups, notifies, and resolves OPREQ ledger requests, and regenerates the consensus.md Awaiting Operator projection.
 
