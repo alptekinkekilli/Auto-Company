@@ -500,7 +500,7 @@ def _resolve_evidence_path(app: Path, rel_path: str) -> Path | None:
 
 
 def verify_document_procurement(
-    fields: dict, app: Path, directive_text: str = ""
+    fields: dict, app: Path, directive_text: str = "", req_id: str = ""
 ) -> tuple[bool, str]:
     # Read the field from the OPERATOR'S directive first, falling back to the
     # request block. Until 2026-07-28 only the block was read, while every
@@ -510,8 +510,19 @@ def verify_document_procurement(
     # older one alive. Nothing is weakened: the checksum, the non-empty check and
     # the operator-evidence/ path confinement below are what actually gate this,
     # and they run identically whichever place the line came from.
+    #
+    # Scope the directive search to THIS request's `Resolves: <req_id>` block. With
+    # two document-procurement resolutions in one file, an unscoped search matched
+    # the FIRST `Evidence files:` line for both, so a later request verified against
+    # an earlier one's files. When req_id is absent (older callers) or its block is
+    # not present in the text, fall back to the whole text — behavior unchanged there.
     raw = ""
-    m = re.search(r"Evidence files:[ \t]*([^\n]+)", directive_text or "")
+    search_text = directive_text or ""
+    if req_id and search_text:
+        window = _resolves_block_window(search_text, req_id)
+        if window is not None:
+            search_text = window
+    m = re.search(r"Evidence files:[ \t]*([^\n]+)", search_text)
     if m:
         raw = m.group(1).strip()
     if not raw:
@@ -643,7 +654,28 @@ def _directive_window_after(directive_text: str, anchor_label: str, req_id: str)
     return window[:MAX_WINDOW_CHARS]
 
 
-DECISION_RE = re.compile(r"\s*([A-Za-z][A-Za-z -]{2,30}?)\s*[—-]\s*(.{10,})")
+def _resolves_block_window(directive_text: str, req_id: str):
+    """Window covering the resolution block that carries `Resolves: <req_id>`, so a
+    per-block field (e.g. `Evidence files:`) is read from THIS request's block and
+    never borrowed from an earlier block's identically-named line. Mirrors
+    _directive_window_after: anchor, then cut at the next block boundary. Assumes the
+    field sits in the same block at or after the `Resolves:` anchor — the shape every
+    document-procurement response format and every test uses."""
+    pat = re.compile(rf"Resolves:[ \t]*{re.escape(req_id)}\b")
+    m = pat.search(directive_text)
+    if not m:
+        return None
+    rest = directive_text[m.end() :]
+    boundary = BLOCK_BOUNDARY_RE.search(rest)
+    window = rest[: boundary.start()] if boundary else rest
+    return window[:MAX_WINDOW_CHARS]
+
+
+# Char class is [A-Za-z0-9_ -] (not just [A-Za-z -]) so underscore/digit decision
+# tokens (OPTION_A, base_20k_plus_40pct_28k, …) resolve. Aligns the repo with the
+# widening a cycle applied in-container on 2026-08-25; keep them in sync so a redeploy
+# does not silently narrow this back.
+DECISION_RE = re.compile(r"\s*([A-Za-z][A-Za-z0-9_ -]{2,30}?)\s*[—-]\s*(.{10,})")
 
 
 def verify_legal_or_financial_decision(
@@ -747,7 +779,7 @@ def verify_resolution(req_id: str, fields: dict, directive_text: str, app: Path)
     into human-directive.md) rather than trusting a free-text claim."""
     req_type = fields.get("Type", "").strip().lower()
     if req_type == "document-procurement":
-        return verify_document_procurement(fields, app, directive_text)
+        return verify_document_procurement(fields, app, directive_text, req_id)
     if req_type == "credential":
         return verify_credential(fields, app)
     if req_type in ("legal-decision", "financial-decision", "adjudication-pending"):

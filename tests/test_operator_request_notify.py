@@ -733,6 +733,49 @@ class OperatorRequestNotifyTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("outside", msg)
 
+    def test_evidence_files_scoped_to_the_resolving_block(self):
+        # Two document-procurement resolutions in one directive text. Each block's
+        # `Evidence files:` must be checked against ITS OWN files — a later request
+        # must not borrow the FIRST block's (an earlier request's) evidence line.
+        rel_a, ha = self._evidence("OPREQ-AAA-001", b"packet A bytes")
+        rel_b, hb = self._evidence("OPREQ-BBB-002", b"packet B different bytes")
+        good = (
+            f"Resolves: OPREQ-AAA-001\nEvidence files: {rel_a} sha256:{ha}\n\n"
+            f"Resolves: OPREQ-BBB-002\nEvidence files: {rel_b} sha256:{hb}\n"
+        )
+        ok, msg = orn.verify_resolution(
+            "OPREQ-BBB-002",
+            {"Type": "document-procurement", "Expected document class": "at least 1 file"},
+            good,
+            self.app,
+        )
+        self.assertTrue(ok, msg)
+        # Definitive guard: B with a WRONG checksum must FAIL even though A's (first)
+        # block carries a valid line. Pre-fix this returned True by borrowing A's line.
+        bad = (
+            f"Resolves: OPREQ-AAA-001\nEvidence files: {rel_a} sha256:{ha}\n\n"
+            f"Resolves: OPREQ-BBB-002\nEvidence files: {rel_b} sha256:{'0' * 64}\n"
+        )
+        ok2, msg2 = orn.verify_resolution(
+            "OPREQ-BBB-002",
+            {"Type": "document-procurement", "Expected document class": "at least 1 file"},
+            bad,
+            self.app,
+        )
+        self.assertFalse(ok2, "B must not borrow A's valid evidence line")
+        self.assertIn("checksum mismatch", msg2)
+
+    def test_decision_token_with_digits_and_underscore_resolves(self):
+        # Locks the widened DECISION_RE char class [A-Za-z0-9_ -]: underscore/digit
+        # decision tokens (OPTION_A, base_20k_v2, …) must resolve, not just letters.
+        ok, msg = orn.verify_resolution(
+            "OPREQ-208A-001",
+            {"Type": "financial-decision"},
+            "Decision for OPREQ-208A-001: base_20k_v2 — rationale long enough to pass\n",
+            self.app,
+        )
+        self.assertTrue(ok, msg)
+
 
 if __name__ == "__main__":
     unittest.main()
