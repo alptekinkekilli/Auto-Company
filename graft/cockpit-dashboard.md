@@ -4,376 +4,158 @@ slug: cockpit-dashboard
 type: system
 sources:
   - path: dashboard/app.js
-    hash: f12257a8f9a08f27b890003b8139742f7ab86e0e5279c03f494f9a2aee8ec4ae
-  - path: dashboard/sentry_client.py
-    hash: 96977bb6701f18064edb69c783e53bdb73c930c8ddadcd1caf47583b42700df4
-  - path: dashboard/server.py
-    hash: 70cf0bcbe6dc4a6d7eefbe16eb758cb028604ef507c20bb090612ce803b21083
-sources_digest: 301ea95057cc663d6370439872af0d0ddbddd75a658b7cf5da46fb05ca84b07c
+    hash: 1a974b1c1d72cf714de69954e840a6335990788860f9442ad1e61fcf6f041ca8
+sources_digest: 8a02818c5dd3a3db3dd230d982a76cda1e4dfe081bb76b6e106dc18b660fa0ae
 links:
-  - to: autonomous-loop
+  - to: cockpit-server
     relation: uses
     description: >-
-      The dashboard's hold/release is the only real loop control; it
-      reads/writes loop state files and the auto-loop.log tail.
-  - to: directive-writer
-    relation: uses
-    description: >-
-      server.py routes all directive writes through directive_writer.py to
-      enforce the PENDING-clobber and body-immutability rules.
-  - to: sentry-reporter
-    relation: uses
-    description: server.py reports errors via sentry_client.capture_exception.
+      Polls /api/status and calls /api/hold, /api/directive, /api/ideas,
+      /api/tool-usage REST endpoints served by the server.
 generator:
   version: 1
 covers:
   - symbol: escapeHtml
     kind: function
-    at: 'dashboard/app.js:L89-L96'
+    at: 'dashboard/app.js:L92-L99'
   - symbol: renderInlineMarkdown
     kind: function
-    at: 'dashboard/app.js:L98-L105'
+    at: 'dashboard/app.js:L101-L108'
   - symbol: renderMarkdown
     kind: function
-    at: 'dashboard/app.js:L107-L189'
+    at: 'dashboard/app.js:L110-L192'
   - symbol: closeParagraph
     kind: function
-    at: 'dashboard/app.js:L114-L119'
+    at: 'dashboard/app.js:L117-L122'
   - symbol: closeList
     kind: function
-    at: 'dashboard/app.js:L120-L125'
+    at: 'dashboard/app.js:L123-L128'
   - symbol: classForState
     kind: function
-    at: 'dashboard/app.js:L191-L213'
+    at: 'dashboard/app.js:L194-L216'
   - symbol: applyCardState
     kind: function
-    at: 'dashboard/app.js:L215-L218'
+    at: 'dashboard/app.js:L218-L221'
+  - symbol: renderGraft
+    kind: function
+    at: 'dashboard/app.js:L223-L246'
   - symbol: formatTime
     kind: function
-    at: 'dashboard/app.js:L220-L226'
+    at: 'dashboard/app.js:L248-L254'
   - symbol: renderStateList
     kind: function
-    at: 'dashboard/app.js:L228-L257'
+    at: 'dashboard/app.js:L256-L285'
   - symbol: ladder
     kind: function
-    at: 'dashboard/app.js:L234-L234'
+    at: 'dashboard/app.js:L262-L262'
   - symbol: fetchStatus
     kind: function
-    at: 'dashboard/app.js:L259-L319'
+    at: 'dashboard/app.js:L287-L348'
   - symbol: renderCost
     kind: function
-    at: 'dashboard/app.js:L321-L369'
+    at: 'dashboard/app.js:L350-L398'
   - symbol: usd
     kind: function
-    at: 'dashboard/app.js:L322-L322'
+    at: 'dashboard/app.js:L351-L351'
   - symbol: renderCcusage
     kind: function
-    at: 'dashboard/app.js:L371-L391'
+    at: 'dashboard/app.js:L400-L420'
   - symbol: usd
     kind: function
-    at: 'dashboard/app.js:L373-L373'
+    at: 'dashboard/app.js:L402-L402'
   - symbol: renderHold
     kind: function
-    at: 'dashboard/app.js:L397-L407'
+    at: 'dashboard/app.js:L426-L436'
   - symbol: setHold
     kind: function
-    at: 'dashboard/app.js:L409-L439'
+    at: 'dashboard/app.js:L438-L468'
   - symbol: renderDirective
     kind: function
-    at: 'dashboard/app.js:L441-L456'
+    at: 'dashboard/app.js:L470-L485'
   - symbol: submitDirective
     kind: function
-    at: 'dashboard/app.js:L458-L501'
+    at: 'dashboard/app.js:L487-L530'
   - symbol: send
     kind: function
-    at: 'dashboard/app.js:L469-L474'
+    at: 'dashboard/app.js:L498-L503'
   - symbol: renderSettings
     kind: function
-    at: 'dashboard/app.js:L503-L523'
+    at: 'dashboard/app.js:L532-L552'
   - symbol: gatherSettings
     kind: function
-    at: 'dashboard/app.js:L525-L532'
+    at: 'dashboard/app.js:L554-L561'
   - symbol: loadIdeas
     kind: function
-    at: 'dashboard/app.js:L535-L555'
+    at: 'dashboard/app.js:L564-L584'
   - symbol: loadToolUsage
     kind: function
-    at: 'dashboard/app.js:L558-L593'
+    at: 'dashboard/app.js:L587-L622'
   - symbol: loadAnalysis
     kind: function
-    at: 'dashboard/app.js:L597-L621'
+    at: 'dashboard/app.js:L626-L650'
   - symbol: renderAnalystTrigger
     kind: function
-    at: 'dashboard/app.js:L625-L638'
+    at: 'dashboard/app.js:L654-L667'
   - symbol: runAnalystNow
     kind: function
-    at: 'dashboard/app.js:L640-L657'
+    at: 'dashboard/app.js:L669-L686'
   - symbol: extractDirective
     kind: function
-    at: 'dashboard/app.js:L663-L675'
+    at: 'dashboard/app.js:L692-L704'
   - symbol: copyToBtn
     kind: function
-    at: 'dashboard/app.js:L677-L685'
+    at: 'dashboard/app.js:L706-L714'
   - symbol: loadDirectiveTemplates
     kind: function
-    at: 'dashboard/app.js:L699-L731'
+    at: 'dashboard/app.js:L728-L760'
   - symbol: loadSettings
     kind: function
-    at: 'dashboard/app.js:L734-L742'
+    at: 'dashboard/app.js:L763-L771'
   - symbol: saveSettings
     kind: function
-    at: 'dashboard/app.js:L744-L773'
+    at: 'dashboard/app.js:L773-L802'
   - symbol: setWakeAvailability
     kind: function
-    at: 'dashboard/app.js:L779-L786'
+    at: 'dashboard/app.js:L808-L815'
   - symbol: wakeLoop
     kind: function
-    at: 'dashboard/app.js:L788-L805'
+    at: 'dashboard/app.js:L817-L834'
   - symbol: resetAutoTimer
     kind: function
-    at: 'dashboard/app.js:L808-L821'
+    at: 'dashboard/app.js:L837-L850'
   - symbol: notifiedIds
     kind: function
-    at: 'dashboard/app.js:L897-L904'
+    at: 'dashboard/app.js:L926-L933'
   - symbol: rememberNotified
     kind: function
-    at: 'dashboard/app.js:L906-L913'
+    at: 'dashboard/app.js:L935-L942'
   - symbol: renderNotifyButton
     kind: function
-    at: 'dashboard/app.js:L915-L933'
+    at: 'dashboard/app.js:L944-L962'
   - symbol: announceNewRequests
     kind: function
-    at: 'dashboard/app.js:L935-L955'
+    at: 'dashboard/app.js:L964-L984'
   - symbol: opreqPanelBusy
     kind: function
-    at: 'dashboard/app.js:L963-L970'
+    at: 'dashboard/app.js:L992-L999'
   - symbol: renderOperatorRequests
     kind: function
-    at: 'dashboard/app.js:L972-L1031'
+    at: 'dashboard/app.js:L1001-L1060'
   - symbol: submitDecision
     kind: function
-    at: 'dashboard/app.js:L1033-L1072'
+    at: 'dashboard/app.js:L1062-L1101'
   - symbol: loadOperatorRequests
     kind: function
-    at: 'dashboard/app.js:L1074-L1081'
-  - symbol: _parse_dsn
-    kind: function
-    at: 'dashboard/sentry_client.py:L33-L43'
-  - symbol: capture_exception
-    kind: function
-    at: 'dashboard/sentry_client.py:L49-L102'
-  - symbol: ps_quote
-    kind: function
-    at: 'dashboard/server.py:L123-L124'
-  - symbol: detect_host_kind
-    kind: function
-    at: 'dashboard/server.py:L127-L137'
-  - symbol: run_powershell_script
-    kind: function
-    at: 'dashboard/server.py:L140-L184'
-  - symbol: run_shell_script
-    kind: function
-    at: 'dashboard/server.py:L187-L217'
-  - symbol: get_host_profile
-    kind: function
-    at: 'dashboard/server.py:L220-L253'
-  - symbol: read_text_file
-    kind: function
-    at: 'dashboard/server.py:L256-L270'
-  - symbol: read_text_file_tail
-    kind: function
-    at: 'dashboard/server.py:L273-L305'
-  - symbol: read_directive
-    kind: function
-    at: 'dashboard/server.py:L315-L347'
-  - symbol: _section
-    kind: function
-    at: 'dashboard/server.py:L326-L337'
-  - symbol: DirectiveRefused
-    kind: class
-    at: 'dashboard/server.py:L350-L351'
-  - symbol: write_directive
-    kind: function
-    at: 'dashboard/server.py:L354-L397'
-  - symbol: parse_proposed_authorization
-    kind: function
-    at: 'dashboard/server.py:L426-L435'
-  - symbol: read_operator_requests
-    kind: function
-    at: 'dashboard/server.py:L438-L473'
-  - symbol: _decisions_audit
-    kind: function
-    at: 'dashboard/server.py:L476-L483'
-  - symbol: write_operator_decision
-    kind: function
-    at: 'dashboard/server.py:L486-L572'
-  - symbol: _parse_env_file
-    kind: function
-    at: 'dashboard/server.py:L575-L587'
-  - symbol: read_ideas
-    kind: function
-    at: 'dashboard/server.py:L590-L608'
-  - symbol: read_tool_usage
-    kind: function
-    at: 'dashboard/server.py:L611-L648'
-  - symbol: read_analysis
-    kind: function
-    at: 'dashboard/server.py:L651-L669'
-  - symbol: analyst_trigger_state
-    kind: function
-    at: 'dashboard/server.py:L672-L679'
-  - symbol: analyst_run_now
-    kind: function
-    at: 'dashboard/server.py:L682-L708'
-  - symbol: read_directive_templates
-    kind: function
-    at: 'dashboard/server.py:L726-L733'
-  - symbol: read_settings
-    kind: function
-    at: 'dashboard/server.py:L736-L778'
-  - symbol: write_settings
-    kind: function
-    at: 'dashboard/server.py:L781-L827'
-  - symbol: _proc_cmdline
-    kind: function
-    at: 'dashboard/server.py:L830-L835'
-  - symbol: _proc_ppid
-    kind: function
-    at: 'dashboard/server.py:L838-L845'
-  - symbol: read_hold
-    kind: function
-    at: 'dashboard/server.py:L852-L875'
-  - symbol: set_hold
-    kind: function
-    at: 'dashboard/server.py:L878-L915'
-  - symbol: wake_loop
-    kind: function
-    at: 'dashboard/server.py:L918-L976'
-  - symbol: trigger_redeploy
-    kind: function
-    at: 'dashboard/server.py:L979-L1015'
-  - symbol: _week_start_epoch
-    kind: function
-    at: 'dashboard/server.py:L1031-L1038'
-  - symbol: _ccusage_compute
-    kind: function
-    at: 'dashboard/server.py:L1041-L1096'
-  - symbol: _run
-    kind: function
-    at: 'dashboard/server.py:L1047-L1055'
-  - symbol: _is_codex
-    kind: function
-    at: 'dashboard/server.py:L1070-L1072'
-  - symbol: read_ccusage
-    kind: function
-    at: 'dashboard/server.py:L1099-L1119'
-  - symbol: _bg
-    kind: function
-    at: 'dashboard/server.py:L1111-L1116'
-  - symbol: read_engine_runtime
-    kind: function
-    at: 'dashboard/server.py:L1122-L1219'
-  - symbol: _window_cutoff_epoch
-    kind: function
-    at: 'dashboard/server.py:L1222-L1250'
-  - symbol: read_cost_summary
-    kind: function
-    at: 'dashboard/server.py:L1253-L1384'
-  - symbol: _last_budget_gate
-    kind: function
-    at: 'dashboard/server.py:L1387-L1395'
-  - symbol: read_tail
-    kind: function
-    at: 'dashboard/server.py:L1398-L1405'
-  - symbol: parse_sections
-    kind: function
-    at: 'dashboard/server.py:L1408-L1423'
-  - symbol: parse_int
-    kind: function
-    at: 'dashboard/server.py:L1426-L1430'
-  - symbol: parse_positive_int
-    kind: function
-    at: 'dashboard/server.py:L1433-L1438'
-  - symbol: parse_key_values
-    kind: function
-    at: 'dashboard/server.py:L1441-L1448'
-  - symbol: blank_parsed
-    kind: function
-    at: 'dashboard/server.py:L1451-L1475'
-  - symbol: parse_windows_status_output
-    kind: function
-    at: 'dashboard/server.py:L1478-L1560'
-  - symbol: parse_macos_status_output
-    kind: function
-    at: 'dashboard/server.py:L1563-L1599'
-  - symbol: read_state_file_pairs
-    kind: function
-    at: 'dashboard/server.py:L1602-L1610'
-  - symbol: run_status_command
-    kind: function
-    at: 'dashboard/server.py:L1613-L1616'
-  - symbol: run_dashboard_action
-    kind: function
-    at: 'dashboard/server.py:L1619-L1631'
-  - symbol: parse_status_output
-    kind: function
-    at: 'dashboard/server.py:L1634-L1636'
-  - symbol: gather_status_payload
-    kind: function
-    at: 'dashboard/server.py:L1639-L1658'
-  - symbol: DashboardHandler
-    kind: class
-    at: 'dashboard/server.py:L1661-L1966'
-  - symbol: _json
-    kind: method
-    at: 'dashboard/server.py:L1662-L1669'
-  - symbol: _text
-    kind: method
-    at: 'dashboard/server.py:L1671-L1680'
-  - symbol: _serve_file
-    kind: method
-    at: 'dashboard/server.py:L1682-L1686'
-  - symbol: do_GET
-    kind: method
-    at: 'dashboard/server.py:L1688-L1693'
-  - symbol: _do_GET
-    kind: method
-    at: 'dashboard/server.py:L1695-L1761'
-  - symbol: _read_body
-    kind: method
-    at: 'dashboard/server.py:L1763-L1770'
-  - symbol: do_POST
-    kind: method
-    at: 'dashboard/server.py:L1772-L1777'
-  - symbol: _do_POST
-    kind: method
-    at: 'dashboard/server.py:L1779-L1842'
-  - symbol: _handle_operator_decision
-    kind: method
-    at: 'dashboard/server.py:L1844-L1884'
-  - symbol: _handle_directive
-    kind: method
-    at: 'dashboard/server.py:L1886-L1932'
-  - symbol: _handle_settings
-    kind: method
-    at: 'dashboard/server.py:L1934-L1963'
-  - symbol: log_message
-    kind: method
-    at: 'dashboard/server.py:L1965-L1966'
-  - symbol: main
-    kind: function
-    at: 'dashboard/server.py:L1969-L1991'
+    at: 'dashboard/app.js:L1103-L1110'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-The local web cockpit that monitors and controls the autonomous loop. A ThreadingHTTPServer serves a single-page client (app.js) that polls /api/status and related endpoints, renders state cards, cost panel, hold/release control, directive display, settings, and lazy-loaded auxiliary panels. All directive writes route through the deterministic directive_writer.py to prevent clobbering a PENDING directive, and the settings whitelist prevents writing secrets to runtime.env. Reads only the last 256KB of auto-loop.log per poll to bound work.
+Browser-side SPA controller for the cockpit dashboard, polling /api/status and rendering live state cards, cost/usage panels, directive editor, settings, and log/consensus views. Hand-rolled markdown rendering, no external libraries, mixed Turkish/English UI. The consensus panel refuses to overwrite while the operator is reading the full file; ccusage fails open; tool-usage is a real table because the Rajdhani font is proportional.
 
 ## Related
 
-- uses [[autonomous-loop]] — The dashboard's hold/release is the only real loop control; it reads/writes loop state files and the auto-loop.log tail.
-- uses [[directive-writer]] — server.py routes all directive writes through directive_writer.py to enforce the PENDING-clobber and body-immutability rules.
-- uses [[sentry-reporter]] — server.py reports errors via sentry_client.capture_exception.
+- uses [[cockpit-server]] — Polls /api/status and calls /api/hold, /api/directive, /api/ideas, /api/tool-usage REST endpoints served by the server.
 <!-- context:generated:end -->
 
 ## Notes

@@ -1,11 +1,11 @@
-# tests/test_operator_request_notify.py · [[operator-request-lifecycle]]
+# tests/test_operator_request_notify.py · [[escalation-operator-requests]]
 
-Test suite for the operator_request_notify script, covering notification dedup, retry, and type-specific resolution verification.
+Unit test suite for the operator_request_notify module, covering notification dedup, retry, and type-specific resolution verification.
 
 - make_send_fn · function · L40-L50 — Builds a fake Telegram send function that records calls and returns scripted (ok, err) results in order.
 - _send · function · L44-L47 — Records each sent message and returns the next scripted result, repeating the last one.
 - block_text · function · L53-L70 — Renders a markdown request block with configurable fields for building test fixtures.
-- OperatorRequestNotifyTests · class · L73-L734 — Test case class exercising notification, dedup, retry, and resolution-verification behavior of the operator request notifier.
+- OperatorRequestNotifyTests · class · L73-L777 — Test harness that sets up a temp app dir with memories files and env tokens, then exercises operator request notification and resolution behaviors.
 - setUp · method · L74-L87 — Creates a temp app dir with memory files and stubs the Telegram environment for each test.
 - tearDown · method · L89-L91 — Stops the environment patch and cleans up the temp directory.
 - write_requests · method · L93-L96 — Writes the given request blocks into the operator-requests file under the template header.
@@ -41,3 +41,5 @@ Test suite for the operator_request_notify script, covering notification dedup, 
 - test_evidence_files_in_the_request_block_still_resolves · method · L701-L713 — Verifies evidence files listed in the request block still resolve the request.
 - test_directive_entry_with_a_wrong_checksum_is_rejected · method · L715-L723 — Verifies a directive entry with a wrong checksum is rejected.
 - test_directive_entry_cannot_escape_the_evidence_directory · method · L725-L734 — Verifies a directive entry cannot escape the evidence directory.
+- test_evidence_files_scoped_to_the_resolving_block · method · L736-L766 — Verifies each document-procurement resolution block's Evidence files are checked against its own evidence directory, so a later request cannot borrow an earlier block's evidence.
+- test_decision_token_with_digits_and_underscore_resolves · method · L768-L777 — Locks the widened DECISION_RE character class so decision tokens containing digits and underscores resolve rather than only plain letters.

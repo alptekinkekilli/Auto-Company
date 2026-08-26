@@ -9,7 +9,7 @@ sources_digest: 6ee6a7bfcdad67740cc3e9c82b68d36bdd80cf963fef48f593806b0c3ca5a41c
 links:
   - to: autonomous-loop
     relation: uses
-    description: The loop's budget ledger consumes this adapter's cost output.
+    description: Feeds the loop's budget/spend accounting.
 generator:
   version: 1
 covers:
@@ -26,11 +26,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Converts token-usage data into notional USD costs at Anthropic list prices (engine-usage-cost.py), serving as an adapter so the APP-263 budget ledger can consume jcode's token-only output. Sums all tokens events (not just done.usage, which undercounts multi-tool cycles), prices unknown models at the most expensive known row times a 5x safety factor flagged as estimated, and honors TTL-specific cache multipliers. Conservative unknown-model pricing avoids silent zero-cost budget gates.
+Converts token usage into notional USD at Anthropic list prices, an adapter so the APP-263 budget ledger can consume jcode's token-only output. Sums ALL tokens events (not just done.usage, which undercounts multi-tool cycles); unknown models priced at most-expensive-known × 5x safety factor flagged estimated:true, with STRICT=1 exiting 3. Conservative unknown-model pricing avoids silent zero-cost budget gates.
 
 ## Related
 
-- uses [[autonomous-loop]] — The loop's budget ledger consumes this adapter's cost output.
+- uses [[autonomous-loop]] — Feeds the loop's budget/spend accounting.
 <!-- context:generated:end -->
 
 ## Notes

@@ -1,4 +1,4 @@
-# scripts/ops/site-contact-evidence.py · [[fail-closed-verification-invariant]] [[g4-identity-attribution-evidence]]
+# scripts/ops/site-contact-evidence.py · [[browse-extract-harness]] [[outreach-eligibility-brake]]
 
 Finds a firm's published contact email across escalating sources, ensuring an unrendered fetch is reported as inconclusive rather than negative.
 

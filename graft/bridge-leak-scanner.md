@@ -6,12 +6,7 @@ sources:
   - path: scripts/core/bridge_leak_scan.py
     hash: e5b7b7ecf614217b79e93037d780bdd0314f4953d8e6308939a49fe5b5b92bcf
 sources_digest: b640af07b633d17a562a8a5f854a19c94a33c6169c66e46291f8978bc47e1945
-links:
-  - to: content-hash-provenance
-    relation: uses
-    description: >-
-      Validates public evidence fields like content_hash against the canonical
-      hash.
+links: []
 generator:
   version: 1
 covers:
@@ -28,11 +23,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A value-sensitive session-leak scanner for EKAP Bridge records that flags only key-plus-value adjacencies (Set-Cookie, Authorization: Bearer, named credential keys, populated localStorage dumps) while passing assurance sentences and public evidence fields. Has a selftest with embedded fixtures that exits 3 on any misbehavior — a canary gate preventing the scanner from being trusted after a regression. Hardened to avoid the original word-presence false positive on bare prose like 'authorization: granted'.
-
-## Related
-
-- uses [[content-hash-provenance]] — Validates public evidence fields like content_hash against the canonical hash.
+Value-sensitive session-leak scanner for EKAP Bridge records, flagging only key-plus-value adjacencies (Set-Cookie: name=value, Authorization: Bearer <token>, named credential keys) while passing assurance sentences and public evidence fields. Selftest runs 2 negative + 6 positive fixtures and exits 3 on any misbehavior — a canary gate preventing the scanner from being trusted after a regression. Hardened to avoid the original word-presence false positive.
 <!-- context:generated:end -->
 
 ## Notes

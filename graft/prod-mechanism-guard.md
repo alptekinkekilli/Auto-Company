@@ -1,5 +1,5 @@
 ---
-name: Prod-mechanism guard
+name: prod-mechanism guard
 slug: prod-mechanism-guard
 type: system
 sources:
@@ -9,9 +9,12 @@ sources:
     hash: 1c8df67eca679e21cbbe4ea2daac7f761fc952f17b25f99d2673a4782ffa6824
 sources_digest: 85f695b540190c148b455d6cc63e72dbb881bcb53a6cf3d680c51a434fc47b16
 links:
-  - to: auto-loop-core-engine
+  - to: auto-loop-core-loop
     relation: validates
-    description: 'blocks edits to auto-loop.sh, send-gate.py, deploy/runtime.env'
+    description: Protects auto-loop.sh and other production surfaces from unapproved edits.
+  - to: session-context-tooling
+    relation: part_of
+    description: Both are Claude Code hooks in scripts/.
 generator:
   version: 1
 covers:
@@ -28,11 +31,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-PreToolUse hook that mechanically enforces the Prod-Mechanism Change Rule, blocking edits to protected production surfaces unless a time-limited approval marker exists. Fails open on malformed stdin or in-container to avoid locking out autonomous cycles; --check-sync detects drift between CLAUDE.md and the protected list.
+prod-mechanism-guard.py is a PreToolUse hook enforcing the Prod-Mechanism Change Rule: blocks edits to protected surfaces (auto-loop.sh, dashboard/server.py, Dockerfile, etc.) unless a 120-minute approval marker exists. Fails open on malformed stdin or inside the container to avoid locking out autonomous cycles; --check-sync verifies the protected list matches CLAUDE.md's rule section to prevent silent scope drift.
 
 ## Related
 
-- validates [[auto-loop-core-engine]] — blocks edits to auto-loop.sh, send-gate.py, deploy/runtime.env
+- validates [[auto-loop-core-loop]] — Protects auto-loop.sh and other production surfaces from unapproved edits.
+- part of [[session-context-tooling]] — Both are Claude Code hooks in scripts/.
 <!-- context:generated:end -->
 
 ## Notes

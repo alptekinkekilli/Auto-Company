@@ -1,4 +1,4 @@
-# scripts/core/jcode-mcp-config.py · [[atomic-state-writes]] [[mcp-boot-config]] [[mcp-config-key-handling]] [[secret-handling]]
+# scripts/core/jcode-mcp-config.py · [[fail-closed-fail-open-invariants]] [[jcode-mcp-boot-gate]] [[mcp-config-key-handling]] [[secret-hygiene]]
 
 Generates jcode's stdio-only MCP config from the repo's .mcp.json, bridging http/sse servers through mcp-remote and refusing to write partial or stale configs so the loop never silently loses tools.
 

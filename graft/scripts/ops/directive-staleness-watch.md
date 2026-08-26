@@ -1,4 +1,4 @@
-# scripts/ops/directive-staleness-watch.py · [[operator-escalation-notification]] [[registry-directive-maintenance]]
+# scripts/ops/directive-staleness-watch.py · [[directive-rule-governance]] [[telegram-notification-channel]]
 
 Cron watcher that alerts when the human directive has been PENDING too long, escalating once at the warn threshold then every repeat interval, while surfacing the audit-log reasons it is stuck.
 

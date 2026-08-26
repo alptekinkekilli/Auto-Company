@@ -1,6 +1,6 @@
-# dashboard/server.py · [[cockpit-dashboard]] [[dashboard-runtime-telemetry]]
+# dashboard/server.py · [[cockpit-server]] [[dashboard-cockpit]]
 
-Local dashboard HTTP server exposing Auto Company runtime state, controls, and settings across Windows/WSL, macOS, and Linux hosts.
+Local dashboard HTTP server for the Auto Company autonomous loop, exposing status, settings, directive, and operator-request controls across Windows/WSL/macOS/Linux hosts.
 
 - ps_quote · function · L123-L124 — Escapes a string for safe embedding as a single-quoted PowerShell argument by doubling embedded single quotes.
 - detect_host_kind · function · L127-L137 — Maps the OS platform name to the internal host kind (windows/macos/linux) and rejects unsupported hosts.
@@ -54,18 +54,19 @@ Local dashboard HTTP server exposing Auto Company runtime state, controls, and s
 - run_status_command · function · L1613-L1616 — Runs the status script for the detected host and returns its result.
 - run_dashboard_action · function · L1619-L1631 — Runs a start/stop dashboard action for the detected host.
 - parse_status_output · function · L1634-L1636 — Dispatches status output parsing to the host-appropriate parser.
-- gather_status_payload · function · L1639-L1658 — Assembles the full status payload combining host status, state files, and runtime data.
-- DashboardHandler · class · L1661-L1966 — HTTP request handler serving the dashboard UI and JSON API endpoints.
-- _json · method · L1662-L1669 — Writes a JSON response with the given status code.
-- _text · method · L1671-L1680 — Writes a plain-text response with the given status code and content type.
-- _serve_file · method · L1682-L1686 — Serves a static file with the given content type.
-- do_GET · method · L1688-L1693 — Dispatches GET requests to the internal handler.
-- _do_GET · method · L1695-L1761 — Routes GET requests to the appropriate data endpoint or static file.
-- _read_body · method · L1763-L1770 — Reads the request body up to a size limit.
-- do_POST · method · L1772-L1777 — Dispatches POST requests to the internal handler.
-- _do_POST · method · L1779-L1842 — Routes POST requests to the appropriate action endpoint.
-- _handle_operator_decision · method · L1844-L1884 — Handles a POST to record an operator decision.
-- _handle_directive · method · L1886-L1932 — Handles a POST to write a new human directive.
-- _handle_settings · method · L1934-L1963 — Handles a POST to update settings.
-- log_message · method · L1965-L1966 — Suppresses default request logging.
-- main · function · L1969-L1991 — Entry point that parses args and starts the dashboard HTTP server.
+- gather_status_payload · function · L1639-L1659 — Assembles the full status payload shown by the dashboard by reading engine runtime, directive, operator requests, and graft freshness state.
+- read_graft_freshness · function · L1662-L1672 — Reads graft freshness state to report how recently the loop's graft data was updated.
+- DashboardHandler · class · L1675-L1980 — HTTP request handler serving the dashboard UI and JSON API endpoints.
+- _json · method · L1676-L1683 — Writes a JSON response with the given status code.
+- _text · method · L1685-L1694 — Writes a plain-text response with the given status code and content type.
+- _serve_file · method · L1696-L1700 — Serves a static file with the given content type.
+- do_GET · method · L1702-L1707 — Dispatches GET requests to the internal handler.
+- _do_GET · method · L1709-L1775 — Routes GET requests to the appropriate data endpoint or static file.
+- _read_body · method · L1777-L1784 — Reads the request body up to a size limit.
+- do_POST · method · L1786-L1791 — Dispatches POST requests to the internal handler.
+- _do_POST · method · L1793-L1856 — Routes POST requests to the appropriate action endpoint.
+- _handle_operator_decision · method · L1858-L1898 — Handles a POST to record an operator decision.
+- _handle_directive · method · L1900-L1946 — Handles a POST to write a new human directive.
+- _handle_settings · method · L1948-L1977 — Handles a POST to update settings.
+- log_message · method · L1979-L1980 — Suppresses default request logging.
+- main · function · L1983-L2005 — Entry point that parses args and starts the dashboard HTTP server.

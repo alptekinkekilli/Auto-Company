@@ -1,5 +1,5 @@
 ---
-name: Budget & spend accounting
+name: budget & spend accounting
 slug: budget-spend-accounting
 type: system
 sources:
@@ -19,12 +19,14 @@ sources:
     hash: d0bfb4ace48e1fa9665e17059be3f618b46fda0dcf432544a6bb16c07a3ed8db
 sources_digest: 008461a9ddcf3ed9ece80cc6682d6d680e7da83e6cd67c877c1a8319da57f40c
 links:
-  - to: auto-loop-core-engine
+  - to: auto-loop-core-loop
     relation: part_of
-    description: functions extracted from auto-loop.sh
-  - to: web-research-cost-model
+    description: These functions live in auto-loop.sh and are invoked each cycle.
+  - to: cycle-metadata-extraction
     relation: uses
-    description: engine-usage-cost.py prices token streams with model-hint fallback
+    description: >-
+      engine-usage-cost.py prices token streams; the model-hint must never
+      override an actual completed model from the done event.
 generator:
   version: 1
 covers:
@@ -41,12 +43,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Measures and gates spend from two disjoint sources (ccusage Codex CLI sessions + TOTAL_SPEND_LEDGER rows from jcode-harness cycles), summed not maxed. Fail-closed: degraded reads never lower a same-period prior observation and latch a hold.
+The spend-measurement and budget-gating subsystem: ccusage reads (fail-closed, never lowering a same-period prior), the TOTAL_SPEND_LEDGER rows written by jcode-harness cycles, daily/weekly/5h period resets, budget gates (APP-263), and the tier ladder that selects model/effort from remaining daily budget. Codex spend is summed from two disjoint sources (ccusage + ledger) rather than maxed, because maxing previously hid real spend.
 
 ## Related
 
-- part of [[auto-loop-core-engine]] — functions extracted from auto-loop.sh
-- uses [[web-research-cost-model]] — engine-usage-cost.py prices token streams with model-hint fallback
+- part of [[auto-loop-core-loop]] — These functions live in auto-loop.sh and are invoked each cycle.
+- uses [[cycle-metadata-extraction]] — engine-usage-cost.py prices token streams; the model-hint must never override an actual completed model from the done event.
 <!-- context:generated:end -->
 
 ## Notes

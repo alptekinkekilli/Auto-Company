@@ -28,7 +28,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Cloudflare Pages Functions for the auto-company marketing site: a branded presentation-layer proxy for the email opt-out flow (forwarding to the Twilio comms service, deliberately with no local suppression store so upstream remains the single source of truth) and a booking endpoint that issues a 302 to Google Calendar with no booking logic. Both keep links on the company's own domain for trust in cold B2B outreach, return no-store/no-referrer headers, and never fabricate success on upstream failure.
+Cloudflare Pages Functions for the branded site: /randevu issues a 302 to Google Calendar (no booking logic — slot management delegated to avoid reimplementing solved problems), /listeden-cik proxies the opt-out flow to the Twilio comms service with no local suppression store (upstream is single source of truth). Both validate env vars, never guess redirects, return Turkish fallback pages on failure, and set no-store/no-referrer. Trust in cold B2B outreach by keeping links on the company's own domain.
 <!-- context:generated:end -->
 
 ## Notes

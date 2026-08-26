@@ -1,4 +1,4 @@
-# scripts/ops/directive-rule-sweep.py · [[registry-directive-maintenance]]
+# scripts/ops/directive-rule-sweep.py · [[directive-rule-governance]]
 
 Scans directive bodies for rule-shaped lines and flags any whose distinctive tokens do not survive in standing files, reporting candidates for human review while failing loudly when coverage cannot be measured.
 

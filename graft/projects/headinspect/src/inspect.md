@@ -1,4 +1,4 @@
-# projects/headinspect/src/inspect.ts · [[headinspect-service]]
+# projects/headinspect/src/inspect.ts · [[headinspect-worker]]
 
 - Category · type · L4-L11 — Union type enumerating the header buckets used to group and order headers in reports.
 - HeaderEntry · interface · L13-L19 — Data holder describing one categorized header with its commentary and sanity flag.

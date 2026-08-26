@@ -1,4 +1,4 @@
-# projects/headinspect/src/render.ts · [[headinspect-service]]
+# projects/headinspect/src/render.ts · [[headinspect-worker]]
 
 - escapeHtml · function · L16-L23 — Escapes HTML-special characters in user-supplied strings so report values and URLs cannot inject markup.
 - badgeColor · function · L27-L36 — Maps a grade letter to the shields.io-style hex color used for the badge message segment.

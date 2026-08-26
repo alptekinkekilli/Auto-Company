@@ -15,9 +15,11 @@ sources:
     hash: 518ec45652bc5010bbd34856e527e2dc9c2dfa525aea151ff467f3a802c9da81
 sources_digest: fe1d8fd6fcb0f308eb0c4072f436e2986ea169f87521e188c20ca981540b20fa
 links:
-  - to: snapog-service
+  - to: snapog-worker
     relation: part_of
-    description: The cron entry point is wired into the Worker's scheduled handler.
+    description: >-
+      Cron entry point runCostAlertCheck is wired into the worker's scheduled
+      handler.
 generator:
   version: 1
 covers:
@@ -67,11 +69,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A six-hourly cron pipeline that runs five independent cost checks against D1 (D1 writes/day, 14-day cache hit rate, new signups, active users, R2 storage via a thin GraphQL client to the Cloudflare Analytics API) and posts fired alerts to a webhook, falling back to log-only mode when ALERT_WEBHOOK_URL is unset. Thresholds are isolated in one file sourced from the CFO cost model so they can be revised without touching check logic. Checks are deliberately isolated — a thrown error is treated as no alert to prevent false positives.
+Cron-triggered cost-alerting system (every 6h) running five independent checks against D1 and R2, posting to a webhook or falling back to log-only. Checks deliberately isolated — a thrown error is logged and treated as no alert, preventing false positives. Thresholds isolated in one file so the CFO can revise numbers without touching check logic. Severity escalates to critical above 1.5× threshold. R2 storage via a thin GraphQL client returning null on any failure.
 
 ## Related
 
-- part of [[snapog-service]] — The cron entry point is wired into the Worker's scheduled handler.
+- part of [[snapog-worker]] — Cron entry point runCostAlertCheck is wired into the worker's scheduled handler.
 <!-- context:generated:end -->
 
 ## Notes

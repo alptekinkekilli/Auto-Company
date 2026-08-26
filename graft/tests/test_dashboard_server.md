@@ -1,6 +1,6 @@
-# tests/test_dashboard_server.py · [[dashboard-runtime-telemetry]]
+# tests/test_dashboard_server.py · [[dashboard-cockpit]]
 
-Test suite for the dashboard server module, covering status parsing, action dispatch, engine runtime parsing, settings resolution, and window cutoff logic.
+Test suite for the dashboard server module, covering status parsing, action dispatch, engine runtime parsing, settings resolution, window cutoff, and graft freshness.
 
 - DashboardServerTests · class · L27-L210 — Tests that parse_status_output maps raw status text to normalized state dicts and that run_dashboard_action dispatches to the right runner per host.
 - test_windows_not_running_maps_to_stopped · method · L28-L52 — Verifies Windows status text with a stopped guardian maps to stopped/not_configured states with no PID.
@@ -53,3 +53,7 @@ Test suite for the dashboard server module, covering status parsing, action disp
 - LiveBudgetGateDisplayTests · class · L547-L581 — Verifies the dashboard surfaces the most recent budget-gate banner from the log rather than an earlier one.
 - test_engine_runtime_parses_live_gate_banner_last_match · method · L553-L565 — Asserts read_engine_runtime picks the last budget-gate banner line so the live gate state reflects the latest boot.
 - test_cost_summary_carries_last_budget_gate_line · method · L567-L581 — Asserts the cost summary carries the last budget-gate line from the log.
+- GraftFreshnessTests · class · L584-L613 — Verifies that graft status JSON is surfaced when fresh and reported unavailable when absent or malformed.
+- test_absent_file_reports_unavailable · method · L588-L592 — Asserts that a missing graft status file yields an unavailable result.
+- test_valid_status_passthrough · method · L594-L604 — Asserts that a fresh, valid graft status JSON is passed through unchanged.
+- test_malformed_json_reports_unavailable · method · L606-L613 — Asserts that malformed graft status JSON is reported as unavailable.

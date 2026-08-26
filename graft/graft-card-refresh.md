@@ -1,0 +1,52 @@
+---
+name: graft card refresh
+slug: graft-card-refresh
+type: file
+sources:
+  - path: scripts/graft-auto-refresh.py
+    hash: 678e4a269c718dc9043afa096157f5d835cb3099883d31954de70ff10a4bfe33
+sources_digest: 349cf6c8fc1b8b2d774551e2842a1220b68910aa7da6e08ac140a57584d3d3b4
+links:
+  - to: loop-lifecycle-monitoring
+    relation: uses
+    description: >-
+      Writes logs/graft-freshness.json for the cockpit alongside the other
+      runtime artifacts the monitor reads.
+generator:
+  version: 1
+covers:
+  - symbol: _repo_root
+    kind: function
+    at: 'scripts/graft-auto-refresh.py:L42-L54'
+  - symbol: _git
+    kind: function
+    at: 'scripts/graft-auto-refresh.py:L57-L68'
+  - symbol: _lock_alive
+    kind: function
+    at: 'scripts/graft-auto-refresh.py:L71-L81'
+  - symbol: _emit
+    kind: function
+    at: 'scripts/graft-auto-refresh.py:L84-L94'
+  - symbol: main
+    kind: function
+    at: 'scripts/graft-auto-refresh.py:L97-L187'
+  - symbol: status
+    kind: function
+    at: 'scripts/graft-auto-refresh.py:L122-L132'
+  - symbol: fmt
+    kind: function
+    at: 'scripts/graft-auto-refresh.py:L134-L137'
+---
+<!-- context:generated:start -->
+## Summary
+
+A SessionStart hook that triggers a paid deep graft build only when git history shows cards are genuinely stale (commits-behind and age double threshold), guarded by a lock file and a 30-minute relaunch marker. Deliberately fail-open, non-blocking (detached via start_new_session), and never touches the Together API key, which lives in graft-build.sh.
+
+## Related
+
+- uses [[loop-lifecycle-monitoring]] — Writes logs/graft-freshness.json for the cockpit alongside the other runtime artifacts the monitor reads.
+<!-- context:generated:end -->
+
+## Notes
+
+_Anything written below the generated block is preserved when the graph is regenerated._

@@ -1,4 +1,4 @@
-# scripts/ops/state-snapshot.py · [[atomic-state-writes]] [[opportunity-analyst-orchestration]] [[state-snapshot-idle-detection]]
+# scripts/ops/state-snapshot.py · [[idle-skip-off-hours]] [[ops-scripts]] [[registry-archive-state-snapshot]]
 
 One-call cycle state snapshot that collapses the per-cycle probe fan-out into a single turn, printing local state hashes plus a DELTA line against the previous snapshot so an unchanged world can be dismissed in one glance.
 

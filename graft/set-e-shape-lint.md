@@ -1,5 +1,5 @@
 ---
-name: Set-e shape lint
+name: set -e shape lint
 slug: set-e-shape-lint
 type: concept
 sources:
@@ -11,9 +11,12 @@ sources:
     hash: c75dd121edbe7aed5432f718bdfff952149464b77f9ab22baced3682261ebc98
 sources_digest: f9a496f4e0fe5319a1b11b70edca4497d399b48d59de2f5764db20f3451464d6
 links:
-  - to: auto-loop-core-engine
+  - to: auto-loop-core-loop
     relation: validates
-    description: asserts zero violations in auto-loop.sh
+    description: Lints auto-loop.sh and docker-entrypoint.sh for the fatal set -e shape.
+  - to: test-by-extraction-strategy
+    relation: part_of
+    description: It is one of the extraction-based test tools.
 generator:
   version: 1
 covers:
@@ -36,11 +39,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A fatal `[ test ] && action` list used as a function's last command or before a bare return propagates a false test's exit 1 and kills an unguarded caller (root cause of APP-240). The lint is deliberately narrow to avoid false positives on safe AND-OR/redirect forms.
+A narrow lint (test_seteshape_lint.py) that flags the fatal `[ test ] && action` pattern used as a function's last command or before a bare return, which propagates a false test's exit 1 and kills an unguarded caller (root cause of APP-240). Deliberately does not flag done/fi/esac terminators (set -e exempts the left operand of AND-OR lists) or lines ending in || true/|| :, to avoid false positives on the safe redirect-fed loop form.
 
 ## Related
 
-- validates [[auto-loop-core-engine]] — asserts zero violations in auto-loop.sh
+- validates [[auto-loop-core-loop]] — Lints auto-loop.sh and docker-entrypoint.sh for the fatal set -e shape.
+- part of [[test-by-extraction-strategy]] — It is one of the extraction-based test tools.
 <!-- context:generated:end -->
 
 ## Notes

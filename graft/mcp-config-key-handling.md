@@ -7,6 +7,8 @@ sources:
     hash: 69e213cd234def194fee047d846a0c29f3c11edb07d7c7421fde188d1f75121c
   - path: scripts/core/jcode-mcp-probe.py
     hash: 60fdd2addf2f53741d03e21002a00b6ee9d8895af1fae9746a51308e67672b67
+  - path: scripts/ops/verify-mcp-keys.py
+    hash: a35c1f35481876cedc5bb4cf0c7fd4eceaea1c85e57d3c28e87560b3f9f342db
   - path: tests/fixtures/mock_mcp_server.py
     hash: e5124ccf90e18331b1e81557000a0bf0cc13e1fd7f0412250c5f37fb08e23021
   - path: tests/test_jcode_mcp_config.sh
@@ -15,14 +17,16 @@ sources:
     hash: 21c4be05f1922a08fa185aaa94f73941a785d5f380b7770431bdee7bf78115d6
   - path: tests/test_mcp_probe.sh
     hash: 07482a8311b81667003a304c3741feed20e311f1e28263a5bb3bcc5599e962ce
-sources_digest: 6bd8fd9aaae9271a702a2764fa6d5996a73d099ffd411282fef86e100d6a3bf7
+sources_digest: 6d01a15858b70f1d3ee539ec05d0027ade03b9db460e7f6e5edfa389c32b7b02
 links:
-  - to: airtable-access-layer
+  - to: auto-loop-core-loop
     relation: configures
-    description: defines airtable/linear/context7/browseros server specs
-  - to: tool-usage-audit
-    relation: uses
-    description: probe validates destructive tool lists and readchecks per server
+    description: >-
+      The generated .mcp.json is consumed by the engine CLIs that auto-loop
+      invokes.
+  - to: ops-scripts
+    relation: part_of
+    description: verify-mcp-keys.py is a post-deploy ops check.
 generator:
   version: 1
 covers:
@@ -83,16 +87,22 @@ covers:
   - symbol: main
     kind: function
     at: 'scripts/core/jcode-mcp-probe.py:L189-L362'
+  - symbol: loop_env
+    kind: function
+    at: 'scripts/ops/verify-mcp-keys.py:L39-L51'
+  - symbol: main
+    kind: function
+    at: 'scripts/ops/verify-mcp-keys.py:L54-L75'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-Generates .mcp.json wrapping HTTP MCP servers in the mcp-remote stdio bridge, and probes them deterministically. Secrets never appear in argv (ps-readable) — literal ${VAR} placeholders ride in --header while real values live in env blocks. Keychain fallback works on macOS but never fires in-container.
+Generates and validates the .mcp.json MCP server configuration (context7, airtable, linear, browseros). jcode-mcp-config.py wraps HTTP servers in the mcp-remote stdio bridge, keeping secrets out of argv (literal ${VAR} placeholder in --header, real value in env block) and masking diagnostics. The Keychain fallback fires on macOS when a ${VAR} placeholder or unset var arrives, but never inside the container where `security` is absent. verify-mcp-keys.py checks deployed keys via /proc/<pid>/environ of the running auto-loop process, never printing values.
 
 ## Related
 
-- configures [[airtable-access-layer]] — defines airtable/linear/context7/browseros server specs
-- uses [[tool-usage-audit]] — probe validates destructive tool lists and readchecks per server
+- configures [[auto-loop-core-loop]] — The generated .mcp.json is consumed by the engine CLIs that auto-loop invokes.
+- part of [[ops-scripts]] — verify-mcp-keys.py is a post-deploy ops check.
 <!-- context:generated:end -->
 
 ## Notes

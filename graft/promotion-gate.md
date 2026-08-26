@@ -1,7 +1,7 @@
 ---
 name: Promotion Gate
 slug: promotion-gate
-type: concept
+type: file
 sources:
   - path: scripts/analyst/promote_directive.py
     hash: 9c45147f1730fc30545b94a30428d54e0bd40f04506aa3db00614880ec93d677
@@ -9,10 +9,7 @@ sources_digest: 529774ce95135d20964e1d42a6242cf44c9928383f17eac44213ac8385a782b9
 links:
   - to: directive-writer
     relation: uses
-    description: Writes the new directive through the same safe-write path.
-  - to: opportunity-analyst
-    relation: part_of
-    description: Pass-3 of the analyst pipeline.
+    description: Writes the new directive through directive_writer.py.
 generator:
   version: 1
 covers:
@@ -35,12 +32,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A deterministic, fail-closed gate (promote_directive.py) that decides whether the analyst's report may overwrite human-directive.md. Uses pure regex (never an LLM) to block on any risk-keyword hit, missing verdict keywords, or escalation language near the current Active Validation ID. Requires the live directive Status to be DONE, backs up the current file, writes a PENDING directive with audit metadata, and verifies via read-back. Deliberately over-includes risk terms to favor manual review over false negatives.
+Deterministic, fail-closed gate deciding whether the analyst's report may overwrite human-directive.md. Pure regex (never an LLM) blocks on risk-keyword hits, missing verdict keywords, or escalation language near the current Active Validation ID. Requires live directive Status DONE, backs up, writes new directive with PENDING status, verifies via read-back/diff. Always exits 0 printing PROMOTED or BLOCKED; deliberately over-includes risk terms to favor manual review.
 
 ## Related
 
-- uses [[directive-writer]] — Writes the new directive through the same safe-write path.
-- part of [[opportunity-analyst]] — Pass-3 of the analyst pipeline.
+- uses [[directive-writer]] — Writes the new directive through directive_writer.py.
 <!-- context:generated:end -->
 
 ## Notes

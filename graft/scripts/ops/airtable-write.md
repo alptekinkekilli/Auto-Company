@@ -1,4 +1,4 @@
-# scripts/ops/airtable-write.py · [[airtable-access-layer]] [[airtable-access-wrappers]] [[secret-handling]]
+# scripts/ops/airtable-write.py · [[airtable-access-layer]] [[airtable-read-write-guards]] [[ops-scripts]]
 
 CLI tool that performs single-record Airtable writes with mandatory before/after read-back, dry-run-by-default, and data-loss guards so operator-side corrections never silently destroy or strand data.
 
