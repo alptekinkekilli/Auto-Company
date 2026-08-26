@@ -579,3 +579,35 @@ class LiveBudgetGateDisplayTests(unittest.TestCase):
         self.assertEqual(out["gateDailyUsd"], 10.636)
         self.assertEqual(out["gateDailyCap"], 500.0)
         self.assertEqual(out["gateWeeklyCap"], 2500.0)
+
+
+class GraftFreshnessTests(unittest.TestCase):
+    """read_graft_freshness fails open — the container cockpit has no local
+    graft-freshness.json (no .git, no local hook) and must show n/a, never crash."""
+
+    def test_absent_file_reports_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            with mock.patch.object(dashboard_server, "REPO_ROOT", Path(td)):
+                self.assertEqual(dashboard_server.read_graft_freshness(),
+                                 {"available": False})
+
+    def test_valid_status_passthrough(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            logs = Path(td) / "logs"
+            logs.mkdir()
+            (logs / "graft-freshness.json").write_text(
+                json.dumps({"available": True, "behind": 3, "age_h": 5.0,
+                            "refreshing": False}))
+            with mock.patch.object(dashboard_server, "REPO_ROOT", Path(td)):
+                out = dashboard_server.read_graft_freshness()
+        self.assertTrue(out["available"])
+        self.assertEqual(out["behind"], 3)
+
+    def test_malformed_json_reports_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            logs = Path(td) / "logs"
+            logs.mkdir()
+            (logs / "graft-freshness.json").write_text("{ not valid json")
+            with mock.patch.object(dashboard_server, "REPO_ROOT", Path(td)):
+                self.assertEqual(dashboard_server.read_graft_freshness(),
+                                 {"available": False})

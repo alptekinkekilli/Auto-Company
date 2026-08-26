@@ -12,11 +12,14 @@ const els = {
   loopMeta: document.getElementById("loopMeta"),
   autostartState: document.getElementById("autostartState"),
   autostartMeta: document.getElementById("autostartMeta"),
+  graftState: document.getElementById("graftState"),
+  graftMeta: document.getElementById("graftMeta"),
 
   cardGuardian: document.getElementById("cardGuardian"),
   cardDaemon: document.getElementById("cardDaemon"),
   cardLoop: document.getElementById("cardLoop"),
   cardAutostart: document.getElementById("cardAutostart"),
+  cardGraft: document.getElementById("cardGraft"),
 
   stateList: document.getElementById("stateList"),
   consensusText: document.getElementById("consensusText"),
@@ -217,6 +220,31 @@ function applyCardState(card, kind, state) {
   card.classList.add(classForState(kind, state));
 }
 
+function renderGraft(g) {
+  g = g || {};
+  els.cardGraft.classList.remove("good", "warn", "bad");
+  if (g.available === false) {
+    els.graftState.textContent = "yerel";
+    els.graftMeta.textContent = "n/a (git yok)";
+    return;
+  }
+  const behind = g.behind == null ? "?" : g.behind;
+  const age = g.age_h == null ? "?" : Math.round(g.age_h);
+  if (g.refreshing) {
+    els.graftState.textContent = "TAZELENİYOR";
+    els.graftMeta.textContent = `${behind}c/${age}s · --deep koşuyor`;
+    els.cardGraft.classList.add("warn");
+    return;
+  }
+  const stale =
+    g.behind != null && g.max_behind != null && g.behind > g.max_behind &&
+    g.age_h != null && g.max_age_h != null && g.age_h > g.max_age_h;
+  els.graftState.textContent = stale ? "BAYAT" : "TAZE";
+  els.graftMeta.textContent =
+    `${behind}c/${age}s · eşik ${g.max_behind ?? "?"}c/${g.max_age_h ?? "?"}s`;
+  els.cardGraft.classList.add(stale ? "warn" : "good");
+}
+
 function formatTime(isoText) {
   try {
     return new Date(isoText).toLocaleString();
@@ -313,6 +341,7 @@ async function fetchStatus() {
   renderCost(data.cost || {});
   lastHold = data.hold || { held: false };
   renderHold(lastHold);
+  renderGraft(data.graft || {});
 
   els.lastUpdate.textContent = `Last update: ${formatTime(data.timestamp)}`;
   els.latency.textContent = `Roundtrip: ${elapsed}ms`;

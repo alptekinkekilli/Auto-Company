@@ -1655,7 +1655,21 @@ def gather_status_payload(system_name: str | None = None) -> dict[str, Any]:
         "directive": read_directive(),
         "cost": read_cost_summary(),
         "router": read_engine_runtime(),
+        "graft": read_graft_freshness(),
     }
+
+
+def read_graft_freshness() -> dict[str, Any]:
+    """Freshness of the git-tracked graft cards, written by scripts/graft-auto-refresh.py
+    at each session start. Local-only: the cards and their commits-behind are a git fact on
+    the operator's Mac, so the container cockpit (no .git, no local hook) reports n/a."""
+    try:
+        data = json.loads(
+            (REPO_ROOT / "logs" / "graft-freshness.json").read_text(encoding="utf-8")
+        )
+    except (OSError, ValueError):
+        return {"available": False}
+    return data if isinstance(data, dict) else {"available": False}
 
 
 class DashboardHandler(BaseHTTPRequestHandler):
