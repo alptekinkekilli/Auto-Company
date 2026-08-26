@@ -11,7 +11,7 @@ sources:
     hash: 4ea7f4b5ce31ce14039bf5cedd3c6a9718e2357906fe289906d06debe11f3fe3
 sources_digest: de3a4d542bf8fb9c655ec4e27c2ef95092a2da94fd27c6740380b87e8ffab8d8
 links:
-  - to: platform-status-reports
+  - to: platform-status-scripts
     relation: uses
     description: >-
       monitor.sh and status scripts read the same runtime artifacts
@@ -23,11 +23,11 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-The background loop's lifecycle and observability layer. stop-loop.sh provides graceful shutdown (signal file for graceful cycle completion plus SIGTERM, pause flag, launchd daemon management). monitor.sh tails logs and reports status/cycles. sentry-heartbeat.sh proves the process tree is alive independently of the dashboard, reporting 'ok' only if both dashboard and loop PID are alive to avoid false positives during restart storms.
+Manages and observes the background Auto Company loop. stop-loop.sh provides graceful shutdown (signal file plus SIGTERM, pause/resume flags), monitor.sh tails logs and reports daemon health via systemctl/launchctl, and sentry-heartbeat.sh proves the process tree is alive independently of the dashboard to catch crash-loops (APP-250), only reporting ok when both dashboard and loop PID are alive to avoid false positives during restart storms (APP-240).
 
 ## Related
 
-- uses [[platform-status-reports]] — monitor.sh and status scripts read the same runtime artifacts (.auto-loop.pid, .auto-loop-state, logs/).
+- uses [[platform-status-scripts]] — monitor.sh and status scripts read the same runtime artifacts (.auto-loop.pid, .auto-loop-state, logs/).
 <!-- context:generated:end -->
 
 ## Notes

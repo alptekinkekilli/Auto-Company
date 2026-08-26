@@ -11,9 +11,7 @@ sources_digest: 85f695b540190c148b455d6cc63e72dbb881bcb53a6cf3d680c51a434fc47b16
 links:
   - to: auto-loop-core-engine
     relation: validates
-    description: >-
-      auto-loop.sh, dashboard/server.py, and Dockerfile are protected surfaces
-      this hook blocks edits to.
+    description: Blocks edits to auto-loop.sh and other protected surfaces
 generator:
   version: 1
 covers:
@@ -30,11 +28,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A PreToolUse hook that mechanically enforces the Prod-Mechanism Change Rule, blocking edits to protected production surfaces unless a time-limited approval marker exists. Fails open on malformed stdin or inside a container to avoid locking out autonomous cycles, and --check-sync enforces that documented protected paths match the actual list to prevent scope drift.
+A PreToolUse hook that mechanically enforces the Prod-Mechanism Change Rule, blocking edits to protected production surfaces unless a time-limited approval marker exists. Fails open on malformed stdin or inside a container to avoid locking out autonomous cycles; --check-sync verifies the protected list matches CLAUDE.md to prevent silent scope drift.
 
 ## Related
 
-- validates [[auto-loop-core-engine]] — auto-loop.sh, dashboard/server.py, and Dockerfile are protected surfaces this hook blocks edits to.
+- validates [[auto-loop-core-engine]] — Blocks edits to auto-loop.sh and other protected surfaces
 <!-- context:generated:end -->
 
 ## Notes

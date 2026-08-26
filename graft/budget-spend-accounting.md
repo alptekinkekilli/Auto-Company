@@ -4,7 +4,7 @@ slug: budget-spend-accounting
 type: system
 sources:
   - path: scripts/core/auto-loop.sh
-    hash: 30cc1c943819800a5516778d7d841255d14720019a6bce081cc5b2d730631e64
+    hash: bc00d41b28222e0836508c4e1674f4e8146364f9a8d8e3a35fcf4c4a3e67f1f6
   - path: scripts/core/engine-usage-cost.py
     hash: 845b4b8bb9293058e19f610185ec25544170dd0adba7323520f2402ecc499a59
   - path: tests/test_budget_gates.sh
@@ -15,16 +15,16 @@ sources:
     hash: 38e285a908cfdba71566f50ec2429fed8dc40ccdaaf68886e24e27399bba5bef
   - path: tests/test_cost_model_hint.sh
     hash: c17d1daedaa46cd803aa562c933e2a0d75aa6f2a5f7e059fd47fa8961847f743
-  - path: tests/test_mixed_harness.sh
-    hash: bd8a1f81df957e0bfdfacf44982a2274a58809d5f9bd8618c64c3efeecb868cc
-sources_digest: 421e004c7ebef884343c055f034507cca24c256dfb630c31ad2350e2e210068a
+  - path: tests/test_discretionary_budget.sh
+    hash: 32b2f12385f1bf8cc0984fc89d1181074406a1726028d2705d2224759cf6de7e
+sources_digest: ae43b2ca9722918c376650b2c4964790adade3571a86989aa169e50991ded214
 links:
   - to: auto-loop-core-engine
     relation: part_of
-    description: These functions live in auto-loop.sh and are extracted by tests via awk.
-  - to: cycle-metadata-extraction
+    description: Functions extracted from auto-loop.sh
+  - to: state-snapshot-probe
     relation: uses
-    description: record_total_spend attributes each cycle's cost under its own run_id.
+    description: 'idle detection reads DELTA: none from the snapshot'
 generator:
   version: 1
 covers:
@@ -41,12 +41,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The spend-measurement and gating layer: sums Codex spend from two disjoint sources (ccusage CLI session files plus TOTAL_SPEND_LEDGER rows from jcode-harness cycles), applies 5h/daily/weekly budget gates, and latches holds on degraded reads. It is fail-closed: a first-ever ccusage failure latches a hold and returns NA, and degraded reads never lower a same-period prior observation.
+The spend-measurement and gating subsystem: sums Codex spend from two disjoint sources (ccusage CLI sessions + TOTAL_SPEND_LEDGER rows), applies 5h/daily/weekly budget gates, and latches holds on degraded reads. Fail-closed: a first-ever ccusage failure latches a hold and returns NA, and degraded reads never lower a same-period prior observation.
 
 ## Related
 
-- part of [[auto-loop-core-engine]] — These functions live in auto-loop.sh and are extracted by tests via awk.
-- uses [[cycle-metadata-extraction]] — record_total_spend attributes each cycle's cost under its own run_id.
+- part of [[auto-loop-core-engine]] — Functions extracted from auto-loop.sh
+- uses [[state-snapshot-probe]] — idle detection reads DELTA: none from the snapshot
 <!-- context:generated:end -->
 
 ## Notes

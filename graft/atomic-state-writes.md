@@ -9,16 +9,15 @@ sources:
     hash: 60fdd2addf2f53741d03e21002a00b6ee9d8895af1fae9746a51308e67672b67
   - path: scripts/core/operator_request_notify.py
     hash: 422b3f99a0cf654022883399da8d8ae7b28d7a6b7bffc2ddfc68dd4d987217ac
-  - path: scripts/ops/directive-staleness-watch.py
-    hash: 6597a8a3666b54131d1b782a8d8ee308e705e33dbed83429da857f9b1f0360fd
   - path: scripts/ops/idle-skip-note.py
     hash: 1d4f853b19cdc9ee94c0fd1136ea67393d04deb36a7563e2720ef15a0631ec98
   - path: scripts/ops/registry-archive.py
     hash: 125be575d2da1c70effa433e2eabe55e5e7e7851fc89719651a1520bb76ee651
-  - path: scripts/ops/state-snapshot.py
-    hash: 3112f4632b64a6b531b215ea81ba82b2ceb6436942511f816de94ced3171bfe8
-sources_digest: 55a36e3f0f9aee7512f085dcd67dd160cd3855a4a7e44a3f6c95ab8ef3658bae
-links: []
+sources_digest: 57ebfadb37b37edf685c4f73cee5e642bbcd9f78ebdb040531b9faa4c442a229
+links:
+  - to: operator-escalation-notification
+    relation: implements
+    description: operator_request_notify.py's state file writes follow this pattern.
 generator:
   version: 1
 covers:
@@ -178,15 +177,6 @@ covers:
   - symbol: main
     kind: function
     at: 'scripts/core/operator_request_notify.py:L976-L988'
-  - symbol: read_directive
-    kind: function
-    at: 'scripts/ops/directive-staleness-watch.py:L40-L56'
-  - symbol: last_line_matching
-    kind: function
-    at: 'scripts/ops/directive-staleness-watch.py:L59-L66'
-  - symbol: main
-    kind: function
-    at: 'scripts/ops/directive-staleness-watch.py:L69-L165'
   - symbol: build_line
     kind: function
     at: 'scripts/ops/idle-skip-note.py:L26-L34'
@@ -220,26 +210,15 @@ covers:
   - symbol: month_of
     kind: function
     at: 'scripts/ops/registry-archive.py:L250-L251'
-  - symbol: file_sha16
-    kind: function
-    at: 'scripts/ops/state-snapshot.py:L54-L61'
-  - symbol: directive_state
-    kind: function
-    at: 'scripts/ops/state-snapshot.py:L64-L72'
-  - symbol: opreq_open
-    kind: function
-    at: 'scripts/ops/state-snapshot.py:L75-L87'
-  - symbol: wowcar_sources
-    kind: function
-    at: 'scripts/ops/state-snapshot.py:L90-L104'
-  - symbol: main
-    kind: function
-    at: 'scripts/ops/state-snapshot.py:L107-L166'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-A cross-cutting invariant: all state files are written atomically via temp-file + os.replace (or os.replace on tmp), with corruption backups where relevant, so a crash never leaves a half-written state. Appears in operator_request_notify.py, jcode-mcp-config.py, jcode-mcp-probe.py, idle-skip-note.py, state-snapshot.py, registry-archive.py, and directive-staleness-watch.py.
+All persistent state is written atomically via temp-file + os.replace (or tmp + os.replace in bash), with corruption backups and compare-and-swap on mtime to prevent concurrent edits. Seen in operator_request_notify.py (load_state/write_state with corruption backup), idle-skip-note.py (mkstemp + os.replace), registry-archive.py (compare-and-swap on mtime), jcode-mcp-config.py (temp-file rename), and jcode-mcp-probe.py (atomic evidence JSON).
+
+## Related
+
+- implements [[operator-escalation-notification]] — operator_request_notify.py's state file writes follow this pattern.
 <!-- context:generated:end -->
 
 ## Notes

@@ -4,27 +4,22 @@ slug: auto-loop-core-engine
 type: system
 sources:
   - path: scripts/core/auto-loop.sh
-    hash: 30cc1c943819800a5516778d7d841255d14720019a6bce081cc5b2d730631e64
-sources_digest: b464e67c211c1ff1554e0643aab744e36fe30b6a947596c4b5e9785a9170c824
+    hash: bc00d41b28222e0836508c4e1674f4e8146364f9a8d8e3a35fcf4c4a3e67f1f6
+sources_digest: 2a434563773d52689cea1c99c376307922ef71ecfe3b855098543da135bccbda
 links:
   - to: budget-spend-accounting
     relation: uses
     description: >-
-      auto-loop.sh calls evaluate_budget_gates, record_total_spend,
-      _codex_spend_since, and codex_ledger_spend_since to gate and record spend.
-  - to: cycle-metadata-extraction
-    relation: uses
+      evaluate_budget_gates, record_total_spend, and ccusage reads gate each
+      cycle
+  - to: prompt-transport-contract
+    relation: implements
     description: >-
-      extract_cycle_metadata() parses engine output into
-      CYCLE_TYPE/SUBTYPE/RESULT_TEXT.
-  - to: prod-mechanism-guard
-    relation: validates
-    description: >-
-      auto-loop.sh is a protected path that prod-mechanism-guard.py blocks edits
-      to without an approval marker.
-  - to: prompt-transport-assembly
+      run_claude_cycle_cli/run_codex_cycle_cli pass prompts via STDIN;
+      run_jcode_cycle refuses oversized prompts
+  - to: state-snapshot-probe
     relation: uses
-    description: auto-loop.sh assembles FULL_PROMPT and passes it to engine CLIs via STDIN.
+    description: reads the DELTA line from state-snapshot.py to decide idle-skip
 generator:
   version: 1
 covers: []
@@ -32,14 +27,13 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-The central orchestration loop that drives autonomous cycles: selects an engine (claude/jcode, codex/cli), applies budget gates, idle-skip, escalation, and prompt assembly, then runs the cycle and records spend/metadata. It is the single most protected surface in the repo and the target of most regression tests.
+The central orchestration loop that runs each cycle: selects an engine (claude/jcode/codex), assembles the prompt, enforces budget gates, handles idle-skip, escalation, and metadata extraction. Most other scripts are probes or hooks that feed or guard this loop.
 
 ## Related
 
-- uses [[budget-spend-accounting]] — auto-loop.sh calls evaluate_budget_gates, record_total_spend, _codex_spend_since, and codex_ledger_spend_since to gate and record spend.
-- uses [[cycle-metadata-extraction]] — extract_cycle_metadata() parses engine output into CYCLE_TYPE/SUBTYPE/RESULT_TEXT.
-- validates [[prod-mechanism-guard]] — auto-loop.sh is a protected path that prod-mechanism-guard.py blocks edits to without an approval marker.
-- uses [[prompt-transport-assembly]] — auto-loop.sh assembles FULL_PROMPT and passes it to engine CLIs via STDIN.
+- uses [[budget-spend-accounting]] — evaluate_budget_gates, record_total_spend, and ccusage reads gate each cycle
+- implements [[prompt-transport-contract]] — run_claude_cycle_cli/run_codex_cycle_cli pass prompts via STDIN; run_jcode_cycle refuses oversized prompts
+- uses [[state-snapshot-probe]] — reads the DELTA line from state-snapshot.py to decide idle-skip
 <!-- context:generated:end -->
 
 ## Notes

@@ -11,9 +11,9 @@ sources:
     hash: 0a140d23218574add9c22c524d6ff03aea85a205f4806261fc0791a4b73c144f
 sources_digest: ce9cb2a773c1290423006a58fe8d649723cb56a07022127ba072ed0d87b79c56
 links:
-  - to: snapog-worker
+  - to: snapog-service
     relation: validates
-    description: 'Smoke tests verify the /og endpoint, cache-cap behavior, and alert cron.'
+    description: 'Smoke tests verify the /og endpoint, cache-cap behavior, and alert firing.'
 generator:
   version: 1
 covers: []
@@ -21,11 +21,11 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-One-off Bash validation scripts for specific SnapOG fixes, archived under _archive/snapog/sample/. smoke-test.sh checks /health and /og PNG size; cache-cap-test.sh verifies that after MONTHLY_CACHE_KEY_CAP distinct keys the R2 cache returns X-Cache: BYPASSED; alerts-dry-run.sh seeds 500 cache-miss rows and triggers the /__scheduled cron to verify alert logic without real webhooks.
+One-off operational validation scripts (archived under _archive/snapog/sample/): smoke-test.sh checks /health and /og PNG size; cache-cap-test.sh verifies that after MONTHLY_CACHE_KEY_CAP distinct keys the R2 cache returns X-Cache: BYPASSED instead of MISS; alerts-dry-run.sh seeds 500 cache-miss usage_events via recursive SQL CTE and triggers the cron handler via /__scheduled to verify alert logic without real webhooks. These are manual/CI checks, not maintained unit tests.
 
 ## Related
 
-- validates [[snapog-worker]] — Smoke tests verify the /og endpoint, cache-cap behavior, and alert cron.
+- validates [[snapog-service]] — Smoke tests verify the /og endpoint, cache-cap behavior, and alert firing.
 <!-- context:generated:end -->
 
 ## Notes

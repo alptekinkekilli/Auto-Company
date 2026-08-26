@@ -3118,6 +3118,19 @@ Priorities, in order: (1) the Human Directive, per the rules above; (2) only the
             >/dev/null 2>&1 || true
     fi
 
+    # Operator action router (2026-08-26). The operator gets ≥13 distinct Telegram message
+    # types from the company and cannot tell at a glance what is actually ON THEM: the
+    # directive-staleness / registry-queue / reply-watch watchers each fire in isolation and
+    # none can say "you have N open items / none". This is the missing single pane — ADDITIVE,
+    # it never edits or silences the others. It reads only the three locally-canonical hard
+    # blockers with NO network call (LOOP_HOLD, open OPREQ, PENDING directive), hashes the open
+    # set for its own dedup, and stays silent when nothing is on the operator. Same discipline
+    # as the block above: existing return moment, own cooldown, advisory, never fails the cycle.
+    if [ -f "$SCRIPT_DIR/../ops/operator-action-router.py" ]; then
+        python3 "$SCRIPT_DIR/../ops/operator-action-router.py" --app "$PROJECT_DIR" \
+            >/dev/null 2>&1 || true
+    fi
+
     # Context7 consultation (2026-08-02). CLAUDE.md has required a Context7 check before
     # writing code against an external library for days; measured over 20 cycles, the company
     # made 291 MCP calls and ZERO to Context7. The tool is fine — the probe records it

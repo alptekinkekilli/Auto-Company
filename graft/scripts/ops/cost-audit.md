@@ -1,4 +1,4 @@
-# scripts/ops/cost-audit.py · [[cost-budget-ledger-adapters]] [[threshold-recalibration-vs-measurement]] [[unknown-model-conservative-pricing]]
+# scripts/ops/cost-audit.py · [[cost-budget-ledger-adapters]]
 
 Deterministic daily cost audit that reads on-disk logs and writes memories/cost-audit.md so the Opportunity Analyst interprets measured numbers instead of computing them.
 

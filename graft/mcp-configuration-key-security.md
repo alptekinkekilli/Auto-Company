@@ -21,9 +21,7 @@ sources_digest: 6d01a15858b70f1d3ee539ec05d0027ade03b9db460e7f6e5edfa389c32b7b02
 links:
   - to: auto-loop-core-engine
     relation: configures
-    description: >-
-      The generated .mcp.json and verified keys are consumed by the loop's
-      engine runs.
+    description: Generates the MCP config the loop's engines use
 generator:
   version: 1
 covers:
@@ -94,11 +92,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Generates and verifies the MCP server configuration: jcode-mcp-config.py wraps HTTP MCP servers in the mcp-remote stdio bridge keeping secrets out of argv (literal ${VAR} placeholder in --header, real value in env), jcode-mcp-probe.py deterministically probes servers, and verify-mcp-keys.py checks deployed keys via /proc/<pid>/environ. Keychain fallback works on macOS but must never fire inside the container where `security` doesn't exist.
+The subsystem that generates and validates the .mcp.json MCP server config and its API keys. Secrets never appear in argv (where ps could read them): the literal ${VAR} placeholder rides in --header while the real value lives in the server spec's env block. The generator refuses to write a partial config (all four servers required) and fails closed naming the missing variable. Keychain fallback fires on macOS but never inside the container where the security binary is absent.
 
 ## Related
 
-- configures [[auto-loop-core-engine]] — The generated .mcp.json and verified keys are consumed by the loop's engine runs.
+- configures [[auto-loop-core-engine]] — Generates the MCP config the loop's engines use
 <!-- context:generated:end -->
 
 ## Notes

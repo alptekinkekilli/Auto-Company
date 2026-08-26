@@ -1,22 +1,17 @@
 ---
-name: Auto Loop
+name: auto-loop
 slug: auto-loop
 type: system
 sources:
   - path: scripts/core/auto-loop.sh
-    hash: 30cc1c943819800a5516778d7d841255d14720019a6bce081cc5b2d730631e64
-sources_digest: b464e67c211c1ff1554e0643aab744e36fe30b6a947596c4b5e9785a9170c824
+    hash: bc00d41b28222e0836508c4e1674f4e8146364f9a8d8e3a35fcf4c4a3e67f1f6
+  - path: tests/test_tier_ladder_daily.sh
+    hash: d0bfb4ace48e1fa9665e17059be3f618b46fda0dcf432544a6bb16c07a3ed8db
+sources_digest: 195d5132db1beb91938c913265df3bf517a0b676f6a8664523d3cdc5bffb0420
 links:
-  - to: directive-writer
-    relation: depends_on
-    description: >-
-      Tripwire fails closed if human-directive.md changes without going through
-      directive_writer.py.
-  - to: opportunity-analyst
-    relation: uses
-    description: >-
-      Invokes the analyst's report and promotion passes as part of the loop's
-      decision flow.
+  - to: set-e-shape-lint
+    relation: validates
+    description: auto-loop.sh is linted for the fatal set -e test-and-action pattern.
 generator:
   version: 1
 covers: []
@@ -24,12 +19,11 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-The 24/7 orchestration loop that repeatedly invokes a CLI coding engine (Claude or Codex, via cli or jcode harness) in fresh sessions, using consensus.md as the cross-cycle relay and PROMPT.md as the standing instruction set. Implements budget gates (per-engine 5h, daily, weekly hard caps), a quota-aware router, tier ladder, circuit-breaker cooldowns, per-cycle timeouts, and a persistent spend ledger with idempotent run IDs. Fails closed if human-directive.md changes without the writer; its own fail-closed mechanisms are explicitly not security boundaries.
+Core orchestration loop including apply_tier_ladder(), which selects a model tier from a daily budget with per-engine independence (one engine's spend doesn't affect the other's tier) and combined model:effort rung syntax. Reads budget-gate variables directly rather than computing them.
 
 ## Related
 
-- depends on [[directive-writer]] — Tripwire fails closed if human-directive.md changes without going through directive_writer.py.
-- uses [[opportunity-analyst]] — Invokes the analyst's report and promotion passes as part of the loop's decision flow.
+- validates [[set-e-shape-lint]] — auto-loop.sh is linted for the fatal set -e test-and-action pattern.
 <!-- context:generated:end -->
 
 ## Notes

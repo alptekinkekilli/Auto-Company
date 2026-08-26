@@ -8,10 +8,10 @@ sources:
 sources_digest: 837c6e521378bcf965cbfcc5891b481682400ecc60b202a8af12f5fc90600758
 links:
   - to: bridge-leak-scanner
-    relation: depends_on
+    relation: uses
     description: >-
-      The scanner's public evidence fields like content_hash are produced by
-      this canonical hash.
+      The scanner's public evidence fields like content_hash are the values this
+      hash produces.
 generator:
   version: 1
 covers:
@@ -31,11 +31,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The canonical content-hash implementation for KİK decision pages, existing because raw HTML from the ASP.NET endpoint varies by client (User-Agent, __VIEWSTATE), making raw-byte hashes unreliable. normalize() applies a load-bearing pipeline (drop script/style, replace tags with a single space, unescape entities after tag removal, collapse whitespace) and digest() returns the first 16 hex chars of SHA-256 plus char count. Deliberately the single source of truth — a hash produced any other way is not comparable and must not be written to the bridge.
+The canonical content-hash implementation for KİK decision pages, existing because raw HTML from the ASP.NET endpoint varies by client (User-Agent, __VIEWSTATE), making raw-byte hashes unreliable. The normalization pipeline is load-bearing at every step: decode UTF-8 with replacement, drop script/style, replace every remaining tag with a single space (so a<br>b stays a b), unescape HTML entities after tag removal, map NBSP to space, collapse whitespace. A hash produced any other way is not comparable and must not be written to the bridge — a lesson from a 2026-07-29 incident where an underdetermined spec caused a legitimate evidence quarantine.
 
 ## Related
 
-- depends on [[bridge-leak-scanner]] — The scanner's public evidence fields like content_hash are produced by this canonical hash.
+- uses [[bridge-leak-scanner]] — The scanner's public evidence fields like content_hash are the values this hash produces.
 <!-- context:generated:end -->
 
 ## Notes

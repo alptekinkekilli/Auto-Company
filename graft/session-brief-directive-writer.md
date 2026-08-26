@@ -12,10 +12,8 @@ sources:
 sources_digest: e9eda69954b7db680bdc46bc19a2d18bfc205ac6bb173315479ab78845651772
 links:
   - to: auto-loop-core-engine
-    relation: configures
-    description: >-
-      The session brief and directive shape the context the loop's cycles
-      operate on.
+    relation: uses
+    description: directive_writer.py maintains the human-directive.md the loop reads
 generator:
   version: 1
 covers:
@@ -98,11 +96,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-SessionStart hook that injects a measured real-time session brief (git state, dirty files, stash) replacing stale hand-written resume text, plus directive_writer.py which writes the analysis directive and whose undefined_section_refs() guards against the bug that froze directive revision 11. Never blocks the session, never writes secrets, always prefers measured facts over claims.
+SessionStart hook that injects a measured real-time session brief (git state, branch, ahead/behind, dirty files, stash) replacing stale hand-written resume text, plus the directive writer that guards against undefined section references (the bug that froze directive revision 11). Never blocks the session, never writes secrets, always prefers measured facts over claims.
 
 ## Related
 
-- configures [[auto-loop-core-engine]] — The session brief and directive shape the context the loop's cycles operate on.
+- uses [[auto-loop-core-engine]] — directive_writer.py maintains the human-directive.md the loop reads
 <!-- context:generated:end -->
 
 ## Notes

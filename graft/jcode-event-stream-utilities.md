@@ -11,7 +11,7 @@ sources_digest: 1f796fb69faf2ddb0e51c4f3628fc7ed30de13034f051e334e55704ca4197287
 links:
   - to: cost-budget-ledger-adapters
     relation: part_of
-    description: engine-usage-cost.py is the adapter feeding the APP-263 budget ledger.
+    description: engine-usage-cost.py is the token-to-cost adapter for the budget ledger.
 generator:
   version: 1
 covers:
@@ -34,11 +34,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Utilities that consume jcode --ndjson event streams. jcode-final-text.py reconstructs the full assistant response by concatenating all text_delta events and preferring the longer of deltas vs done.text (a measured failure mode where done.text held only the last paragraph of a 31-delta answer). engine-usage-cost.py sums all tokens events (not just done.usage, which undercounts multi-tool cycles) and uses done only to identify the model.
+CLI utilities that consume jcode --ndjson event streams. jcode-final-text.py reconstructs the full assistant answer by concatenating all text_delta events and preferring the longer of deltas vs done.text (done.text can silently truncate on tool-using runs). engine-usage-cost.py (also here) sums all tokens events for cost. Both tolerate malformed lines and use only the standard library.
 
 ## Related
 
-- part of [[cost-budget-ledger-adapters]] — engine-usage-cost.py is the adapter feeding the APP-263 budget ledger.
+- part of [[cost-budget-ledger-adapters]] — engine-usage-cost.py is the token-to-cost adapter for the budget ledger.
 <!-- context:generated:end -->
 
 ## Notes

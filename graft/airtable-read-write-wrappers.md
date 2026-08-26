@@ -9,14 +9,11 @@ sources:
     hash: 888d408c392193511145e11dfbe73841a6d7e3e743e396ab8c8fee8b9507ab7c
 sources_digest: 43a42c7621b93d8e35ed7813326f7b761e954384d076a4d1b176afa770c1b952
 links:
-  - to: g4-identity-attribution
-    relation: uses
-    description: g4-check.py pulls registry bridge records via air_get/air_list.
-  - to: operator-escalation-gate
+  - to: outreach-eligibility-evidence
     relation: uses
     description: >-
-      registry-queue-watch.py and reply-watch.py read Airtable queues through
-      the REST API.
+      send-gate.py, g4-check.py, reply-watch.py, and registry-queue-watch.py all
+      read Airtable through these wrappers.
 generator:
   version: 1
 covers:
@@ -72,12 +69,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Scoped, auditable wrappers around the Airtable REST API. airtable-read.py refuses unscoped reads (which cost $2.41 in context re-reads) and paginates with automatic POST /listRecords past a 15k-char URL threshold; airtable-write.py is dry-run by default, reads-then-PATCH-then-verifies, and requires explicit flags to clear or replace substantial content. Secrets come from runtime.env or macOS Keychain, never argv.
+Scoped, auditable Airtable access. airtable-read.py refuses unscoped reads (Refusal exception naming the fixing flag) to prevent whole-table pulls that cost $2.41 in context re-reads, paginates with automatic POST /listRecords past a 15k-char URL threshold, and clips cells. airtable-write.py reads-then-PATCHes-then-verifies a single record, with dry-run default, --allow-clear, --force, and --replace guards; secrets come from runtime.env or Keychain, never argv.
 
 ## Related
 
-- uses [[g4-identity-attribution]] — g4-check.py pulls registry bridge records via air_get/air_list.
-- uses [[operator-escalation-gate]] — registry-queue-watch.py and reply-watch.py read Airtable queues through the REST API.
+- uses [[outreach-eligibility-evidence]] — send-gate.py, g4-check.py, reply-watch.py, and registry-queue-watch.py all read Airtable through these wrappers.
 <!-- context:generated:end -->
 
 ## Notes

@@ -9,9 +9,9 @@ sources:
     hash: 7f22912e40c9235114d147f0fb3949880a970ed7104ffcee964c37b187a1cb1d
 sources_digest: 875ac09d3881cc65a58be24ab4eb3cc263052e0fafa782d0a4d99a38657c4c96
 links:
-  - to: operator-escalation-gate
-    relation: produces
-    description: Delivers the notifications that the escalation gate and watchers generate.
+  - to: operator-escalation-notification
+    relation: implements
+    description: Provides the delivery mechanism those gates call.
 generator:
   version: 1
 covers: []
@@ -19,11 +19,11 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-The single real-time operator notification channel. telegram-notify.sh is safe to call unconditionally (silent no-op when tokens unset, never non-zero exit, 3900-char truncation), and is invoked by many watchers. docker-prune-safe.sh deliberately pipes into the running container rather than dot-sourcing runtime.env because its values contain '|'.
+The single real-time operator notification channel. telegram-notify.sh is safe to call unconditionally (silent no-op without tokens, never non-zero, truncates to 3900 chars). docker-prune-safe.sh pipes messages into the running container to read tokens from runtime.env rather than dot-sourcing it (values contain '|').
 
 ## Related
 
-- produces [[operator-escalation-gate]] — Delivers the notifications that the escalation gate and watchers generate.
+- implements [[operator-escalation-notification]] — Provides the delivery mechanism those gates call.
 <!-- context:generated:end -->
 
 ## Notes

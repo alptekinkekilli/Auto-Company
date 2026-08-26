@@ -17,10 +17,10 @@ sources_digest: fe1d8fd6fcb0f308eb0c4072f436e2986ea169f87521e188c20ca981540b20fa
 links:
   - to: snapog-schema
     relation: uses
-    description: Queries usage_events and api_keys for metrics.
-  - to: snapog-worker
-    relation: implements
-    description: Implements the scheduled cron handler the worker registers.
+    description: 'Queries usage_events, api_keys, and R2 bucket for metrics.'
+  - to: snapog-service
+    relation: part_of
+    description: The alerts subsystem of the SnapOG Worker.
 generator:
   version: 1
 covers:
@@ -70,12 +70,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Cron-triggered cost-alerting system (every 6h) running five independent checks against D1 and R2, with thresholds isolated in one file sourced from the CFO cost model. Checks are deliberately isolated — a thrown error is logged and treated as no alert, preventing false positives. Delivery posts only when alerts are non-empty, falling back to log-only mode when ALERT_WEBHOOK_URL is unset. R2 storage bytes come from a thin GraphQL client against Cloudflare Analytics.
+Cron-triggered cost-alerting system (every 6h) running five independent checks against D1 and R2: D1 writes/day (assuming 2 writes per request), 14-day cache hit rate, new signups in 30d, active users, and R2 storage via a thin Cloudflare Analytics GraphQL client. Thresholds isolated in one file (from CFO cost model §5) so the CFO can revise numbers without touching check logic. Checks deliberately isolated — a thrown error is logged and treated as no alert, preventing false positives. Webhook delivery short-circuits on empty alerts and falls back to log-only mode when ALERT_WEBHOOK_URL unset.
 
 ## Related
 
-- uses [[snapog-schema]] — Queries usage_events and api_keys for metrics.
-- implements [[snapog-worker]] — Implements the scheduled cron handler the worker registers.
+- uses [[snapog-schema]] — Queries usage_events, api_keys, and R2 bucket for metrics.
+- part of [[snapog-service]] — The alerts subsystem of the SnapOG Worker.
 <!-- context:generated:end -->
 
 ## Notes

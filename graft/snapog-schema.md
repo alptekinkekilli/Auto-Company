@@ -11,9 +11,9 @@ sources:
     hash: a672bc9c2f87bedb83312ef869d3ea29305f96bcca7241131ce1130edcb4ee75
 sources_digest: 8820226ce02d1d9ebb352867760d54a674115efb44b492597558e611bb10dc93
 links:
-  - to: snapog-worker
+  - to: snapog-service
     relation: implements
-    description: Defines the persistence layer the worker's D1 bindings use.
+    description: The schema the Worker's D1 queries operate against.
 generator:
   version: 1
 covers: []
@@ -21,11 +21,11 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-Cloudflare D1 schema for SnapOG: users, api_keys (with display-only key_prefix and SHA-256 key_hash, tier, monthly quota, usage_reset_at), usage_events, waitlist, and api_key_cache_keys (composite PK on api_key_id, cache_key, billing_month for R2 storage-abuse tracking). Deliberately avoids storing raw keys. billing_month format must stay aligned with the application's month-rollover logic to avoid double-counting.
+Initial D1 schema: users, api_keys (display-only key_prefix + SHA-256 key_hash for secure lookup, tier, monthly quota, usage count, usage_reset_at for billing cycles), usage_events (per-request template and cache hit status), plus api_key_cache_keys tracking distinct cache keys per key per billing month to address R2 storage abuse (G8). Deliberately avoids storing raw keys; billing-month boundaries tied to api_keys.usage_reset_at semantics to avoid double-counting.
 
 ## Related
 
-- implements [[snapog-worker]] — Defines the persistence layer the worker's D1 bindings use.
+- implements [[snapog-service]] — The schema the Worker's D1 queries operate against.
 <!-- context:generated:end -->
 
 ## Notes
