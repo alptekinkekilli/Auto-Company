@@ -1,4 +1,4 @@
-# tests/test_operator_request_notify.py · [[operator-request-decision-pipeline]]
+# tests/test_operator_request_notify.py · [[auto-loop-core]]
 
 Unit test suite for the operator_request_notify module, covering notification dedup, retry, and type-specific resolution verification.
 

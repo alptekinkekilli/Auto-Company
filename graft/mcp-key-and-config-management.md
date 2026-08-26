@@ -1,6 +1,6 @@
 ---
-name: MCP config & key management
-slug: mcp-config-key-management
+name: mcp-key-and-config-management
+slug: mcp-key-and-config-management
 type: system
 sources:
   - path: scripts/core/jcode-mcp-config.py
@@ -14,18 +14,18 @@ sources:
   - path: tests/test_jcode_mcp_config.sh
     hash: 3a26837a4685e40b45e3e8593459a69680a7bc6cc7e839f4ceb986c570a27025
   - path: tests/test_mcp_config_manifest_sync.sh
-    hash: 2d6aa7b59ec815f637858cb911c4c0f9054f724fd2cb7cb113425ea66e0420a2
+    hash: 372a198973bc97e73dd00c1acafe2fe458887504be2f5ef9849242d6549c1112
   - path: tests/test_mcp_key_fallback.sh
     hash: 21c4be05f1922a08fa185aaa94f73941a785d5f380b7770431bdee7bf78115d6
   - path: tests/test_mcp_probe.sh
     hash: 07482a8311b81667003a304c3741feed20e311f1e28263a5bb3bcc5599e962ce
-sources_digest: 1ef7d59073ccda999d533e11a7e64fc7f9805ae88a1a5df12aeabda20dae6af3
+sources_digest: ee4c7f35a95ffbbee8bdcbdd4a30243ce0236369364bb1d9d39a7858c8366489
 links:
   - to: auto-loop-core
     relation: configures
     description: >-
-      The generated .mcp.json is consumed by the loop's engine CLIs; manifest
-      drift crash-loops the container at boot.
+      The generated jcode MCP config and the JCODE_MCP_CONFIG_REQUIRED preflight
+      list gate the loop's boot; divergence causes a crash-loop.
 generator:
   version: 1
 covers:
@@ -96,11 +96,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Generation and verification of the .mcp.json MCP server configuration: jcode-mcp-config.py builds the config keeping secrets in the env block (never argv, to avoid ps leaks), jcode-mcp-probe.py deterministically probes servers against a manifest, and verify-mcp-keys.py checks deployed keys by reading the running auto-loop.sh process environment via /proc/<pid>/environ (not docker exec's fresh shell).
+Scripts and tests that manage MCP server configuration and API keys: verifying keys in the running loop's environment, generating jcode MCP configs that keep secrets in env (never argv), and enforcing that the generated config, manifest, and preflight list stay in sync. A recurring invariant is that secrets must never appear in process argv where ps could expose them.
 
 ## Related
 
-- configures [[auto-loop-core]] — The generated .mcp.json is consumed by the loop's engine CLIs; manifest drift crash-loops the container at boot.
+- configures [[auto-loop-core]] — The generated jcode MCP config and the JCODE_MCP_CONFIG_REQUIRED preflight list gate the loop's boot; divergence causes a crash-loop.
 <!-- context:generated:end -->
 
 ## Notes

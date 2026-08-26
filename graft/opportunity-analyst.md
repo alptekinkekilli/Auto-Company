@@ -16,15 +16,16 @@ sources:
     hash: 9c45147f1730fc30545b94a30428d54e0bd40f04506aa3db00614880ec93d677
 sources_digest: 0e30aa01e58354844cc15ea6a1e05fcee433c04412f00d5b4955c540c51d2eaf
 links:
+  - to: auto-loop-daemon
+    relation: part_of
+    description: >-
+      Analyst Codex sessions are budget-excluded by auto-loop.sh when their
+      thread IDs parse cleanly.
   - to: directive-writer
     relation: uses
-    description: Uses directive_writer.py for safe restore of human-directive.md.
-  - to: promotion-gate
-    relation: part_of
-    description: promote_directive.py is the deterministic promotion gate.
-  - to: registry-merge
-    relation: part_of
-    description: merge_registry.py is the PASS-2 merge tool used by the codex variant.
+    description: >-
+      Calls directive_writer.py for snapshot/restore and promotion of
+      human-directive.md.
 generator:
   version: 1
 covers:
@@ -89,13 +90,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Independent 'second-brain' (APP-221) invoking Codex or jcode to analyze the Tender Track portfolio and produce a decision report plus candidate-registry update. Three passes: write report to analysis-directive.md (draft only, never auto-applied), extract live span of candidate-registry.md via merge_registry.py and splice back with invariant checks, and run deterministic promotion gate via promote_directive.py. Never auto-applies directives (snapshot/restore with hash check); avoids E2BIG by not passing large files as prompt args; records session IDs for budget exclusion. jcode variant re-chartered 2026-08-24 to retire registry merge and promotion passes entirely — writes only analysis-directive.md in audit-only mode.
+Independent 'second-brain' (APP-221) that invokes Codex or jcode with the autocompany-opportunity-director skill to analyze the Tender Track portfolio and produce a decision report plus candidate-registry update. Never auto-applies directives (snapshot/restore with hash check); preserves the registry's historical journal by only editing the live span via merge_registry.py; runs a deterministic promotion gate via promote_directive.py. Records thread IDs to session logs for budget exclusion, avoids passing large file contents as prompt args to prevent E2BIG, and treats opportunity-scan.md as historical input to be ignored. The jcode variant (2026-08-24 re-charter) retires the registry merge and directive promotion passes entirely, writing only analysis-directive.md in audit-only mode.
 
 ## Related
 
-- uses [[directive-writer]] — Uses directive_writer.py for safe restore of human-directive.md.
-- part of [[promotion-gate]] — promote_directive.py is the deterministic promotion gate.
-- part of [[registry-merge]] — merge_registry.py is the PASS-2 merge tool used by the codex variant.
+- part of [[auto-loop-daemon]] — Analyst Codex sessions are budget-excluded by auto-loop.sh when their thread IDs parse cleanly.
+- uses [[directive-writer]] — Calls directive_writer.py for snapshot/restore and promotion of human-directive.md.
 <!-- context:generated:end -->
 
 ## Notes

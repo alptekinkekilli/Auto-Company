@@ -1,5 +1,5 @@
 ---
-name: Airtable read/write guards
+name: airtable-read-write-guards
 slug: airtable-read-write-guards
 type: system
 sources:
@@ -15,7 +15,9 @@ sources_digest: 2021356891ac463bde76a17510d6206598905cc15d804b9b867e92529075e85e
 links:
   - to: auto-loop-core
     relation: uses
-    description: Called by the loop for Airtable data access.
+    description: >-
+      The loop's cycles call these wrappers for Airtable access; their scoping
+      caps context cost.
 generator:
   version: 1
 covers:
@@ -71,11 +73,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Wrappers that gate Airtable reads (scoping, field caps, pageSize ceiling) and writes (guard function validating single-record writes) to control context cost and data integrity; the guard was extracted from main() specifically to be testable offline.
+Wrappers scripts/ops/airtable-read.py and airtable-write.py that gate Airtable access to control context cost and validate writes before hitting the API. Reads are scoped (refusing unscoped/column-less reads, capping fields and maxRecords at 200, pageSize at 100); writes validate unknown fields, clears, and replacements unless explicit flags are passed. The guard functions were extracted from main() specifically to be testable offline.
 
 ## Related
 
-- uses [[auto-loop-core]] — Called by the loop for Airtable data access.
+- uses [[auto-loop-core]] — The loop's cycles call these wrappers for Airtable access; their scoping caps context cost.
 <!-- context:generated:end -->
 
 ## Notes

@@ -28,7 +28,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Cloudflare Pages Functions for the branded auto-company site. /randevu issues a 302 to Google Calendar (no booking logic — slot/timezone/cancellation delegated to Google), validating RANDEVU_URL starts with https, 503 Turkish fallback page never a guessed redirect. /listeden-cik proxies the opt-out flow to the Twilio comms service (single source of truth, no local suppression store), preserving HMAC signature and email params so existing links keep working; 502 Turkish error page on upstream failure, never false success. Both set no-store/no-referrer.
+Cloudflare Pages Functions for the branded auto-company site: a booking endpoint that 302-redirects to the operator's Google Calendar (delegating slot management, timezone, cancellation to avoid reimplementing solved problems, never guessing a redirect, 503 fallback page if RANDEVU_URL unset) and an email opt-out proxy forwarding to the Twilio comms service with no local suppression store so upstream remains the single source of truth. Both set no-store/no-referrer and return Turkish fallback pages on failure, never false success.
 <!-- context:generated:end -->
 
 ## Notes

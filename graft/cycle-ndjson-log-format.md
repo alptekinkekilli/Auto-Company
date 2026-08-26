@@ -1,6 +1,6 @@
 ---
-name: idempotent durable ledgers
-slug: idempotent-durable-ledgers
+name: cycle-ndjson-log-format
+slug: cycle-ndjson-log-format
 type: concept
 sources:
   - path: scripts/ops/tool-usage-audit.py
@@ -9,11 +9,16 @@ sources:
     hash: 006e9aac95a503a1e158d1c6f03a7bdf98f44322805509d886c627e74d4d41d0
   - path: scripts/ops/web-research-cost.py
     hash: 24d7735b6dc6defa0f80e75aeee37a13a40d4df43e9b38539be02df6fe23cbf2
-sources_digest: 05a5a8135b793a7ae3595f1faa0f4445138043d5ad416b12ef019fd435434902
+  - path: tests/test_cost_model_hint.sh
+    hash: c17d1daedaa46cd803aa562c933e2a0d75aa6f2a5f7e059fd47fa8961847f743
+sources_digest: 5f4871f249fc7f3b6e50d56e42c0fd25c8941997744513a9cffd470f58087b06
 links:
-  - to: ops-audit-analytics-scripts
+  - to: ops-audit-and-telemetry-scripts
     relation: implements
-    description: tool-usage-audit.py's state file and backfill behavior.
+    description: >-
+      The audit tools are the consumers that pin this format; the
+      cost-model-hint test additionally pins that a done event's model field
+      wins over any hint.
 generator:
   version: 1
 covers:
@@ -57,11 +62,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Per-cycle ledgers dedup on filename+size+mtime (not name alone, since the cycle counter restarts on container restart), always exit 0, and backfill retained-but-unprocessed files on the next run.
+The de-facto event-stream contract that the ops audit tools depend on: NDJSON lines with type fields tokens, tool_start, tool_done, and streamed tool_input deltas, plus a done event carrying the model name. Several tools assume this shape and would silently misparse if it changed.
 
 ## Related
 
-- implements [[ops-audit-analytics-scripts]] — tool-usage-audit.py's state file and backfill behavior.
+- implements [[ops-audit-and-telemetry-scripts]] — The audit tools are the consumers that pin this format; the cost-model-hint test additionally pins that a done event's model field wins over any hint.
 <!-- context:generated:end -->
 
 ## Notes

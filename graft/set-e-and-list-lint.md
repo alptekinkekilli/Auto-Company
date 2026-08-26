@@ -6,10 +6,10 @@ sources:
   - path: docker-entrypoint.sh
     hash: fbc2010d8d1d9dda2bc7ebd72fba1d674136624f968ff2f453bf7bbb894de017
   - path: scripts/core/auto-loop.sh
-    hash: 376e5c5d4935009b140ead228b3ca323f3084a991e38f8961a9a9b045cf54ddb
+    hash: f3e965e3aed59b32903f95d8be2954d7b966aa422c82a10fa581359fd906bb0b
   - path: tests/test_seteshape_lint.py
     hash: c75dd121edbe7aed5432f718bdfff952149464b77f9ab22baced3682261ebc98
-sources_digest: f34828fb9fb35392a978b6e6469ddd81d06464603262049c62217e8a31b968d5
+sources_digest: 9824d739a8c16a9c17da633b63408b2b7b9e7e2774b57a88b9e2854207b5a193
 links:
   - to: auto-loop-core
     relation: validates

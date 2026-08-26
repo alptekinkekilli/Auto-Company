@@ -1,10 +1,14 @@
 ---
-name: SnapOG Worker
-slug: snapog-worker
+name: SnapOG Service
+slug: snapog-service
 type: system
 sources:
-  - path: projects/_archive/snapog/src/dashboard/pages.ts
-    hash: 6a33d1b6152ee8ea3ee6f5617105ce757c915627156072dd9cb1f3b78e32b4af
+  - path: projects/_archive/snapog/migrations/0001_init.sql
+    hash: 5a2ecc41dbff948e5d8f895feb80ae4145864f3703776f737cda73c84fec8623
+  - path: projects/_archive/snapog/migrations/0002_waitlist.sql
+    hash: 541f4f76f6f87aab342fe067acbcc746587f600d1e76028fe97a4c67c8b3202a
+  - path: projects/_archive/snapog/migrations/0003_cache_key_tracking.sql
+    hash: a672bc9c2f87bedb83312ef869d3ea29305f96bcca7241131ce1130edcb4ee75
   - path: projects/_archive/snapog/src/index.ts
     hash: c484536a0f66188fa0ac986f34c605540b32efb599ec1ae08d091b89a20d2954
   - path: projects/_archive/snapog/src/og/render.ts
@@ -13,44 +17,17 @@ sources:
     hash: bfc8c9e61038224564b61c55c627b2d86d9ba2514dd47f64a717e94f0be8b810
   - path: projects/_archive/snapog/src/types.ts
     hash: 1551e13c618a1b8ceaa8b5189318810934889c1d4e822425cb830e7efb45bc15
-sources_digest: d4343ceffc68f713a6dcfc6ae45ec31bd030d35d94d34d04ef9190c816f7239c
+sources_digest: fdaeeb7e96b128caaf56f24722d43c264ce856d635c7315a709e6c4879ccc4f1
 links:
-  - to: content-hash-provenance
-    relation: uses
-    description: buildCacheKey uses sorted-key SHA-256 for deterministic cache keys.
   - to: snapog-cost-alerts
     relation: uses
-    description: Scheduled cron invokes runCostAlertCheck.
-  - to: snapog-schema
-    relation: uses
-    description: 'Persists users, api_keys, usage_events, api_key_cache_keys in D1.'
+    description: scheduled handler calls runCostAlertCheck from ./alerts.
+  - to: snapog-landing-dashboard
+    relation: produces
+    description: 'Serves the landing page, /register, and /dashboard HTML.'
 generator:
   version: 1
 covers:
-  - symbol: layout
-    kind: function
-    at: 'projects/_archive/snapog/src/dashboard/pages.ts:L340-L355'
-  - symbol: nav
-    kind: function
-    at: 'projects/_archive/snapog/src/dashboard/pages.ts:L357-L367'
-  - symbol: footer
-    kind: function
-    at: 'projects/_archive/snapog/src/dashboard/pages.ts:L369-L376'
-  - symbol: landingPage
-    kind: function
-    at: 'projects/_archive/snapog/src/dashboard/pages.ts:L378-L588'
-  - symbol: registerPage
-    kind: function
-    at: 'projects/_archive/snapog/src/dashboard/pages.ts:L590-L628'
-  - symbol: keyCreatedPage
-    kind: function
-    at: 'projects/_archive/snapog/src/dashboard/pages.ts:L630-L700'
-  - symbol: dashboardPage
-    kind: function
-    at: 'projects/_archive/snapog/src/dashboard/pages.ts:L702-L789'
-  - symbol: errorPage
-    kind: function
-    at: 'projects/_archive/snapog/src/dashboard/pages.ts:L791-L805'
   - symbol: sha256
     kind: function
     at: 'projects/_archive/snapog/src/index.ts:L21-L29'
@@ -127,13 +104,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Hono-based Cloudflare Worker generating Open Graph images on demand. Routes: GET /og (validate API key, enforce monthly usage limits, cache to R2), / and /register (landing + key creation with waitlist for paid tiers), /dashboard (usage stats), scheduled cron for cost alerts. Hashes API keys before storage, counts usage even on cache hits, bypasses R2 writes when cache-key cap exceeded (still renders and counts, returns X-Cache: BYPASSED). waitUntil for fire-and-forget; free-tier watermark; input length limits.
+Archived Cloudflare Worker (Hono) that generates Open Graph images on demand, with D1 persistence (users, api_keys, usage_events, cache-key tracking) and R2 image caching. Hashes API keys before storage, counts usage even on cache hits, enforces a free-tier watermark, and caps distinct R2 cache keys per key per month (MONTHLY_CACHE_KEY_CAP=30) — beyond the cap /og still renders but skips OG_CACHE.put() and returns X-Cache: BYPASSED to prevent unique-URL storage abuse. Uses waitUntil for fire-and-forget operations. Includes a scheduled cron cost-alert check.
 
 ## Related
 
-- uses [[content-hash-provenance]] — buildCacheKey uses sorted-key SHA-256 for deterministic cache keys.
-- uses [[snapog-cost-alerts]] — Scheduled cron invokes runCostAlertCheck.
-- uses [[snapog-schema]] — Persists users, api_keys, usage_events, api_key_cache_keys in D1.
+- uses [[snapog-cost-alerts]] — scheduled handler calls runCostAlertCheck from ./alerts.
+- produces [[snapog-landing-dashboard]] — Serves the landing page, /register, and /dashboard HTML.
 <!-- context:generated:end -->
 
 ## Notes

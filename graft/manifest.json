@@ -1,7 +1,7 @@
 {
   "version": 1,
   "model": "openai:deepseek-ai/DeepSeek-V4-Flash-0731",
-  "repoDigest": "ec518688f92496ce55782c41f6f2906d1a352d4a91726113e276a082c148c44e",
+  "repoDigest": "f0c31901539660ba10405ab92d6da9e8d2ae80f69c2e9ee39b489ab8778514c1",
   "files": [
     {
       "path": "dashboard/app.js",
@@ -149,7 +149,7 @@
     },
     {
       "path": "scripts/core/auto-loop.sh",
-      "hash": "376e5c5d4935009b140ead228b3ca323f3084a991e38f8961a9a9b045cf54ddb"
+      "hash": "f3e965e3aed59b32903f95d8be2954d7b966aa422c82a10fa581359fd906bb0b"
     },
     {
       "path": "scripts/core/bridge_leak_scan.py",
@@ -437,7 +437,7 @@
     },
     {
       "path": "tests/test_mcp_config_manifest_sync.sh",
-      "hash": "2d6aa7b59ec815f637858cb911c4c0f9054f724fd2cb7cb113425ea66e0420a2"
+      "hash": "372a198973bc97e73dd00c1acafe2fe458887504be2f5ef9849242d6549c1112"
     },
     {
       "path": "tests/test_mcp_key_fallback.sh",
@@ -515,7 +515,7 @@
   "nodes": [
     {
       "slug": "airtable-read-write-guards",
-      "name": "Airtable read/write guards",
+      "name": "airtable-read-write-guards",
       "type": "system",
       "sources": [
         "scripts/ops/airtable-read.py",
@@ -524,6 +524,16 @@
         "tests/test_airtable_write.sh"
       ],
       "sourcesDigest": "2021356891ac463bde76a17510d6206598905cc15d804b9b867e92529075e85e"
+    },
+    {
+      "slug": "analyst-engine",
+      "name": "analyst-engine",
+      "type": "system",
+      "sources": [
+        "scripts/analyst/opportunity-analyst-jcode.sh",
+        "tests/test_analyst_engine.sh"
+      ],
+      "sourcesDigest": "24e5cf415f1f3114f9283e91276213f80f34d7f0fcc25c5d4753b7b247f1c154"
     },
     {
       "slug": "auto-company-site-functions",
@@ -537,33 +547,40 @@
     },
     {
       "slug": "auto-loop-core",
-      "name": "auto-loop core",
+      "name": "auto-loop-core",
       "type": "system",
       "sources": [
         "scripts/core/auto-loop.sh",
+        "scripts/core/codex-final-text.py",
+        "scripts/core/directive_writer.py",
+        "scripts/core/engine-usage-cost.py",
+        "scripts/core/operator_request_notify.py",
         "tests/test_active_window.sh",
         "tests/test_budget_gates.sh",
         "tests/test_ccusage_failclosed.sh",
         "tests/test_codex_spend_sources.sh",
         "tests/test_cycle_counter.sh",
         "tests/test_cycle_metadata.sh",
+        "tests/test_directive_section_refs.sh",
         "tests/test_discretionary_budget.sh",
         "tests/test_escalation.sh",
         "tests/test_idle_skip.sh",
         "tests/test_mixed_harness.sh",
+        "tests/test_operator_action_router.py",
+        "tests/test_operator_request_notify.py",
         "tests/test_prompt_assembly.sh",
         "tests/test_prompt_transport.sh"
       ],
-      "sourcesDigest": "e5b215515c2b147ac24fa913c5736ab38c225b0ad0fa3d4341a8dbfa4a24ca57"
+      "sourcesDigest": "b0dfd86de42a62d5b2a02c17b0522b014d0b58180179c09ae068fe20bfb1f298"
     },
     {
-      "slug": "autonomous-loop",
-      "name": "Autonomous Loop",
+      "slug": "auto-loop-daemon",
+      "name": "Auto Loop Daemon",
       "type": "system",
       "sources": [
         "scripts/core/auto-loop.sh"
       ],
-      "sourcesDigest": "7454b13d037f0452d6e70bc9cfe60936ccc83ecee56b7661a84c43c98821179c"
+      "sourcesDigest": "37ab20fc08031b66afd3689d1156671eff37d4ad8b4d6b223063c5bb09234e8f"
     },
     {
       "slug": "bridge-leak-scanner",
@@ -575,39 +592,40 @@
       "sourcesDigest": "b640af07b633d17a562a8a5f854a19c94a33c6169c66e46291f8978bc47e1945"
     },
     {
+      "slug": "browse-extract-and-context7",
+      "name": "browse-extract-and-context7",
+      "type": "system",
+      "sources": [
+        "scripts/ops/browse-extract.py",
+        "scripts/ops/context7-check.py",
+        "tests/test_browse_extract.sh",
+        "tests/test_context7_check.sh"
+      ],
+      "sourcesDigest": "802d81510972c0d0fd959ca2ab6ddd50f92e6754b02c9d69a815737bfb4fca43"
+    },
+    {
       "slug": "cockpit-dashboard",
       "name": "Cockpit Dashboard",
       "type": "system",
       "sources": [
         "dashboard/app.js",
-        "dashboard/sentry_client.py",
-        "dashboard/server.py",
-        "tests/test_dashboard_server.py"
+        "dashboard/sentry_client.py"
       ],
-      "sourcesDigest": "5894a7878160451879356a54940d38fff67bebd2abb27f1e8e4c4d68800a87da"
+      "sourcesDigest": "f7cffd86cee6a866334be6fc13e2b3724150ee08680c1996bf52b88ccc7091f6"
     },
     {
-      "slug": "codex-final-text",
-      "name": "Codex Final Text",
-      "type": "file",
+      "slug": "cockpit-dashboard-server",
+      "name": "Cockpit Dashboard Server",
+      "type": "system",
       "sources": [
-        "scripts/core/codex-final-text.py"
+        "dashboard/server.py"
       ],
-      "sourcesDigest": "50f7d26269f033eca96271260397036b6cb8e3cc93d3bb1d120e0c11189605b9"
-    },
-    {
-      "slug": "compact-preflight",
-      "name": "Compact Preflight",
-      "type": "file",
-      "sources": [
-        "scripts/compact-preflight.py"
-      ],
-      "sourcesDigest": "8209b0e705f42296e979b77c5e321a326f8eb906c9d9dbc38000f6403c23136c"
+      "sourcesDigest": "8b82355bba156c61c76505ae335656f264eff4fc117d0a477f2c27a30456f883"
     },
     {
       "slug": "container-entrypoint",
       "name": "Container Entrypoint",
-      "type": "file",
+      "type": "system",
       "sources": [
         "docker-entrypoint.sh"
       ],
@@ -618,28 +636,42 @@
       "name": "Content-Hash Provenance",
       "type": "concept",
       "sources": [
-        "projects/_archive/snapog/src/og/render.ts",
         "scripts/core/decision_text_hash.py"
       ],
-      "sourcesDigest": "1e628f4874fb1669c237c51ce666b97d3554f7d0dff92b36395cd37d8b0c4df8"
+      "sourcesDigest": "837c6e521378bcf965cbfcc5891b481682400ecc60b202a8af12f5fc90600758"
     },
     {
-      "slug": "context-watch",
-      "name": "Context Watch",
-      "type": "file",
+      "slug": "context-compact-hooks",
+      "name": "Context & Compact Hooks",
+      "type": "system",
       "sources": [
+        "scripts/compact-preflight.py",
         "scripts/context-watch.py"
       ],
-      "sourcesDigest": "e120476879431ac8f01406f0c7056c596e84ad05a3bdffa80c27718e3d312c80"
+      "sourcesDigest": "36e2492447e7ec5e61486860d79762b85b2182f8f99c57081cc7b63ff3b1804c"
+    },
+    {
+      "slug": "cycle-ndjson-log-format",
+      "name": "cycle-ndjson-log-format",
+      "type": "concept",
+      "sources": [
+        "scripts/ops/tool-usage-audit.py",
+        "scripts/ops/turn-audit.py",
+        "scripts/ops/web-research-cost.py",
+        "tests/test_cost_model_hint.sh"
+      ],
+      "sourcesDigest": "5f4871f249fc7f3b6e50d56e42c0fd25c8941997744513a9cffd470f58087b06"
     },
     {
       "slug": "dashboard-server",
-      "name": "Dashboard Server",
+      "name": "dashboard-server",
       "type": "system",
       "sources": [
-        "dashboard/server.py"
+        "dashboard/server.py",
+        "tests/test_dashboard_server.py",
+        "tests/test_refusal_format.sh"
       ],
-      "sourcesDigest": "8b82355bba156c61c76505ae335656f264eff4fc117d0a477f2c27a30456f883"
+      "sourcesDigest": "b345d383ecc504e4dc9ae899649f4c78d13f54490aec22ca11dbdb4bb80e8732"
     },
     {
       "slug": "directive-writer",
@@ -649,28 +681,6 @@
         "scripts/core/directive_writer.py"
       ],
       "sourcesDigest": "f4f863d4df3fc313e0dd21bd4e126bc92b8f46cf056589dd04f736eba34c9ebd"
-    },
-    {
-      "slug": "escalation-one-shot-consumption",
-      "name": "escalation & one-shot consumption",
-      "type": "concept",
-      "sources": [
-        "scripts/core/auto-loop.sh",
-        "tests/test_escalation.sh"
-      ],
-      "sourcesDigest": "9390cd3a10c417b42cb8ec1b1d5f534a8130d315d55b6c4f5475bff2333859bc"
-    },
-    {
-      "slug": "fail-closed-measurement-spend-accounting",
-      "name": "fail-closed measurement & spend accounting",
-      "type": "concept",
-      "sources": [
-        "scripts/core/auto-loop.sh",
-        "tests/test_budget_gates.sh",
-        "tests/test_ccusage_failclosed.sh",
-        "tests/test_codex_spend_sources.sh"
-      ],
-      "sourcesDigest": "91e1f62002eebcbcec085802a5e9438052acfb76ab147baca80859029f7ef0e4"
     },
     {
       "slug": "fail-closed-send-policy",
@@ -683,35 +693,26 @@
       "sourcesDigest": "260cbac1d830524fefee8831ec62d8032fb6948e871229aae8fb6af3055fb10f"
     },
     {
-      "slug": "headinspect-schema",
-      "name": "HeadInspect Schema",
-      "type": "file",
+      "slug": "g4-and-registry-matching",
+      "name": "g4-and-registry-matching",
+      "type": "system",
       "sources": [
-        "projects/headinspect/migrations/0001_hits.sql"
+        "scripts/ops/g4-check.py",
+        "tests/test_g4_check.sh"
       ],
-      "sourcesDigest": "749d2c2597b768efd8b2d98fa11448a3fea8bb6aa07962bec8ae443dd5bd793b"
+      "sourcesDigest": "542228c29abd6900d4324bc37cd02aeb0e7333c24f02e4c7a73a5a887d54d8a6"
     },
     {
       "slug": "headinspect-worker",
       "name": "HeadInspect Worker",
       "type": "system",
       "sources": [
+        "projects/headinspect/migrations/0001_hits.sql",
         "projects/headinspect/src/index.ts",
         "projects/headinspect/src/inspect.ts",
         "projects/headinspect/src/render.ts"
       ],
-      "sourcesDigest": "61ec7e58ed05ae951822ed237bf2ebfb8776d6ef03adfdf225ebc93540a32da4"
-    },
-    {
-      "slug": "idempotent-durable-ledgers",
-      "name": "idempotent durable ledgers",
-      "type": "concept",
-      "sources": [
-        "scripts/ops/tool-usage-audit.py",
-        "scripts/ops/turn-audit.py",
-        "scripts/ops/web-research-cost.py"
-      ],
-      "sourcesDigest": "05a5a8135b793a7ae3595f1faa0f4445138043d5ad416b12ef019fd435434902"
+      "sourcesDigest": "cb61b3ccfe05c907fe9c1d45e555e1e03b1607816df1e7ac11b12c3268891960"
     },
     {
       "slug": "jcode-pilot-smoke-test",
@@ -723,8 +724,8 @@
       "sourcesDigest": "580997342635860ff744d27a36e889c902bd03a27837c94edb20c5bb745f01b5"
     },
     {
-      "slug": "mcp-config-key-management",
-      "name": "MCP config & key management",
+      "slug": "mcp-key-and-config-management",
+      "name": "mcp-key-and-config-management",
       "type": "system",
       "sources": [
         "scripts/core/jcode-mcp-config.py",
@@ -736,20 +737,16 @@
         "tests/test_mcp_key_fallback.sh",
         "tests/test_mcp_probe.sh"
       ],
-      "sourcesDigest": "1ef7d59073ccda999d533e11a7e64fc7f9805ae88a1a5df12aeabda20dae6af3"
+      "sourcesDigest": "ee4c7f35a95ffbbee8bdcbdd4a30243ce0236369364bb1d9d39a7858c8366489"
     },
     {
-      "slug": "operator-request-decision-pipeline",
-      "name": "operator request & decision pipeline",
-      "type": "system",
+      "slug": "north-star-metric-sql",
+      "name": "North-Star Metric SQL",
+      "type": "file",
       "sources": [
-        "scripts/core/operator_request_notify.py",
-        "scripts/ops/operator-action-router.py",
-        "tests/test_operator_action_router.py",
-        "tests/test_operator_request_notify.py",
-        "tests/test_refusal_format.sh"
+        "docs/operations/north-star-metric-query.sql"
       ],
-      "sourcesDigest": "b926e1b649b6b7679a3570ee3cdf0e6d61de99492b73ea299fc13439a4667c2d"
+      "sourcesDigest": "91dcfb3b617798695902ce25230879b0ebdf6c4ac53fe80d36c1db48d76a29a9"
     },
     {
       "slug": "opportunity-analyst",
@@ -765,32 +762,8 @@
       "sourcesDigest": "0e30aa01e58354844cc15ea6a1e05fcee433c04412f00d5b4955c540c51d2eaf"
     },
     {
-      "slug": "ops-analysis-audit-tools",
-      "name": "ops analysis & audit tools",
-      "type": "system",
-      "sources": [
-        "scripts/core/codex-final-text.py",
-        "scripts/core/directive_writer.py",
-        "scripts/core/engine-usage-cost.py",
-        "scripts/ops/browse-extract.py",
-        "scripts/ops/context7-check.py",
-        "scripts/ops/g4-check.py",
-        "scripts/ops/idle-skip-note.py",
-        "scripts/ops/registry-archive.py",
-        "scripts/ops/registry-queue-watch.py",
-        "tests/test_browse_extract.sh",
-        "tests/test_context7_check.sh",
-        "tests/test_cost_model_hint.sh",
-        "tests/test_directive_section_refs.sh",
-        "tests/test_g4_check.sh",
-        "tests/test_registry_archive.sh",
-        "tests/test_registry_queue_watch.sh"
-      ],
-      "sourcesDigest": "bae94fe8b43f71d5e3da2fe86dcd738fb668d41310859f59044a40b068f50c52"
-    },
-    {
-      "slug": "ops-audit-analytics-scripts",
-      "name": "ops audit & analytics scripts",
+      "slug": "ops-audit-and-telemetry-scripts",
+      "name": "ops-audit-and-telemetry-scripts",
       "type": "system",
       "sources": [
         "scripts/ops/tool-usage-audit.py",
@@ -826,8 +799,8 @@
       "sourcesDigest": "93663c3b0200b26d44d5e634fe641e1e354a96af7b384f7eef0c3201cec706ea"
     },
     {
-      "slug": "production-mechanism-guard",
-      "name": "production mechanism guard",
+      "slug": "prod-mechanism-guard",
+      "name": "prod-mechanism-guard",
       "type": "system",
       "sources": [
         "scripts/prod-mechanism-guard.py",
@@ -845,15 +818,16 @@
       "sourcesDigest": "529774ce95135d20964e1d42a6242cf44c9928383f17eac44213ac8385a782b9"
     },
     {
-      "slug": "prompt-transport-assembly-safety",
-      "name": "prompt transport & assembly safety",
-      "type": "concept",
+      "slug": "registry-and-queue-ops",
+      "name": "registry-and-queue-ops",
+      "type": "system",
       "sources": [
-        "scripts/core/auto-loop.sh",
-        "tests/test_prompt_assembly.sh",
-        "tests/test_prompt_transport.sh"
+        "scripts/ops/registry-archive.py",
+        "scripts/ops/registry-queue-watch.py",
+        "tests/test_registry_archive.sh",
+        "tests/test_registry_queue_watch.sh"
       ],
-      "sourcesDigest": "4b9d5d46f953db128f3b0708441a0d3b6c32e662d7c6187047f6f2dfaa2ab429"
+      "sourcesDigest": "041be21891feded98c7048c108896acfbcd3843d06da6b28a7a6e7581bddea17"
     },
     {
       "slug": "registry-merge",
@@ -892,18 +866,6 @@
       "sourcesDigest": "4723e6ba8dca1d39b1aea072775ce24cbdf8acba1e2cfea62a55d5f3fa240256"
     },
     {
-      "slug": "secret-hygiene-in-argv-vs-env",
-      "name": "secret hygiene in argv vs env",
-      "type": "concept",
-      "sources": [
-        "scripts/core/jcode-mcp-config.py",
-        "scripts/ops/verify-mcp-keys.py",
-        "tests/test_jcode_mcp_config.sh",
-        "tests/test_mcp_key_fallback.sh"
-      ],
-      "sourcesDigest": "c73011dc45f8214aaa8bd30154b2039a634202986bd827468d3ceb2701bf6951"
-    },
-    {
       "slug": "sentry-reporter",
       "name": "Sentry Reporter",
       "type": "file",
@@ -913,8 +875,8 @@
       "sourcesDigest": "d14955d1810e44ac017b77743809ea9e510da96b9f40c625eb3bfe88e5d2372d"
     },
     {
-      "slug": "session-brief-hooks",
-      "name": "session brief & hooks",
+      "slug": "session-brief-hook",
+      "name": "session-brief-hook",
       "type": "system",
       "sources": [
         "scripts/session-brief.py"
@@ -930,7 +892,7 @@
         "scripts/core/auto-loop.sh",
         "tests/test_seteshape_lint.py"
       ],
-      "sourcesDigest": "f34828fb9fb35392a978b6e6469ddd81d06464603262049c62217e8a31b968d5"
+      "sourcesDigest": "9824d739a8c16a9c17da633b63408b2b7b9e7e2774b57a88b9e2854207b5a193"
     },
     {
       "slug": "snapog-cost-alerts",
@@ -946,28 +908,17 @@
       "sourcesDigest": "fe1d8fd6fcb0f308eb0c4072f436e2986ea169f87521e188c20ca981540b20fa"
     },
     {
-      "slug": "snapog-north-star-metric",
-      "name": "SnapOG North-Star Metric",
+      "slug": "snapog-landing-dashboard",
+      "name": "SnapOG Landing & Dashboard",
       "type": "file",
       "sources": [
-        "docs/operations/north-star-metric-query.sql"
+        "projects/_archive/snapog/src/dashboard/pages.ts"
       ],
-      "sourcesDigest": "91dcfb3b617798695902ce25230879b0ebdf6c4ac53fe80d36c1db48d76a29a9"
+      "sourcesDigest": "aa49b78a6522f0383edeedf2bbb936457599ccfbd81b5ce65f2e99c6e243ad03"
     },
     {
-      "slug": "snapog-schema",
-      "name": "SnapOG Schema",
-      "type": "system",
-      "sources": [
-        "projects/_archive/snapog/migrations/0001_init.sql",
-        "projects/_archive/snapog/migrations/0002_waitlist.sql",
-        "projects/_archive/snapog/migrations/0003_cache_key_tracking.sql"
-      ],
-      "sourcesDigest": "8820226ce02d1d9ebb352867760d54a674115efb44b492597558e611bb10dc93"
-    },
-    {
-      "slug": "snapog-smoke-tests",
-      "name": "SnapOG Smoke Tests",
+      "slug": "snapog-sample-scripts",
+      "name": "SnapOG Sample Scripts",
       "type": "system",
       "sources": [
         "projects/_archive/snapog/sample/alerts-dry-run.sh",
@@ -977,17 +928,19 @@
       "sourcesDigest": "ce9cb2a773c1290423006a58fe8d649723cb56a07022127ba072ed0d87b79c56"
     },
     {
-      "slug": "snapog-worker",
-      "name": "SnapOG Worker",
+      "slug": "snapog-service",
+      "name": "SnapOG Service",
       "type": "system",
       "sources": [
-        "projects/_archive/snapog/src/dashboard/pages.ts",
+        "projects/_archive/snapog/migrations/0001_init.sql",
+        "projects/_archive/snapog/migrations/0002_waitlist.sql",
+        "projects/_archive/snapog/migrations/0003_cache_key_tracking.sql",
         "projects/_archive/snapog/src/index.ts",
         "projects/_archive/snapog/src/og/render.ts",
         "projects/_archive/snapog/src/og/templates.ts",
         "projects/_archive/snapog/src/types.ts"
       ],
-      "sourcesDigest": "d4343ceffc68f713a6dcfc6ae45ec31bd030d35d94d34d04ef9190c816f7239c"
+      "sourcesDigest": "fdaeeb7e96b128caaf56f24722d43c264ce856d635c7315a709e6c4879ccc4f1"
     },
     {
       "slug": "state-snapshot-delta",
@@ -1029,8 +982,17 @@
       "sourcesDigest": "d172c81ad96a0a7833800c32917ff357b620817a9ca217cba878f3d6f8500ea3"
     },
     {
-      "slug": "wsl-daemon-lifecycle",
-      "name": "WSL daemon lifecycle",
+      "slug": "waitlist-function",
+      "name": "Waitlist Function",
+      "type": "file",
+      "sources": [
+        "projects/_archive/snapog-landing/functions/api/waitlist.ts"
+      ],
+      "sourcesDigest": "2eab55af564b0f608bf8be780ff3a47c7384bb204d191cb437072802784c073f"
+    },
+    {
+      "slug": "wsl-daemon-management",
+      "name": "wsl-daemon-management",
       "type": "system",
       "sources": [
         "scripts/wsl/install-wsl-daemon.sh",

@@ -1,6 +1,6 @@
 ---
-name: ops audit & analytics scripts
-slug: ops-audit-analytics-scripts
+name: ops-audit-and-telemetry-scripts
+slug: ops-audit-and-telemetry-scripts
 type: system
 sources:
   - path: scripts/ops/tool-usage-audit.py
@@ -11,12 +11,17 @@ sources:
     hash: 24d7735b6dc6defa0f80e75aeee37a13a40d4df43e9b38539be02df6fe23cbf2
 sources_digest: 05a5a8135b793a7ae3595f1faa0f4445138043d5ad416b12ef019fd435434902
 links:
-  - to: cockpit-dashboard
+  - to: auto-loop-core
     relation: produces
     description: >-
-      tool-usage-audit.py appends one JSON line per cycle to
-      logs/tool-usage-history.ndjson which powers the cockpit's Tool Analytics
-      panel.
+      The cycle ndjson files these scripts consume are written by the auto-loop
+      engine's jcode harness.
+  - to: cycle-ndjson-log-format
+    relation: uses
+    description: >-
+      All three parse the jcode event stream (tool_start, tool_input deltas,
+      tokens, tool_done) from logs/cycle-ndjson; a change to that format breaks
+      their parsers.
 generator:
   version: 1
 covers:
@@ -60,11 +65,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A family of stdlib-only Python CLI tools that parse jcode/cycle NDJSON and log files to produce durable per-cycle ledgers and cost/usage analytics for the cockpit. They share conventions: read from logs/cycle-ndjson, append to logs/*.ndjson, dedup via state files keyed on filename+size+mtime (not name, because the cycle counter restarts on container restart), always exit 0, and backfill retained-but-unprocessed files on the next run.
+A family of standalone stdlib-only Python CLI tools that parse jcode/cycle NDJSON logs and produce durable ledgers, cost models, and audits for the cockpit. They share conventions: read from logs/cycle-ndjson, append to logs/*.ndjson, dedup via state files keyed on filename+size+mtime, always exit 0, and backfill unprocessed files on next run.
 
 ## Related
 
-- produces [[cockpit-dashboard]] — tool-usage-audit.py appends one JSON line per cycle to logs/tool-usage-history.ndjson which powers the cockpit's Tool Analytics panel.
+- produces [[auto-loop-core]] — The cycle ndjson files these scripts consume are written by the auto-loop engine's jcode harness.
+- uses [[cycle-ndjson-log-format]] — All three parse the jcode event stream (tool_start, tool_input deltas, tokens, tool_done) from logs/cycle-ndjson; a change to that format breaks their parsers.
 <!-- context:generated:end -->
 
 ## Notes

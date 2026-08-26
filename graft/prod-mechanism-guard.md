@@ -1,6 +1,6 @@
 ---
-name: production mechanism guard
-slug: production-mechanism-guard
+name: prod-mechanism-guard
+slug: prod-mechanism-guard
 type: system
 sources:
   - path: scripts/prod-mechanism-guard.py
@@ -11,7 +11,10 @@ sources_digest: 85f695b540190c148b455d6cc63e72dbb881bcb53a6cf3d680c51a434fc47b16
 links:
   - to: auto-loop-core
     relation: validates
-    description: 'Blocks edits to auto-loop.sh, dashboard/server.py, Dockerfile, etc.'
+    description: >-
+      The guard protects auto-loop.sh and other production surfaces from
+      unapproved edits; --check-sync validates the documented rule matches the
+      guard.
 generator:
   version: 1
 covers:
@@ -28,11 +31,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-PreToolUse hook (prod-mechanism-guard.py) that blocks edits to protected production surfaces unless a time-limited approval marker exists; fails open on malformed stdin or inside the container, and --check-sync enforces the protected list matches CLAUDE.md's rule section.
+A PreToolUse hook (scripts/prod-mechanism-guard.py) that blocks edits to protected production surfaces unless a time-limited approval marker exists, plus its regression suite. It fails open on malformed stdin or inside the container, treats itself as a tripwire, and has a --check-sync mode that detects drift between CLAUDE.md's documented protected list and the actual PROTECTED_* lists.
 
 ## Related
 
-- validates [[auto-loop-core]] — Blocks edits to auto-loop.sh, dashboard/server.py, Dockerfile, etc.
+- validates [[auto-loop-core]] — The guard protects auto-loop.sh and other production surfaces from unapproved edits; --check-sync validates the documented rule matches the guard.
 <!-- context:generated:end -->
 
 ## Notes

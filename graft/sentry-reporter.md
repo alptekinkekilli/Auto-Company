@@ -7,9 +7,9 @@ sources:
     hash: 96977bb6701f18064edb69c783e53bdb73c930c8ddadcd1caf47583b42700df4
 sources_digest: d14955d1810e44ac017b77743809ea9e510da96b9f40c625eb3bfe88e5d2372d
 links:
-  - to: dashboard-server
+  - to: cockpit-dashboard-server
     relation: part_of
-    description: Error-reporting library used by the dashboard server.
+    description: External library used by server.py for error reporting.
 generator:
   version: 1
 covers:
@@ -23,11 +23,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Minimal stdlib-only Sentry error reporter (no sentry-sdk because container has no pip deps). Builds a Sentry event and POSTs to legacy Store API via urllib.request; DSN parsed and cached at import. Best-effort: any failure caught and logged to stderr, never raised, so monitoring cannot crash the dashboard. 3s timeout, X-Sentry-Auth header with sentry_version=7.
+Minimal stdlib-only Sentry error reporter that POSTs to Sentry's legacy Store API via urllib.request, avoiding the official sentry-sdk because the container has no pip deps. Best-effort: any failure is caught and logged to stderr, never raised, so monitoring cannot crash the dashboard. DSN parsed and cached at import time; 3-second timeout; X-Sentry-Auth header built manually with sentry_version=7.
 
 ## Related
 
-- part of [[dashboard-server]] — Error-reporting library used by the dashboard server.
+- part of [[cockpit-dashboard-server]] — External library used by server.py for error reporting.
 <!-- context:generated:end -->
 
 ## Notes

@@ -3,17 +3,16 @@ name: HeadInspect Worker
 slug: headinspect-worker
 type: system
 sources:
+  - path: projects/headinspect/migrations/0001_hits.sql
+    hash: 651c37d5aafbcd41932f5307a9080183fd953c8b5968f3dd2921bf1c379af022
   - path: projects/headinspect/src/index.ts
     hash: 2c4962e89d06e9fb5bf12aad7cdd08634974a4f57f59cceaa6dca9c98e771499
   - path: projects/headinspect/src/inspect.ts
     hash: 778af3f3556aa953b9e4409c1dee1c52f7fc773639a4e8b2cee22ac8390c75c6
   - path: projects/headinspect/src/render.ts
     hash: 3792b2bd4004ee751d9ae6647d0fc58d9708ef758ad6bfda6beb0a4314bd8883
-sources_digest: 61ec7e58ed05ae951822ed237bf2ebfb8776d6ef03adfdf225ebc93540a32da4
-links:
-  - to: headinspect-schema
-    relation: uses
-    description: Persists hit counts in D1.
+sources_digest: cb61b3ccfe05c907fe9c1d45e555e1e03b1607816df1e7ac11b12c3268891960
+links: []
 generator:
   version: 1
 covers:
@@ -126,11 +125,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Cloudflare Worker fetching a user-supplied URL and reporting response headers. Routes: / (HTML report or JSON), /api/inspect, /health, /badge.svg. Strict SSRF protections via validateUrl/isBlockedHost (reject non-HTTPS, localhost, private IPs, cloud metadata). Follows up to 5 redirects manually, drains bodies, 10s AbortController timeout. Badge always returns 200 with edge caching so broken embeds never render broken. CORS on all API responses.
-
-## Related
-
-- uses [[headinspect-schema]] — Persists hit counts in D1.
+Cloudflare Worker exposing an HTTP API and HTML UI that fetches a user-supplied URL and reports on its response headers, with strict SSRF protections (rejecting non-HTTPS, localhost, private IP ranges, cloud metadata endpoints), manual redirect following (up to 5) with body draining, and a 10-second AbortController timeout. The badge endpoint always returns HTTP 200 with edge caching so broken embeds never render as broken images. Only the hostname is stored, never the full URL, to prevent query strings leaking PII.
 <!-- context:generated:end -->
 
 ## Notes

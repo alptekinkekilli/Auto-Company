@@ -1,6 +1,6 @@
 ---
-name: WSL daemon lifecycle
-slug: wsl-daemon-lifecycle
+name: wsl-daemon-management
+slug: wsl-daemon-management
 type: system
 sources:
   - path: scripts/wsl/install-wsl-daemon.sh
@@ -13,7 +13,9 @@ sources_digest: 9492ae8c037a012dbfdfbe959108c9028822a628598cab08029dd84ec43e3b99
 links:
   - to: auto-loop-core
     relation: configures
-    description: Runs auto-loop.sh as a systemd user service with Restart=always.
+    description: >-
+      The installed unit runs scripts/core/auto-loop.sh from the project root as
+      a persistent daemon.
 generator:
   version: 1
 covers: []
@@ -21,11 +23,11 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-Install/uninstall/status scripts for the per-user systemd auto-company.service that runs auto-loop.sh in WSL, with strict error handling and guards for missing user-level systemd.
+Bash scripts to install, uninstall, and report on the per-user systemd service that runs auto-loop.sh in WSL. They share strict set -euo pipefail handling, || true guards for missing services, and version checks for user-level systemd availability.
 
 ## Related
 
-- configures [[auto-loop-core]] — Runs auto-loop.sh as a systemd user service with Restart=always.
+- configures [[auto-loop-core]] — The installed unit runs scripts/core/auto-loop.sh from the project root as a persistent daemon.
 <!-- context:generated:end -->
 
 ## Notes
