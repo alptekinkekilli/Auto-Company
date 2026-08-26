@@ -15,9 +15,12 @@ sources:
     hash: 518ec45652bc5010bbd34856e527e2dc9c2dfa525aea151ff467f3a802c9da81
 sources_digest: fe1d8fd6fcb0f308eb0c4072f436e2986ea169f87521e188c20ca981540b20fa
 links:
-  - to: snapog-service
+  - to: snapog-schema
+    relation: uses
+    description: Queries D1 tables defined in migrations.
+  - to: snapog-worker
     relation: part_of
-    description: Cron entry point wired into the Worker's scheduled handler.
+    description: Scheduled handler in index.ts invokes runCostAlertCheck.
 generator:
   version: 1
 covers:
@@ -67,11 +70,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Cron-triggered cost-alerting pipeline (every 6h) running five independent checks against D1 and R2, posting fired alerts to a webhook or falling back to log-only mode. Checks are deliberately isolated — a thrown error is logged and treated as no alert to prevent false positives. Thresholds live in one file (ALERT_THRESHOLDS) sourced from the CFO cost model so the CFO can revise numbers without touching check logic; severity escalates to critical at 1.5x threshold. R2 storage is fetched via a thin GraphQL client that returns null on any failure so callers skip storage checks rather than trigger false alerts.
+Cron-triggered cost-alerting system (every 6h) running five independent checks against D1 and R2 (via a narrow GraphQL client for R2 storage bytes). Thresholds isolated in one file (ALERT_THRESHOLDS) so the CFO can revise numbers without touching check logic; severity escalates to critical at 1.5x. Checks are deliberately isolated — a thrown error is logged and treated as no alert to prevent false positives. Delivery posts only when alerts are non-empty, falling back to log-only mode when ALERT_WEBHOOK_URL is unset.
 
 ## Related
 
-- part of [[snapog-service]] — Cron entry point wired into the Worker's scheduled handler.
+- uses [[snapog-schema]] — Queries D1 tables defined in migrations.
+- part of [[snapog-worker]] — Scheduled handler in index.ts invokes runCostAlertCheck.
 <!-- context:generated:end -->
 
 ## Notes

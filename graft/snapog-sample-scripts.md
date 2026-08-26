@@ -11,9 +11,12 @@ sources:
     hash: 0a140d23218574add9c22c524d6ff03aea85a205f4806261fc0791a4b73c144f
 sources_digest: ce9cb2a773c1290423006a58fe8d649723cb56a07022127ba072ed0d87b79c56
 links:
-  - to: snapog-service
+  - to: snapog-cost-alerts
     relation: validates
-    description: Smoke-test and cache-cap behavior of the /og endpoint and cron alerting.
+    description: alerts-dry-run.sh verifies the cron alert pipeline fires.
+  - to: snapog-worker
+    relation: validates
+    description: Smoke-tests the /og endpoint and cache-cap behavior.
 generator:
   version: 1
 covers: []
@@ -21,11 +24,12 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-One-off operational validation scripts for the archived SnapOG service: a smoke test of /health and /og, a dry-run of the cost-alert cron against a local Wrangler dev server (seeding 500 cache-miss rows to trip the 14-day hit-rate threshold), and a cache-cap test verifying that after MONTHLY_CACHE_KEY_CAP distinct keys the R2 cache returns X-Cache: BYPASSED. These are manual/CI checks, not maintained unit tests, and write throwaway rows into local Miniflare D1 state.
+One-off validation scripts for specific fixes rather than maintained tests: smoke-test.sh (basic /health and /og PNG check), cache-cap-test.sh (verifies X-Cache: BYPASSED after MONTHLY_CACHE_KEY_CAP distinct keys), and alerts-dry-run.sh (seeds 500 cache-miss rows via recursive CTE and triggers the cron handler via /__scheduled to verify alert firing without real webhooks).
 
 ## Related
 
-- validates [[snapog-service]] — Smoke-test and cache-cap behavior of the /og endpoint and cron alerting.
+- validates [[snapog-cost-alerts]] — alerts-dry-run.sh verifies the cron alert pipeline fires.
+- validates [[snapog-worker]] — Smoke-tests the /og endpoint and cache-cap behavior.
 <!-- context:generated:end -->
 
 ## Notes

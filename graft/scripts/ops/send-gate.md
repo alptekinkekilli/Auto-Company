@@ -1,4 +1,4 @@
-# scripts/ops/send-gate.py · [[fail-closed-send-policy]] [[outreach-ops-scripts]]
+# scripts/ops/send-gate.py · [[send-gate-py]]
 
 Fail-closed gate that decides from live evidence whether a firm may be emailed, enforcing caps, no-duplicate, opt-out, and live G4 verification with the operator out of the loop.
 

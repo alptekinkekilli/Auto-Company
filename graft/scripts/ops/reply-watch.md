@@ -1,4 +1,4 @@
-# scripts/ops/reply-watch.py · [[outreach-ops-scripts]] [[reply-silence-classification]]
+# scripts/ops/reply-watch.py · [[reply-watch-py]]
 
 Advisory watcher that detects the outcome of outreach sends (reply, delivery failure, or silence) and notifies the operator once per row per outcome class, persisting state in a JSON file.
 

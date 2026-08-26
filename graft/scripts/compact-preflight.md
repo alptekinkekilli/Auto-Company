@@ -1,4 +1,4 @@
-# scripts/compact-preflight.py · [[context-compact-hooks]]
+# scripts/compact-preflight.py · [[compact-ritual]] [[compact-ritual-hooks]]
 
 Pre-compact hook that measures what would be lost in a compact and writes a report to /tmp for the post-compact session-brief to carry forward.
 

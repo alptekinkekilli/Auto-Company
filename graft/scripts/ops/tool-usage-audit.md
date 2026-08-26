@@ -1,4 +1,4 @@
-# scripts/ops/tool-usage-audit.py · [[cycle-ndjson-log-format]] [[ops-audit-and-telemetry-scripts]] [[outreach-ops-scripts]] [[tool-usage-audit]]
+# scripts/ops/tool-usage-audit.py · [[context7-tool-usage-audit]] [[ops-probe-audit-scripts]] [[tool-usage-audit-py]]
 
 Durable per-cycle ledger of tool-consultation counts (ctx7/Airtable/Linear/Browser/graft) appended from finished cycle ndjson, idempotent via a state file, with read-only report and per-MCP-name modes.
 

@@ -9,12 +9,12 @@ sources:
     hash: 96977bb6701f18064edb69c783e53bdb73c930c8ddadcd1caf47583b42700df4
 sources_digest: f7cffd86cee6a866334be6fc13e2b3724150ee08680c1996bf52b88ccc7091f6
 links:
-  - to: cockpit-dashboard-server
+  - to: cockpit-server
     relation: uses
     description: >-
-      app.js polls /api/status, /api/hold, /api/directive, /api/ideas,
-      /api/tool-usage served by server.py; sentry_client.py is imported by
-      server.py for error reporting.
+      app.js polls /api/status and calls /api/hold, /api/directive, /api/ideas,
+      /api/tool-usage; sentry_client.py is imported by server.py for error
+      reporting.
 generator:
   version: 1
 covers:
@@ -160,11 +160,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Browser-side SPA controller plus its stdlib-only Sentry reporter. Polls /api/status on a timer and renders live state cards, cost/usage panels, directive editor, settings form, and log/consensus views. All state comes from backend REST endpoints; no external libraries. The consensus panel refuses to overwrite while the operator is reading the full file; ccusage fails open; tool-usage is a real table because the Rajdhani font is proportional.
+Browser-side SPA controller plus its stdlib-only Sentry reporter. Polls /api/status on a timer, renders live state cards, cost/usage panels, directive editor, settings form, and log/consensus views. All state comes from backend REST endpoints; no external libraries. The consensus panel refuses to overwrite while the operator is reading the full file; ccusage fails open; tool-usage is a real table because the Rajdhani font is proportional.
 
 ## Related
 
-- uses [[cockpit-dashboard-server]] — app.js polls /api/status, /api/hold, /api/directive, /api/ideas, /api/tool-usage served by server.py; sentry_client.py is imported by server.py for error reporting.
+- uses [[cockpit-server]] — app.js polls /api/status and calls /api/hold, /api/directive, /api/ideas, /api/tool-usage; sentry_client.py is imported by server.py for error reporting.
 <!-- context:generated:end -->
 
 ## Notes

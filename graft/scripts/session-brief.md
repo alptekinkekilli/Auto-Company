@@ -1,4 +1,4 @@
-# scripts/session-brief.py · [[session-brief-hook]]
+# scripts/session-brief.py · [[claude-code-hooks]]
 
 SessionStart hook that injects a measured, non-stale session briefing into the context, never blocking the session.
 

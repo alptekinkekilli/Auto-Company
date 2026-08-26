@@ -1,5 +1,5 @@
 ---
-name: dashboard-server
+name: Dashboard server
 slug: dashboard-server
 type: system
 sources:
@@ -7,20 +7,14 @@ sources:
     hash: 999b44bc7671293e78906611b1dfd46bcf6efcc520ed92623a17281766a7fc85
   - path: tests/test_dashboard_server.py
     hash: 56e9073d5a9447df622cb3e0873d553053a3b16089534d427c177db772b933dd
-  - path: tests/test_refusal_format.sh
-    hash: 11bf5e9869e2e573b4a897e4df84053e4f58d759d3073a9e058705482cc31ef5
-sources_digest: b345d383ecc504e4dc9ae899649f4c78d13f54490aec22ca11dbdb4bb80e8732
+sources_digest: a00d09651be48cf7015196cad5672555ff241c03a2b27887a7ef361af457aa42
 links:
   - to: auto-loop-core
     relation: uses
-    description: >-
-      The dashboard parses auto-loop.log and spend ledgers produced by the loop,
-      and writes operator decisions consumed by operator_request_notify.py.
-  - to: ops-audit-and-telemetry-scripts
+    description: Parses auto-loop.log and budget/spend state written by the loop.
+  - to: ops-probe-audit-scripts
     relation: uses
-    description: >-
-      The cockpit's Tool Analytics panel is powered by the tool-usage-history
-      ledger the audit script maintains.
+    description: Tool Analytics panel consumes tool-usage-audit's ledger.
 generator:
   version: 1
 covers:
@@ -397,12 +391,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-dashboard/server.py and its unit suite: status parsing, action dispatch, engine runtime state, settings resolution, cost summary, and log tailing. Tests mock file/shell reads and encode historical regressions (stale boot lines, escalation reporting, window cutoff mismatches).
+The cockpit web server (dashboard/server.py) that renders status, engine runtime state, cost summary, and log tailing from the persistent auto-loop.log, with spend-window anchoring on ccusage blockStart and Monday-UTC weekly cost split. It imports a sibling sentry_client, which tests must account for when loading via importlib.
 
 ## Related
 
-- uses [[auto-loop-core]] — The dashboard parses auto-loop.log and spend ledgers produced by the loop, and writes operator decisions consumed by operator_request_notify.py.
-- uses [[ops-audit-and-telemetry-scripts]] — The cockpit's Tool Analytics panel is powered by the tool-usage-history ledger the audit script maintains.
+- uses [[auto-loop-core]] — Parses auto-loop.log and budget/spend state written by the loop.
+- uses [[ops-probe-audit-scripts]] — Tool Analytics panel consumes tool-usage-audit's ledger.
 <!-- context:generated:end -->
 
 ## Notes

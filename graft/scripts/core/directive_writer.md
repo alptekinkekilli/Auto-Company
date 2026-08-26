@@ -1,4 +1,4 @@
-# scripts/core/directive_writer.py · [[auto-loop-core]] [[directive-writer]]
+# scripts/core/directive_writer.py · [[directive-writer-section-refs]]
 
 Single locked pipeline for writing the human directive file, enforcing in-flight protection and body immutability via atomic writes, backups, and audit.
 

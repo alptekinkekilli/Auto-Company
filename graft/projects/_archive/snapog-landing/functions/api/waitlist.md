@@ -1,4 +1,4 @@
-# projects/_archive/snapog-landing/functions/api/waitlist.ts · [[waitlist-function]]
+# projects/_archive/snapog-landing/functions/api/waitlist.ts
 
 Cloudflare Pages function that persists waitlist signups to KV with deduplication and validation.
 

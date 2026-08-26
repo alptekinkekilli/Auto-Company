@@ -9,10 +9,10 @@ sources_digest: 529774ce95135d20964e1d42a6242cf44c9928383f17eac44213ac8385a782b9
 links:
   - to: directive-writer
     relation: uses
-    description: Writes the promoted directive through directive_writer.py.
-  - to: opportunity-analyst
-    relation: part_of
-    description: Pass-3 promotion gate of the legacy pipeline.
+    description: Writes the new directive through the safe writer.
+  - to: opportunity-analyst-codex
+    relation: implements
+    description: Pass 3 of the codex analyst.
 generator:
   version: 1
 covers:
@@ -35,12 +35,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Deterministic, fail-closed gate deciding whether the analyst's report may overwrite human-directive.md. Uses pure regex (never an LLM) to block on risk-keyword hits, missing verdict keywords, or escalation language near the current Active Validation ID from consensus.md. Requires the live directive Status to be DONE, backs up the current file, writes the new directive with PENDING status, verifies via read-back/diff, and always exits 0 printing PROMOTED or BLOCKED. Deliberately over-includes risk terms to favor manual review over false negatives.
+Deterministic, fail-closed gate deciding whether the analyst's report may overwrite human-directive.md. Pure regex (never an LLM) blocks on any risk-keyword hit, missing verdict keywords, or escalation language near the current Active Validation ID. Requires live directive Status DONE, backs up the current file, writes the new directive with PENDING status and audit metadata, verifies via read-back/diff, and notifies via telegram-notify.sh. Always exits 0 printing PROMOTED or BLOCKED; over-includes risk terms to favor manual review.
 
 ## Related
 
-- uses [[directive-writer]] — Writes the promoted directive through directive_writer.py.
-- part of [[opportunity-analyst]] — Pass-3 promotion gate of the legacy pipeline.
+- uses [[directive-writer]] — Writes the new directive through the safe writer.
+- implements [[opportunity-analyst-codex]] — Pass 3 of the codex analyst.
 <!-- context:generated:end -->
 
 ## Notes

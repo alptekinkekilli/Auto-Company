@@ -1,4 +1,4 @@
-# scripts/ops/verify-mcp-keys.py · [[mcp-key-and-config-management]]
+# scripts/ops/verify-mcp-keys.py · [[ops-probe-audit-scripts]]
 
 Post-deploy check that each MCP server's key is present and well-shaped in the loop process's own environment, without ever printing a secret.
 
