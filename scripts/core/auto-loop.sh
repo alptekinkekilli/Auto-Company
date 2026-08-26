@@ -2467,7 +2467,13 @@ if [ "$LOOP_HARNESS" = "jcode" ]; then
     # cycle. This used to warn and continue; it now refuses to start, and the required
     # set is exact so a partially-generated config cannot pass either.
     _mcp_file="${JCODE_HOME:-$HOME/.jcode}/mcp.json"
-    _mcp_required="${JCODE_MCP_CONFIG_REQUIRED:-airtable,linear,context7,browseros}"
+    # OPREQ-A: airtable/linear are denied for the loop during the Wowcar charter, so the
+    # EXACT required set is {context7,browseros}. This is the THIRD place the server set is
+    # pinned — it MUST stay in sync with jcode-mcp-config.py's REQUIRED/SKIP and
+    # jcode-mcp-manifest.json's servers, or the boot fails here. All three are cross-checked
+    # by tests/test_mcp_config_manifest_sync.sh; the RFQ re-enable re-adds airtable to ALL of
+    # them. Still operator-overridable via JCODE_MCP_CONFIG_REQUIRED.
+    _mcp_required="${JCODE_MCP_CONFIG_REQUIRED:-context7,browseros}"
     _mcp_have="$(python3 -c '
 import json,sys
 try:

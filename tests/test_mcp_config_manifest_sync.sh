@@ -34,6 +34,15 @@ def check(name, cond):
     print(("  PASS " if cond else "  FAIL ")+name); fail = fail or (0 if cond else 1)
 
 check(f"config servers == manifest servers ({sorted(cfg)} vs {sorted(man)})", cfg == man)
+# THIRD pin: auto-loop.sh's boot preflight (JCODE_MCP_CONFIG_REQUIRED default) is a separate
+# hardcoded copy of the server set — if it disagrees with the manifest the boot fails THERE,
+# not in the probe. It crash-looped the loop once (2026-08-26) because only config+manifest
+# were updated. This asserts all THREE pins agree.
+import re
+al = open("scripts/core/auto-loop.sh", encoding="utf-8").read()
+mm = re.search(r'_mcp_required="\$\{JCODE_MCP_CONFIG_REQUIRED:-([^}"]+)\}"', al)
+pre = set(s for s in (mm.group(1).split(",") if mm else []) if s)
+check(f"auto-loop.sh preflight required == manifest ({sorted(pre)} vs {sorted(man)})", pre == man)
 # every non-exempt manifest server must have a readcheck (the manifest's own rule)
 exempt = {n for n, s in json.load(open("scripts/core/jcode-mcp-manifest.json"))["servers"].items()
           if "readcheck_exempt" in s}
