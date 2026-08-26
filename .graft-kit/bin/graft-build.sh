@@ -17,7 +17,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(git -C "$HERE" rev-parse --show-toplevel)"
 cd "$ROOT"
 
-GRAFT_VERSION="${GRAFT_VERSION:-0.10.1}"   # .mcp.json ile aynı olmalı; birlikte yükseltin
+GRAFT_VERSION="${GRAFT_VERSION:-0.13.0}"   # .mcp.json ile aynı olmalı; birlikte yükseltin
 KEYCHAIN_SERVICE="${GRAFT_KEYCHAIN_SERVICE:-autocompany-together-key}"
 
 if [[ " $* " == *" --deep "* ]]; then

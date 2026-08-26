@@ -9,7 +9,7 @@
 # Kurulum:       git config core.hooksPath .githooks   (install.sh bunu yapar)
 set -uo pipefail
 
-GRAFT_VERSION="${GRAFT_VERSION:-0.10.1}"
+GRAFT_VERSION="${GRAFT_VERSION:-0.13.0}"
 
 # 1) Graft'ın indekslediği türde bir dosya staged mı? Değilse hızlıca çık.
 staged="$(git diff --cached --name-only --diff-filter=ACMR)"
