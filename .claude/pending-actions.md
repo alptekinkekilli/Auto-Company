@@ -40,3 +40,13 @@ Her kalemde SAHİBİ ve varsa mutlak tarih olsun.
       **Sonuç: public repo'da gerçek sızıntı YOK — orijinal "hızlı regex" değerlendirmesi
       doğruymuş, ben yanlışlıkla "yanlıştı" dedim.** Hafızadaki iki eski token sızıntısı
       (08-01 ps leak, 08-03 transcript leak) konusu bu bulgudan etkilenmiyor, ayrı durur.
+
+- [ ] **Router floor 168h — redeploy-sonrası fiili teyit** — SAHİP: sonraki doğal redeploy
+      (container hash ≠ `-152423747967`). `ROUTER_DIRECTIVE_MIN_HOURS=168` runtime.env'de
+      staged; boot'ta canlı olacak (entrypoint export). Deterministik kanıt ZATEN var
+      (boot-sim: floor 168 → PENDING directive düşüyor, router "silent"). Redeploy olunca
+      TEYİT ET: yeni container'da `ROUTER_DIRECTIVE_MIN_HOURS` loop env'de = 168 VE
+      `operator-action-router.py --app /app --dry-run` → "no open operator items — silent"
+      (directive <168h iken). Sonra APP-302 checklist kalemini tickle. Zorlama redeploy YOK
+      (operatör "doğal uygula"). Ref: [[operator-action-router]] memory + consensus stamp
+      2026-08-26 #2.
