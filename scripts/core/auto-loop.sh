@@ -2362,8 +2362,14 @@ trap cleanup SIGTERM SIGINT SIGHUP
 # counter AND the highest cycle-NNNN log still on disk (self-healing if the counter file is
 # lost on a fresh volume), then keep counting up. Fail-safe: unreadable/absent → 0 (old behavior).
 CYCLE_COUNTER_FILE="${CYCLE_COUNTER_FILE:-$LOG_DIR/.cycle-counter}"
-_seed_persisted="$(cat "$CYCLE_COUNTER_FILE" 2>/dev/null | tr -cd '0-9')"; : "${_seed_persisted:=0}"
-_seed_logs="$(ls "$LOG_DIR"/cycle-[0-9][0-9][0-9][0-9]-*.log 2>/dev/null | sed -E 's#.*/cycle-0*([0-9]+)-.*#\1#' | sort -n | tail -1)"; : "${_seed_logs:=0}"
+# set -e + pipefail SAFE: a missing counter file or a no-match `ls` must NEVER abort the
+# boot (that would crash-loop the container — the exact APP-240 class of trap). `[ -r ] &&`
+# short-circuits without tripping set -e; the `ls | …` pipeline is guarded with `|| true`.
+_seed_persisted=0
+[ -r "$CYCLE_COUNTER_FILE" ] && _seed_persisted="$(tr -cd '0-9' < "$CYCLE_COUNTER_FILE" 2>/dev/null)"
+[ -n "$_seed_persisted" ] || _seed_persisted=0
+_seed_logs="$(ls "$LOG_DIR"/cycle-[0-9][0-9][0-9][0-9]-*.log 2>/dev/null | sed -E 's#.*/cycle-0*([0-9]+)-.*#\1#' | sort -n | tail -1 || true)"
+[ -n "$_seed_logs" ] || _seed_logs=0
 loop_count=$(( _seed_persisted > _seed_logs ? _seed_persisted : _seed_logs ))
 error_count=0
 

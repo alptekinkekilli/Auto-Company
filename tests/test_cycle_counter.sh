@@ -14,7 +14,10 @@ check(){ if [ "$2" = "$3" ]; then echo "  PASS $1"; else echo "  FAIL $1: want '
 # Extract the seed block (CYCLE_COUNTER_FILE= .. loop_count=) into a runnable stub.
 SEED="$(sed -n '/^CYCLE_COUNTER_FILE=/,/^loop_count=/p' "$SRC")"
 [ -n "$SEED" ] || { echo "FAIL: could not extract seed block"; exit 1; }
-STUB="$(mktemp)"; { echo 'LOG_DIR="$1"'; printf '%s\n' "$SEED"; echo 'echo "$loop_count"'; } > "$STUB"
+# CRITICAL: run under the SAME shell options as the real boot (`set -euo pipefail`). The
+# first version of this test omitted them and passed a seed block that crash-looped the
+# container on first boot (missing counter file → cat|tr fails → pipefail → set -e abort).
+STUB="$(mktemp)"; { echo 'set -euo pipefail'; echo 'LOG_DIR="$1"'; printf '%s\n' "$SEED"; echo 'echo "$loop_count"'; } > "$STUB"
 seed(){ bash "$STUB" "$1"; }
 
 echo "--- 1: fresh dir (no counter, no logs) → 0 (fail-safe) ---"
@@ -37,7 +40,8 @@ d="$(mktemp -d)"; printf 'nonsense\n' > "$d/.cycle-counter"; check "seed=0" "$(s
 echo "--- 6: persist line writes the new value ---"
 PERSIST="$(grep -F 'CYCLE_COUNTER_FILE.tmp' "$SRC" | head -1)"
 [ -n "$PERSIST" ] || { echo "FAIL: could not extract persist line"; exit 1; }
-d="$(mktemp -d)"; CYCLE_COUNTER_FILE="$d/.cycle-counter" loop_count=8 bash -c '
+d="$(mktemp -d)"; bash -c '
+  set -euo pipefail
   CYCLE_COUNTER_FILE="'"$d"'/.cycle-counter"; loop_count=8; '"$PERSIST"
 check "file=8 after persist" "$(cat "$d/.cycle-counter" 2>/dev/null)" "8"
 
