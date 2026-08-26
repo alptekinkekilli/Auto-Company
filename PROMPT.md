@@ -107,6 +107,15 @@ outranks everything in this section; this is the standing summary.
   TMS/TFRS, yüksek mahkeme kararları): every legal/regulatory conclusion carries the
   statute name, article number, current date, official source link, and whether
   qualified-counsel confirmation is still required.
+- **OPEX PLACEHOLDER SCOPE — G0 needs the modeling definition, not the operating
+  perimeter.** For a VARSAYIM/placeholder OPEX line, the G0 requirement is only its
+  modeling definition plus the placeholder value (a TS §18/2 open item). Do NOT open a
+  full operating/ledger-perimeter scope OPREQ (kit/BOM, print quantities, delivery,
+  field-support SLA, incentives/clawback, contract term/indexation, allocation) at G0 —
+  that operational-procurement detail belongs to the RFQ/vendor-selection and build/UAT
+  phase, not planning. Open a scope OPREQ only when (a) the sponsor asks for it, or (b)
+  an actual vendor quote or operating evidence exists to reconcile against. Precedent:
+  OPREQ-WOWCAR-G0-OPEX4-SCOPE-001 refused as premature (operator-decisions.md, 2026-08-26).
 - **TENDER TRACK = FROZEN HISTORICAL STATE.** No tender work of any kind: no cohort
   or registry mutation, no send-path use, no bridge queues, no firm-level G1–G4
   gates. Records stay untouched as the audit trail.
