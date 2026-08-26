@@ -1,4 +1,4 @@
-# scripts/ops/kik-decision-read.py · [[ki-k-decision-browser-extraction]]
+# scripts/ops/kik-decision-read.py
 
 One-call reader that fetches a KİK decision and returns only the fields a G1/outcome call needs, bounding bytes entering the context.
 

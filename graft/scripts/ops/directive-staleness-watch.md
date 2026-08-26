@@ -1,4 +1,4 @@
-# scripts/ops/directive-staleness-watch.py · [[directive-rule-compliance-watchers]]
+# scripts/ops/directive-staleness-watch.py
 
 Cron watcher that alerts when the human directive has been PENDING too long, escalating once at the warn threshold then every repeat interval, while surfacing the audit-log reasons it is stuck.
 

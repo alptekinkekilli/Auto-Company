@@ -1,4 +1,4 @@
-# scripts/ops/site-contact-evidence.py · [[fail-closed-verification-invariant]] [[outreach-eligibility-evidence]]
+# scripts/ops/site-contact-evidence.py
 
 Finds a firm's published contact email across escalating sources, ensuring an unrendered fetch is reported as inconclusive rather than negative.
 

@@ -25,24 +25,6 @@
     "open"
   ],
   "servers": {
-    "airtable": {
-      "destructive": [
-        "delete_records_for_table",
-        "delete_table",
-        "delete_automation",
-        "delete_interface",
-        "delete_page",
-        "revert_action"
-      ]
-    },
-    "linear": {
-      "destructive": [
-        "delete_attachment",
-        "delete_comment",
-        "delete_diff_comment",
-        "delete_status_update"
-      ]
-    },
     "context7": {
       "destructive": []
     },
@@ -52,16 +34,6 @@
     }
   },
   "readchecks": [
-    {
-      "server": "airtable",
-      "tool": "list_bases",
-      "arguments": {}
-    },
-    {
-      "server": "linear",
-      "tool": "list_teams",
-      "arguments": {}
-    },
     {
       "server": "context7",
       "tool": "resolve-library-id",

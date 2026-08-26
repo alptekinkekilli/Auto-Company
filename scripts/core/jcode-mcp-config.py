@@ -44,10 +44,24 @@ VAR_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 
 # Per-server overrides applied ONLY on the jcode path, each with a measured reason.
 # These are not preference: without them a provider is simply unusable.
+# OPREQ-A (operator decision, 2026-08-26): airtable + linear are DENIED for the LOOP during
+# the Wowcar-only charter. The auditor measured them as ~98 advertised tools with 0 calls,
+# sitting in the ~59k-token per-turn prompt prefix. They are SKIPPED from the loop's generated
+# config below — `.mcp.json` is deliberately left intact so the operator's INTERACTIVE sessions
+# keep airtable/linear, and jcode-mcp-manifest.json is trimmed to match so the boot probe's
+# config==manifest gate still passes. RE-ENABLE (RFQ-outreach build needs airtable): drop it
+# from SKIP, and re-add it to REQUIRED + jcode-mcp-manifest.json (servers + readchecks).
+# Overridable via runtime.env (JCODE_MCP_SKIP="a,b"), the same operator-owned lever as
+# JCODE_TOOLS_DENY — an escape hatch, and the hook the config test uses to exercise the
+# airtable/linear override/masking paths. Default keeps the OPREQ-A charter deny. Whatever
+# the value, the boot probe still FAILS CLOSED if the resulting config server set diverges
+# from jcode-mcp-manifest.json, so this can never silently ship a mismatched surface.
+SKIP = tuple(s.strip() for s in os.environ.get("JCODE_MCP_SKIP", "airtable,linear").split(",") if s.strip())
 # The set a cycle cannot work without. Writing a config that lacks any of these is a
 # failure, not a degraded success: the loop would keep running and quietly stop being
-# able to read or write the company's own state.
-REQUIRED = ("airtable", "linear", "context7", "browseros")
+# able to read or write the company's own state. (airtable/linear left the REQUIRED set
+# with OPREQ-A above — during the Wowcar charter the loop does not use them.)
+REQUIRED = ("context7", "browseros")
 
 OVERRIDES: dict[str, dict] = {
     # The community `@tacticlaunch/mcp-linear` package publishes a tool whose JSON
@@ -170,6 +184,10 @@ def main() -> int:
     out: dict[str, dict] = {}
     for name, spec in servers.items():
         spec = spec if isinstance(spec, dict) else {}
+        if name in SKIP:
+            print(f"[jcode-mcp] SKIP {name}: OPREQ-A charter deny (loop only; .mcp.json kept "
+                  "for interactive sessions; RFQ build re-enables)", file=sys.stderr)
+            continue
         if name in OVERRIDES:
             ov = dict(OVERRIDES[name])
             why = ov.pop("_why", "")

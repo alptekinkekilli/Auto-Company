@@ -11,9 +11,9 @@ sources:
     hash: 55fb93df7f080f48a322d005e6b1f76ec2de1c5283de176883b0644d69f39a6a
 sources_digest: 9492ae8c037a012dbfdfbe959108c9028822a628598cab08029dd84ec43e3b99
 links:
-  - to: auto-loop-core-engine
-    relation: uses
-    description: The daemon runs auto-loop.sh from the project root.
+  - to: auto-loop-core
+    relation: configures
+    description: Runs auto-loop.sh as a systemd user service with Restart=always.
 generator:
   version: 1
 covers: []
@@ -21,11 +21,11 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-The install/uninstall/status scripts for the auto-company.service systemd user unit on WSL/Linux: install writes a Restart=always unit running auto-loop.sh, uninstall disables/stops/removes with || true guards so a missing service doesn't abort, and status reports MainPID/ActiveState/SubState with 'unknown' fallbacks.
+Install/uninstall/status scripts for the per-user systemd auto-company.service that runs auto-loop.sh in WSL, with strict error handling and guards for missing user-level systemd.
 
 ## Related
 
-- uses [[auto-loop-core-engine]] — The daemon runs auto-loop.sh from the project root.
+- configures [[auto-loop-core]] — Runs auto-loop.sh as a systemd user service with Restart=always.
 <!-- context:generated:end -->
 
 ## Notes

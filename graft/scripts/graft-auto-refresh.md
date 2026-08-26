@@ -1,4 +1,4 @@
-# scripts/graft-auto-refresh.py · [[operator-usage-graft-refresh]]
+# scripts/graft-auto-refresh.py
 
 SessionStart hook that measures graft card freshness from git and, only when both thresholds are crossed, launches the paid deep build detached while always exiting 0.
 

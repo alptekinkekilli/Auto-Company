@@ -43,7 +43,10 @@ cat > "$SB/src.json" <<'EOF'
   "browseros": {"type": "http", "url": "http://172.17.0.1:9245/mcp"}
 }}
 EOF
-run_gen() { LINEAR_API_KEY="$SECRET_L" AIRTABLE_API_KEY="$SECRET_A" CONTEXT7_API_KEY="ctx7sk-canary" \
+# JCODE_MCP_SKIP="" turns OFF the OPREQ-A charter deny for airtable/linear so this test can
+# still exercise their override + secret-masking code paths (live for the RFQ re-enable).
+# The default-skip (airtable/linear absent) is covered by tests/test_mcp_config_manifest_sync.sh.
+run_gen() { JCODE_MCP_SKIP="" LINEAR_API_KEY="$SECRET_L" AIRTABLE_API_KEY="$SECRET_A" CONTEXT7_API_KEY="ctx7sk-canary" \
     python3 "$GEN" --src "$SB/src.json" "$@"; }
 
 echo "1. hosted-endpoint secrets stay out of argv, ride in env (linear+airtable overrides)"
@@ -58,9 +61,12 @@ for pair in "linear LINEAR_API_KEY $SECRET_L" "airtable AIRTABLE_API_KEY $SECRET
 done
 
 echo "2. unset variable -> server skipped and named, no partial config written"
-ERR=$(env -u LINEAR_API_KEY AIRTABLE_API_KEY="$SECRET_A" CONTEXT7_API_KEY="ctx7sk-canary" \
+# context7 is a REQUIRED server (linear/airtable left REQUIRED under OPREQ-A), so unset ITS
+# var to trigger the partial-config refusal. JCODE_MCP_SKIP="" keeps the fixture's other
+# servers in play so the only thing missing is the REQUIRED context7.
+ERR=$(env -u CONTEXT7_API_KEY JCODE_MCP_SKIP="" LINEAR_API_KEY="$SECRET_L" AIRTABLE_API_KEY="$SECRET_A" \
     python3 "$GEN" --src "$SB/src.json" --dest "$SB/out2.json" 2>&1); RC=$?
-contains "names the variable" "$ERR" "LINEAR_API_KEY"
+contains "names the variable" "$ERR" "CONTEXT7_API_KEY"
 contains "refuses partial" "$ERR" "refusing to write"
 if [ ! -f "$SB/out2.json" ] && [ "$RC" -ne 0 ]; then echo "  PASS nothing written, non-zero"; else
   echo "  FAIL partial config written or rc=0"; fail=1; fi

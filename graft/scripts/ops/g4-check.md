@@ -1,4 +1,4 @@
-# scripts/ops/g4-check.py · [[outreach-eligibility-evidence]] [[registry-g4-compliance-tooling]] [[turn-economy-compliance-checks]]
+# scripts/ops/g4-check.py · [[ops-analysis-audit-tools]]
 
 CLI that mechanically rules on G4 identity attribution from live evidence (first-party contact plus a registered-identity anchor), so the closing decision follows evidence rather than a self-declared PASS.
 

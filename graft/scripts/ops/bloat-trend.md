@@ -1,4 +1,4 @@
-# scripts/ops/bloat-trend.py · [[turn-economy-compliance-checks]]
+# scripts/ops/bloat-trend.py
 
 Tracks whether per-cycle turn-economy metrics are improving across a rolling window, and alerts only on a genuine regression or on the two-consecutive-window target being met, so the watcher can be retired.
 

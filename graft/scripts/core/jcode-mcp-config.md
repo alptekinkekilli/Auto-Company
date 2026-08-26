@@ -1,8 +1,8 @@
-# scripts/core/jcode-mcp-config.py · [[atomic-state-writes]] [[mcp-config-key-security]] [[mcp-configuration-boot-probe]] [[secret-handling-redaction]]
+# scripts/core/jcode-mcp-config.py · [[mcp-config-key-management]] [[scripts-core]] [[secret-hygiene-in-argv-vs-env]]
 
-Generates jcode's stdio-only MCP config from the repo's .mcp.json, bridging http/sse servers through mcp-remote and refusing to write partial or stale configs so the loop never silently loses tools.
+Generates jcode's stdio-only MCP config from the repo's .mcp.json, bridging http servers through mcp-remote and skipping OPREQ-A-denied servers, so the loop's tool surface matches what jcode can actually connect to.
 
-- expand · function · L82-L94 — Substitutes ${VAR} references from the environment, returning None if any referenced variable is unset so the caller can skip the server loudly.
-- sub · function · L86-L91 — Replacement callback that resolves one ${VAR} match and records it as missing when the environment has no value.
-- convert · function · L97-L148 — Rewrites one server spec into a jcode-compatible stdio form, passing stdio servers through and wrapping http/sse servers in an mcp-remote bridge while keeping secrets out of argv.
-- main · function · L151-L258 — Orchestrates reading the source config, applying overrides, converting servers, and atomically writing the config plus a freshness stamp, refusing to write empty or partial results.
+- expand · function · L96-L108 — Substitutes ${VAR} references from the environment, returning None if any referenced variable is unset so the caller can skip the server loudly.
+- sub · function · L100-L105 — Replacement callback that resolves one ${VAR} match and records it as missing when the environment has no value.
+- convert · function · L111-L162 — Rewrites one server spec into a jcode-compatible stdio form, passing stdio servers through and wrapping http/sse servers in an mcp-remote bridge while keeping secrets out of argv.
+- main · function · L165-L276 — Reads the source .mcp.json, applies SKIP/OVERRIDE/convert per server, and atomically writes the resulting config plus a freshness stamp, refusing to write empty or partial configs.
