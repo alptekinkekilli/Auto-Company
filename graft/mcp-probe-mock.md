@@ -1,17 +1,19 @@
 ---
-name: MCP probe
-slug: mcp-probe
+name: MCP probe & mock
+slug: mcp-probe-mock
 type: system
 sources:
   - path: scripts/core/jcode-mcp-probe.py
     hash: 60fdd2addf2f53741d03e21002a00b6ee9d8895af1fae9746a51308e67672b67
   - path: tests/fixtures/mock_mcp_server.py
     hash: e5124ccf90e18331b1e81557000a0bf0cc13e1fd7f0412250c5f37fb08e23021
-sources_digest: 4e5805e69edce8229dc6c4c2fb5cd20a312a17b3d2789496ee247d6fa0f8f398
+  - path: tests/test_mcp_probe.sh
+    hash: 07482a8311b81667003a304c3741feed20e311f1e28263a5bb3bcc5599e962ce
+sources_digest: 6ff1872f4bc57b780d21f82bde755d58401545251d18bfb0f129b93c13091014
 links:
-  - to: mcp-configuration-and-key-security
-    relation: uses
-    description: Probe reads the .mcp.json config and manifest to validate servers.
+  - to: mcp-config-key-security
+    relation: validates
+    description: The probe checks the generated .mcp.json config.
 generator:
   version: 1
 covers:
@@ -64,11 +66,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Deterministic pre-cycle probe (jcode-mcp-probe.py) that validates each MCP server's tools against a manifest, requiring at least one proven readcheck per server and exact match of destructive tools, with a denylist covering base and per-server tools.
+jcode-mcp-probe.py deterministically validates MCP servers (exact-match success, missing/extra servers, destructive-tool denylist, readcheck requirements with an exemption mechanism) against a mock stdio server fixture. Requires at least one proven readcheck per server and that the manifest's destructive tool list exactly matches live tools.
 
 ## Related
 
-- uses [[mcp-configuration-and-key-security]] — Probe reads the .mcp.json config and manifest to validate servers.
+- validates [[mcp-config-key-security]] — The probe checks the generated .mcp.json config.
 <!-- context:generated:end -->
 
 ## Notes

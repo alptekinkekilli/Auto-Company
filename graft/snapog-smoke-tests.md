@@ -11,11 +11,12 @@ sources:
     hash: 0a140d23218574add9c22c524d6ff03aea85a205f4806261fc0791a4b73c144f
 sources_digest: ce9cb2a773c1290423006a58fe8d649723cb56a07022127ba072ed0d87b79c56
 links:
+  - to: snapog-cost-alerts
+    relation: validates
+    description: alerts-dry-run.sh verifies alert logic fires without real webhooks.
   - to: snapog-worker
     relation: validates
-    description: >-
-      Exercise the /og, /health, and /__scheduled endpoints against a dev
-      server.
+    description: Smoke tests verify worker behavior including cache-cap bypass.
 generator:
   version: 1
 covers: []
@@ -23,11 +24,12 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-One-off Bash validation scripts for specific fixes rather than maintained tests: smoke-test.sh (basic /health and /og checks), cache-cap-test.sh (verifies X-Cache: BYPASSED after MONTHLY_CACHE_KEY_CAP distinct keys), and alerts-dry-run.sh (seeds 500 cache-miss rows to trip the alert threshold and triggers /__scheduled). All write throwaway state into local Miniflare D1, resettable by deleting .wrangler/state/v3/d1.
+Archived one-off validation scripts for SnapOG fixes: smoke-test.sh (health + /og PNG size check), cache-cap-test.sh (verifies X-Cache: BYPASSED after MONTHLY_CACHE_KEY_CAP distinct keys), alerts-dry-run.sh (seeds 500 cache-miss rows to trip 14-day hit-rate threshold, triggers /__scheduled, expects log lines). Write throwaway rows into local Miniflare D1 state resettable by deleting .wrangler/state/v3/d1.
 
 ## Related
 
-- validates [[snapog-worker]] — Exercise the /og, /health, and /__scheduled endpoints against a dev server.
+- validates [[snapog-cost-alerts]] — alerts-dry-run.sh verifies alert logic fires without real webhooks.
+- validates [[snapog-worker]] — Smoke tests verify worker behavior including cache-cap bypass.
 <!-- context:generated:end -->
 
 ## Notes

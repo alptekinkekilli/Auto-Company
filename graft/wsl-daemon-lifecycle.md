@@ -21,7 +21,7 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-Install/uninstall/status scripts for the auto-company systemd user service on WSL, running auto-loop.sh with Restart=always and a 10s delay, with linger guidance for background persistence.
+The install/uninstall/status scripts for the auto-company.service systemd user unit on WSL/Linux: install writes a Restart=always unit running auto-loop.sh, uninstall disables/stops/removes with || true guards so a missing service doesn't abort, and status reports MainPID/ActiveState/SubState with 'unknown' fallbacks.
 
 ## Related
 

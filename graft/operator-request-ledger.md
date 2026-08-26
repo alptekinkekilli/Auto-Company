@@ -1,231 +1,311 @@
 ---
-name: Operator Request Ledger
+name: Operator request ledger
 slug: operator-request-ledger
-type: concept
+type: system
 sources:
-  - path: dashboard/server.py
-    hash: 999b44bc7671293e78906611b1dfd46bcf6efcc520ed92623a17281766a7fc85
-sources_digest: 8b82355bba156c61c76505ae335656f264eff4fc117d0a477f2c27a30456f883
+  - path: scripts/core/operator_request_notify.py
+    hash: 422b3f99a0cf654022883399da8d8ae7b28d7a6b7bffc2ddfc68dd4d987217ac
+  - path: scripts/ops/operator-action-router.py
+    hash: 25fd8206f44d0baa7b87a910d0d1846fe5ef1b155289d1a769994aff6817587e
+  - path: tests/test_operator_action_router.py
+    hash: 20f6bd56ba2238d0242627275af5749560272630a1212f9f9f22159d655d99ae
+  - path: tests/test_operator_request_notify.py
+    hash: 07fef3026944da791037a735c7e5cea15cdb4f53eabaecf7affda422400f016f
+  - path: tests/test_refusal_format.sh
+    hash: 11bf5e9869e2e573b4a897e4df84053e4f58d759d3073a9e058705482cc31ef5
+sources_digest: b926e1b649b6b7679a3570ee3cdf0e6d61de99492b73ea299fc13439a4667c2d
 links:
-  - to: cockpit-dashboard
-    relation: part_of
-    description: Read/written by server.py.
+  - to: auto-loop-core-engine
+    relation: uses
+    description: >-
+      The loop runs operator_request_notify.py before sleeping in the idle-skip
+      branch.
+  - to: state-snapshot-probe
+    relation: produces
+    description: The snapshot counts open OPREQ blocks from this ledger.
 generator:
   version: 1
 covers:
-  - symbol: ps_quote
+  - symbol: _looks_secret
     kind: function
-    at: 'dashboard/server.py:L123-L124'
-  - symbol: detect_host_kind
+    at: 'scripts/core/operator_request_notify.py:L114-L123'
+  - symbol: now_iso
     kind: function
-    at: 'dashboard/server.py:L127-L137'
-  - symbol: run_powershell_script
+    at: 'scripts/core/operator_request_notify.py:L134-L135'
+  - symbol: norm_field
     kind: function
-    at: 'dashboard/server.py:L140-L184'
-  - symbol: run_shell_script
+    at: 'scripts/core/operator_request_notify.py:L138-L139'
+  - symbol: material_hash
     kind: function
-    at: 'dashboard/server.py:L187-L217'
-  - symbol: get_host_profile
+    at: 'scripts/core/operator_request_notify.py:L142-L151'
+  - symbol: parse_fields
     kind: function
-    at: 'dashboard/server.py:L220-L253'
-  - symbol: read_text_file
+    at: 'scripts/core/operator_request_notify.py:L154-L166'
+  - symbol: parse_blocks
     kind: function
-    at: 'dashboard/server.py:L256-L270'
-  - symbol: read_text_file_tail
+    at: 'scripts/core/operator_request_notify.py:L169-L181'
+  - symbol: validate_required
     kind: function
-    at: 'dashboard/server.py:L273-L305'
-  - symbol: read_directive
+    at: 'scripts/core/operator_request_notify.py:L184-L186'
+  - symbol: set_field_in_block_body
     kind: function
-    at: 'dashboard/server.py:L315-L347'
-  - symbol: _section
+    at: 'scripts/core/operator_request_notify.py:L189-L198'
+  - symbol: set_field_in_text
     kind: function
-    at: 'dashboard/server.py:L326-L337'
-  - symbol: DirectiveRefused
-    kind: class
-    at: 'dashboard/server.py:L350-L351'
-  - symbol: write_directive
+    at: 'scripts/core/operator_request_notify.py:L201-L208'
+  - symbol: scrub_secrets
     kind: function
-    at: 'dashboard/server.py:L354-L397'
-  - symbol: parse_proposed_authorization
+    at: 'scripts/core/operator_request_notify.py:L211-L216'
+  - symbol: compose_message
     kind: function
-    at: 'dashboard/server.py:L426-L435'
-  - symbol: read_operator_requests
+    at: 'scripts/core/operator_request_notify.py:L241-L271'
+  - symbol: send_telegram
     kind: function
-    at: 'dashboard/server.py:L438-L473'
-  - symbol: _decisions_audit
+    at: 'scripts/core/operator_request_notify.py:L274-L294'
+  - symbol: attempt_notify
     kind: function
-    at: 'dashboard/server.py:L476-L483'
-  - symbol: write_operator_decision
+    at: 'scripts/core/operator_request_notify.py:L297-L306'
+  - symbol: load_state
     kind: function
-    at: 'dashboard/server.py:L486-L572'
-  - symbol: _parse_env_file
+    at: 'scripts/core/operator_request_notify.py:L309-L327'
+  - symbol: write_state
     kind: function
-    at: 'dashboard/server.py:L575-L587'
-  - symbol: read_ideas
+    at: 'scripts/core/operator_request_notify.py:L330-L337'
+  - symbol: write_text_verified
     kind: function
-    at: 'dashboard/server.py:L590-L608'
-  - symbol: read_tool_usage
+    at: 'scripts/core/operator_request_notify.py:L340-L342'
+  - symbol: audit
     kind: function
-    at: 'dashboard/server.py:L611-L648'
-  - symbol: read_analysis
+    at: 'scripts/core/operator_request_notify.py:L345-L348'
+  - symbol: render_projection_body
     kind: function
-    at: 'dashboard/server.py:L651-L669'
-  - symbol: analyst_trigger_state
+    at: 'scripts/core/operator_request_notify.py:L351-L366'
+  - symbol: splice_projection
     kind: function
-    at: 'dashboard/server.py:L672-L679'
-  - symbol: analyst_run_now
+    at: 'scripts/core/operator_request_notify.py:L369-L397'
+  - symbol: process_notifications
     kind: function
-    at: 'dashboard/server.py:L682-L708'
-  - symbol: read_directive_templates
+    at: 'scripts/core/operator_request_notify.py:L400-L480'
+  - symbol: _resolve_evidence_path
     kind: function
-    at: 'dashboard/server.py:L726-L733'
-  - symbol: read_settings
+    at: 'scripts/core/operator_request_notify.py:L489-L499'
+  - symbol: verify_document_procurement
     kind: function
-    at: 'dashboard/server.py:L736-L778'
-  - symbol: write_settings
+    at: 'scripts/core/operator_request_notify.py:L502-L578'
+  - symbol: verify_credential
     kind: function
-    at: 'dashboard/server.py:L781-L827'
-  - symbol: _proc_cmdline
+    at: 'scripts/core/operator_request_notify.py:L581-L622'
+  - symbol: _directive_window_after
     kind: function
-    at: 'dashboard/server.py:L830-L835'
-  - symbol: _proc_ppid
+    at: 'scripts/core/operator_request_notify.py:L646-L654'
+  - symbol: _resolves_block_window
     kind: function
-    at: 'dashboard/server.py:L838-L845'
-  - symbol: read_hold
+    at: 'scripts/core/operator_request_notify.py:L657-L671'
+  - symbol: verify_legal_or_financial_decision
     kind: function
-    at: 'dashboard/server.py:L852-L875'
-  - symbol: set_hold
+    at: 'scripts/core/operator_request_notify.py:L681-L703'
+  - symbol: verify_authorization
     kind: function
-    at: 'dashboard/server.py:L878-L915'
-  - symbol: wake_loop
+    at: 'scripts/core/operator_request_notify.py:L706-L732'
+  - symbol: refusal_for
     kind: function
-    at: 'dashboard/server.py:L918-L976'
-  - symbol: trigger_redeploy
+    at: 'scripts/core/operator_request_notify.py:L748-L772'
+  - symbol: verify_resolution
     kind: function
-    at: 'dashboard/server.py:L979-L1015'
-  - symbol: _week_start_epoch
+    at: 'scripts/core/operator_request_notify.py:L775-L796'
+  - symbol: _answer_sources
     kind: function
-    at: 'dashboard/server.py:L1031-L1038'
-  - symbol: _ccusage_compute
+    at: 'scripts/core/operator_request_notify.py:L799-L817'
+  - symbol: process_resolutions
     kind: function
-    at: 'dashboard/server.py:L1041-L1096'
-  - symbol: _run
+    at: 'scripts/core/operator_request_notify.py:L820-L878'
+  - symbol: _main_impl
     kind: function
-    at: 'dashboard/server.py:L1047-L1055'
-  - symbol: _is_codex
-    kind: function
-    at: 'dashboard/server.py:L1070-L1072'
-  - symbol: read_ccusage
-    kind: function
-    at: 'dashboard/server.py:L1099-L1119'
-  - symbol: _bg
-    kind: function
-    at: 'dashboard/server.py:L1111-L1116'
-  - symbol: read_engine_runtime
-    kind: function
-    at: 'dashboard/server.py:L1122-L1219'
-  - symbol: _window_cutoff_epoch
-    kind: function
-    at: 'dashboard/server.py:L1222-L1250'
-  - symbol: read_cost_summary
-    kind: function
-    at: 'dashboard/server.py:L1253-L1384'
-  - symbol: _last_budget_gate
-    kind: function
-    at: 'dashboard/server.py:L1387-L1395'
-  - symbol: read_tail
-    kind: function
-    at: 'dashboard/server.py:L1398-L1405'
-  - symbol: parse_sections
-    kind: function
-    at: 'dashboard/server.py:L1408-L1423'
-  - symbol: parse_int
-    kind: function
-    at: 'dashboard/server.py:L1426-L1430'
-  - symbol: parse_positive_int
-    kind: function
-    at: 'dashboard/server.py:L1433-L1438'
-  - symbol: parse_key_values
-    kind: function
-    at: 'dashboard/server.py:L1441-L1448'
-  - symbol: blank_parsed
-    kind: function
-    at: 'dashboard/server.py:L1451-L1475'
-  - symbol: parse_windows_status_output
-    kind: function
-    at: 'dashboard/server.py:L1478-L1560'
-  - symbol: parse_macos_status_output
-    kind: function
-    at: 'dashboard/server.py:L1563-L1599'
-  - symbol: read_state_file_pairs
-    kind: function
-    at: 'dashboard/server.py:L1602-L1610'
-  - symbol: run_status_command
-    kind: function
-    at: 'dashboard/server.py:L1613-L1616'
-  - symbol: run_dashboard_action
-    kind: function
-    at: 'dashboard/server.py:L1619-L1631'
-  - symbol: parse_status_output
-    kind: function
-    at: 'dashboard/server.py:L1634-L1636'
-  - symbol: gather_status_payload
-    kind: function
-    at: 'dashboard/server.py:L1639-L1659'
-  - symbol: read_graft_freshness
-    kind: function
-    at: 'dashboard/server.py:L1662-L1672'
-  - symbol: DashboardHandler
-    kind: class
-    at: 'dashboard/server.py:L1675-L1980'
-  - symbol: _json
-    kind: method
-    at: 'dashboard/server.py:L1676-L1683'
-  - symbol: _text
-    kind: method
-    at: 'dashboard/server.py:L1685-L1694'
-  - symbol: _serve_file
-    kind: method
-    at: 'dashboard/server.py:L1696-L1700'
-  - symbol: do_GET
-    kind: method
-    at: 'dashboard/server.py:L1702-L1707'
-  - symbol: _do_GET
-    kind: method
-    at: 'dashboard/server.py:L1709-L1775'
-  - symbol: _read_body
-    kind: method
-    at: 'dashboard/server.py:L1777-L1784'
-  - symbol: do_POST
-    kind: method
-    at: 'dashboard/server.py:L1786-L1791'
-  - symbol: _do_POST
-    kind: method
-    at: 'dashboard/server.py:L1793-L1856'
-  - symbol: _handle_operator_decision
-    kind: method
-    at: 'dashboard/server.py:L1858-L1898'
-  - symbol: _handle_directive
-    kind: method
-    at: 'dashboard/server.py:L1900-L1946'
-  - symbol: _handle_settings
-    kind: method
-    at: 'dashboard/server.py:L1948-L1977'
-  - symbol: log_message
-    kind: method
-    at: 'dashboard/server.py:L1979-L1980'
+    at: 'scripts/core/operator_request_notify.py:L881-L973'
   - symbol: main
     kind: function
-    at: 'dashboard/server.py:L1983-L2005'
+    at: 'scripts/core/operator_request_notify.py:L976-L988'
+  - symbol: _now
+    kind: function
+    at: 'scripts/ops/operator-action-router.py:L78-L79'
+  - symbol: read_hold
+    kind: function
+    at: 'scripts/ops/operator-action-router.py:L82-L102'
+  - symbol: read_opreqs
+    kind: function
+    at: 'scripts/ops/operator-action-router.py:L105-L118'
+  - symbol: read_directive
+    kind: function
+    at: 'scripts/ops/operator-action-router.py:L121-L134'
+  - symbol: collect_items
+    kind: function
+    at: 'scripts/ops/operator-action-router.py:L137-L174'
+  - symbol: render
+    kind: function
+    at: 'scripts/ops/operator-action-router.py:L177-L183'
+  - symbol: set_hash
+    kind: function
+    at: 'scripts/ops/operator-action-router.py:L186-L189'
+  - symbol: should_notify
+    kind: function
+    at: 'scripts/ops/operator-action-router.py:L192-L207'
+  - symbol: load_state
+    kind: function
+    at: 'scripts/ops/operator-action-router.py:L210-L214'
+  - symbol: write_state
+    kind: function
+    at: 'scripts/ops/operator-action-router.py:L217-L225'
+  - symbol: clear_state
+    kind: function
+    at: 'scripts/ops/operator-action-router.py:L228-L232'
+  - symbol: notify
+    kind: function
+    at: 'scripts/ops/operator-action-router.py:L235-L251'
+  - symbol: main
+    kind: function
+    at: 'scripts/ops/operator-action-router.py:L254-L296'
+  - symbol: check
+    kind: function
+    at: 'tests/test_operator_action_router.py:L27-L33'
+  - symbol: check_true
+    kind: function
+    at: 'tests/test_operator_action_router.py:L36-L37'
+  - symbol: make_app
+    kind: function
+    at: 'tests/test_operator_action_router.py:L40-L67'
+  - symbol: make_send_fn
+    kind: function
+    at: 'tests/test_operator_request_notify.py:L40-L50'
+  - symbol: _send
+    kind: function
+    at: 'tests/test_operator_request_notify.py:L44-L47'
+  - symbol: block_text
+    kind: function
+    at: 'tests/test_operator_request_notify.py:L53-L70'
+  - symbol: OperatorRequestNotifyTests
+    kind: class
+    at: 'tests/test_operator_request_notify.py:L73-L777'
+  - symbol: setUp
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L74-L87'
+  - symbol: tearDown
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L89-L91'
+  - symbol: write_requests
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L93-L96'
+  - symbol: noop_sleep
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L98-L99'
+  - symbol: test_new_request_notified_once
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L102-L118'
+  - symbol: test_unchanged_request_not_renotified
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L121-L126'
+  - symbol: test_timestamp_only_change_does_not_renotify
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L129-L138'
+  - symbol: test_material_change_renotifies_once
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L141-L155'
+  - symbol: test_ordinary_hold_type_never_notifies
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L158-L177'
+  - symbol: test_telegram_failure_not_marked_notified_then_recovers
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L180-L195'
+  - symbol: test_document_procurement_resolution_verifies_checksum_then_disappears
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L202-L244'
+  - symbol: test_document_procurement_resolution_blocks_on_checksum_mismatch
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L248-L279'
+  - symbol: test_document_procurement_resolution_blocks_path_outside_evidence_dir
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L283-L308'
+  - symbol: test_credential_resolution_requires_pass_log_without_secrets
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L312-L353'
+  - symbol: test_credential_resolution_blocks_if_log_contains_secret_shaped_token
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L355-L400'
+  - symbol: test_legal_decision_resolution_requires_structured_decision_line
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L405-L435'
+  - symbol: test_adjudication_pending_resolution_requires_structured_decision_line
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L441-L480'
+  - symbol: test_expenditure_resolution_requires_structured_authorization_block
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L485-L523'
+  - symbol: test_dedup_state_persists_across_process_reinstantiation
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L528-L538'
+  - symbol: _must_not_be_called
+    kind: function
+    at: 'tests/test_operator_request_notify.py:L534-L535'
+  - symbol: test_requests_md_write_failure_does_not_lose_notified_state
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L544-L565'
+  - symbol: test_authorization_complete_block_passes
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L585-L588'
+  - symbol: test_authorization_blank_field_does_not_borrow_next_line
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L590-L598'
+  - symbol: test_authorization_missing_field_reported
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L600-L604'
+  - symbol: _refuse_run
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L613-L621'
+  - symbol: test_refuse_closes_the_request_as_refused_not_resolved
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L623-L631'
+  - symbol: test_refuse_works_without_an_authorization_block
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L633-L640'
+  - symbol: test_prose_mentioning_refusal_does_not_close_anything
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L642-L651'
+  - symbol: test_bare_refuse_with_two_requests_fails_closed
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L653-L661'
+  - symbol: test_named_refuse_targets_only_that_request
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L663-L673'
+  - symbol: _evidence
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L683-L689'
+  - symbol: test_evidence_files_in_the_directive_resolves
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L691-L699'
+  - symbol: test_evidence_files_in_the_request_block_still_resolves
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L701-L713'
+  - symbol: test_directive_entry_with_a_wrong_checksum_is_rejected
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L715-L723'
+  - symbol: test_directive_entry_cannot_escape_the_evidence_directory
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L725-L734'
+  - symbol: test_evidence_files_scoped_to_the_resolving_block
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L736-L766'
+  - symbol: test_decision_token_with_digits_and_underscore_resolves
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L768-L777'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-The operator-request/decision ledger pair (operator-requests.md read, operator-decisions.md appended) whose layout is load-bearing for operator_request_notify.py's regex-based window parsing. The dashboard appends decisions in a specific format that downstream regex parsing depends on, so the layout must not drift.
+The memories/operator-requests.md ledger and its notification/resolution machinery: operator_request_notify.py orchestrates Telegram notifications with content-fingerprint dedup (ignoring timestamp-only changes), enforces per-type resolution rules (checksum-matched evidence files, PASS logs, structured Decision/Authorization lines in human-directive.md), and operator-action-router.py prioritizes hold > opreq > directive with staleness floors and fail-soft behavior.
 
 ## Related
 
-- part of [[cockpit-dashboard]] — Read/written by server.py.
+- uses [[auto-loop-core-engine]] — The loop runs operator_request_notify.py before sleeping in the idle-skip branch.
+- produces [[state-snapshot-probe]] — The snapshot counts open OPREQ blocks from this ledger.
 <!-- context:generated:end -->
 
 ## Notes

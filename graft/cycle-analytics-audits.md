@@ -1,6 +1,6 @@
 ---
-name: Ops audit tooling
-slug: ops-audit-tooling
+name: Cycle analytics & audits
+slug: cycle-analytics-audits
 type: system
 sources:
   - path: scripts/ops/tool-usage-audit.py
@@ -13,7 +13,7 @@ sources_digest: 05a5a8135b793a7ae3595f1faa0f4445138043d5ad416b12ef019fd435434902
 links:
   - to: auto-loop-core-engine
     relation: uses
-    description: These parse cycle-ndjson and jcode logs produced by the loop.
+    description: These parse the cycle-ndjson and jcode logs produced by the loop.
 generator:
   version: 1
 covers:
@@ -57,11 +57,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Durable per-cycle audit scripts that parse ndjson/log streams: tool-usage-audit.py (Tool Analytics ledger), turn-audit.py (LLM turn economics), web-research-cost.py (residual context cost). All stdlib-only, always exit 0, and backfill retained-but-unprocessed data.
+The per-cycle observability tooling: tool-usage-audit.py builds the durable tool-usage ledger (dedup on filename+size+mtime, separate browser vs browser_mcp counters for an honest A/B denominator), turn-audit.py measures per-session LLM turn economics with environment-overridable verdict thresholds, and web-research-cost.py scores context cost. All are read-only, stdlib-only, always exit 0, and tolerate malformed log lines.
 
 ## Related
 
-- uses [[auto-loop-core-engine]] — These parse cycle-ndjson and jcode logs produced by the loop.
+- uses [[auto-loop-core-engine]] — These parse the cycle-ndjson and jcode logs produced by the loop.
 <!-- context:generated:end -->
 
 ## Notes

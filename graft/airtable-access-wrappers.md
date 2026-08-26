@@ -7,11 +7,17 @@ sources:
     hash: 148f66145510c90e03256b7b37853122bcd892d51cba67f095ce700a0895e3e2
   - path: scripts/ops/airtable-write.py
     hash: 888d408c392193511145e11dfbe73841a6d7e3e743e396ab8c8fee8b9507ab7c
-sources_digest: 43a42c7621b93d8e35ed7813326f7b761e954384d076a4d1b176afa770c1b952
+  - path: tests/test_airtable_read.sh
+    hash: f1c8fbb1b495e922c52d041bac7edbae8f100ab57606ebd987179783265325df
+  - path: tests/test_airtable_write.sh
+    hash: a51c25001935da566cca4a450cfc0906827eb332779f2b454b12d547b7a0e6e0
+sources_digest: 2021356891ac463bde76a17510d6206598905cc15d804b9b867e92529075e85e
 links:
-  - to: mcp-configuration-and-key-security
+  - to: web-research-cost
     relation: uses
-    description: Airtable is one of the MCP servers whose keys are verified.
+    description: >-
+      Airtable dumps are the largest context source scored by
+      web-research-cost.py.
 generator:
   version: 1
 covers:
@@ -67,11 +73,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-airtable-read.py gates Airtable reads to control context cost (scoping, field caps, pageSize ceiling), and airtable-write.py guards single-record writes (unknown fields, clear, replace). Both refuse with named missing flags to guide users.
+airtable-read.py gates Airtable reads to control context cost (refuses unscoped reads, caps --all-fields and --max-records at 200, pageSize at 100, builds OR(RECORD_ID()=...) formulas) and airtable-write.py's guard validates single-record writes (unknown fields, --allow-clear, --replace for substantial replacements). The write guard was extracted from main() specifically to make refusals testable offline.
 
 ## Related
 
-- uses [[mcp-configuration-and-key-security]] — Airtable is one of the MCP servers whose keys are verified.
+- uses [[web-research-cost]] — Airtable dumps are the largest context source scored by web-research-cost.py.
 <!-- context:generated:end -->
 
 ## Notes

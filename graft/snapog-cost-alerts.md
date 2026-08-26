@@ -20,7 +20,7 @@ links:
     description: Queries usage_events and api_keys for metrics.
   - to: snapog-worker
     relation: part_of
-    description: Triggered by the scheduled handler in src/index.ts.
+    description: Cron handler invoked by the worker's scheduled event.
 generator:
   version: 1
 covers:
@@ -70,12 +70,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Cron-triggered cost-alerting system (every 6h) running five independent checks against D1 and R2, with thresholds isolated in one file (sourced from the CFO cost model) so the CFO can revise numbers without touching check logic. Severity escalates to critical at 1.5× threshold; checks are deliberately isolated so a thrown error logs and is treated as no alert. Delivery is format-agnostic (Slack/Discord compatible) and falls back to log-only when the webhook URL is unset.
+Cron-triggered cost-alerting system (every 6h) running five independent checks against D1 and R2: D1 writes/day (2 writes/request), 14-day cache-hit rate, new signups 30d, active users, R2 storage bytes (via Cloudflare GraphQL analytics). Thresholds isolated in one file (ALERT_THRESHOLDS) so CFO can revise without touching check logic; severity escalates to critical at 1.5x. Checks isolated — thrown error logged as no alert to prevent false positives. Webhook delivery fails open to log-only mode when URL unset.
 
 ## Related
 
 - uses [[snapog-schema]] — Queries usage_events and api_keys for metrics.
-- part of [[snapog-worker]] — Triggered by the scheduled handler in src/index.ts.
+- part of [[snapog-worker]] — Cron handler invoked by the worker's scheduled event.
 <!-- context:generated:end -->
 
 ## Notes

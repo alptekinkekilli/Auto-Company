@@ -3,24 +3,54 @@ name: SnapOG Worker
 slug: snapog-worker
 type: system
 sources:
+  - path: projects/_archive/snapog/src/dashboard/pages.ts
+    hash: 6a33d1b6152ee8ea3ee6f5617105ce757c915627156072dd9cb1f3b78e32b4af
   - path: projects/_archive/snapog/src/index.ts
     hash: c484536a0f66188fa0ac986f34c605540b32efb599ec1ae08d091b89a20d2954
+  - path: projects/_archive/snapog/src/og/render.ts
+    hash: c74a09fcf98afae74090c3b72b8b4c7f84252e7f0aca090d1418352cd48d8094
+  - path: projects/_archive/snapog/src/og/templates.ts
+    hash: bfc8c9e61038224564b61c55c627b2d86d9ba2514dd47f64a717e94f0be8b810
   - path: projects/_archive/snapog/src/types.ts
     hash: 1551e13c618a1b8ceaa8b5189318810934889c1d4e822425cb830e7efb45bc15
-sources_digest: 3a502edd4ac88332d9c5d9708afe48ce4227dfd0fbbe3aa4b9aebdc3c5ff6165
+sources_digest: d4343ceffc68f713a6dcfc6ae45ec31bd030d35d94d34d04ef9190c816f7239c
 links:
-  - to: og-rendering
+  - to: content-hash-provenance
     relation: uses
-    description: Calls generateOGImage/buildCacheKey from src/og/render.ts.
+    description: buildCacheKey uses sorted-key SHA-256 for deterministic cache keys.
   - to: snapog-cost-alerts
     relation: uses
-    description: scheduled handler runs runCostAlertCheck from src/alerts.
+    description: Scheduled cron invokes runCostAlertCheck.
   - to: snapog-schema
     relation: uses
-    description: Persists users/api_keys/usage_events/api_key_cache_keys in D1.
+    description: 'Persists users, api_keys, usage_events, api_key_cache_keys in D1.'
 generator:
   version: 1
 covers:
+  - symbol: layout
+    kind: function
+    at: 'projects/_archive/snapog/src/dashboard/pages.ts:L340-L355'
+  - symbol: nav
+    kind: function
+    at: 'projects/_archive/snapog/src/dashboard/pages.ts:L357-L367'
+  - symbol: footer
+    kind: function
+    at: 'projects/_archive/snapog/src/dashboard/pages.ts:L369-L376'
+  - symbol: landingPage
+    kind: function
+    at: 'projects/_archive/snapog/src/dashboard/pages.ts:L378-L588'
+  - symbol: registerPage
+    kind: function
+    at: 'projects/_archive/snapog/src/dashboard/pages.ts:L590-L628'
+  - symbol: keyCreatedPage
+    kind: function
+    at: 'projects/_archive/snapog/src/dashboard/pages.ts:L630-L700'
+  - symbol: dashboardPage
+    kind: function
+    at: 'projects/_archive/snapog/src/dashboard/pages.ts:L702-L789'
+  - symbol: errorPage
+    kind: function
+    at: 'projects/_archive/snapog/src/dashboard/pages.ts:L791-L805'
   - symbol: sha256
     kind: function
     at: 'projects/_archive/snapog/src/index.ts:L21-L29'
@@ -48,6 +78,39 @@ covers:
   - symbol: scheduled
     kind: method
     at: 'projects/_archive/snapog/src/index.ts:L360-L370'
+  - symbol: generateOGImage
+    kind: function
+    at: 'projects/_archive/snapog/src/og/render.ts:L11-L23'
+  - symbol: buildCacheKey
+    kind: function
+    at: 'projects/_archive/snapog/src/og/render.ts:L26-L37'
+  - symbol: StyleObject
+    kind: type
+    at: 'projects/_archive/snapog/src/og/templates.ts:L6-L6'
+  - symbol: VNode
+    kind: type
+    at: 'projects/_archive/snapog/src/og/templates.ts:L8-L15'
+  - symbol: AccentBar
+    kind: function
+    at: 'projects/_archive/snapog/src/og/templates.ts:L18-L33'
+  - symbol: Header
+    kind: function
+    at: 'projects/_archive/snapog/src/og/templates.ts:L36-L83'
+  - symbol: Footer
+    kind: function
+    at: 'projects/_archive/snapog/src/og/templates.ts:L86-L133'
+  - symbol: defaultTemplate
+    kind: function
+    at: 'projects/_archive/snapog/src/og/templates.ts:L136-L202'
+  - symbol: blogTemplate
+    kind: function
+    at: 'projects/_archive/snapog/src/og/templates.ts:L205-L286'
+  - symbol: articleTemplate
+    kind: function
+    at: 'projects/_archive/snapog/src/og/templates.ts:L289-L461'
+  - symbol: buildElement
+    kind: function
+    at: 'projects/_archive/snapog/src/og/templates.ts:L463-L472'
   - symbol: Tier
     kind: type
     at: 'projects/_archive/snapog/src/types.ts:L3-L3'
@@ -64,13 +127,13 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Hono-based Cloudflare Worker that generates Open Graph images on demand. Routes /og (validating API keys, enforcing monthly usage limits, caching to R2), landing/register (with waitlist for paid tiers), and /dashboard. Hashes API keys before storage, counts usage even on cache hits, bypasses R2 writes when the per-key cache cap is exceeded (still rendering and counting, returning X-Cache: BYPASSED), and uses waitUntil for fire-and-forget operations.
+Hono-based Cloudflare Worker generating Open Graph images on demand. Routes: GET /og (validate API key, enforce monthly usage limits, cache to R2), / and /register (landing + key creation with waitlist for paid tiers), /dashboard (usage stats), scheduled cron for cost alerts. Hashes API keys before storage, counts usage even on cache hits, bypasses R2 writes when cache-key cap exceeded (still renders and counts, returns X-Cache: BYPASSED). waitUntil for fire-and-forget; free-tier watermark; input length limits.
 
 ## Related
 
-- uses [[og-rendering]] — Calls generateOGImage/buildCacheKey from src/og/render.ts.
-- uses [[snapog-cost-alerts]] — scheduled handler runs runCostAlertCheck from src/alerts.
-- uses [[snapog-schema]] — Persists users/api_keys/usage_events/api_key_cache_keys in D1.
+- uses [[content-hash-provenance]] — buildCacheKey uses sorted-key SHA-256 for deterministic cache keys.
+- uses [[snapog-cost-alerts]] — Scheduled cron invokes runCostAlertCheck.
+- uses [[snapog-schema]] — Persists users, api_keys, usage_events, api_key_cache_keys in D1.
 <!-- context:generated:end -->
 
 ## Notes

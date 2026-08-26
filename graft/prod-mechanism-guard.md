@@ -1,15 +1,17 @@
 ---
 name: Prod-mechanism guard
 slug: prod-mechanism-guard
-type: system
+type: file
 sources:
   - path: scripts/prod-mechanism-guard.py
     hash: df90f44c6e799ee5505f180b9c47889d0ebfe295a0fd99b661438f51a8dd6bf2
-sources_digest: 3b577b3d1f7a1d17923d334bebe6766de49a839fbd51de39aee05bf1572b4657
+  - path: tests/test_prod_mechanism_guard.sh
+    hash: 1c8df67eca679e21cbbe4ea2daac7f761fc952f17b25f99d2673a4782ffa6824
+sources_digest: 85f695b540190c148b455d6cc63e72dbb881bcb53a6cf3d680c51a434fc47b16
 links:
   - to: auto-loop-core-engine
     relation: validates
-    description: Blocks edits to auto-loop.sh and other protected surfaces.
+    description: auto-loop.sh is a protected surface this hook blocks edits to.
 generator:
   version: 1
 covers:
@@ -26,11 +28,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-PreToolUse hook (prod-mechanism-guard.py) that blocks edits to protected production surfaces unless a time-limited approval marker exists. Fails open inside the container to avoid locking out autonomous cycles, and --check-sync enforces the protected list matches CLAUDE.md.
+A PreToolUse hook that mechanically enforces the Prod-Mechanism Change Rule, blocking edits to protected production surfaces (auto-loop.sh, dashboard/server.py, Dockerfile, etc.) unless a time-limited approval marker exists. Fails open on malformed stdin or inside the container to avoid locking out autonomous cycles; --check-sync enforces that every backtick-quoted path in the CLAUDE.md rule section is covered.
 
 ## Related
 
-- validates [[auto-loop-core-engine]] — Blocks edits to auto-loop.sh and other protected surfaces.
+- validates [[auto-loop-core-engine]] — auto-loop.sh is a protected surface this hook blocks edits to.
 <!-- context:generated:end -->
 
 ## Notes

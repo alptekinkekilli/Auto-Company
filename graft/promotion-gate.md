@@ -9,10 +9,10 @@ sources_digest: 529774ce95135d20964e1d42a6242cf44c9928383f17eac44213ac8385a782b9
 links:
   - to: directive-writer
     relation: uses
-    description: Writes the new directive through the same safe-write discipline.
+    description: Writes the promoted directive through the sole writer.
   - to: opportunity-analyst
     relation: part_of
-    description: Pass 3 of opportunity-analyst.sh.
+    description: PASS-3 promotion gate of the codex analyst variant.
 generator:
   version: 1
 covers:
@@ -35,12 +35,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Deterministic, fail-closed gate deciding whether the analyst's report may overwrite human-directive.md. Uses pure regex (never an LLM) to block on risk keywords, missing verdict keywords, or escalation language near the current Active Validation ID. Requires the live directive Status to be DONE, backs up the current file, writes the new directive with PENDING status, verifies via read-back/diff, and always exits 0 printing PROMOTED or BLOCKED. Deliberately over-includes risk terms to favor manual review.
+Deterministic, fail-closed gate deciding whether the analyst's report may overwrite human-directive.md. Pure regex (never LLM) blocks on risk-keyword hits, missing verdict keywords, or escalation language near the current Active Validation ID. Requires live directive Status DONE; backs up, writes new directive with PENDING status, verifies via read-back/diff, logs and notifies. Always exits 0 printing PROMOTED or BLOCKED. Over-includes risk terms to favor manual review; no blanket NO-GO auto-promotion, no partial application.
 
 ## Related
 
-- uses [[directive-writer]] — Writes the new directive through the same safe-write discipline.
-- part of [[opportunity-analyst]] — Pass 3 of opportunity-analyst.sh.
+- uses [[directive-writer]] — Writes the promoted directive through the sole writer.
+- part of [[opportunity-analyst]] — PASS-3 promotion gate of the codex analyst variant.
 <!-- context:generated:end -->
 
 ## Notes

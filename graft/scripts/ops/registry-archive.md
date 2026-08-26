@@ -1,4 +1,4 @@
-# scripts/ops/registry-archive.py · [[atomic-state-writes]] [[fail-closed-verification-invariant]] [[registry-and-browse-tooling]] [[registry-evidence-maintenance]]
+# scripts/ops/registry-archive.py · [[atomic-state-writes]] [[fail-closed-verification-invariant]] [[registry-evidence-maintenance]] [[registry-g4-compliance-tooling]]
 
 Deterministic fail-closed archival tool that moves old maintenance notes and frozen discovery sections out of candidate-registry.md into monthly archive files, preserving the protected live region byte-identical.
 

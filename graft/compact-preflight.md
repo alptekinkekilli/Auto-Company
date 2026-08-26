@@ -6,7 +6,10 @@ sources:
   - path: scripts/compact-preflight.py
     hash: e05718ceddc1954b8cefcea9ad00d143d0adb92d0d5547b55fe3916e5fbdb0b3
 sources_digest: 8209b0e705f42296e979b77c5e321a326f8eb906c9d9dbc38000f6403c23136c
-links: []
+links:
+  - to: context-watch
+    relation: uses
+    description: Consumed by the context-watch compact ritual flow.
 generator:
   version: 1
 covers:
@@ -23,7 +26,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Pre-flight check run from the PreCompact hook to make the compact ritual measurable: counts open items (unpushed commits, uncommitted changes, stashes) that would be lost on compaction, per git root. Always exits 0 so it never blocks the compact; writes a report to /tmp/compact-preflight.md for session-brief.py to read after compact.
+Pre-flight check from the PreCompact hook making the compact ritual measurable: counts open items (unpushed commits, uncommitted tracked changes, stashes) that would be lost on compaction. Builds Markdown report per git root (PREFLIGHT_ROOTS env var); runs optional .claude/preflight-extra.sh and counts its ⚠ toward risk score. Writes /tmp/compact-preflight.md for session-brief.py; always exits 0 so it never blocks compaction.
+
+## Related
+
+- uses [[context-watch]] — Consumed by the context-watch compact ritual flow.
 <!-- context:generated:end -->
 
 ## Notes

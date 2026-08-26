@@ -1,19 +1,21 @@
 ---
-name: Session brief and directive writer
-slug: session-brief-and-directive-writer
+name: Directive writer & section refs
+slug: directive-writer-section-refs
 type: system
 sources:
+  - path: scripts/analyst/opportunity-analyst-jcode.sh
+    hash: 8250db61c0a1031c088076e240616d2771868957339ff80f5e730388b06e5395
   - path: scripts/core/directive_writer.py
     hash: 447057795ab4776c589695bd00450009df0af8fff481fa7a68c89244ca93a9a3
-  - path: scripts/session-brief.py
-    hash: a6cd13941a50d768403e080d89e484683b33ec725c6ce151e4447074b784cea4
-sources_digest: 8a27c31e6559e28273b51caea21ca56f725057891bd369c0abc387ca86667401
+  - path: tests/test_analyst_engine.sh
+    hash: 3f6fbcc1efd4568252ac5d138931953946575646f3cdd0edd9f2a3bbe325cf63
+  - path: tests/test_directive_section_refs.sh
+    hash: 413742241d956ae77feb01e20780757ee86fa63f3699e3926a2ddeea81a53a71
+sources_digest: f7fec3d715834a02838e8cf08041f8fb3daa7891a96700a6684ad2f736f213f1
 links:
-  - to: operator-request-and-decision-ledger
+  - to: state-snapshot-probe
     relation: produces
-    description: >-
-      directive_writer.py writes human-directive.md which the ledger resolution
-      rules read.
+    description: The snapshot hashes the directive and analysis-directive files.
 generator:
   version: 1
 covers:
@@ -86,21 +88,15 @@ covers:
   - symbol: fn
     kind: function
     at: 'scripts/core/directive_writer.py:L477-L481'
-  - symbol: sh
-    kind: function
-    at: 'scripts/session-brief.py:L19-L23'
-  - symbol: main
-    kind: function
-    at: 'scripts/session-brief.py:L26-L63'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-SessionStart hook (session-brief.py) injecting a measured git-state brief, and directive_writer.py which writes the human directive with undefined-section-ref checking. Both prefer measured facts over claims and never block the session.
+directive_writer.py maintains the human-directive.md and analysis-directive.md files, including undefined_section_refs() which guards against references to absent sections (the bug that froze directive revision 11). The analyst engine (opportunity-analyst-jcode.sh) writes the auditor report header naming jcode/claude and the model.
 
 ## Related
 
-- produces [[operator-request-and-decision-ledger]] — directive_writer.py writes human-directive.md which the ledger resolution rules read.
+- produces [[state-snapshot-probe]] — The snapshot hashes the directive and analysis-directive files.
 <!-- context:generated:end -->
 
 ## Notes
