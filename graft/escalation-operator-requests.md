@@ -1,10 +1,10 @@
 ---
-name: escalation & operator requests
+name: Escalation & operator requests
 slug: escalation-operator-requests
 type: system
 sources:
   - path: scripts/core/auto-loop.sh
-    hash: 19f2148376589dba4de398b1ec4040b9419c62ea0a03089842cc8978b006f8b0
+    hash: 30cc1c943819800a5516778d7d841255d14720019a6bce081cc5b2d730631e64
   - path: scripts/core/operator_request_notify.py
     hash: 422b3f99a0cf654022883399da8d8ae7b28d7a6b7bffc2ddfc68dd4d987217ac
   - path: tests/test_escalation.sh
@@ -13,16 +13,16 @@ sources:
     hash: 07fef3026944da791037a735c7e5cea15cdb4f53eabaecf7affda422400f016f
   - path: tests/test_refusal_format.sh
     hash: 11bf5e9869e2e573b4a897e4df84053e4f58d759d3073a9e058705482cc31ef5
-sources_digest: 63e39e26f9784ffb0995f6b2a452a7223056ed59d42057dc2e9b862dfa5f1667
+sources_digest: 68f4a3010fa23a4ca62f77b4a78a850dbc3d13b2f778d2bccb2f06ab6e7c6c54
 links:
-  - to: auto-loop-core-loop
+  - to: auto-loop-core-engine
     relation: part_of
-    description: Escalation functions and the OPREQ ledger step run inside auto-loop.sh.
-  - to: dashboard-cockpit
-    relation: produces
+    description: apply_cycle_escalation() and _consume_escalation() live in auto-loop.sh.
+  - to: cockpit-dashboard
+    relation: uses
     description: >-
-      The cockpit's operator-decision panel writes the REFUSE head-line format
-      that operator_request_notify parses.
+      The refusal format written by the operator-decision panel in
+      dashboard/server.py is parsed by operator_request_notify.py.
 generator:
   version: 1
 covers:
@@ -252,12 +252,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-One-shot operator escalation (APP-238): a PENDING directive arms ESCALATE_NEXT_CYCLE, consumed exactly once by a Claude cycle (model/effort override, long wall timeout); a refusal leaves it ARMED. Also the operator_request_notify.py orchestrator that sends Telegram notifications, dedupes by content fingerprint, enforces per-type resolution rules (checksum-matched evidence files, PASS logs, structured Decision/Authorization lines), and records audit logs.
+One-shot operator escalation (APP-238): a PENDING directive arms a model/effort/timeout override consumed exactly once, and a refusal leaves it ARMED rather than burning an approval. operator_request_notify.py orchestrates Telegram notifications and enforces deterministic resolution rules per request type (checksum-matched evidence files, structured decision lines, authorization blocks).
 
 ## Related
 
-- part of [[auto-loop-core-loop]] — Escalation functions and the OPREQ ledger step run inside auto-loop.sh.
-- produces [[dashboard-cockpit]] — The cockpit's operator-decision panel writes the REFUSE head-line format that operator_request_notify parses.
+- part of [[auto-loop-core-engine]] — apply_cycle_escalation() and _consume_escalation() live in auto-loop.sh.
+- uses [[cockpit-dashboard]] — The refusal format written by the operator-decision panel in dashboard/server.py is parsed by operator_request_notify.py.
 <!-- context:generated:end -->
 
 ## Notes

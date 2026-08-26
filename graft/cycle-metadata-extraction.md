@@ -1,22 +1,19 @@
 ---
-name: cycle metadata extraction
+name: Cycle metadata extraction
 slug: cycle-metadata-extraction
 type: system
 sources:
   - path: scripts/core/auto-loop.sh
-    hash: 19f2148376589dba4de398b1ec4040b9419c62ea0a03089842cc8978b006f8b0
+    hash: 30cc1c943819800a5516778d7d841255d14720019a6bce081cc5b2d730631e64
   - path: tests/test_cycle_metadata.sh
-    hash: 66a21f12ac379be58cda6db2e98c410b11104c0fc2c2d8c6efdffd422dcd3988
+    hash: ed0597fda8cb7dd8c8f45b5dea353e18374e12a7f4b247afab630f455e708c2e
   - path: tests/test_mixed_harness.sh
     hash: bd8a1f81df957e0bfdfacf44982a2274a58809d5f9bd8618c64c3efeecb868cc
-sources_digest: b71af85a8e3d37ddedc24ebaad80325f373a40d492b8573185b04ec3236f0e13
+sources_digest: 5c87bb000e976620696f6f8e0a8a8caf8706bec9246b6875d49b41e875be3744
 links:
-  - to: auto-loop-core-loop
+  - to: auto-loop-core-engine
     relation: part_of
-    description: extract_cycle_metadata() and run_engine_cycle() live in auto-loop.sh.
-  - to: budget-spend-accounting
-    relation: uses
-    description: Per-cycle cost attribution feeds record_total_spend and the ledger.
+    description: extract_cycle_metadata() is a function in auto-loop.sh.
 generator:
   version: 1
 covers: []
@@ -24,12 +21,11 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-Parses engine output into CYCLE_TYPE/CYCLE_SUBTYPE/RESULT_TEXT and attributes each cycle's harness/provider/cost. Must be robust under set -euo pipefail (APP-240 regression: plain-prose Codex output used to kill the loop) and must attribute mixed-harness cycles correctly, persisting a claude attempt's cost under its own run ID before a codex retry (REVISE-2 gate A5).
+Parses engine output into per-cycle metadata (CYCLE_TYPE, CYCLE_SUBTYPE, RESULT_TEXT) and converts Codex JSONL event streams into clean summary text via codex-final-text.py, ensuring reasoning and thread metadata are not leaked. Must never kill the loop when Codex is routed through alternation or fallback (APP-240).
 
 ## Related
 
-- part of [[auto-loop-core-loop]] — extract_cycle_metadata() and run_engine_cycle() live in auto-loop.sh.
-- uses [[budget-spend-accounting]] — Per-cycle cost attribution feeds record_total_spend and the ledger.
+- part of [[auto-loop-core-engine]] — extract_cycle_metadata() is a function in auto-loop.sh.
 <!-- context:generated:end -->
 
 ## Notes

@@ -1,62 +1,18 @@
 ---
-name: outreach eligibility brake
+name: Outreach Eligibility Brake
 slug: outreach-eligibility-brake
 type: system
 sources:
-  - path: scripts/ops/g4-check.py
-    hash: 719fa86c0e307ef71bf0bce8f49e2baab2bb522aec732b784b39c8f2d788aba8
   - path: scripts/ops/send-gate.py
     hash: 6acd746a20aff7267d711d61350ac14d8fa0c17a1af95341625aa2bfd9a63f92
-  - path: scripts/ops/site-contact-evidence.py
-    hash: 008b4735e6133445eff667f840f9c7faaeef8013b1363f6555b602a9d6fd048c
-sources_digest: b7dc1d90f990039e354257bad12db6d0a979c8a2a2ab43cc83f70d9f5f392920
+sources_digest: 5ab131417a8c8279edfc66290905fedf1a1dd1427669fc3449e20dab94f45e26
 links:
-  - to: airtable-access-layer
+  - to: g4-identity-attribution
     relation: uses
-    description: >-
-      All three read Registry Bridge / Outreach tables via the air() wrapper and
-      scoped read conventions.
-  - to: operator-escalation-gate
-    relation: uses
-    description: >-
-      g4-check.py's verdicts feed the G4/Rule 9 attribution checks the
-      escalation gate's resolution verifiers rely on.
+    description: Re-derives G4 live via g4-check.py before allowing.
 generator:
   version: 1
 covers:
-  - symbol: load_key
-    kind: function
-    at: 'scripts/ops/g4-check.py:L71-L89'
-  - symbol: norm
-    kind: function
-    at: 'scripts/ops/g4-check.py:L92-L100'
-  - symbol: address_anchor
-    kind: function
-    at: 'scripts/ops/g4-check.py:L103-L132'
-  - symbol: registry_id_anchor
-    kind: function
-    at: 'scripts/ops/g4-check.py:L135-L164'
-  - symbol: field
-    kind: function
-    at: 'scripts/ops/g4-check.py:L167-L169'
-  - symbol: domains_in
-    kind: function
-    at: 'scripts/ops/g4-check.py:L172-L180'
-  - symbol: air_get
-    kind: function
-    at: 'scripts/ops/g4-check.py:L183-L187'
-  - symbol: air_list
-    kind: function
-    at: 'scripts/ops/g4-check.py:L190-L195'
-  - symbol: site_evidence
-    kind: function
-    at: 'scripts/ops/g4-check.py:L198-L217'
-  - symbol: judge
-    kind: function
-    at: 'scripts/ops/g4-check.py:L220-L287'
-  - symbol: main
-    kind: function
-    at: 'scripts/ops/g4-check.py:L290-L337'
   - symbol: phase_of
     kind: function
     at: 'scripts/ops/send-gate.py:L66-L91'
@@ -93,34 +49,15 @@ covers:
   - symbol: main
     kind: function
     at: 'scripts/ops/send-gate.py:L547-L583'
-  - symbol: fetch
-    kind: function
-    at: 'scripts/ops/site-contact-evidence.py:L56-L64'
-  - symbol: emails
-    kind: function
-    at: 'scripts/ops/site-contact-evidence.py:L67-L68'
-  - symbol: looks_unrendered
-    kind: function
-    at: 'scripts/ops/site-contact-evidence.py:L71-L81'
-  - symbol: render_dom
-    kind: function
-    at: 'scripts/ops/site-contact-evidence.py:L84-L110'
-  - symbol: examine
-    kind: function
-    at: 'scripts/ops/site-contact-evidence.py:L113-L172'
-  - symbol: main
-    kind: function
-    at: 'scripts/ops/site-contact-evidence.py:L175-L196'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-Fail-closed eligibility checks that gate autonomous outreach and G4 identity attribution. send-gate.py answers 'may this firm be emailed right now?' with cheapest-first checks (caps bind on messages not firms, never-send-twice, opt-out, HOLD markers, body-leak scan) where any incomplete check is a REFUSE. g4-check.py tests a row's self-declared G4 PASS against live evidence (first-party contact plus address/registry-number/Profile-bridge anchor), reporting CLAIMED_PASS_UNVERIFIED rather than downgrading. site-contact-evidence.py finds published contact emails, treating a non-rendered fetch as inconclusive, never negative.
+The fail-closed eligibility brake for autonomous outreach: send-gate.py answers 'may this firm be emailed right now?' and exits, never sending. It checks daily/total caps (binding on messages not firms), never-send-twice, opt-out, Qualified status, HOLD markers, body-leak scan, and Exclusion-ground limits, in cheapest-first order; any check that cannot complete is a REFUSE, never an ALLOW.
 
 ## Related
 
-- uses [[airtable-access-layer]] — All three read Registry Bridge / Outreach tables via the air() wrapper and scoped read conventions.
-- uses [[operator-escalation-gate]] — g4-check.py's verdicts feed the G4/Rule 9 attribution checks the escalation gate's resolution verifiers rely on.
+- uses [[g4-identity-attribution]] — Re-derives G4 live via g4-check.py before allowing.
 <!-- context:generated:end -->
 
 ## Notes

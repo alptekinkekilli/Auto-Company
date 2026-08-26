@@ -1,4 +1,4 @@
-# scripts/ops/bloat-trend.py · [[telegram-notification-channel]] [[turn-economy-trend-watcher]]
+# scripts/ops/bloat-trend.py · [[cost-budget-ledger-adapters]] [[threshold-recalibration-vs-measurement]]
 
 Tracks whether per-cycle turn-economy metrics are improving across a rolling window, and alerts only on a genuine regression or on the two-consecutive-window target being met, so the watcher can be retired.
 

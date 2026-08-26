@@ -1,4 +1,4 @@
-# scripts/ops/reply-watch.py · [[ops-scripts]] [[outreach-send-gate]] [[outreach-watchers]] [[telegram-notification-channel]]
+# scripts/ops/reply-watch.py · [[operator-escalation-gate]] [[outreach-send-gate]]
 
 Advisory watcher that detects the outcome of outreach sends (reply, delivery failure, or silence) and notifies the operator once per row per outcome class, persisting state in a JSON file.
 

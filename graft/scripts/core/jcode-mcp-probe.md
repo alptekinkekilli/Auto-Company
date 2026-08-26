@@ -1,4 +1,4 @@
-# scripts/core/jcode-mcp-probe.py · [[jcode-mcp-boot-gate]] [[mcp-config-key-handling]]
+# scripts/core/jcode-mcp-probe.py · [[atomic-state-writes]] [[fail-closed-verification]] [[mcp-boot-probe]] [[mcp-configuration-key-security]]
 
 Deterministic MCP boot probe that speaks the MCP protocol itself to verify config/manifest parity, tool reachability, destructive-tool denylist coverage, and a real read-only call per server, failing closed on any mismatch.
 

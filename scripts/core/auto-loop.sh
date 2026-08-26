@@ -1867,7 +1867,16 @@ run_codex_cycle_cli() {
     set -e
 
     OUTPUT=$(cat "$output_file")
-    RESULT_MESSAGE=$(cat "$message_file" 2>/dev/null || true)
+    # `codex exec --json -o FILE` writes a JSONL EVENT STREAM to the -o file in the
+    # current CLI (thread.started / item.completed{agent_message} / turn.completed), NOT
+    # the plain final message the older CLI wrote — so `cat`ting it straight leaked raw
+    # JSON into the cycle SUMMARY (telegram/log/consensus/state-snapshot). Extract the
+    # clean agent_message text instead. FAIL-OPEN: an empty result (older plain-text -o,
+    # jq/python absent, or a future schema change) falls back to the raw file content —
+    # the pre-fix behaviour — so this can never regress. Cost metering is unaffected: it
+    # reads turn.completed.usage from the --json stream ($output_file), not this message.
+    RESULT_MESSAGE=$(python3 "$PROJECT_DIR/scripts/core/codex-final-text.py" "$message_file" 2>/dev/null || true)
+    [ -z "$RESULT_MESSAGE" ] && RESULT_MESSAGE=$(cat "$message_file" 2>/dev/null || true)
     rm -f "$output_file" "$message_file"
 
     if [ -s "$timeout_flag" ]; then

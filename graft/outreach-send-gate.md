@@ -1,27 +1,39 @@
 ---
-name: outreach & send gate
+name: Outreach & send gate
 slug: outreach-send-gate
 type: system
 sources:
+  - path: scripts/ops/registry-queue-watch.py
+    hash: 0ef6723d089c54ee8272050eb2776ce81af9de986e8f6dc15b065b7bbd913497
   - path: scripts/ops/reply-watch.py
     hash: 110e009b20f709db9dda31e2e17af9fb061696a869901bd389dddedca9294070
   - path: scripts/ops/send-gate.py
     hash: 6acd746a20aff7267d711d61350ac14d8fa0c17a1af95341625aa2bfd9a63f92
+  - path: tests/test_registry_queue_watch.sh
+    hash: 0c823a0b115d8fb57d7a64e25cb89f725943078e58504a22aa5306a416ac6668
   - path: tests/test_reply_watch.sh
     hash: a1291856a346b22fd46c2d1179ae6602778674b7f930d53c4216e449e286b67f
   - path: tests/test_send_gate.sh
     hash: 4d0f03bd1b3e73a289e87cf0a56b25499b131e48fac01098b3f1d81755cb190d
-sources_digest: e774e14338d178843b669f4842456566b52f147dc82ef1a33e4df0c7aa78e522
+sources_digest: d2a6d4f95965acbd5e7f0bfe81b54acf34cb25a6db5060a25f1345e44ba7b61f
 links:
   - to: airtable-read-write-guards
     relation: uses
-    description: send-gate reads outreach rows from Airtable and g4_live checks firm names.
-  - to: ops-scripts
-    relation: part_of
-    description: Both are ops scripts in scripts/ops.
+    description: >-
+      send-gate.py reads outreach rows from Airtable via the guarded read
+      wrapper.
 generator:
   version: 1
 covers:
+  - symbol: api_key
+    kind: function
+    at: 'scripts/ops/registry-queue-watch.py:L48-L58'
+  - symbol: fetch
+    kind: function
+    at: 'scripts/ops/registry-queue-watch.py:L61-L77'
+  - symbol: main
+    kind: function
+    at: 'scripts/ops/registry-queue-watch.py:L80-L215'
   - symbol: api_key
     kind: function
     at: 'scripts/ops/reply-watch.py:L46-L56'
@@ -83,12 +95,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The send-gate.py refusal policy for outreach emails (fail-closed across 20 scenarios: caps, duplicates, opt-out, non-Qualified status, G4 failure, body-leak scanner for internal markers, exact normalized firm-name matching, follow-up mode) and reply-watch.py which classifies replies/bounces/silence with a 72h threshold, reporting each reply once and never as silence. Both encode real incidents (Rayelsis, Arkenom, N.K.Y, Bilgi Birikim).
+The outreach outcome pipeline: send-gate.py refuses sends fail-closed across 20 policy scenarios (caps, duplicates, opt-out, status, G4 failure, body-leak scanner, exact firm-name matching), reply-watch.py classifies replies/bounces/silence for real firms, and registry-queue-watch.py alerts on registry bottlenecks without crying wolf. All tested offline with stubbed network calls.
 
 ## Related
 
-- uses [[airtable-read-write-guards]] — send-gate reads outreach rows from Airtable and g4_live checks firm names.
-- part of [[ops-scripts]] — Both are ops scripts in scripts/ops.
+- uses [[airtable-read-write-guards]] — send-gate.py reads outreach rows from Airtable via the guarded read wrapper.
 <!-- context:generated:end -->
 
 ## Notes

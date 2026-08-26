@@ -3,21 +3,17 @@ name: HeadInspect Worker
 slug: headinspect-worker
 type: system
 sources:
-  - path: projects/headinspect/migrations/0001_hits.sql
-    hash: 651c37d5aafbcd41932f5307a9080183fd953c8b5968f3dd2921bf1c379af022
   - path: projects/headinspect/src/index.ts
     hash: 2c4962e89d06e9fb5bf12aad7cdd08634974a4f57f59cceaa6dca9c98e771499
   - path: projects/headinspect/src/inspect.ts
     hash: 778af3f3556aa953b9e4409c1dee1c52f7fc773639a4e8b2cee22ac8390c75c6
   - path: projects/headinspect/src/render.ts
     hash: 3792b2bd4004ee751d9ae6647d0fc58d9708ef758ad6bfda6beb0a4314bd8883
-sources_digest: cb61b3ccfe05c907fe9c1d45e555e1e03b1607816df1e7ac11b12c3268891960
+sources_digest: 61ec7e58ed05ae951822ed237bf2ebfb8776d6ef03adfdf225ebc93540a32da4
 links:
-  - to: snapog-worker
+  - to: headinspect-schema
     relation: uses
-    description: >-
-      Shares the Cloudflare Workers/D1 pattern for server-rendered HTML and
-      badge generation.
+    description: Persists hit counts to the headinspect_hits table.
 generator:
   version: 1
 covers:
@@ -130,11 +126,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Cloudflare Worker fetching a user-supplied URL and reporting response headers with categorization, grading, HTML report, and SVG badge. Strict SSRF protections (reject non-HTTPS, localhost, private IPs, cloud metadata), follows up to 5 redirects manually, drains bodies, 10s AbortController timeout. Badge always returns 200 with edge caching so broken embeds never render as broken images. Only hostname stored, never full URL, to prevent query-string PII leaks.
+Cloudflare Worker that fetches a user-supplied URL and reports on response headers, with an HTML report UI, JSON API, health probe, and shield-style SVG badge. Enforces strict SSRF protections (rejects non-HTTPS, localhost, private IP ranges, cloud metadata endpoints), follows up to five redirects manually, drains bodies, and applies a 10-second timeout. The badge endpoint always returns HTTP 200 with edge caching so broken embeds never render as broken images.
 
 ## Related
 
-- uses [[snapog-worker]] — Shares the Cloudflare Workers/D1 pattern for server-rendered HTML and badge generation.
+- uses [[headinspect-schema]] — Persists hit counts to the headinspect_hits table.
 <!-- context:generated:end -->
 
 ## Notes

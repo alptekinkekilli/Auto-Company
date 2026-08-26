@@ -9,7 +9,7 @@ sources_digest: aa49b78a6522f0383edeedf2bbb936457599ccfbd81b5ce65f2e99c6e243ad03
 links:
   - to: snapog-worker
     relation: part_of
-    description: Landing page and waitlist endpoint of the SnapOG service.
+    description: Landing page and waitlist are part of the SnapOG service surface.
 generator:
   version: 1
 covers:
@@ -41,11 +41,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Server-side HTML template module for the landing page and dashboard (Carbon Terminal aesthetic, no client framework) plus the /api/waitlist Pages Function capturing email signups. Waitlist normalizes emails to lowercase, dedupes via email:<address> KV key, truncates source/user-agent, returns 503 if the KV binding is missing so the client falls back to Formspree/mailto. Archived under _archive, possibly superseded.
+Server-side HTML template module for the landing page and dashboard (Carbon Terminal aesthetic, no client framework), plus the Cloudflare Pages Function for POST /api/waitlist that validates, deduplicates against a KV namespace, and stores email records. The waitlist handler returns 503 if the KV binding is missing, prompting client fallback to Formspree or mailto, and returns a deduped flag on duplicates.
 
 ## Related
 
-- part of [[snapog-worker]] — Landing page and waitlist endpoint of the SnapOG service.
+- part of [[snapog-worker]] — Landing page and waitlist are part of the SnapOG service surface.
 <!-- context:generated:end -->
 
 ## Notes

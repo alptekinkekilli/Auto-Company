@@ -1,4 +1,4 @@
-# scripts/ops/turn-audit.py · [[jcode-event-stream-utilities]] [[threshold-pinning-against-drift]] [[turn-audit-policy-engine]]
+# scripts/ops/turn-audit.py · [[ops-audit-analytics-scripts]] [[turn-audit-ops-script-tests]]
 
 Turn-level waste accounting classifier over jcode's daily log, reporting per-session turn count, context growth, cache traffic, priced floor, tool census, wait-share, and a risk-calibrated verdict (ok/CHATTY/BLOATED).
 

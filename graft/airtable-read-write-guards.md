@@ -13,14 +13,11 @@ sources:
     hash: a51c25001935da566cca4a450cfc0906827eb332779f2b454b12d547b7a0e6e0
 sources_digest: 2021356891ac463bde76a17510d6206598905cc15d804b9b867e92529075e85e
 links:
-  - to: mcp-config-key-handling
+  - to: ops-audit-analytics-scripts
     relation: uses
     description: >-
-      Airtable is one of the MCP servers whose key and endpoint are configured
-      in .mcp.json.
-  - to: ops-scripts
-    relation: part_of
-    description: Both are ops scripts invoked by the loop and by operator workflows.
+      Airtable dumps are the largest context source identified by
+      web-research-cost.py.
 generator:
   version: 1
 covers:
@@ -76,12 +73,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Context-cost control for Airtable: airtable-read.py gates reads (refuses unscoped reads, caps --all-fields unless --force, caps --max-records at 200, pageSize at 100, builds OR(RECORD_ID()=...) formulas ANDed with --formula), and airtable-write.py's guard validates single-record writes (unknown fields, --allow-clear, --replace for substantial value replacement). The guard was extracted from main() specifically to make refusals testable offline.
+Wrappers that gate Airtable access to control context costs and validate writes: airtable-read.py refuses unscoped reads and caps --all-fields/--max-records (200) unless --force, and airtable-write.py's guard validates single-record writes (unknown fields, clears, replaces) before they hit the API. The guard was extracted from main() specifically to make refusals testable offline.
 
 ## Related
 
-- uses [[mcp-config-key-handling]] — Airtable is one of the MCP servers whose key and endpoint are configured in .mcp.json.
-- part of [[ops-scripts]] — Both are ops scripts invoked by the loop and by operator workflows.
+- uses [[ops-audit-analytics-scripts]] — Airtable dumps are the largest context source identified by web-research-cost.py.
 <!-- context:generated:end -->
 
 ## Notes

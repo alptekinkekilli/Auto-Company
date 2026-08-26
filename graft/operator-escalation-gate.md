@@ -1,22 +1,28 @@
 ---
-name: operator escalation gate
+name: Operator Escalation Gate
 slug: operator-escalation-gate
 type: system
 sources:
   - path: scripts/core/operator_request_notify.py
     hash: 422b3f99a0cf654022883399da8d8ae7b28d7a6b7bffc2ddfc68dd4d987217ac
-sources_digest: 7f77a59f480f9b1823884e1b689d9e56d5ce8506070183f94139e8dc343ae4ac
+  - path: scripts/ops/directive-staleness-watch.py
+    hash: 6597a8a3666b54131d1b782a8d8ee308e705e33dbed83429da857f9b1f0360fd
+  - path: scripts/ops/registry-queue-watch.py
+    hash: 0ef6723d089c54ee8272050eb2776ce81af9de986e8f6dc15b065b7bbd913497
+  - path: scripts/ops/reply-watch.py
+    hash: 110e009b20f709db9dda31e2e17af9fb061696a869901bd389dddedca9294070
+sources_digest: 46e0f6bc84f7a28d9573997853e4e109a0d0f48e58514525782fa4de3567426b
 links:
-  - to: jcode-mcp-boot-gate
+  - to: airtable-read-write-wrappers
     relation: uses
     description: >-
-      Consumes the probe's evidence JSON and canary audit results when resolving
-      infra OPREQs.
+      registry-queue-watch.py and reply-watch.py read Airtable queues via the
+      REST API.
   - to: telegram-notification-channel
     relation: uses
     description: >-
-      Calls send_telegram/attempt_notify which shell out to telegram-notify.sh
-      with tokens from runtime.env.
+      All four scripts shell out to scripts/core/telegram-notify.sh for operator
+      alerts.
 generator:
   version: 1
 covers:
@@ -119,16 +125,55 @@ covers:
   - symbol: main
     kind: function
     at: 'scripts/core/operator_request_notify.py:L976-L988'
+  - symbol: read_directive
+    kind: function
+    at: 'scripts/ops/directive-staleness-watch.py:L40-L56'
+  - symbol: last_line_matching
+    kind: function
+    at: 'scripts/ops/directive-staleness-watch.py:L59-L66'
+  - symbol: main
+    kind: function
+    at: 'scripts/ops/directive-staleness-watch.py:L69-L165'
+  - symbol: api_key
+    kind: function
+    at: 'scripts/ops/registry-queue-watch.py:L48-L58'
+  - symbol: fetch
+    kind: function
+    at: 'scripts/ops/registry-queue-watch.py:L61-L77'
+  - symbol: main
+    kind: function
+    at: 'scripts/ops/registry-queue-watch.py:L80-L215'
+  - symbol: api_key
+    kind: function
+    at: 'scripts/ops/reply-watch.py:L46-L56'
+  - symbol: fetch
+    kind: function
+    at: 'scripts/ops/reply-watch.py:L59-L74'
+  - symbol: notify
+    kind: function
+    at: 'scripts/ops/reply-watch.py:L77-L91'
+  - symbol: first_ts
+    kind: function
+    at: 'scripts/ops/reply-watch.py:L94-L99'
+  - symbol: hours_since
+    kind: function
+    at: 'scripts/ops/reply-watch.py:L102-L112'
+  - symbol: main
+    kind: function
+    at: 'scripts/ops/reply-watch.py:L115-L142'
+  - symbol: classify
+    kind: function
+    at: 'scripts/ops/reply-watch.py:L145-L223'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-The single deterministic gate for operator interaction: decides whether an OPREQ block is genuinely new/changed via SHA-256 fingerprint, sends Telegram notifications only on ok:true, flips OPEN to RESOLVED through type-specific verifiers (procurement requires checksum-matched files confined to memories/operator-evidence/ with path-traversal protection; credential requires a human-directive reference plus a verifiable artifact), and regenerates the Awaiting Operator projection in consensus.md. Always exits 0 so it never breaks the calling loop; redaction is shape-based to avoid stripping request IDs.
+The deterministic operator-escalation and notification layer: the only component allowed to decide whether an OPREQ block is genuinely new/changed (via SHA-256 material_hash), send Telegram notifications, flip OPEN to RESOLVED through type-specific verification, and regenerate the Awaiting Operator projection. Always exits 0 so it never breaks the calling loop.
 
 ## Related
 
-- uses [[jcode-mcp-boot-gate]] — Consumes the probe's evidence JSON and canary audit results when resolving infra OPREQs.
-- uses [[telegram-notification-channel]] — Calls send_telegram/attempt_notify which shell out to telegram-notify.sh with tokens from runtime.env.
+- uses [[airtable-read-write-wrappers]] — registry-queue-watch.py and reply-watch.py read Airtable queues via the REST API.
+- uses [[telegram-notification-channel]] — All four scripts shell out to scripts/core/telegram-notify.sh for operator alerts.
 <!-- context:generated:end -->
 
 ## Notes

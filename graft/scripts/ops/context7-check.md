@@ -1,4 +1,4 @@
-# scripts/ops/context7-check.py · [[evidence-extraction-compliance]] [[jcode-event-stream-utilities]] [[ops-scripts]] [[session-context-tooling]]
+# scripts/ops/context7-check.py · [[compliance-audit-watchers]] [[ops-audit-analytics-scripts]]
 
 CLI check that audits cycle ndjson logs to flag cycles that wrote code importing an external library without calling Context7, reporting to the log rather than blocking.
 

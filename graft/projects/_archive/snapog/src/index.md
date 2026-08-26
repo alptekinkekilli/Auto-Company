@@ -1,5 +1,7 @@
 # projects/_archive/snapog/src/index.ts · [[snapog-worker]]
 
+The main Cloudflare Worker entrypoint that wires Hono routes for OG image generation, key registration, dashboard, health, and a scheduled cost-alert cron.
+
 - sha256 · function · L21-L29 — Hashes raw API keys to SHA-256 hex so only hashes are stored and compared in the DB.
 - generateRawKey · function · L31-L35 — Generates a random 32-byte API key prefixed with sk_ for issuance to users.
 - htmlResponse · function · L37-L42 — Wraps HTML strings in a Response with the proper content-type header.

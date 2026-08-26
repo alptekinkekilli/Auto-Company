@@ -7,16 +7,17 @@ sources:
     hash: 447057795ab4776c589695bd00450009df0af8fff481fa7a68c89244ca93a9a3
 sources_digest: f4f863d4df3fc313e0dd21bd4e126bc92b8f46cf056589dd04f736eba34c9ebd
 links:
+  - to: auto-loop
+    relation: implements
+    description: >-
+      Enforces the tripwire contract that human-directive.md changes only via
+      this writer.
+  - to: dashboard-server
+    relation: uses
+    description: Server routes all human-directive.md writes through this writer.
   - to: opportunity-analyst
     relation: uses
-    description: >-
-      Used by opportunity-analyst.sh for safe snapshot/restore of
-      human-directive.md.
-  - to: promotion-gate
-    relation: uses
-    description: >-
-      promote_directive.py writes the new directive through this writer with
-      PENDING status.
+    description: Used for safe snapshot/restore of human-directive.md during analyst runs.
 generator:
   version: 1
 covers:
@@ -93,12 +94,13 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Sole writer for memories/human-directive.md, enforcing two fail-closed rules: in-flight PENDING directives are never clobbered without --allow-pending, and the directive body is immutable after acceptance (only ## Status can change, via compare-and-swap verifying body hash). Every write goes through lock → read → in-flight gate → backup → atomic rename → verify → audit → notify. Exit codes distinguish gate refusals (2) from I/O failures (3).
+Sole writer for memories/human-directive.md, enforcing two fail-closed rules: in-flight PENDING directives are never clobbered without --allow-pending, and the directive body is immutable after acceptance (only ## Status can change, via compare-and-swap verifying the body hash). Every write goes through lock → read → in-flight gate → backup → atomic rename → verify → audit → notify. Exit codes distinguish gate refusals (2) from I/O failures (3).
 
 ## Related
 
-- uses [[opportunity-analyst]] — Used by opportunity-analyst.sh for safe snapshot/restore of human-directive.md.
-- uses [[promotion-gate]] — promote_directive.py writes the new directive through this writer with PENDING status.
+- implements [[auto-loop]] — Enforces the tripwire contract that human-directive.md changes only via this writer.
+- uses [[dashboard-server]] — Server routes all human-directive.md writes through this writer.
+- uses [[opportunity-analyst]] — Used for safe snapshot/restore of human-directive.md during analyst runs.
 <!-- context:generated:end -->
 
 ## Notes

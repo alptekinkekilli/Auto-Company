@@ -55,4 +55,26 @@ echo "--- 5: Claude cycle with NO JSON at all (warnings only) must not die eithe
 out=$(run_case claude "" 0 "Ignoring 3 permissions.allow entries")
 check "does not die" "${out##*|}" "rc=0"
 
+echo "--- 6: codex-final-text.py turns the raw --json -o event stream into clean SUMMARY text ---"
+# Regression for the Codex-CLI SUMMARY leak: the -o message file is a JSONL event stream
+# (thread.started / item.completed{agent_message} / turn.completed), not plain text.
+# run_codex_cycle_cli now pipes it through this extractor before it becomes RESULT_MESSAGE.
+EXTRACTOR="$(dirname "$SRC")/codex-final-text.py"
+NDJSON="$(mktemp)"
+printf '%s\n' \
+  '{"type":"thread.started","thread_id":"01a03e14"}' \
+  '{"type":"turn.started"}' \
+  '{"type":"item.completed","item":{"id":"item_0","type":"reasoning","text":"internal thinking, must be ignored"}}' \
+  '{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Cycle complete. Updated consensus."}}' \
+  '{"type":"turn.completed","usage":{"input_tokens":10}}' > "$NDJSON"
+got=$(python3 "$EXTRACTOR" "$NDJSON")
+check "extracts agent_message text" "$got" "Cycle complete. Updated consensus."
+check "does NOT leak thread.started" "$(printf '%s' "$got" | grep -c 'thread.started' || true)" "0"
+check "does NOT leak reasoning text" "$(printf '%s' "$got" | grep -c 'internal thinking' || true)" "0"
+# plain-text / non-JSON -o (older CLI or parse failure) -> empty, so the caller falls back to raw
+printf 'plain final message, not a json stream\n' > "$NDJSON"
+python3 "$EXTRACTOR" "$NDJSON" >/dev/null; rc=$?
+check "empty extraction exits 1 (fallback path fires)" "$rc" "1"
+rm -f "$NDJSON"
+
 echo; [ "$fail" = 0 ] && echo "ALL PASS" || { echo "FAILURES"; exit 1; }

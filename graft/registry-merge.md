@@ -8,8 +8,8 @@ sources:
 sources_digest: 5ff39050e2ffebfcb89290b663b10deb8e198c076c45e5893acf920e54d83301
 links:
   - to: opportunity-analyst
-    relation: part_of
-    description: Pass-2 of the analyst pipeline.
+    relation: implements
+    description: Implements the pass-2 registry splice the analyst orchestrates.
 generator:
   version: 1
 covers:
@@ -59,11 +59,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Deterministic PASS-2 merge tool that surgically replaces only the 'live decision state' span of candidate-registry.md (between ## Selected and ## Exhausted patterns / lessons) while leaving the ~180KB append-only journal byte-identical. Enforces invariants: no candidate ID may disappear, no duplicate axes, active-candidate identity cannot be rewritten (only verdict changes). Fail-closed exit 0 with BLOCKED:/MERGED: stdout, read-back verification, and restoration on failure. Never trusts model instruction-following — proves prefix/suffix byte-identity via exact string slicing and hashes.
+Deterministic PASS-2 merge tool that surgically replaces only the 'live decision state' span of candidate-registry.md (between ## Selected and ## Exhausted patterns / lessons) while leaving the ~180KB append-only journal byte-identical. Enforces invariants: no candidate ID may disappear, no duplicate axes, and the identity of active candidates cannot be rewritten — only verdict changes are allowed. Proves prefix/suffix byte-identity via exact string slicing and hashes; fail-closed with BLOCKED:/MERGED: stdout.
 
 ## Related
 
-- part of [[opportunity-analyst]] — Pass-2 of the analyst pipeline.
+- implements [[opportunity-analyst]] — Implements the pass-2 registry splice the analyst orchestrates.
 <!-- context:generated:end -->
 
 ## Notes

@@ -9,14 +9,15 @@ sources:
     hash: 1551e13c618a1b8ceaa8b5189318810934889c1d4e822425cb830e7efb45bc15
 sources_digest: 3a502edd4ac88332d9c5d9708afe48ce4227dfd0fbbe3aa4b9aebdc3c5ff6165
 links:
-  - to: og-rendering
-    relation: uses
-    description: >-
-      Delegates image generation to generateOGImage and cache-key building to
-      buildCacheKey.
   - to: snapog-cost-alerts
     relation: uses
-    description: Scheduled cron triggers runCostAlertCheck.
+    description: Scheduled cron handler invokes runCostAlertCheck.
+  - to: snapog-og-rendering
+    relation: uses
+    description: Calls generateOGImage and buildCacheKey from render.ts.
+  - to: snapog-schema
+    relation: uses
+    description: 'Persists users, api_keys, usage_events, and cache-key tracking to D1.'
 generator:
   version: 1
 covers:
@@ -63,12 +64,13 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Hono-based Cloudflare Worker generating Open Graph images on demand. Routes /og (validate key, enforce monthly limits, cache to R2), / and /register (landing/key creation with waitlist), /dashboard. Hashes API keys before storage, counts usage even on cache hits, bypasses R2 writes when the per-key cache-key cap is exceeded (still renders and counts), uses waitUntil for fire-and-forget. Free-tier watermark and input length limits enforced.
+Hono-based Cloudflare Worker that generates Open Graph images on demand. Routes /og (validating API keys, enforcing monthly usage limits, caching to R2), / and /register (landing and key creation with waitlist), and /dashboard. Hashes API keys before storage, counts usage even on cache hits, bypasses R2 writes when the distinct-cache-key cap is exceeded (still rendering and counting), and uses waitUntil for fire-and-forget operations. Enforces a free-tier watermark and input length limits.
 
 ## Related
 
-- uses [[og-rendering]] — Delegates image generation to generateOGImage and cache-key building to buildCacheKey.
-- uses [[snapog-cost-alerts]] — Scheduled cron triggers runCostAlertCheck.
+- uses [[snapog-cost-alerts]] — Scheduled cron handler invokes runCostAlertCheck.
+- uses [[snapog-og-rendering]] — Calls generateOGImage and buildCacheKey from render.ts.
+- uses [[snapog-schema]] — Persists users, api_keys, usage_events, and cache-key tracking to D1.
 <!-- context:generated:end -->
 
 ## Notes

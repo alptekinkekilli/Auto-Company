@@ -9,19 +9,19 @@ sources:
     hash: a0a766435a1f9e501b97cca96bb30314440de72fd569313488d3b80d5f9c55a5
 sources_digest: 17f4e5386f1a4fbb0283498ca259cc80e6c56a994d2d7c376fa2f138fff7cba0
 links:
-  - to: directive-writer
-    relation: uses
-    description: Uses directive_writer.py for safe restore of human-directive.md.
-  - to: promotion-gate
+  - to: directive-promotion-gate
     relation: uses
     description: >-
-      Runs promote_directive.py to decide if the report's proposed directive
-      text may be applied.
+      Runs promote_directive.py to decide whether the report's proposed
+      human-directive.md text may be applied.
+  - to: directive-writer
+    relation: uses
+    description: Snapshot/restore guardrail for human-directive.md.
   - to: registry-merge
     relation: uses
     description: >-
-      Uses merge_registry.py to extract and splice the live span of
-      candidate-registry.md.
+      Extracts and splices the live span of candidate-registry.md with invariant
+      checks.
 generator:
   version: 1
 covers: []
@@ -29,13 +29,13 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-Independent 'second-brain' (APP-221) invoking Codex (gpt-5.6-sol, effort high) with the autocompany-opportunity-director skill to analyze the Tender Track portfolio. Three passes: write report draft (never auto-applied), extract live span of candidate-registry.md via merge_registry.py and splice back with invariant checks, and run a deterministic promotion gate. Never auto-applies directives; records Codex thread IDs for budget exclusion; treats opportunity-scan.md as historical input to ignore.
+Independent 'second-brain' (APP-221) that invokes a coding engine (Codex gpt-5.6-sol or jcode claude-opus-5) with the autocompany-opportunity-director skill to analyze the Tender Track portfolio and produce a decision report plus candidate-registry update. Runs three passes: write report draft (never auto-applied), splice the live span of candidate-registry.md via merge_registry.py with invariant checks, and a deterministic promotion gate via promote_directive.py. Never auto-applies directives; records session IDs to a budget-exclusion ledger.
 
 ## Related
 
-- uses [[directive-writer]] — Uses directive_writer.py for safe restore of human-directive.md.
-- uses [[promotion-gate]] — Runs promote_directive.py to decide if the report's proposed directive text may be applied.
-- uses [[registry-merge]] — Uses merge_registry.py to extract and splice the live span of candidate-registry.md.
+- uses [[directive-promotion-gate]] — Runs promote_directive.py to decide whether the report's proposed human-directive.md text may be applied.
+- uses [[directive-writer]] — Snapshot/restore guardrail for human-directive.md.
+- uses [[registry-merge]] — Extracts and splices the live span of candidate-registry.md with invariant checks.
 <!-- context:generated:end -->
 
 ## Notes

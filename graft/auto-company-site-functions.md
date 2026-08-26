@@ -8,7 +8,12 @@ sources:
   - path: projects/auto-company-site/functions/randevu.js
     hash: 680f4267bf50111c0d6d05e9068a837e04e46dc3a7cac7d549eb3e7a35c708bb
 sources_digest: d765296cba06e0858b94642f9c57598b0a01dbdbf1099116ab94c5ce24458b9c
-links: []
+links:
+  - to: snapog-landing-waitlist
+    relation: implements
+    description: >-
+      Mirrors the same branded-domain trust pattern used by the waitlist
+      fallback.
 generator:
   version: 1
 covers:
@@ -28,7 +33,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Cloudflare Pages Functions for the branded site: /randevu issues a 302 to Google Calendar (no booking logic — slot management delegated to avoid reimplementing solved problems), /listeden-cik proxies the opt-out flow to the Twilio comms service with no local suppression store (upstream is single source of truth). Both validate env vars, never guess redirects, return Turkish fallback pages on failure, and set no-store/no-referrer. Trust in cold B2B outreach by keeping links on the company's own domain.
+Cloudflare Pages Functions for the branded auto-company site. /randevu issues a 302 redirect to the operator's Google Calendar (no booking logic — slot management delegated to Google), validating RANDEVU_URL starts with https and returning a Turkish 503 fallback page otherwise. /listeden-cik is a presentation-layer proxy to the Twilio comms service, deliberately keeping no local suppression store so upstream remains the single source of truth for opt-out status.
+
+## Related
+
+- implements [[snapog-landing-waitlist]] — Mirrors the same branded-domain trust pattern used by the waitlist fallback.
 <!-- context:generated:end -->
 
 ## Notes

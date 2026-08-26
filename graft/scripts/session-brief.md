@@ -1,4 +1,4 @@
-# scripts/session-brief.py · [[secret-hygiene]] [[session-context-tooling]]
+# scripts/session-brief.py · [[session-brief-directive-writer]]
 
 SessionStart hook that injects a measured, non-stale session briefing into the context, never blocking the session.
 

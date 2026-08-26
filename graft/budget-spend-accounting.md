@@ -1,10 +1,10 @@
 ---
-name: budget & spend accounting
+name: Budget & spend accounting
 slug: budget-spend-accounting
 type: system
 sources:
   - path: scripts/core/auto-loop.sh
-    hash: 19f2148376589dba4de398b1ec4040b9419c62ea0a03089842cc8978b006f8b0
+    hash: 30cc1c943819800a5516778d7d841255d14720019a6bce081cc5b2d730631e64
   - path: scripts/core/engine-usage-cost.py
     hash: 845b4b8bb9293058e19f610185ec25544170dd0adba7323520f2402ecc499a59
   - path: tests/test_budget_gates.sh
@@ -15,18 +15,16 @@ sources:
     hash: 38e285a908cfdba71566f50ec2429fed8dc40ccdaaf68886e24e27399bba5bef
   - path: tests/test_cost_model_hint.sh
     hash: c17d1daedaa46cd803aa562c933e2a0d75aa6f2a5f7e059fd47fa8961847f743
-  - path: tests/test_tier_ladder_daily.sh
-    hash: d0bfb4ace48e1fa9665e17059be3f618b46fda0dcf432544a6bb16c07a3ed8db
-sources_digest: 008461a9ddcf3ed9ece80cc6682d6d680e7da83e6cd67c877c1a8319da57f40c
+  - path: tests/test_mixed_harness.sh
+    hash: bd8a1f81df957e0bfdfacf44982a2274a58809d5f9bd8618c64c3efeecb868cc
+sources_digest: 421e004c7ebef884343c055f034507cca24c256dfb630c31ad2350e2e210068a
 links:
-  - to: auto-loop-core-loop
+  - to: auto-loop-core-engine
     relation: part_of
-    description: These functions live in auto-loop.sh and are invoked each cycle.
+    description: These functions live in auto-loop.sh and are extracted by tests via awk.
   - to: cycle-metadata-extraction
     relation: uses
-    description: >-
-      engine-usage-cost.py prices token streams; the model-hint must never
-      override an actual completed model from the done event.
+    description: record_total_spend attributes each cycle's cost under its own run_id.
 generator:
   version: 1
 covers:
@@ -43,12 +41,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The spend-measurement and budget-gating subsystem: ccusage reads (fail-closed, never lowering a same-period prior), the TOTAL_SPEND_LEDGER rows written by jcode-harness cycles, daily/weekly/5h period resets, budget gates (APP-263), and the tier ladder that selects model/effort from remaining daily budget. Codex spend is summed from two disjoint sources (ccusage + ledger) rather than maxed, because maxing previously hid real spend.
+The spend-measurement and gating layer: sums Codex spend from two disjoint sources (ccusage CLI session files plus TOTAL_SPEND_LEDGER rows from jcode-harness cycles), applies 5h/daily/weekly budget gates, and latches holds on degraded reads. It is fail-closed: a first-ever ccusage failure latches a hold and returns NA, and degraded reads never lower a same-period prior observation.
 
 ## Related
 
-- part of [[auto-loop-core-loop]] — These functions live in auto-loop.sh and are invoked each cycle.
-- uses [[cycle-metadata-extraction]] — engine-usage-cost.py prices token streams; the model-hint must never override an actual completed model from the done event.
+- part of [[auto-loop-core-engine]] — These functions live in auto-loop.sh and are extracted by tests via awk.
+- uses [[cycle-metadata-extraction]] — record_total_spend attributes each cycle's cost under its own run_id.
 <!-- context:generated:end -->
 
 ## Notes
