@@ -41,7 +41,7 @@ Her kalemde SAHİBİ ve varsa mutlak tarih olsun.
       doğruymuş, ben yanlışlıkla "yanlıştı" dedim.** Hafızadaki iki eski token sızıntısı
       (08-01 ps leak, 08-03 transcript leak) konusu bu bulgudan etkilenmiyor, ayrı durur.
 
-- [ ] **Router floor 168h — redeploy-sonrası fiili teyit** — SAHİP: sonraki doğal redeploy
+- [x] **Router floor 168h — redeploy-sonrası fiili teyit** — KAPANDI 2026-08-26: ara redeploy'lar sonrası loop process (pid 172) environ'ında `ROUTER_DIRECTIVE_MIN_HOURS=168` doğrulandı (canlı). Orijinal not: — SAHİP: sonraki doğal redeploy
       (container hash ≠ `-152423747967`). `ROUTER_DIRECTIVE_MIN_HOURS=168` runtime.env'de
       staged; boot'ta canlı olacak (entrypoint export). Deterministik kanıt ZATEN var
       (boot-sim: floor 168 → PENDING directive düşüyor, router "silent"). Redeploy olunca
