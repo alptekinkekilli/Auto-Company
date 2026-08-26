@@ -1,4 +1,4 @@
-# scripts/core/codex-final-text.py · [[cli-final-text-extractors]] [[cycle-metadata-mixed-harness-attribution]]
+# scripts/core/codex-final-text.py · [[engine-final-text-extractors]]
 
 Standalone script that extracts the assistant's final message text from a codex exec JSONL event stream, failing soft so callers can fall back to raw content.
 

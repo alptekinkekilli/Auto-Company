@@ -1,19 +1,15 @@
 ---
-name: set-e-shape-lint
-slug: set-e-shape-lint
+name: set -e lint (APP-240)
+slug: set-e-lint-app-240
 type: concept
 sources:
-  - path: docker-entrypoint.sh
-    hash: fbc2010d8d1d9dda2bc7ebd72fba1d674136624f968ff2f453bf7bbb894de017
-  - path: scripts/core/auto-loop.sh
-    hash: bc00d41b28222e0836508c4e1674f4e8146364f9a8d8e3a35fcf4c4a3e67f1f6
   - path: tests/test_seteshape_lint.py
     hash: c75dd121edbe7aed5432f718bdfff952149464b77f9ab22baced3682261ebc98
-sources_digest: b5fb48bb9f058cbbbdb87ad2169a17765cd8169cc3dbaeaa1dcb89241eee57f4
+sources_digest: bb485dc41fe2695620287c9f61a662378b47a6f7a52a7d87a6d4b941bd639c6c
 links:
-  - to: auto-loop
+  - to: core-bash-scripts
     relation: validates
-    description: auto-loop.sh is a lint target.
+    description: Lints auto-loop.sh and docker-entrypoint.sh for the fatal pattern.
 generator:
   version: 1
 covers:
@@ -36,11 +32,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A fatal bash pattern: a `[ test ] && action` list used as a function's last command or immediately before a bare `return` propagates a false test's exit status 1 and kills an unguarded caller (root cause of APP-240). The lint deliberately skips `done`/`fi`/`esac` terminators and `|| true`/`|| :` tails because set -e exempts the left operand of AND-OR lists.
+A deliberately narrow lint for a fatal bash pattern: a `[ test ] && action` list used as a function's last command or immediately before a bare `return` propagates a false test's exit status 1 and kills an unguarded caller (root cause of APP-240). The lint exempts `done`/`fi`/`esac` terminators (set -e exempts the left operand of AND-OR lists) and skips lines ending in `|| true`/`|| :`; a wider scan would false-positive on the safe redirect-fed loop form used by docker-entrypoint.sh's runtime.env parser.
 
 ## Related
 
-- validates [[auto-loop]] — auto-loop.sh is a lint target.
+- validates [[core-bash-scripts]] — Lints auto-loop.sh and docker-entrypoint.sh for the fatal pattern.
 <!-- context:generated:end -->
 
 ## Notes

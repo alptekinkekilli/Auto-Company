@@ -12,8 +12,8 @@ sources:
 sources_digest: 9492ae8c037a012dbfdfbe959108c9028822a628598cab08029dd84ec43e3b99
 links:
   - to: auto-loop-core-engine
-    relation: configures
-    description: Runs auto-loop.sh as a persistent service
+    relation: uses
+    description: The daemon runs auto-loop.sh from the project root.
 generator:
   version: 1
 covers: []
@@ -21,11 +21,11 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-Install/uninstall/status scripts for the per-user systemd service that runs auto-loop.sh in WSL. Install writes a Restart=always unit with 10s delay; uninstall treats file removal as the authoritative action (disable wrapped in || true); status reports MainPID/ActiveState/SubState with unknown fallback.
+Install/uninstall/status scripts for the auto-company systemd user service on WSL, running auto-loop.sh with Restart=always and a 10s delay, with linger guidance for background persistence.
 
 ## Related
 
-- configures [[auto-loop-core-engine]] — Runs auto-loop.sh as a persistent service
+- uses [[auto-loop-core-engine]] — The daemon runs auto-loop.sh from the project root.
 <!-- context:generated:end -->
 
 ## Notes

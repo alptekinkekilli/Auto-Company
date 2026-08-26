@@ -1,20 +1,25 @@
 ---
 name: Directive Writer
 slug: directive-writer
-type: system
+type: file
 sources:
   - path: scripts/core/directive_writer.py
     hash: 447057795ab4776c589695bd00450009df0af8fff481fa7a68c89244ca93a9a3
 sources_digest: f4f863d4df3fc313e0dd21bd4e126bc92b8f46cf056589dd04f736eba34c9ebd
 links:
-  - to: cockpit-server
-    relation: implements
-    description: Server routes all human-directive.md writes through this gate.
+  - to: cockpit-dashboard
+    relation: uses
+    description: server.py routes all directive writes through this module.
   - to: opportunity-analyst
     relation: uses
     description: >-
-      opportunity-analyst.sh uses directive_writer.py for safe restore of
-      human-directive.md.
+      opportunity-analyst.sh uses directive_writer.py for safe snapshot/restore
+      of human-directive.md.
+  - to: opportunity-analyst-jcode
+    relation: uses
+    description: >-
+      opportunity-analyst-jcode.sh uses directive_writer.py's restore_directive
+      guardrail.
 generator:
   version: 1
 covers:
@@ -91,12 +96,13 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Sole writer for memories/human-directive.md, enforcing two fail-closed rules: in-flight PENDING directives are never clobbered without --allow-pending, and the directive body is immutable after acceptance — only the ## Status value can change via compare-and-swap verifying the body hash. Every write goes through lock → read → in-flight gate → backup → atomic rename → verify → audit → notify. Exit codes distinguish gate refusals (2) from I/O failures (3).
+Sole writer for memories/human-directive.md, enforcing two fail-closed rules: in-flight PENDING directives are never clobbered without --allow-pending, and the directive body is immutable after acceptance (only ## Status changes, via a compare-and-swap verifying the body hash). Every write goes through lock → read → in-flight gate → backup → atomic rename → verify → audit → notify; exit codes distinguish gate refusals (2) from I/O failures (3).
 
 ## Related
 
-- implements [[cockpit-server]] — Server routes all human-directive.md writes through this gate.
-- uses [[opportunity-analyst]] — opportunity-analyst.sh uses directive_writer.py for safe restore of human-directive.md.
+- uses [[cockpit-dashboard]] — server.py routes all directive writes through this module.
+- uses [[opportunity-analyst]] — opportunity-analyst.sh uses directive_writer.py for safe snapshot/restore of human-directive.md.
+- uses [[opportunity-analyst-jcode]] — opportunity-analyst-jcode.sh uses directive_writer.py's restore_directive guardrail.
 <!-- context:generated:end -->
 
 ## Notes

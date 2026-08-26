@@ -7,7 +7,7 @@ sources:
     hash: 96977bb6701f18064edb69c783e53bdb73c930c8ddadcd1caf47583b42700df4
 sources_digest: d14955d1810e44ac017b77743809ea9e510da96b9f40c625eb3bfe88e5d2372d
 links:
-  - to: cockpit-server
+  - to: cockpit-dashboard
     relation: part_of
     description: Imported by server.py for error reporting.
 generator:
@@ -23,11 +23,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Minimal stdlib-only Sentry error reporter avoiding official sentry-sdk because the container has no pip deps. Best-effort: any failure to reach Sentry is caught and logged to stderr, never raised, so monitoring cannot crash the dashboard. DSN parsed and cached at import time; 3s timeout; X-Sentry-Auth header built manually with sentry_version=7.
+Stdlib-only Sentry error reporter (no sentry-sdk, since the container has no pip deps). Parses the DSN at import time, builds a legacy Store-API event, and POSTs via urllib with a 3s timeout. Best-effort by design: any failure is logged to stderr and never raised, so monitoring can never crash the dashboard.
 
 ## Related
 
-- part of [[cockpit-server]] — Imported by server.py for error reporting.
+- part of [[cockpit-dashboard]] — Imported by server.py for error reporting.
 <!-- context:generated:end -->
 
 ## Notes

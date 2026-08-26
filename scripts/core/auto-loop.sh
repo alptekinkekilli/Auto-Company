@@ -2356,8 +2356,15 @@ echo $$ > "$PID_FILE"
 # Trap signals for graceful shutdown
 trap cleanup SIGTERM SIGINT SIGHUP
 
-# Initialize counters
-loop_count=0
+# Initialize counters. The cycle counter is MONOTONIC ACROSS REDEPLOYS (audit continuity):
+# a plain `loop_count=0` reset Cycle #N back to #1 on every container boot, so two different
+# cycles could both log as "#5" and the audit trail lost its ordering. Seed from the persisted
+# counter AND the highest cycle-NNNN log still on disk (self-healing if the counter file is
+# lost on a fresh volume), then keep counting up. Fail-safe: unreadable/absent → 0 (old behavior).
+CYCLE_COUNTER_FILE="${CYCLE_COUNTER_FILE:-$LOG_DIR/.cycle-counter}"
+_seed_persisted="$(cat "$CYCLE_COUNTER_FILE" 2>/dev/null | tr -cd '0-9')"; : "${_seed_persisted:=0}"
+_seed_logs="$(ls "$LOG_DIR"/cycle-[0-9][0-9][0-9][0-9]-*.log 2>/dev/null | sed -E 's#.*/cycle-0*([0-9]+)-.*#\1#' | sort -n | tail -1)"; : "${_seed_logs:=0}"
+loop_count=$(( _seed_persisted > _seed_logs ? _seed_persisted : _seed_logs ))
 error_count=0
 
 log "=== Auto Company Loop Started (PID $$) ==="
@@ -2688,6 +2695,9 @@ while true; do
     apply_cycle_escalation
 
     loop_count=$((loop_count + 1))
+    # Persist the monotonic counter so the next boot resumes from here, not from #1.
+    # Advisory: a write failure must never fail the cycle.
+    printf '%s\n' "$loop_count" > "$CYCLE_COUNTER_FILE.tmp" 2>/dev/null && mv -f "$CYCLE_COUNTER_FILE.tmp" "$CYCLE_COUNTER_FILE" 2>/dev/null || true
     cycle_log="$LOG_DIR/cycle-$(printf '%04d' "$loop_count")-$(date '+%Y%m%d-%H%M%S').log"
 
     log_cycle "$loop_count" "START" "Beginning work cycle"

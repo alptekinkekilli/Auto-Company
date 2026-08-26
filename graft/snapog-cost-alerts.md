@@ -17,10 +17,10 @@ sources_digest: fe1d8fd6fcb0f308eb0c4072f436e2986ea169f87521e188c20ca981540b20fa
 links:
   - to: snapog-schema
     relation: uses
-    description: 'Queries usage_events, api_keys, and R2 bucket for metrics.'
-  - to: snapog-service
+    description: Queries usage_events and api_keys for metrics.
+  - to: snapog-worker
     relation: part_of
-    description: The alerts subsystem of the SnapOG Worker.
+    description: Triggered by the scheduled handler in src/index.ts.
 generator:
   version: 1
 covers:
@@ -70,12 +70,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Cron-triggered cost-alerting system (every 6h) running five independent checks against D1 and R2: D1 writes/day (assuming 2 writes per request), 14-day cache hit rate, new signups in 30d, active users, and R2 storage via a thin Cloudflare Analytics GraphQL client. Thresholds isolated in one file (from CFO cost model §5) so the CFO can revise numbers without touching check logic. Checks deliberately isolated — a thrown error is logged and treated as no alert, preventing false positives. Webhook delivery short-circuits on empty alerts and falls back to log-only mode when ALERT_WEBHOOK_URL unset.
+Cron-triggered cost-alerting system (every 6h) running five independent checks against D1 and R2, with thresholds isolated in one file (sourced from the CFO cost model) so the CFO can revise numbers without touching check logic. Severity escalates to critical at 1.5× threshold; checks are deliberately isolated so a thrown error logs and is treated as no alert. Delivery is format-agnostic (Slack/Discord compatible) and falls back to log-only when the webhook URL is unset.
 
 ## Related
 
-- uses [[snapog-schema]] — Queries usage_events, api_keys, and R2 bucket for metrics.
-- part of [[snapog-service]] — The alerts subsystem of the SnapOG Worker.
+- uses [[snapog-schema]] — Queries usage_events and api_keys for metrics.
+- part of [[snapog-worker]] — Triggered by the scheduled handler in src/index.ts.
 <!-- context:generated:end -->
 
 ## Notes

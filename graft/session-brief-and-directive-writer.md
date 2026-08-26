@@ -1,19 +1,19 @@
 ---
-name: Session brief & directive writer
-slug: session-brief-directive-writer
+name: Session brief and directive writer
+slug: session-brief-and-directive-writer
 type: system
 sources:
   - path: scripts/core/directive_writer.py
     hash: 447057795ab4776c589695bd00450009df0af8fff481fa7a68c89244ca93a9a3
   - path: scripts/session-brief.py
     hash: a6cd13941a50d768403e080d89e484683b33ec725c6ce151e4447074b784cea4
-  - path: tests/test_directive_section_refs.sh
-    hash: 413742241d956ae77feb01e20780757ee86fa63f3699e3926a2ddeea81a53a71
-sources_digest: e9eda69954b7db680bdc46bc19a2d18bfc205ac6bb173315479ab78845651772
+sources_digest: 8a27c31e6559e28273b51caea21ca56f725057891bd369c0abc387ca86667401
 links:
-  - to: auto-loop-core-engine
-    relation: uses
-    description: directive_writer.py maintains the human-directive.md the loop reads
+  - to: operator-request-and-decision-ledger
+    relation: produces
+    description: >-
+      directive_writer.py writes human-directive.md which the ledger resolution
+      rules read.
 generator:
   version: 1
 covers:
@@ -96,11 +96,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-SessionStart hook that injects a measured real-time session brief (git state, branch, ahead/behind, dirty files, stash) replacing stale hand-written resume text, plus the directive writer that guards against undefined section references (the bug that froze directive revision 11). Never blocks the session, never writes secrets, always prefers measured facts over claims.
+SessionStart hook (session-brief.py) injecting a measured git-state brief, and directive_writer.py which writes the human directive with undefined-section-ref checking. Both prefer measured facts over claims and never block the session.
 
 ## Related
 
-- uses [[auto-loop-core-engine]] — directive_writer.py maintains the human-directive.md the loop reads
+- produces [[operator-request-and-decision-ledger]] — directive_writer.py writes human-directive.md which the ledger resolution rules read.
 <!-- context:generated:end -->
 
 ## Notes

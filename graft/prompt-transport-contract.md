@@ -4,16 +4,14 @@ slug: prompt-transport-contract
 type: concept
 sources:
   - path: scripts/core/auto-loop.sh
-    hash: bc00d41b28222e0836508c4e1674f4e8146364f9a8d8e3a35fcf4c4a3e67f1f6
-  - path: tests/test_prompt_transport.sh
-    hash: c5df34a0acc0d09b63a231df392960370ab146ceea135b5bcace427223300501
-sources_digest: 0a84fe33986969ce59e5241b79bdb451749288ec9bfd6d6e516ae361148c0444
+    hash: 8047ae1ceb7eac76beba89e0584912e2500baee4f68bb2f372c872739a2c7193
+sources_digest: 09490ff62dd4b45d3340d0b71341695ef1b4205f1305a986d18cf8036c7ab394
 links:
   - to: auto-loop-core-engine
-    relation: implements
+    relation: part_of
     description: >-
-      run_claude_cycle_cli/run_codex_cycle_cli/run_jcode_cycle honor this
-      contract
+      run_claude_cycle_cli/run_codex_cycle_cli/run_jcode_cycle implement this
+      contract.
 generator:
   version: 1
 covers: []
@@ -21,11 +19,11 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-The invariant that cycle prompts are passed to engine CLIs via STDIN (codex uses the - sentinel) rather than argv, preventing E2BIG failures from Linux's 131072-byte per-argument cap. run_jcode_cycle refuses prompts >=126000 bytes with a named PROMPT-TOO-LARGE reason before spawning.
+Cycle prompts are passed via STDIN (codex uses the '-' sentinel) not argv, to avoid E2BIG; jcode refuses prompts ≥126000 bytes with a named PROMPT-TOO-LARGE reason. Prompt assembly must keep XML section order and survive embedded guardrail quotes.
 
 ## Related
 
-- implements [[auto-loop-core-engine]] — run_claude_cycle_cli/run_codex_cycle_cli/run_jcode_cycle honor this contract
+- part of [[auto-loop-core-engine]] — run_claude_cycle_cli/run_codex_cycle_cli/run_jcode_cycle implement this contract.
 <!-- context:generated:end -->
 
 ## Notes

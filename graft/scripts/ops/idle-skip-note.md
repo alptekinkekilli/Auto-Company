@@ -1,4 +1,4 @@
-# scripts/ops/idle-skip-note.py · [[atomic-state-writes]] [[idle-skip-escalation-one-shot-semantics]] [[registry-evidence-maintenance]]
+# scripts/ops/idle-skip-note.py · [[atomic-state-writes]] [[idle-skip-and-escalation]] [[registry-evidence-maintenance]]
 
 Records a model-free idle-skip as one line per UTC day in consensus.md, updated in place and written atomically, so the loop leaves auditable 'checked, nothing moved' evidence without bloating the prompt.
 

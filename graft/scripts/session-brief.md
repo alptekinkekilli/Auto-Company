@@ -1,4 +1,4 @@
-# scripts/session-brief.py · [[session-brief-directive-writer]]
+# scripts/session-brief.py · [[session-brief-and-directive-writer]]
 
 SessionStart hook that injects a measured, non-stale session briefing into the context, never blocking the session.
 

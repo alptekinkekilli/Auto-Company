@@ -9,10 +9,9 @@ sources_digest: b49055f6ad2667278243a5d453a6f3a32f13b362f453588327ababae654d5019
 links:
   - to: auto-loop-core-engine
     relation: produces
-    description: Its DELTA line feeds the idle-skip decision
-  - to: budget-spend-accounting
-    relation: uses
-    description: 'idle detection consumes the DELTA: none output'
+    description: >-
+      The snapshot DELTA line drives idle-skip and discretionary budget
+      decisions in auto-loop.sh.
 generator:
   version: 1
 covers:
@@ -35,12 +34,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A read-only probe that collapses per-cycle state checks into one grep-friendly report of five watched surfaces, computing a DELTA against the previous snapshot so an unchanged world can be dismissed without re-probing. Always exits 0 so a probe failure never kills the calling cycle; errored fields print as ERROR and are excluded from DELTA on both sides.
+state-snapshot.py collapses per-cycle state checks into one grep-friendly report of five watched surfaces, computing a DELTA against the previous snapshot so an unchanged world can be dismissed without re-probing. Read-only toward the world, always exits 0.
 
 ## Related
 
-- produces [[auto-loop-core-engine]] — Its DELTA line feeds the idle-skip decision
-- uses [[budget-spend-accounting]] — idle detection consumes the DELTA: none output
+- produces [[auto-loop-core-engine]] — The snapshot DELTA line drives idle-skip and discretionary budget decisions in auto-loop.sh.
 <!-- context:generated:end -->
 
 ## Notes

@@ -1,6 +1,6 @@
 ---
-name: Tool usage & cost analytics
-slug: tool-usage-cost-analytics
+name: Ops audit tooling
+slug: ops-audit-tooling
 type: system
 sources:
   - path: scripts/ops/tool-usage-audit.py
@@ -11,9 +11,9 @@ sources:
     hash: 24d7735b6dc6defa0f80e75aeee37a13a40d4df43e9b38539be02df6fe23cbf2
 sources_digest: 05a5a8135b793a7ae3595f1faa0f4445138043d5ad416b12ef019fd435434902
 links:
-  - to: dashboard-cockpit
-    relation: produces
-    description: tool-usage-audit.py feeds the Tool Analytics panel
+  - to: auto-loop-core-engine
+    relation: uses
+    description: These parse cycle-ndjson and jcode logs produced by the loop.
 generator:
   version: 1
 covers:
@@ -57,11 +57,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Per-cycle ledger and analysis scripts that parse finished cycle ndjson files: tool-usage-audit.py powers the cockpit's Tool Analytics panel, web-research-cost.py measures the true residual cost of tool results (each result is re-read every subsequent turn), and turn-audit.py measures per-session LLM turn economics. All are read-only, stdlib-only, always exit 0, and dedup on filename+size+mtime (not name alone, since the cycle counter restarts on container restart).
+Durable per-cycle audit scripts that parse ndjson/log streams: tool-usage-audit.py (Tool Analytics ledger), turn-audit.py (LLM turn economics), web-research-cost.py (residual context cost). All stdlib-only, always exit 0, and backfill retained-but-unprocessed data.
 
 ## Related
 
-- produces [[dashboard-cockpit]] — tool-usage-audit.py feeds the Tool Analytics panel
+- uses [[auto-loop-core-engine]] — These parse cycle-ndjson and jcode logs produced by the loop.
 <!-- context:generated:end -->
 
 ## Notes

@@ -29,6 +29,12 @@ sake.
 - `memories/consensus.md` — the company's own current reading, Program State, and
   claimed progress.
 - `projects/wowcar/` — the five source documents (SHA-256'ları direktifte kayıtlı).
+- `projects/wowcar/Wowcar_Sponsor_Kararlari.md` — the sponsor's BINDING decisions (KARAR-*).
+  These SUPERSEDE the five source docs' open questions: e.g. the legal-form (tacir vs 6361)
+  question is direction-decided here. Read it explicitly and do NOT re-flag a question the
+  sponsor has already decided — treat such items as "direction-set, condition(s) open", never
+  as if the company never decided. (A sponsor declaration sets direction, not legal evidence.)
+- `memories/operator-decisions.md` — resolved operator/OPREQ decisions (same supersession rule).
 - `docs/operations/` — receipts, ledgers, weekly reports, gate documents the company
   has produced (e.g. `cycle49-wowcar-charter-persistence-receipt-2026-08-24.md`).
 - `memories/cost-audit.md` — TODAY's deterministic cost measurements (interpret,

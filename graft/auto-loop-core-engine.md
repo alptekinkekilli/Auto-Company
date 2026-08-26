@@ -4,22 +4,19 @@ slug: auto-loop-core-engine
 type: system
 sources:
   - path: scripts/core/auto-loop.sh
-    hash: bc00d41b28222e0836508c4e1674f4e8146364f9a8d8e3a35fcf4c4a3e67f1f6
-sources_digest: 2a434563773d52689cea1c99c376307922ef71ecfe3b855098543da135bccbda
+    hash: 8047ae1ceb7eac76beba89e0584912e2500baee4f68bb2f372c872739a2c7193
+sources_digest: 09490ff62dd4b45d3340d0b71341695ef1b4205f1305a986d18cf8036c7ab394
 links:
-  - to: budget-spend-accounting
-    relation: uses
+  - to: prod-mechanism-guard
+    relation: validates
     description: >-
-      evaluate_budget_gates, record_total_spend, and ccusage reads gate each
-      cycle
-  - to: prompt-transport-contract
-    relation: implements
-    description: >-
-      run_claude_cycle_cli/run_codex_cycle_cli pass prompts via STDIN;
-      run_jcode_cycle refuses oversized prompts
+      test_prod_mechanism_guard.sh and prod-mechanism-guard.py block edits to
+      auto-loop.sh unless an approval marker exists.
   - to: state-snapshot-probe
     relation: uses
-    description: reads the DELTA line from state-snapshot.py to decide idle-skip
+    description: >-
+      auto-loop.sh reads the snapshot DELTA line to decide idle-skip and
+      discretionary budget.
 generator:
   version: 1
 covers: []
@@ -27,13 +24,12 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-The central orchestration loop that runs each cycle: selects an engine (claude/jcode/codex), assembles the prompt, enforces budget gates, handles idle-skip, escalation, and metadata extraction. Most other scripts are probes or hooks that feed or guard this loop.
+The central orchestration loop that runs cycles, selects engines (claude→jcode, codex→cli), enforces budget gates, idle-skip, escalation, and prompt assembly. It is the protected production surface guarded by prod-mechanism-guard.py and the subject of most regression tests.
 
 ## Related
 
-- uses [[budget-spend-accounting]] — evaluate_budget_gates, record_total_spend, and ccusage reads gate each cycle
-- implements [[prompt-transport-contract]] — run_claude_cycle_cli/run_codex_cycle_cli pass prompts via STDIN; run_jcode_cycle refuses oversized prompts
-- uses [[state-snapshot-probe]] — reads the DELTA line from state-snapshot.py to decide idle-skip
+- validates [[prod-mechanism-guard]] — test_prod_mechanism_guard.sh and prod-mechanism-guard.py block edits to auto-loop.sh unless an approval marker exists.
+- uses [[state-snapshot-probe]] — auto-loop.sh reads the snapshot DELTA line to decide idle-skip and discretionary budget.
 <!-- context:generated:end -->
 
 ## Notes

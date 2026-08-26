@@ -1,23 +1,15 @@
 ---
-name: Cockpit Server
-slug: cockpit-server
-type: system
+name: Operator Request Ledger
+slug: operator-request-ledger
+type: concept
 sources:
   - path: dashboard/server.py
     hash: 999b44bc7671293e78906611b1dfd46bcf6efcc520ed92623a17281766a7fc85
 sources_digest: 8b82355bba156c61c76505ae335656f264eff4fc117d0a477f2c27a30456f883
 links:
   - to: cockpit-dashboard
-    relation: produces
-    description: Serves the REST endpoints the dashboard polls.
-  - to: directive-writer
-    relation: uses
-    description: >-
-      Routes all human-directive.md writes through directive_writer.py's
-      lock/gate/atomic-rename pipeline.
-  - to: sentry-reporter
-    relation: uses
-    description: Error reporting goes through the external sentry_client library.
+    relation: part_of
+    description: Read/written by server.py.
 generator:
   version: 1
 covers:
@@ -229,13 +221,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-ThreadingHTTPServer-based local web service that monitors and controls the autonomous loop across Windows (WSL), macOS, and Linux via get_host_profile() pairing each OS with a script runner and status parser. Reads/writes state files: parses human-directive.md, appends to operator-decisions.md in a layout load-bearing for operator_request_notify.py's regex window parsing, and restricts non-secret knobs via SETTINGS_SPEC whitelist so secrets are never persisted. Logs are read with a 256KB tail window because auto-loop.log grows across redeploys; decoding tries utf-8, utf-8-sig, gb18030, cp936 for Windows.
+The operator-request/decision ledger pair (operator-requests.md read, operator-decisions.md appended) whose layout is load-bearing for operator_request_notify.py's regex-based window parsing. The dashboard appends decisions in a specific format that downstream regex parsing depends on, so the layout must not drift.
 
 ## Related
 
-- produces [[cockpit-dashboard]] — Serves the REST endpoints the dashboard polls.
-- uses [[directive-writer]] — Routes all human-directive.md writes through directive_writer.py's lock/gate/atomic-rename pipeline.
-- uses [[sentry-reporter]] — Error reporting goes through the external sentry_client library.
+- part of [[cockpit-dashboard]] — Read/written by server.py.
 <!-- context:generated:end -->
 
 ## Notes

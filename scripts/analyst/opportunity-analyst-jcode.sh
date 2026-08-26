@@ -160,6 +160,8 @@ Inputs are in this workspace ($APP) — find them with rg:
 - memories/human-directive.md   (ANA DİREKTİF — the charter; outranks your judgment on scope)
 - memories/consensus.md         (the company's own current reading + Program State)
 - projects/wowcar/              (the five source documents, SHA-256s recorded in the directive)
+- projects/wowcar/Wowcar_Sponsor_Kararlari.md  (sponsor's BINDING decisions KARAR-*; they SUPERSEDE the source docs' open questions — e.g. legal form is direction-decided here. Do NOT re-flag a decided question; mark it "direction-set, condition open". A declaration sets direction, not legal evidence.)
+- memories/operator-decisions.md               (resolved operator/OPREQ decisions; same supersession rule)
 - docs/operations/              (receipts, ledgers, weekly reports, gate artifacts)
 - memories/cost-audit.md        (TODAY's deterministic cost measurements — interpret, never recompute; if missing or stale, say so)
 

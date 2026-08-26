@@ -1,4 +1,4 @@
-# scripts/ops/browse-extract.py · [[context7-browse-extraction]] [[ki-k-decision-browser-extraction]]
+# scripts/ops/browse-extract.py · [[ki-k-decision-browser-extraction]] [[registry-and-browse-tooling]]
 
 One-shot CLI that walks a list of URLs in a single background browser tab, waits for render, greps rendered text, and returns a capped excerpt, replacing multi-turn MCP micro-step chains.
 

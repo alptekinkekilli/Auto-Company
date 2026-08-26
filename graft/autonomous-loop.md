@@ -4,19 +4,19 @@ slug: autonomous-loop
 type: system
 sources:
   - path: scripts/core/auto-loop.sh
-    hash: bc00d41b28222e0836508c4e1674f4e8146364f9a8d8e3a35fcf4c4a3e67f1f6
-sources_digest: 2a434563773d52689cea1c99c376307922ef71ecfe3b855098543da135bccbda
+    hash: 8047ae1ceb7eac76beba89e0584912e2500baee4f68bb2f372c872739a2c7193
+sources_digest: 09490ff62dd4b45d3340d0b71341695ef1b4205f1305a986d18cf8036c7ab394
 links:
+  - to: container-entrypoint
+    relation: depends_on
+    description: >-
+      Launched and supervised by docker-entrypoint.sh; consumes the boot-epoch
+      stamp and runtime.env overrides.
   - to: directive-writer
     relation: uses
     description: >-
-      Fail-closed tripwire on human-directive.md changes; directive_writer.py is
-      the sole writer of that file.
-  - to: opportunity-analyst
-    relation: uses
-    description: >-
-      The analyst runs inside the loop's container as user app with CODEX_HOME
-      on a persistent volume.
+      The loop's directive promotion/restore paths route through
+      directive_writer.py.
 generator:
   version: 1
 covers: []
@@ -24,12 +24,12 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-The 24/7 operator loop that repeatedly launches fresh Claude/Codex/jcode sessions with consensus.md as the cross-cycle relay, enforcing a four-gate budget model (per-engine 5h, daily, weekly) backed by an idempotent TOTAL_SPEND_LEDGER keyed on run_id. Quota-aware router alternates engines, tier ladder for model/effort selection, circuit-breaking on consecutive errors, watchdog timeout per cycle. ERR trap with set -E diagnoses silent set -e deaths; jcode tool denylist serves both safety and context-budget (each denied tool saves ~540 prompt tokens per turn); fail-closed tripwire on human-directive.md changes.
+The core loop: a Bash script that continuously runs a CLI coding agent (Claude/Codex/jcode) in fresh sessions, using consensus.md as the cross-cycle relay and PROMPT.md as the standing instruction set. Enforces a four-gate budget model (per-engine 5h, daily, weekly) backed by an idempotent spend ledger, a tier ladder for cost spreading, strict guardrail verification of the source PROMPT.md, a jcode tool denylist, and a circuit breaker that disables Codex on permanent auth failures while distinguishing them from transient limits.
 
 ## Related
 
-- uses [[directive-writer]] — Fail-closed tripwire on human-directive.md changes; directive_writer.py is the sole writer of that file.
-- uses [[opportunity-analyst]] — The analyst runs inside the loop's container as user app with CODEX_HOME on a persistent volume.
+- depends on [[container-entrypoint]] — Launched and supervised by docker-entrypoint.sh; consumes the boot-epoch stamp and runtime.env overrides.
+- uses [[directive-writer]] — The loop's directive promotion/restore paths route through directive_writer.py.
 <!-- context:generated:end -->
 
 ## Notes

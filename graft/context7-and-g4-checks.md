@@ -1,26 +1,35 @@
 ---
-name: Analyst engine & g4 check
-slug: analyst-engine-g4-check
+name: Context7 and g4 checks
+slug: context7-and-g4-checks
 type: system
 sources:
-  - path: scripts/analyst/opportunity-analyst-jcode.sh
-    hash: 69985d473943f6d5adc94f51728ad97490391d0f517750ce54c9b785931bf5d6
+  - path: scripts/ops/context7-check.py
+    hash: 4687b776e558caf660fad0d984e405c6a9498525648273569ac9a5feb544797e
   - path: scripts/ops/g4-check.py
     hash: 719fa86c0e307ef71bf0bce8f49e2baab2bb522aec732b784b39c8f2d788aba8
-  - path: tests/test_analyst_engine.sh
-    hash: 3f6fbcc1efd4568252ac5d138931953946575646f3cdd0edd9f2a3bbe325cf63
-  - path: tests/test_g4_check.sh
-    hash: 426129aa4d430db932523139037190cd1c5106394e917a10fc73e29b823bc4d2
-sources_digest: 9202fe219b5b029ded74c8a18e875b26813d30c8174302e3ac0d859a6bb7e723
+sources_digest: 3679683e5d770f4977018551a0d3cddc6cbec55f135a533a8de49407fe0868f7
 links:
-  - to: state-snapshot-probe
-    relation: produces
-    description: >-
-      The analyst report hash is delta-visible in the snapshot
-      (OPREQ-INFRA-ANALYST-ROUTING-001 Option B)
+  - to: mcp-configuration-and-key-security
+    relation: uses
+    description: Context7 is one of the MCP servers.
 generator:
   version: 1
 covers:
+  - symbol: externals
+    kind: function
+    at: 'scripts/ops/context7-check.py:L59-L75'
+  - symbol: scan
+    kind: function
+    at: 'scripts/ops/context7-check.py:L78-L108'
+  - symbol: walk_calls
+    kind: function
+    at: 'scripts/ops/context7-check.py:L111-L122'
+  - symbol: verdict
+    kind: function
+    at: 'scripts/ops/context7-check.py:L125-L138'
+  - symbol: main
+    kind: function
+    at: 'scripts/ops/context7-check.py:L141-L170'
   - symbol: load_key
     kind: function
     at: 'scripts/ops/g4-check.py:L71-L89'
@@ -58,11 +67,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The opportunity-analyst engine that runs jcode cycles to produce the auditor report, plus the g4-check decision logic for matching register addresses against website addresses (Turkish dotted/dotless İ-ı folding, coincidence guard, context-dependent number matching).
+context7-check.py audits cycles to ensure external imports have a Context7 lookup, and g4-check.py matches register vs website addresses with Turkish folding and coincidence guards. Both are offline-testable pure decision logic.
 
 ## Related
 
-- produces [[state-snapshot-probe]] — The analyst report hash is delta-visible in the snapshot (OPREQ-INFRA-ANALYST-ROUTING-001 Option B)
+- uses [[mcp-configuration-and-key-security]] — Context7 is one of the MCP servers.
 <!-- context:generated:end -->
 
 ## Notes

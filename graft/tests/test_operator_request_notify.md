@@ -1,4 +1,4 @@
-# tests/test_operator_request_notify.py · [[operator-request-decision-resolution]]
+# tests/test_operator_request_notify.py
 
 Unit test suite for the operator_request_notify module, covering notification dedup, retry, and type-specific resolution verification.
 
