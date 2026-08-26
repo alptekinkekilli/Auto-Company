@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""graft'ın .gitignore'a geri eklediği 'graft/' satırını kaldırır.
+"""graft'ın .gitignore'a geri eklediği 'graft/' (veya 0.13+ formatında '/graft/') satırını kaldırır.
 
 NEDEN: Kartları versiyonlama kararı (bkz. CLAUDE.md > "Graft kart kuralı") graft'ın
 kendi yazma davranışıyla çakışıyor. `graft build` VE graft'ın Claude Code hook'ları
@@ -22,11 +22,12 @@ def main() -> int:
     if not p.is_file():
         return 0
     s = orig = p.read_text(encoding="utf-8")
-    if not re.search(r"(?m)^graft/$", s):
+    # graft 0.10 yazar "graft/", 0.13+ yazar "/graft/" (leading slash) — ikisini de yakala.
+    if not re.search(r"(?m)^/?graft/$", s):
         return 0
     # graft'ın eklediği bloğu (yorum satırı varsa onunla birlikte) kaldır
-    s = re.sub(r"\n*# graft's local graph cache[^\n]*\ngraft/\n", "\n", s)
-    s = re.sub(r"(?m)^graft/\n", "", s)
+    s = re.sub(r"\n*# graft's local graph cache[^\n]*\n/?graft/\n", "\n", s)
+    s = re.sub(r"(?m)^/?graft/\n", "", s)
     s = re.sub(r"\n{3,}", "\n\n", s)
     if s != orig:
         p.write_text(s, encoding="utf-8")
