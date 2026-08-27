@@ -1,15 +1,23 @@
 ---
-name: SnapOG Landing/Dashboard
-slug: snapog-landing-dashboard
-type: file
+name: SnapOG Landing
+slug: snapog-landing
+type: system
 sources:
+  - path: projects/_archive/snapog/sample/alerts-dry-run.sh
+    hash: fabd322c673a2e7f93273116221eac10392cdbf3d6cd8eb5457e6c960b67797c
+  - path: projects/_archive/snapog/sample/cache-cap-test.sh
+    hash: c11830b054136c0d367415ca1a62bc16312be6ec69c45fc217b2fda9bf8a67bc
+  - path: projects/_archive/snapog/sample/smoke-test.sh
+    hash: 0a140d23218574add9c22c524d6ff03aea85a205f4806261fc0791a4b73c144f
   - path: projects/_archive/snapog/src/dashboard/pages.ts
     hash: 6a33d1b6152ee8ea3ee6f5617105ce757c915627156072dd9cb1f3b78e32b4af
-sources_digest: aa49b78a6522f0383edeedf2bbb936457599ccfbd81b5ce65f2e99c6e243ad03
+sources_digest: 549070e3b2562d329888a889272968ce40f9a958654aa3bb1b592200e5288d75
 links:
   - to: snapog-service
-    relation: part_of
-    description: Rendered by the Worker's / and /dashboard routes.
+    relation: uses
+    description: >-
+      Landing page hits the /og endpoint for live preview; waitlist stores to
+      KV.
 generator:
   version: 1
 covers:
@@ -41,11 +49,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Server-side HTML template module (no client framework) rendering the marketing landing page and dashboard with the 'Carbon Terminal' aesthetic. Threads the host argument into code examples and meta tags to build absolute URLs, and embeds a live OG image preview hitting the actual /og endpoint.
+Server-side HTML template module rendering the public landing page and dashboard with a Carbon Terminal aesthetic, plus the waitlist capture function and smoke-test scripts. No client-side framework; host threaded into code examples for absolute URLs.
 
 ## Related
 
-- part of [[snapog-service]] — Rendered by the Worker's / and /dashboard routes.
+- uses [[snapog-service]] — Landing page hits the /og endpoint for live preview; waitlist stores to KV.
 <!-- context:generated:end -->
 
 ## Notes

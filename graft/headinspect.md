@@ -1,6 +1,6 @@
 ---
-name: HeadInspect Service
-slug: headinspect-service
+name: HeadInspect
+slug: headinspect
 type: system
 sources:
   - path: projects/headinspect/migrations/0001_hits.sql
@@ -125,7 +125,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Cloudflare Worker that fetches a user-supplied URL and reports on its response headers, with strict SSRF protections (rejects non-HTTPS, localhost, private IPs, cloud metadata), manual redirect following (up to 5), body draining, and a 10s AbortController timeout. Pure header-categorization/grading logic is I/O-free and deterministic; the badge endpoint always returns 200 with edge caching so broken embeds never render as broken images.
+Cloudflare Worker that fetches a user-supplied URL and reports on its response headers, with strict SSRF protections (rejecting non-HTTPS, localhost, private IPs, cloud metadata), manual redirect following, and a 10s timeout. Pure header-categorization/grading logic is separated from the single-template HTML/SVG renderer; the badge always returns 200 with edge caching so broken embeds never render broken.
 <!-- context:generated:end -->
 
 ## Notes

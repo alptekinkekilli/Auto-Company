@@ -9,7 +9,7 @@ sources_digest: 580997342635860ff744d27a36e889c902bd03a27837c94edb20c5bb745f01b5
 links:
   - to: loop-driver
     relation: validates
-    description: Validates the jcode harness used by auto-loop.sh and the analyst runner.
+    description: Verifies the jcode harness the loop can invoke.
 generator:
   version: 1
 covers: []
@@ -17,11 +17,11 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-Acceptance smoke test for the jcode pilot container verifying five checks (GLIBC sanity, binary runnability, Claude auth via OAuth token envelope, a real model round-trip, daemon-leak check) while touching nothing persistent. Documents a gotcha: as of jcode v0.64.2 the tool does NOT read the project's .mcp.json, so it only verifies the file parses — actual MCP connections are deferred to host-side checks.
+Acceptance smoke test for the jcode pilot container verifying GLIBC sanity, binary runnability, Claude auth, a real model round-trip, and no daemon leak, while touching nothing persistent. Documents a gotcha: jcode v0.64.2 does NOT read the project's .mcp.json, so it only verifies the file parses.
 
 ## Related
 
-- validates [[loop-driver]] — Validates the jcode harness used by auto-loop.sh and the analyst runner.
+- validates [[loop-driver]] — Verifies the jcode harness the loop can invoke.
 <!-- context:generated:end -->
 
 ## Notes

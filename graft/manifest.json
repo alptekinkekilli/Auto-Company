@@ -1,7 +1,7 @@
 {
   "version": 1,
   "model": "openai:deepseek-ai/DeepSeek-V4-Flash-0731",
-  "repoDigest": "3ece2d1d6260b21e4743839b38808eabad76d0a4d74ca76fe4b73c01f72d5a7f",
+  "repoDigest": "f0706252a25a3401c932579cda1df2b5c85b5620e1eb0c77ad543ffb19f5a2ae",
   "files": [
     {
       "path": "dashboard/app.js",
@@ -146,6 +146,10 @@
     {
       "path": "scripts/compact-preflight.py",
       "hash": "e05718ceddc1954b8cefcea9ad00d143d0adb92d0d5547b55fe3916e5fbdb0b3"
+    },
+    {
+      "path": "scripts/compact-report.py",
+      "hash": "06d11935c31a1f1517fde00f600844f4bb48f1c1df968c063ab6cf3007458a81"
     },
     {
       "path": "scripts/compact-resume-lint.py",
@@ -548,8 +552,8 @@
       "sourcesDigest": "43a42c7621b93d8e35ed7813326f7b761e954384d076a4d1b176afa770c1b952"
     },
     {
-      "slug": "auto-company-site-functions",
-      "name": "Auto-Company Site Functions",
+      "slug": "auto-company-site-proxies",
+      "name": "Auto-Company Site Proxies",
       "type": "system",
       "sources": [
         "projects/auto-company-site/functions/listeden-cik.js",
@@ -595,6 +599,16 @@
       "sourcesDigest": "569be6755fcfc4da6381cf4afc5e059f8838053811c1b1d328a5f480dbd7665a"
     },
     {
+      "slug": "cli-final-text-extractors",
+      "name": "CLI Final-Text Extractors",
+      "type": "system",
+      "sources": [
+        "scripts/core/codex-final-text.py",
+        "scripts/core/jcode-final-text.py"
+      ],
+      "sourcesDigest": "8c86c687652a082aa409b4a8ba8ffb34c64122612918dfab6b3f4384e3425870"
+    },
+    {
       "slug": "cockpit-dashboard",
       "name": "Cockpit Dashboard",
       "type": "system",
@@ -606,15 +620,17 @@
       "sourcesDigest": "c3eeec88fbadc17427d51f65b1a682adbd4d4eb429313cc3a6c06273f937d76d"
     },
     {
-      "slug": "compact-ritual",
-      "name": "Compact Ritual",
+      "slug": "compact-ritual-hooks",
+      "name": "Compact Ritual Hooks",
       "type": "system",
       "sources": [
         "scripts/compact-postcheck.py",
         "scripts/compact-preflight.py",
-        "scripts/compact-resume-lint.py"
+        "scripts/compact-report.py",
+        "scripts/compact-resume-lint.py",
+        "scripts/context-watch.py"
       ],
-      "sourcesDigest": "8a29be38a180ad8d9499a56cd3d111ad43039671f2ed2e59086a14253cad9064"
+      "sourcesDigest": "19a2a8b04acd80d73143d2cc1f5e5c9891f272b1685785df73160ccb605eaae3"
     },
     {
       "slug": "compact-ritual-scripts",
@@ -637,15 +653,6 @@
       "sourcesDigest": "4859f8b1dfb24f857df1d999107a7d92d7c4d14a2c247976ae81cbb021029d23"
     },
     {
-      "slug": "context-watch",
-      "name": "Context Watch",
-      "type": "file",
-      "sources": [
-        "scripts/context-watch.py"
-      ],
-      "sourcesDigest": "e120476879431ac8f01406f0c7056c596e84ad05a3bdffa80c27718e3d312c80"
-    },
-    {
       "slug": "dashboard-server",
       "name": "Dashboard server",
       "type": "system",
@@ -657,14 +664,11 @@
     {
       "slug": "directive-writer",
       "name": "Directive Writer",
-      "type": "concept",
+      "type": "file",
       "sources": [
-        "dashboard/server.py",
-        "scripts/analyst/opportunity-analyst-jcode.sh",
-        "scripts/analyst/opportunity-analyst.sh",
-        "scripts/analyst/promote_directive.py"
+        "scripts/core/directive_writer.py"
       ],
-      "sourcesDigest": "a241dea3d7a4b796dc586887632af1230d3ebb6276ab48f6517ec15141e6e259"
+      "sourcesDigest": "f4f863d4df3fc313e0dd21bd4e126bc92b8f46cf056589dd04f736eba34c9ebd"
     },
     {
       "slug": "fail-closed-measurement-invariant",
@@ -690,8 +694,8 @@
       "sourcesDigest": "1627b649c4591fefbe53718943b83b073d34ecceb699cc194f34d1c884c4155e"
     },
     {
-      "slug": "headinspect-service",
-      "name": "HeadInspect Service",
+      "slug": "headinspect",
+      "name": "HeadInspect",
       "type": "system",
       "sources": [
         "projects/headinspect/migrations/0001_hits.sql",
@@ -711,14 +715,22 @@
       "sourcesDigest": "580997342635860ff744d27a36e889c902bd03a27837c94edb20c5bb745f01b5"
     },
     {
+      "slug": "leak-scanner",
+      "name": "Leak Scanner",
+      "type": "file",
+      "sources": [
+        "scripts/core/bridge_leak_scan.py"
+      ],
+      "sourcesDigest": "b640af07b633d17a562a8a5f854a19c94a33c6169c66e46291f8978bc47e1945"
+    },
+    {
       "slug": "loop-driver",
       "name": "Loop Driver",
       "type": "system",
       "sources": [
-        "scripts/core/auto-loop.sh",
-        "scripts/core/codex-final-text.py"
+        "scripts/core/auto-loop.sh"
       ],
-      "sourcesDigest": "9c7f69c3ab695cdfeb60af9d2cf604e2afa439aa980e0d9141de96a1ce39e8cb"
+      "sourcesDigest": "9acc0249ddcf7d53dc97c65117d01ec63059f34e1003f3864d7b48ce6de9355a"
     },
     {
       "slug": "mcp-config-key-handling",
@@ -730,6 +742,15 @@
         "scripts/ops/verify-mcp-keys.py"
       ],
       "sourcesDigest": "f05ab069a6ee9c80b42b8808951d60e4035e8ca7a144240e09cd75577f327e4b"
+    },
+    {
+      "slug": "north-star-metric-sql",
+      "name": "North-Star Metric SQL",
+      "type": "file",
+      "sources": [
+        "docs/operations/north-star-metric-query.sql"
+      ],
+      "sourcesDigest": "91dcfb3b617798695902ce25230879b0ebdf6c4ac53fe80d36c1db48d76a29a9"
     },
     {
       "slug": "operator-decision-panel",
@@ -790,6 +811,15 @@
       "sourcesDigest": "85f695b540190c148b455d6cc63e72dbb881bcb53a6cf3d680c51a434fc47b16"
     },
     {
+      "slug": "promotion-gate",
+      "name": "Promotion Gate",
+      "type": "file",
+      "sources": [
+        "scripts/analyst/promote_directive.py"
+      ],
+      "sourcesDigest": "529774ce95135d20964e1d42a6242cf44c9928383f17eac44213ac8385a782b9"
+    },
+    {
       "slug": "prompt-transport-contract",
       "name": "prompt-transport-contract",
       "type": "concept",
@@ -810,9 +840,9 @@
       "sourcesDigest": "19cec281a0f24ce825491428331ca5006618cbdd419a7fc31cebd53d832015d2"
     },
     {
-      "slug": "registry-merge-invariants",
-      "name": "Registry Merge Invariants",
-      "type": "concept",
+      "slug": "registry-merge",
+      "name": "Registry Merge",
+      "type": "file",
       "sources": [
         "scripts/analyst/merge_registry.py"
       ],
@@ -894,24 +924,16 @@
       "sourcesDigest": "fe1d8fd6fcb0f308eb0c4072f436e2986ea169f87521e188c20ca981540b20fa"
     },
     {
-      "slug": "snapog-landing-dashboard",
-      "name": "SnapOG Landing/Dashboard",
-      "type": "file",
-      "sources": [
-        "projects/_archive/snapog/src/dashboard/pages.ts"
-      ],
-      "sourcesDigest": "aa49b78a6522f0383edeedf2bbb936457599ccfbd81b5ce65f2e99c6e243ad03"
-    },
-    {
-      "slug": "snapog-sample-tests",
-      "name": "SnapOG Sample Tests",
+      "slug": "snapog-landing",
+      "name": "SnapOG Landing",
       "type": "system",
       "sources": [
         "projects/_archive/snapog/sample/alerts-dry-run.sh",
         "projects/_archive/snapog/sample/cache-cap-test.sh",
-        "projects/_archive/snapog/sample/smoke-test.sh"
+        "projects/_archive/snapog/sample/smoke-test.sh",
+        "projects/_archive/snapog/src/dashboard/pages.ts"
       ],
-      "sourcesDigest": "ce9cb2a773c1290423006a58fe8d649723cb56a07022127ba072ed0d87b79c56"
+      "sourcesDigest": "549070e3b2562d329888a889272968ce40f9a958654aa3bb1b592200e5288d75"
     },
     {
       "slug": "snapog-service",
@@ -1022,15 +1044,6 @@
         "tests/test_turn_audit.sh"
       ],
       "sourcesDigest": "d172c81ad96a0a7833800c32917ff357b620817a9ca217cba878f3d6f8500ea3"
-    },
-    {
-      "slug": "value-sensitive-leak-scanner",
-      "name": "Value-Sensitive Leak Scanner",
-      "type": "concept",
-      "sources": [
-        "scripts/core/bridge_leak_scan.py"
-      ],
-      "sourcesDigest": "b640af07b633d17a562a8a5f854a19c94a33c6169c66e46291f8978bc47e1945"
     },
     {
       "slug": "wowcar-revenue-relabel-acceptance-harness",

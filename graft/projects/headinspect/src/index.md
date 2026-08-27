@@ -1,4 +1,4 @@
-# projects/headinspect/src/index.ts · [[headinspect-service]]
+# projects/headinspect/src/index.ts · [[headinspect]]
 
 - fetch · method · L24-L83 — Routes incoming requests to health, inspect, badge, and root endpoints, applying CORS and JSON/HTML content negotiation.
 - TargetOk · type · L88-L88 — Type tag for a successfully validated target URL.

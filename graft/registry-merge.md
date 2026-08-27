@@ -1,7 +1,7 @@
 ---
-name: Registry Merge Invariants
-slug: registry-merge-invariants
-type: concept
+name: Registry Merge
+slug: registry-merge
+type: file
 sources:
   - path: scripts/analyst/merge_registry.py
     hash: 55719338148054fff06780400062453a037e4bf10fe5817f04536b5c85ade7d1
@@ -9,7 +9,7 @@ sources_digest: 5ff39050e2ffebfcb89290b663b10deb8e198c076c45e5893acf920e54d83301
 links:
   - to: opportunity-analyst
     relation: part_of
-    description: Pass-2 of the analyst pipeline.
+    description: Pass 2 of the analyst pipeline.
 generator:
   version: 1
 covers:
@@ -59,11 +59,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-merge_registry.py surgically replaces only the live decision-state span of candidate-registry.md (between ## Selected and ## Exhausted patterns / lessons) while leaving the ~180KB append-only journal byte-identical. Enforces invariants: no candidate ID may disappear, no duplicate axes, and the identity of active candidates cannot be rewritten — only verdict changes are allowed. Fail-closed with read-back verification and restoration on failure.
+Deterministic PASS-2 merge tool that surgically replaces only the live decision-state span of candidate-registry.md (between ## Selected and ## Exhausted patterns headings), leaving the ~180KB append-only journal byte-identical. Enforces invariants (no candidate ID may disappear, no duplicate axes, active identity cannot be rewritten) and proves prefix/suffix byte-identity via hashing, restoring the original on failure.
 
 ## Related
 
-- part of [[opportunity-analyst]] — Pass-2 of the analyst pipeline.
+- part of [[opportunity-analyst]] — Pass 2 of the analyst pipeline.
 <!-- context:generated:end -->
 
 ## Notes

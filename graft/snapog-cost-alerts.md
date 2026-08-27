@@ -17,7 +17,7 @@ sources_digest: fe1d8fd6fcb0f308eb0c4072f436e2986ea169f87521e188c20ca981540b20fa
 links:
   - to: snapog-service
     relation: part_of
-    description: Scheduled handler in src/index.ts triggers runCostAlertCheck.
+    description: Scheduled cron entry point within the same Worker.
 generator:
   version: 1
 covers:
@@ -67,11 +67,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Cron-triggered (every 6h) cost-alerting pipeline: five independent checks against D1 and R2 (via a thin Cloudflare Analytics GraphQL client), thresholds isolated in one file sourced from the CFO cost model, and a webhook deliverer that falls back to log-only mode when ALERT_WEBHOOK_URL is unset. Checks are deliberately isolated — a thrown error is logged and treated as no alert to prevent false positives.
+Cron-triggered cost-alerting subsystem (every 6h) running five isolated checks against D1 and R2 (via a thin Cloudflare Analytics GraphQL client), with thresholds isolated in one file sourced from the CFO cost model. Alerts post to a webhook or fall back to log-only; all failures degrade to no-alert to avoid false positives.
 
 ## Related
 
-- part of [[snapog-service]] — Scheduled handler in src/index.ts triggers runCostAlertCheck.
+- part of [[snapog-service]] — Scheduled cron entry point within the same Worker.
 <!-- context:generated:end -->
 
 ## Notes

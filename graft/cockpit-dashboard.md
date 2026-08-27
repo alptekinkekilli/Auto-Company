@@ -11,16 +11,20 @@ sources:
     hash: 999b44bc7671293e78906611b1dfd46bcf6efcc520ed92623a17281766a7fc85
 sources_digest: c3eeec88fbadc17427d51f65b1a682adbd4d4eb429313cc3a6c06273f937d76d
 links:
+  - to: directive-writer
+    relation: uses
+    description: >-
+      server.py routes all human-directive.md writes through
+      scripts/core/directive_writer.py for locking and PENDING gating.
   - to: loop-driver
     relation: uses
     description: >-
-      server.py routes directive writes through scripts/core/directive_writer.py
-      and reads memories/human-directive.md, operator-requests.md,
-      operator-decisions.md; app.js polls /api/status and /api/hold to control
-      the loop.
+      Dashboard's /api/hold and /api/directive endpoints control the loop's hold
+      state and directive file; server routes directive writes through
+      directive_writer.py.
   - to: sentry-reporter
     relation: uses
-    description: server.py reports errors via the external sentry_client library.
+    description: server.py reports errors via sentry_client.capture_exception.
 generator:
   version: 1
 covers:
@@ -370,12 +374,13 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Browser-side SPA controller plus the ThreadingHTTPServer backend that monitors and controls the autonomous loop. Polls /api/status, renders live state cards, and exposes the only real loop control (setHold) plus directive editing, settings, and log/consensus views. All state comes from backend REST endpoints; no external libraries.
+Browser-side SPA controller and its stdlib-only Python server that monitor and control the autonomous loop. The server (ThreadingHTTPServer) abstracts host platforms (WSL/macOS/Linux), reads/writes state files, and exposes REST endpoints; the browser JS polls /api/status and renders live cards, with the hold control and directive editor as the only real loop controls. All state flows from backend files via REST; no external JS libraries.
 
 ## Related
 
-- uses [[loop-driver]] — server.py routes directive writes through scripts/core/directive_writer.py and reads memories/human-directive.md, operator-requests.md, operator-decisions.md; app.js polls /api/status and /api/hold to control the loop.
-- uses [[sentry-reporter]] — server.py reports errors via the external sentry_client library.
+- uses [[directive-writer]] — server.py routes all human-directive.md writes through scripts/core/directive_writer.py for locking and PENDING gating.
+- uses [[loop-driver]] — Dashboard's /api/hold and /api/directive endpoints control the loop's hold state and directive file; server routes directive writes through directive_writer.py.
+- uses [[sentry-reporter]] — server.py reports errors via sentry_client.capture_exception.
 <!-- context:generated:end -->
 
 ## Notes

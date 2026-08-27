@@ -21,10 +21,10 @@ sources_digest: fdaeeb7e96b128caaf56f24722d43c264ce856d635c7315a709e6c4879ccc4f1
 links:
   - to: snapog-cost-alerts
     relation: uses
-    description: scheduled handler calls runCostAlertCheck from ./alerts.
-  - to: snapog-landing-dashboard
-    relation: uses
-    description: Serves the landing page and dashboard HTML from src/dashboard/pages.ts.
+    description: scheduled handler invokes runCostAlertCheck from ./alerts.
+  - to: snapog-landing
+    relation: produces
+    description: Landing page embeds a live OG preview hitting the /og endpoint.
 generator:
   version: 1
 covers:
@@ -104,12 +104,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Cloudflare Worker (Hono) that generates Open Graph images on demand, with D1 persistence (users, api_keys, usage_events, cache-key tracking) and R2 image caching. Hashes API keys before storage, counts usage even on cache hits, and caps distinct cache keys per key per month — beyond the cap /og still renders but skips R2 put and returns X-Cache: BYPASSED to prevent unique-URL storage abuse. Includes a scheduled cost-alert cron.
+Cloudflare Worker (Hono) that generates Open Graph images on demand, with D1 persistence (users, API keys, usage events, cache-key tracking) and R2 image caching. Hashes API keys before storage, counts usage even on cache hits, enforces monthly tier limits and a per-key cache-key cap (beyond which it still renders but skips R2 put and returns X-Cache: BYPASSED), and runs a scheduled cost-alert cron.
 
 ## Related
 
-- uses [[snapog-cost-alerts]] — scheduled handler calls runCostAlertCheck from ./alerts.
-- uses [[snapog-landing-dashboard]] — Serves the landing page and dashboard HTML from src/dashboard/pages.ts.
+- uses [[snapog-cost-alerts]] — scheduled handler invokes runCostAlertCheck from ./alerts.
+- produces [[snapog-landing]] — Landing page embeds a live OG preview hitting the /og endpoint.
 <!-- context:generated:end -->
 
 ## Notes

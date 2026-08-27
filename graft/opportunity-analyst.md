@@ -18,12 +18,12 @@ sources_digest: 0e30aa01e58354844cc15ea6a1e05fcee433c04412f00d5b4955c540c51d2eaf
 links:
   - to: directive-writer
     relation: uses
-    description: >-
-      Uses directive_writer.py for snapshot/restore and promotion of
-      human-directive.md.
+    description: Snapshot/restore guardrail for human-directive.md.
   - to: loop-driver
-    relation: part_of
-    description: Runs inside the same container harness and shares budget/ledger helpers.
+    relation: uses
+    description: >-
+      Runs inside the company container as user app with CODEX_HOME on a
+      persistent volume.
 generator:
   version: 1
 covers:
@@ -88,12 +88,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Independent 'second-brain' (APP-221) that invokes Codex or jcode with the autocompany-opportunity-director skill to audit the Tender Track portfolio and produce a decision report plus a candidate-registry update. Never auto-applies directives: it writes analysis-directive.md as a draft, splices only the live span of candidate-registry.md via merge_registry.py, and runs a deterministic promotion gate. Records session IDs to logs for budget exclusion and uses danger-full-access sandbox mode.
+Independent 'second-brain' (APP-221) that invokes Codex or jcode with the opportunity-director skill to audit the Tender Track portfolio and produce a decision report plus candidate-registry update. Runs three passes: writes a draft report (never auto-applied), splices only the live span of candidate-registry.md via merge_registry.py with invariant checks, and runs a deterministic promotion gate. Never auto-applies directives; records session IDs for budget exclusion.
 
 ## Related
 
-- uses [[directive-writer]] — Uses directive_writer.py for snapshot/restore and promotion of human-directive.md.
-- part of [[loop-driver]] — Runs inside the same container harness and shares budget/ledger helpers.
+- uses [[directive-writer]] — Snapshot/restore guardrail for human-directive.md.
+- uses [[loop-driver]] — Runs inside the company container as user app with CODEX_HOME on a persistent volume.
 <!-- context:generated:end -->
 
 ## Notes

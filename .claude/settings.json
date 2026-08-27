@@ -67,6 +67,10 @@
           {
             "type": "command",
             "command": "PREFLIGHT_ROOTS=\"/Users/akekilli/projects/autocompany-deploy\" python3 \"$CLAUDE_PROJECT_DIR\"/scripts/compact-preflight.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/scripts/compact-report.py"
           }
         ]
       }

@@ -1,4 +1,4 @@
-# scripts/core/jcode-final-text.py
+# scripts/core/jcode-final-text.py · [[cli-final-text-extractors]]
 
 Extracts the full assistant text from a jcode --ndjson stream, preferring concatenated text_delta events over done.text to avoid silent truncation of the final answer.
 
