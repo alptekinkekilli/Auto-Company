@@ -65,15 +65,20 @@ def block_prod(kok: str, L: list) -> None:
 
 def block_loop(L: list) -> None:
     """Tek ssh round-trip: cockpit State File (LOOP_COUNT/ERROR_COUNT/STATUS/ENGINE/
-    MODEL) + son auto-loop.log telemetri/cycle satırı + loop süreç canlılığı."""
+    MODEL) + son telemetri/cycle satırı + loop canlılığı + BOŞ-CYCLE serisi ve
+    discretionary bütçe durumu (SUMMARY satırlarından — loop 'durmuş' görünüp aslında
+    cost-guard'la boş dönerken bunu bir bakışta göster)."""
     try:
         remote = (
             'C=$(docker ps --format "{{.Names}}" | grep z12a992 | head -1); '
             '[ -z "$C" ] && { echo LOOP=no-container; exit 0; }; '
             'docker exec -u app "$C" sh -c '
             '\'curl -s -m5 http://127.0.0.1:8787/api/status 2>/dev/null; echo; '
-            'cd /app 2>/dev/null && tail -n 80 logs/auto-loop.log 2>/dev/null | '
-            'grep -E "\\[TELEMETRY\\]|Cycle #[0-9]+ \\[" | tail -2; '
+            'cd /app 2>/dev/null && tail -n 120 logs/auto-loop.log 2>/dev/null | '
+            'grep -E "\\[TELEMETRY\\]|Cycle #[0-9]+ \\[(OK|WAIT|START|ERR)" | tail -2; '
+            'echo ===SUMMARY===; '
+            'grep -hE "Cycle #[0-9]+ \\[SUMMARY\\]" logs/auto-loop.log 2>/dev/null | tail -20; '
+            'echo ===END===; '
             'pgrep -f auto-loop.sh >/dev/null && echo LOOPPROC=alive || echo LOOPPROC=DEAD\''
         )
         out = sh(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8",
@@ -108,6 +113,35 @@ def block_loop(L: list) -> None:
             if m:
                 L.append(f"    - {m.group(1)[:120]}")
                 break
+        # BOŞ-CYCLE serisi + discretionary durumu (SUMMARY bölümünden)
+        try:
+            body = out.split("===SUMMARY===", 1)[1].split("===END===", 1)[0]
+            sums = [s for s in body.splitlines() if "[SUMMARY]" in s]
+            empty_pat = re.compile(
+                r"empty cycle|EMPTY|no permitted work|no work was permitted|"
+                r"discretionary budget spent|recorded as an empty|no state changed",
+                re.IGNORECASE)
+            streak = 0
+            for s in reversed(sums):          # sondan geriye ardışık boşları say
+                if empty_pat.search(s):
+                    streak += 1
+                else:
+                    break
+            disc = None                        # en son "$X.XX/$YY" discretionary rakamı
+            for s in reversed(sums):
+                dm = re.search(r"\$([0-9.]+)\s*/\s*\$?([0-9]+)", s)
+                if dm:
+                    disc = (dm.group(1), dm.group(2)); break
+            if streak > 0:
+                extra = ""
+                if disc:
+                    over = "DOLU ⚠" if float(disc[0]) >= float(disc[1]) else "içinde"
+                    extra = f" — discretionary ${disc[0]}/${disc[1]} {over} (00:00 UTC reset)"
+                L.append(f"    - ⚠ **iş durumu**: son {streak} cycle BOŞ (üretken iş yok){extra}")
+            else:
+                L.append("    - **iş durumu**: üretken (son cycle boş değil)")
+        except Exception:
+            pass
     except Exception:
         pass
 

@@ -1,4 +1,4 @@
-# projects/auto-company-site/functions/randevu.js · [[auto-company-site-proxies]]
+# projects/auto-company-site/functions/randevu.js · [[auto-company-site-pages-functions]]
 
 Branded booking front door that redirects recipients to the operator's Google Calendar appointment page, or shows a fallback page when the destination is unconfigured.
 

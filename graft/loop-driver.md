@@ -10,13 +10,13 @@ links:
   - to: cockpit-dashboard
     relation: produces
     description: >-
-      Writes auto-loop.log and state files that the dashboard reads via
-      /api/status.
-  - to: directive-writer
+      Writes auto-loop.log and state files that the dashboard's /api/status
+      reads.
+  - to: opportunity-analyst
     relation: uses
     description: >-
-      Restores/guards human-directive.md via directive_writer.py during analyst
-      runs.
+      The analyst runner and loop share the directive/consensus state files and
+      the directive_writer guardrail.
 generator:
   version: 1
 covers: []
@@ -24,12 +24,12 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-The 24/7 autonomous driver running continuous work cycles via Claude/Codex/jcode CLIs, with consensus.md as the cross-cycle relay baton and PROMPT.md as standing law. Enforces a four-gate budget model, a circuit breaker on consecutive errors, usage-limit detection, and a jcode tool denylist that doubles as a context-budget lever. Persists state to logs and idempotent spend ledgers; an ERR trap with set -E records silent set -e deaths.
+The 24/7 autonomous driver that runs continuous work cycles via the Claude CLI, Codex CLI, or the unified jcode harness, with each cycle starting a fresh session that reads consensus.md as the cross-cycle relay baton and PROMPT.md as standing law. Enforces a four-gate budget model (per-engine 5h, daily, weekly hard gates), a circuit breaker on consecutive errors, usage-limit detection, and a jcode tool denylist that doubles as a context-budget lever. Persists state to auto-loop.log, idempotent spend ledgers, and PID/state files.
 
 ## Related
 
-- produces [[cockpit-dashboard]] — Writes auto-loop.log and state files that the dashboard reads via /api/status.
-- uses [[directive-writer]] — Restores/guards human-directive.md via directive_writer.py during analyst runs.
+- produces [[cockpit-dashboard]] — Writes auto-loop.log and state files that the dashboard's /api/status reads.
+- uses [[opportunity-analyst]] — The analyst runner and loop share the directive/consensus state files and the directive_writer guardrail.
 <!-- context:generated:end -->
 
 ## Notes

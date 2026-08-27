@@ -1,4 +1,4 @@
-# projects/_archive/snapog/src/types.ts · [[snapog-service]]
+# projects/_archive/snapog/src/types.ts · [[snapog-og-image-service]]
 
 - Tier · type · L3-L3 — Defines the three billing subscription levels that gate usage limits.
 - ApiKey · interface · L16-L27 — Represents a customer API key record with its tier, monthly quota, and usage accounting fields.

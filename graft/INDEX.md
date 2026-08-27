@@ -12,34 +12,32 @@ graph, not in these files: `graft callers <symbol>` is the only way to read them
 ## Concepts
 
 - [airtable-read-write-guards](airtable-read-write-guards.md) — Airtable read/write guards · scripts/ops/airtable-read.py, scripts/ops/airtable-write.py
-- [auto-company-site-proxies](auto-company-site-proxies.md) — Auto-Company Site Proxies · projects/auto-company-site/functions/listeden-cik.js, projects/auto-company-site/functions/randevu.js
+- [auto-company-site-pages-functions](auto-company-site-pages-functions.md) — Auto-Company Site Pages Functions · projects/auto-company-site/functions/listeden-cik.js, projects/auto-company-site/functions/randevu.js
 - [auto-loop](auto-loop.md) — auto-loop · scripts/core/auto-loop.sh, tests/test_prompt_assembly.sh, tests/test_prompt_transport.sh, tests/test_tier_ladder_daily.sh
 - [auto-loop-core](auto-loop-core.md) — Auto-loop core · scripts/core/auto-loop.sh, scripts/core/codex-final-text.py, scripts/core/directive_writer.py, scripts/core/engine-usage-cost.py, scripts/core/jcode-mcp-config.py, scripts/core/jcode-mcp-probe.py, scripts/core/operator_request_notify.py
 - [claude-code-hooks-pretooluse-sessionstart](claude-code-hooks-pretooluse-sessionstart.md) — Claude Code hooks (PreToolUse/SessionStart) · scripts/prod-mechanism-guard.py, scripts/session-brief.py
-- [cli-final-text-extractors](cli-final-text-extractors.md) — CLI Final-Text Extractors · scripts/core/codex-final-text.py, scripts/core/jcode-final-text.py
-- [cockpit-dashboard](cockpit-dashboard.md) — Cockpit Dashboard · dashboard/app.js, dashboard/sentry_client.py, dashboard/server.py
+- [cockpit-dashboard](cockpit-dashboard.md) — Cockpit Dashboard · dashboard/app.js, dashboard/server.py
+- [codex-jcode-final-text-extractors](codex-jcode-final-text-extractors.md) — Codex/jcode Final-Text Extractors · scripts/core/codex-final-text.py, scripts/core/jcode-final-text.py
 - [compact-ritual-hooks](compact-ritual-hooks.md) — Compact Ritual Hooks · scripts/compact-postcheck.py, scripts/compact-preflight.py, scripts/compact-report.py, scripts/compact-resume-lint.py, scripts/context-watch.py
 - [compact-ritual-scripts](compact-ritual-scripts.md) — Compact ritual scripts · scripts/compact-postcheck.py, scripts/compact-preflight.py, scripts/compact-resume-lint.py
-- [container-bootstrap](container-bootstrap.md) — Container Bootstrap · docker-entrypoint.sh
+- [container-entrypoint](container-entrypoint.md) — Container Entrypoint · docker-entrypoint.sh
+- [context7-docs-cli](context7-docs-cli.md) — Context7 Docs CLI · scripts/analyst/codex-skill/autocompany-opportunity-director/scripts/context7_docs.sh
 - [dashboard-server](dashboard-server.md) — Dashboard server · dashboard/server.py
 - [directive-writer](directive-writer.md) — Directive Writer · scripts/core/directive_writer.py
 - [fail-closed-measurement-invariant](fail-closed-measurement-invariant.md) — Fail-closed measurement invariant · scripts/core/auto-loop.sh, scripts/core/engine-usage-cost.py, scripts/ops/site-contact-evidence.py, tests/test_ccusage_failclosed.sh, tests/test_cost_model_hint.sh
 - [g4-attribution-contact-evidence](g4-attribution-contact-evidence.md) — G4 attribution & contact evidence · scripts/ops/g4-check.py, scripts/ops/site-contact-evidence.py
-- [headinspect](headinspect.md) — HeadInspect · projects/headinspect/migrations/0001_hits.sql, projects/headinspect/src/index.ts, projects/headinspect/src/inspect.ts, projects/headinspect/src/render.ts
+- [headinspect-header-inspector](headinspect-header-inspector.md) — HeadInspect Header Inspector · projects/headinspect/migrations/0001_hits.sql, projects/headinspect/src/index.ts, projects/headinspect/src/inspect.ts, projects/headinspect/src/render.ts
+- [headinspect-hit-counter-schema](headinspect-hit-counter-schema.md) — HeadInspect Hit Counter Schema · projects/headinspect/migrations/0001_hits.sql
 - [jcode-pilot-smoke-test](jcode-pilot-smoke-test.md) — jcode Pilot Smoke Test · scripts/analyst/jcode-pilot-smoke.sh
-- [leak-scanner](leak-scanner.md) — Leak Scanner · scripts/core/bridge_leak_scan.py
 - [loop-driver](loop-driver.md) — Loop Driver · scripts/core/auto-loop.sh
 - [mcp-config-key-handling](mcp-config-key-handling.md) — MCP config & key handling · scripts/core/jcode-mcp-config.py, scripts/core/jcode-mcp-probe.py, scripts/ops/verify-mcp-keys.py
-- [north-star-metric-sql](north-star-metric-sql.md) — North-Star Metric SQL · docs/operations/north-star-metric-query.sql
 - [operator-decision-panel](operator-decision-panel.md) — operator-decision-panel · dashboard/server.py, scripts/core/operator_request_notify.py, tests/test_refusal_format.sh
 - [operator-request-action-routing](operator-request-action-routing.md) — Operator request & action routing · scripts/core/operator_request_notify.py, scripts/ops/operator-action-router.py
-- [opportunity-analyst](opportunity-analyst.md) — Opportunity Analyst · scripts/analyst/codex-skill/autocompany-opportunity-director/scripts/context7_docs.sh, scripts/analyst/merge_registry.py, scripts/analyst/opportunity-analyst-jcode.sh, scripts/analyst/opportunity-analyst.sh, scripts/analyst/promote_directive.py
+- [opportunity-analyst](opportunity-analyst.md) — Opportunity Analyst · scripts/analyst/merge_registry.py, scripts/analyst/opportunity-analyst-jcode.sh, scripts/analyst/opportunity-analyst.sh, scripts/analyst/promote_directive.py
 - [ops-probe-audit-scripts](ops-probe-audit-scripts.md) — Ops probe & audit scripts · scripts/ops/site-contact-evidence.py, scripts/ops/state-snapshot.py, scripts/ops/tool-usage-audit.py, scripts/ops/turn-audit.py, scripts/ops/verify-mcp-keys.py, scripts/ops/web-research-cost.py
 - [prod-mechanism-guard](prod-mechanism-guard.md) — prod-mechanism-guard · scripts/prod-mechanism-guard.py, tests/test_prod_mechanism_guard.sh
-- [promotion-gate](promotion-gate.md) — Promotion Gate · scripts/analyst/promote_directive.py
 - [prompt-transport-contract](prompt-transport-contract.md) — prompt-transport-contract · scripts/core/auto-loop.sh, tests/test_prompt_transport.sh
 - [registry-archive](registry-archive.md) — registry-archive · scripts/ops/registry-archive.py, tests/test_registry_archive.sh
-- [registry-merge](registry-merge.md) — Registry Merge · scripts/analyst/merge_registry.py
 - [registry-queue-watch](registry-queue-watch.md) — registry-queue-watch · scripts/ops/registry-queue-watch.py, tests/test_registry_queue_watch.sh
 - [reply-watch](reply-watch.md) — reply-watch · scripts/ops/reply-watch.py, tests/test_reply_watch.sh
 - [secrets-never-in-argv](secrets-never-in-argv.md) — Secrets never in argv · scripts/core/jcode-mcp-config.py, scripts/ops/verify-mcp-keys.py, tests/test_jcode_mcp_config.sh, tests/test_mcp_key_fallback.sh
@@ -47,8 +45,10 @@ graph, not in these files: `graft callers <symbol>` is the only way to read them
 - [sentry-reporter](sentry-reporter.md) — Sentry Reporter · dashboard/sentry_client.py
 - [set-e-shape-lint](set-e-shape-lint.md) — set-e-shape-lint · docker-entrypoint.sh, scripts/core/auto-loop.sh, tests/test_seteshape_lint.py
 - [snapog-cost-alerts](snapog-cost-alerts.md) — SnapOG Cost Alerts · projects/_archive/snapog/src/alerts/check.ts, projects/_archive/snapog/src/alerts/graphql.ts, projects/_archive/snapog/src/alerts/index.ts, projects/_archive/snapog/src/alerts/thresholds.ts, projects/_archive/snapog/src/alerts/webhook.ts
-- [snapog-landing](snapog-landing.md) — SnapOG Landing · projects/_archive/snapog/sample/alerts-dry-run.sh, projects/_archive/snapog/sample/cache-cap-test.sh, projects/_archive/snapog/sample/smoke-test.sh, projects/_archive/snapog/src/dashboard/pages.ts
-- [snapog-service](snapog-service.md) — SnapOG Service · projects/_archive/snapog/migrations/0001_init.sql, projects/_archive/snapog/migrations/0002_waitlist.sql, projects/_archive/snapog/migrations/0003_cache_key_tracking.sql, projects/_archive/snapog/src/index.ts, projects/_archive/snapog/src/og/render.ts, projects/_archive/snapog/src/og/templates.ts, projects/_archive/snapog/src/types.ts
+- [snapog-landing-dashboard](snapog-landing-dashboard.md) — SnapOG Landing & Dashboard · projects/_archive/snapog/src/dashboard/pages.ts
+- [snapog-north-star-metric-sql](snapog-north-star-metric-sql.md) — SnapOG North-Star Metric SQL · docs/operations/north-star-metric-query.sql
+- [snapog-og-image-service](snapog-og-image-service.md) — SnapOG OG Image Service · projects/_archive/snapog/migrations/0001_init.sql, projects/_archive/snapog/migrations/0002_waitlist.sql, projects/_archive/snapog/migrations/0003_cache_key_tracking.sql, projects/_archive/snapog/src/index.ts, projects/_archive/snapog/src/og/render.ts, projects/_archive/snapog/src/og/templates.ts, projects/_archive/snapog/src/types.ts
+- [snapog-validation-scripts](snapog-validation-scripts.md) — SnapOG Validation Scripts · projects/_archive/snapog/sample/alerts-dry-run.sh, projects/_archive/snapog/sample/cache-cap-test.sh, projects/_archive/snapog/sample/smoke-test.sh
 - [state-snapshot](state-snapshot.md) — state-snapshot · scripts/ops/state-snapshot.py, tests/test_state_snapshot.sh
 - [test-extraction-strategy](test-extraction-strategy.md) — Test extraction strategy · tests/test_active_window.sh, tests/test_budget_gates.sh, tests/test_cycle_counter.sh, tests/test_escalation.sh, tests/test_idle_skip.sh, tests/test_mixed_harness.sh
 - [test-suite-for-auto-loop-core](test-suite-for-auto-loop-core.md) — Test suite for auto-loop core · tests/test_active_window.sh, tests/test_budget_gates.sh, tests/test_ccusage_failclosed.sh, tests/test_codex_spend_sources.sh, tests/test_cycle_counter.sh, tests/test_cycle_metadata.sh, tests/test_discretionary_budget.sh, tests/test_escalation.sh, tests/test_idle_skip.sh, tests/test_mixed_harness.sh
@@ -56,6 +56,7 @@ graph, not in these files: `graft callers <symbol>` is the only way to read them
 - [test-suite-for-ops-scripts](test-suite-for-ops-scripts.md) — Test suite for ops scripts · tests/test_airtable_read.sh, tests/test_airtable_write.sh, tests/test_browse_extract.sh, tests/test_compact_anchor_sync.py, tests/test_compact_ritual_hardening.sh, tests/test_context7_check.sh, tests/test_cost_model_hint.sh, tests/test_dashboard_server.py, tests/test_directive_section_refs.sh, tests/test_g4_check.sh, tests/test_operator_action_router.py, tests/test_operator_request_notify.py
 - [tool-usage-audit](tool-usage-audit.md) — tool-usage-audit · scripts/ops/tool-usage-audit.py, tests/test_tool_usage_audit.sh
 - [turn-economy](turn-economy.md) — turn-economy · scripts/ops/turn-audit.py, tests/test_turn_audit.sh
+- [value-sensitive-leak-scanner](value-sensitive-leak-scanner.md) — Value-Sensitive Leak Scanner · scripts/core/bridge_leak_scan.py
 - [wowcar-revenue-relabel-acceptance-harness](wowcar-revenue-relabel-acceptance-harness.md) — Wowcar revenue relabel acceptance harness · scripts/ops/wowcar-revenue-vocabulary-acceptance.py
 - [wowcar-vocabulary-acceptance](wowcar-vocabulary-acceptance.md) — wowcar-vocabulary-acceptance · scripts/ops/wowcar-revenue-vocabulary-acceptance.py, tests/test_wowcar_revenue_vocabulary_acceptance.sh
 - [wsl-systemd-daemon-scripts](wsl-systemd-daemon-scripts.md) — WSL systemd daemon scripts · scripts/wsl/install-wsl-daemon.sh, scripts/wsl/uninstall-wsl-daemon.sh, scripts/wsl/wsl-daemon-status.sh

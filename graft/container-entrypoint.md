@@ -1,7 +1,7 @@
 ---
-name: Container Bootstrap
-slug: container-bootstrap
-type: system
+name: Container Entrypoint
+slug: container-entrypoint
+type: file
 sources:
   - path: docker-entrypoint.sh
     hash: fbc2010d8d1d9dda2bc7ebd72fba1d674136624f968ff2f453bf7bbb894de017
@@ -20,7 +20,7 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-PID-1 entrypoint that drops privileges via gosu, stamps a boot-epoch file for the MCP freshness gate, applies operator overrides from runtime.env (parsed literally to avoid shell-special-char corruption), and launches the dashboard and loop as background children, restarting the container if either exits. Persists state across redeploys via symlinks and volume relocation, seeds Codex auth only on first boot, and forwards TERM/INT to all children.
+PID-1 bootstrap that drops privileges via gosu, stamps a boot-epoch file for the loop's MCP-config freshness gate, applies operator overrides from runtime.env (parsed literally to avoid shell-special-char corruption), and launches the dashboard and loop as background processes, restarting the container if either exits. Persists state across redeploys by symlinking docs/ and skills into the memories volume and relocating CLAUDE_CONFIG_DIR/CODEX_HOME onto the logs volume; seeds Codex auth only on first boot to avoid token-rotation 401s.
 
 ## Related
 

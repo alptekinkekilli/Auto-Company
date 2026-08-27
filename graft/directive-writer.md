@@ -12,7 +12,9 @@ links:
     description: server.py routes directive writes through this writer.
   - to: opportunity-analyst
     relation: uses
-    description: Used for safe restore of human-directive.md during analyst runs.
+    description: >-
+      The analyst uses directive_writer.py for safe snapshot/restore of
+      human-directive.md.
 generator:
   version: 1
 covers:
@@ -89,12 +91,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The single deterministic writer for memories/human-directive.md: locks, gates on in-flight PENDING directives, and refuses clobbering unless allow_pending is set. All dashboard and analyst writes route through it, and it is used for snapshot/restore guardrails.
+The single deterministic writer for memories/human-directive.md: it locks, gates on in-flight PENDING directives, and refuses to clobber unless allow_pending is set. All directive writes from the dashboard, the analyst, and the loop must route through it.
 
 ## Related
 
 - implements [[cockpit-dashboard]] — server.py routes directive writes through this writer.
-- uses [[opportunity-analyst]] — Used for safe restore of human-directive.md during analyst runs.
+- uses [[opportunity-analyst]] — The analyst uses directive_writer.py for safe snapshot/restore of human-directive.md.
 <!-- context:generated:end -->
 
 ## Notes

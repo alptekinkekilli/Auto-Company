@@ -17,7 +17,7 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-Acceptance smoke test for the jcode pilot container verifying GLIBC sanity, binary runnability, Claude auth, a real model round-trip, and no daemon leak, while touching nothing persistent. Documents a gotcha: jcode v0.64.2 does NOT read the project's .mcp.json, so it only verifies the file parses.
+Acceptance smoke test for the jcode pilot container verifying five checks per RUNBOOK §0.4 while touching nothing persistent. Documents a key gotcha: as of jcode v0.64.2 the tool does NOT read the project's .mcp.json, so the script only verifies the file parses and registers servers — actual Airtable/Linear/BrowserOS connections are deferred to second-stage checks from the real host.
 
 ## Related
 

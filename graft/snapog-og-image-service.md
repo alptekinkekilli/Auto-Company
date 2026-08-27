@@ -1,6 +1,6 @@
 ---
-name: SnapOG Service
-slug: snapog-service
+name: SnapOG OG Image Service
+slug: snapog-og-image-service
 type: system
 sources:
   - path: projects/_archive/snapog/migrations/0001_init.sql
@@ -20,11 +20,11 @@ sources:
 sources_digest: fdaeeb7e96b128caaf56f24722d43c264ce856d635c7315a709e6c4879ccc4f1
 links:
   - to: snapog-cost-alerts
-    relation: uses
-    description: scheduled handler invokes runCostAlertCheck from ./alerts.
-  - to: snapog-landing
     relation: produces
-    description: Landing page embeds a live OG preview hitting the /og endpoint.
+    description: The scheduled cron handler in index.ts triggers runCostAlertCheck.
+  - to: snapog-landing-dashboard
+    relation: part_of
+    description: The landing page and dashboard HTML are served from the same Worker.
 generator:
   version: 1
 covers:
@@ -104,12 +104,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Cloudflare Worker (Hono) that generates Open Graph images on demand, with D1 persistence (users, API keys, usage events, cache-key tracking) and R2 image caching. Hashes API keys before storage, counts usage even on cache hits, enforces monthly tier limits and a per-key cache-key cap (beyond which it still renders but skips R2 put and returns X-Cache: BYPASSED), and runs a scheduled cost-alert cron.
+A Hono-based Cloudflare Worker that generates Open Graph images on demand, with D1 persistence (users, API keys, usage events, cache-key tracking) and R2 image caching. Hashes API keys before storage, counts usage even on cache hits, enforces a free-tier watermark, and caps distinct R2 cache keys per key per month — beyond the cap it still renders but skips the R2 put and returns X-Cache: BYPASSED to prevent unique-URL storage abuse. Includes a cron-triggered cost-alerting pipeline.
 
 ## Related
 
-- uses [[snapog-cost-alerts]] — scheduled handler invokes runCostAlertCheck from ./alerts.
-- produces [[snapog-landing]] — Landing page embeds a live OG preview hitting the /og endpoint.
+- produces [[snapog-cost-alerts]] — The scheduled cron handler in index.ts triggers runCostAlertCheck.
+- part of [[snapog-landing-dashboard]] — The landing page and dashboard HTML are served from the same Worker.
 <!-- context:generated:end -->
 
 ## Notes

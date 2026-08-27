@@ -15,9 +15,9 @@ sources:
     hash: 518ec45652bc5010bbd34856e527e2dc9c2dfa525aea151ff467f3a802c9da81
 sources_digest: fe1d8fd6fcb0f308eb0c4072f436e2986ea169f87521e188c20ca981540b20fa
 links:
-  - to: snapog-service
+  - to: snapog-og-image-service
     relation: part_of
-    description: Scheduled cron entry point within the same Worker.
+    description: Triggered by the scheduled handler in index.ts.
 generator:
   version: 1
 covers:
@@ -67,11 +67,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Cron-triggered cost-alerting subsystem (every 6h) running five isolated checks against D1 and R2 (via a thin Cloudflare Analytics GraphQL client), with thresholds isolated in one file sourced from the CFO cost model. Alerts post to a webhook or fall back to log-only; all failures degrade to no-alert to avoid false positives.
+A cron-triggered cost-alerting pipeline (every 6h) that runs five independent D1/R2 checks against thresholds sourced from the CFO cost model, escalates severity to critical at 1.5x threshold, and posts alerts to a webhook (or falls back to log-only mode). Checks are deliberately isolated — a thrown error is logged and treated as no alert to prevent false positives; the R2 storage check uses a thin GraphQL client that returns null on any failure.
 
 ## Related
 
-- part of [[snapog-service]] — Scheduled cron entry point within the same Worker.
+- part of [[snapog-og-image-service]] — Triggered by the scheduled handler in index.ts.
 <!-- context:generated:end -->
 
 ## Notes

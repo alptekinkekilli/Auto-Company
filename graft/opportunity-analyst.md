@@ -3,9 +3,6 @@ name: Opportunity Analyst
 slug: opportunity-analyst
 type: system
 sources:
-  - path: >-
-      scripts/analyst/codex-skill/autocompany-opportunity-director/scripts/context7_docs.sh
-    hash: 79198378c25b2ff21cf5e4e2eda13f55c29ac806bd7f9d2bb0cba11a6268c447
   - path: scripts/analyst/merge_registry.py
     hash: 55719338148054fff06780400062453a037e4bf10fe5817f04536b5c85ade7d1
   - path: scripts/analyst/opportunity-analyst-jcode.sh
@@ -14,16 +11,16 @@ sources:
     hash: a0a766435a1f9e501b97cca96bb30314440de72fd569313488d3b80d5f9c55a5
   - path: scripts/analyst/promote_directive.py
     hash: 9c45147f1730fc30545b94a30428d54e0bd40f04506aa3db00614880ec93d677
-sources_digest: 0e30aa01e58354844cc15ea6a1e05fcee433c04412f00d5b4955c540c51d2eaf
+sources_digest: 466cd5357bc86cd54e0c0bc2a6c4b3756df89d6f333d6ec3e184072f3ff7d3a8
 links:
   - to: directive-writer
     relation: uses
-    description: Snapshot/restore guardrail for human-directive.md.
+    description: Uses directive_writer.py for safe restore of human-directive.md.
   - to: loop-driver
     relation: uses
     description: >-
-      Runs inside the company container as user app with CODEX_HOME on a
-      persistent volume.
+      Shares the directive/consensus state files and the directive_writer
+      guardrail with the loop.
 generator:
   version: 1
 covers:
@@ -88,12 +85,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Independent 'second-brain' (APP-221) that invokes Codex or jcode with the opportunity-director skill to audit the Tender Track portfolio and produce a decision report plus candidate-registry update. Runs three passes: writes a draft report (never auto-applied), splices only the live span of candidate-registry.md via merge_registry.py with invariant checks, and runs a deterministic promotion gate. Never auto-applies directives; records session IDs for budget exclusion.
+An independent 'second-brain' that invokes Codex or jcode with the autocompany-opportunity-director skill to audit the Tender Track portfolio and produce a decision report plus a candidate-registry update. Orchestrates three passes: write the report to analysis-directive.md (draft only, never auto-applied), splice a model-proposed replacement into the live span of candidate-registry.md via merge_registry.py, and run a deterministic promotion gate via promote_directive.py. Never auto-applies directives; snapshots/restores with hash checks and records session IDs for budget exclusion.
 
 ## Related
 
-- uses [[directive-writer]] — Snapshot/restore guardrail for human-directive.md.
-- uses [[loop-driver]] — Runs inside the company container as user app with CODEX_HOME on a persistent volume.
+- uses [[directive-writer]] — Uses directive_writer.py for safe restore of human-directive.md.
+- uses [[loop-driver]] — Shares the directive/consensus state files and the directive_writer guardrail with the loop.
 <!-- context:generated:end -->
 
 ## Notes

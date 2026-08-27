@@ -5,26 +5,25 @@ type: system
 sources:
   - path: dashboard/app.js
     hash: 1a974b1c1d72cf714de69954e840a6335990788860f9442ad1e61fcf6f041ca8
-  - path: dashboard/sentry_client.py
-    hash: 96977bb6701f18064edb69c783e53bdb73c930c8ddadcd1caf47583b42700df4
   - path: dashboard/server.py
     hash: 999b44bc7671293e78906611b1dfd46bcf6efcc520ed92623a17281766a7fc85
-sources_digest: c3eeec88fbadc17427d51f65b1a682adbd4d4eb429313cc3a6c06273f937d76d
+sources_digest: 7d986a7d98a798efeb4945892386462d60e6538d13c5007e0b0abb0fb743f51f
 links:
   - to: directive-writer
     relation: uses
     description: >-
-      server.py routes all human-directive.md writes through
-      scripts/core/directive_writer.py for locking and PENDING gating.
+      server.py routes all directive writes through
+      scripts/core/directive_writer.py, which locks and gates on in-flight
+      PENDING directives.
   - to: loop-driver
     relation: uses
     description: >-
-      Dashboard's /api/hold and /api/directive endpoints control the loop's hold
-      state and directive file; server routes directive writes through
-      directive_writer.py.
+      The dashboard's /api/hold and /api/directive endpoints control the loop's
+      hold state and directive file; the server reads auto-loop.log and state
+      files produced by the loop.
   - to: sentry-reporter
     relation: uses
-    description: server.py reports errors via sentry_client.capture_exception.
+    description: server.py reports errors via the sentry_client library.
 generator:
   version: 1
 covers:
@@ -160,12 +159,6 @@ covers:
   - symbol: loadOperatorRequests
     kind: function
     at: 'dashboard/app.js:L1103-L1110'
-  - symbol: _parse_dsn
-    kind: function
-    at: 'dashboard/sentry_client.py:L33-L43'
-  - symbol: capture_exception
-    kind: function
-    at: 'dashboard/sentry_client.py:L49-L102'
   - symbol: ps_quote
     kind: function
     at: 'dashboard/server.py:L123-L124'
@@ -374,13 +367,13 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Browser-side SPA controller and its stdlib-only Python server that monitor and control the autonomous loop. The server (ThreadingHTTPServer) abstracts host platforms (WSL/macOS/Linux), reads/writes state files, and exposes REST endpoints; the browser JS polls /api/status and renders live cards, with the hold control and directive editor as the only real loop controls. All state flows from backend files via REST; no external JS libraries.
+Browser-side SPA controller plus the stdlib-only HTTP server that serves it. The server abstracts host platforms (WSL/macOS/Linux), reads/writes the operator state files, and exposes REST endpoints (/api/status, /api/hold, /api/directive, /api/ideas, /api/tool-usage) that the browser polls on a timer. The browser renders live state cards, cost/usage panels, a directive editor, and a hand-rolled markdown renderer; the only real loop control is the hold toggle.
 
 ## Related
 
-- uses [[directive-writer]] — server.py routes all human-directive.md writes through scripts/core/directive_writer.py for locking and PENDING gating.
-- uses [[loop-driver]] — Dashboard's /api/hold and /api/directive endpoints control the loop's hold state and directive file; server routes directive writes through directive_writer.py.
-- uses [[sentry-reporter]] — server.py reports errors via sentry_client.capture_exception.
+- uses [[directive-writer]] — server.py routes all directive writes through scripts/core/directive_writer.py, which locks and gates on in-flight PENDING directives.
+- uses [[loop-driver]] — The dashboard's /api/hold and /api/directive endpoints control the loop's hold state and directive file; the server reads auto-loop.log and state files produced by the loop.
+- uses [[sentry-reporter]] — server.py reports errors via the sentry_client library.
 <!-- context:generated:end -->
 
 ## Notes
