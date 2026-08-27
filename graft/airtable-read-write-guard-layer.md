@@ -1,6 +1,6 @@
 ---
-name: Airtable access layer
-slug: airtable-access-layer
+name: Airtable read/write guard layer
+slug: airtable-read-write-guard-layer
 type: system
 sources:
   - path: scripts/ops/airtable-read.py
@@ -13,10 +13,11 @@ sources:
     hash: a51c25001935da566cca4a450cfc0906827eb332779f2b454b12d547b7a0e6e0
 sources_digest: 2021356891ac463bde76a17510d6206598905cc15d804b9b867e92529075e85e
 links:
-  - to: mcp-configuration-probe
+  - to: outreach-eligibility-send-gate
     relation: uses
-  - to: outreach-eligibility-sending
-    relation: uses
+    description: >-
+      The send-gate and rfq-send scripts read/write Airtable through these
+      wrappers, so their caps and refusal messages are enforced here.
 generator:
   version: 1
 covers:
@@ -72,12 +73,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The read/write wrappers that gate Airtable access to control context cost and validate writes. Reads are scoped (refuse unscoped reads, cap --all-fields and --max-records at 200, pageSize at 100); writes go through a guard that refuses unknown fields, clears, and substantial replacements unless explicit flags are given. The air() wrapper carries a URL-quoting fix for table names with spaces.
+Wrappers that gate every Airtable read and write to control context cost and protect data integrity. airtable-read.py refuses unscoped reads, caps --all-fields and --max-records (200) and pageSize (100); airtable-write.py validates single-record writes (unknown fields, clears, replaces) before they hit the API. The guard functions were extracted from main() specifically to be testable offline.
 
 ## Related
 
-- uses [[mcp-configuration-probe]]
-- uses [[outreach-eligibility-sending]]
+- uses [[outreach-eligibility-send-gate]] — The send-gate and rfq-send scripts read/write Airtable through these wrappers, so their caps and refusal messages are enforced here.
 <!-- context:generated:end -->
 
 ## Notes

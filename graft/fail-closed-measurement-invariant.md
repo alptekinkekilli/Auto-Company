@@ -7,16 +7,12 @@ sources:
     hash: b8f8a3989fee29f5a561d7f4d4eb8f558086586d603c5217caf20288b84d27ec
   - path: scripts/ops/send-gate.py
     hash: 6acd746a20aff7267d711d61350ac14d8fa0c17a1af95341625aa2bfd9a63f92
-  - path: tests/test_budget_gates.sh
-    hash: 8d96846319108d7f4c41477e346d7ae803743be23e0bc4ca6de30e9f117e99c9
+  - path: scripts/ops/site-contact-evidence.py
+    hash: 008b4735e6133445eff667f840f9c7faaeef8013b1363f6555b602a9d6fd048c
   - path: tests/test_ccusage_failclosed.sh
     hash: 366b96bee74416db05cc9752919b04304a49f5121d5802920a26641b196ef706
-sources_digest: d1de8474b8bb79ce0c915ded116e2d6208a0c434c823af7db2f9b5245d1f6653
-links:
-  - to: auto-loop-core-engine
-    relation: implements
-  - to: outreach-eligibility-sending
-    relation: implements
+sources_digest: 53c398c0186c496fb403943d741849619a7e16b538b0eff6dbf6ee0ce26c4e6d
+links: []
 generator:
   version: 1
 covers:
@@ -56,16 +52,29 @@ covers:
   - symbol: main
     kind: function
     at: 'scripts/ops/send-gate.py:L547-L583'
+  - symbol: fetch
+    kind: function
+    at: 'scripts/ops/site-contact-evidence.py:L56-L64'
+  - symbol: emails
+    kind: function
+    at: 'scripts/ops/site-contact-evidence.py:L67-L68'
+  - symbol: looks_unrendered
+    kind: function
+    at: 'scripts/ops/site-contact-evidence.py:L71-L81'
+  - symbol: render_dom
+    kind: function
+    at: 'scripts/ops/site-contact-evidence.py:L84-L110'
+  - symbol: examine
+    kind: function
+    at: 'scripts/ops/site-contact-evidence.py:L113-L172'
+  - symbol: main
+    kind: function
+    at: 'scripts/ops/site-contact-evidence.py:L175-L196'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-A cross-cutting rule: any measurement or check that cannot complete is a REFUSE/NA, never an ALLOW/0. Applies to ccusage reads (first failure latches a hold), send-gate eligibility, budget gates, and MCP probes. Degraded reads never lower a same-period prior observation.
-
-## Related
-
-- implements [[auto-loop-core-engine]]
-- implements [[outreach-eligibility-sending]]
+Across the codebase, any measurement that cannot complete must refuse or preserve the prior observation, never return a permissive default. ccusage degraded reads never lower a same-period prior; send-gate REFUSEs on incomplete checks; site-contact-evidence treats unrendered fetches as inconclusive; budget gates latch holds on first failure.
 <!-- context:generated:end -->
 
 ## Notes

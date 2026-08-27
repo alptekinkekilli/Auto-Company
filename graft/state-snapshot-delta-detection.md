@@ -1,16 +1,17 @@
 ---
-name: State snapshot & directive hashing
-slug: state-snapshot-directive-hashing
+name: State snapshot & delta detection
+slug: state-snapshot-delta-detection
 type: system
 sources:
   - path: scripts/ops/state-snapshot.py
     hash: 3112f4632b64a6b531b215ea81ba82b2ceb6436942511f816de94ced3171bfe8
-  - path: tests/test_idle_skip.sh
-    hash: 13ce9f0b8801b94a1bc896bd2db53f2fc68c2984b45db8372050ca760e1edb53
-sources_digest: 862c4befc1b02d528aa7f80eeb41264ef3d2b8c908e73a9b65b879fd8307f1ed
+sources_digest: b49055f6ad2667278243a5d453a6f3a32f13b362f453588327ababae654d5019
 links:
-  - to: auto-loop-core-engine
-    relation: uses
+  - to: cycle-orchestration-engine-routing
+    relation: produces
+    description: >-
+      The idle-skip mechanism reads the snapshot's DELTA: none line to decide
+      whether to skip.
 generator:
   version: 1
 covers:
@@ -33,11 +34,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-state-snapshot.py hashes watched surfaces (directives, OPREQ ledger, Wowcar sources) into a compact report with a DELTA line; the auditor report hash is delta-visible per OPREQ-INFRA-ANALYST-ROUTING-001 Option B. Advisory and read-only toward the world, always exits 0.
+state-snapshot.py collapses per-cycle state checks into one probe, hashing five watched surfaces and computing a DELTA against the previous snapshot. Advisory and read-only toward the world (only writes its own state file), always exits 0 so a probe failure never kills the cycle, and 'none' does not mean 'nothing to do'.
 
 ## Related
 
-- uses [[auto-loop-core-engine]]
+- produces [[cycle-orchestration-engine-routing]] — The idle-skip mechanism reads the snapshot's DELTA: none line to decide whether to skip.
 <!-- context:generated:end -->
 
 ## Notes

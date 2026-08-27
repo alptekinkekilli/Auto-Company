@@ -7,8 +7,6 @@ sources:
     hash: 7e5496c29eae3646af4874f74f0d70e22230b762a74acdfb7e38e93197b41aca
   - path: scripts/core/jcode-mcp-probe.py
     hash: 60fdd2addf2f53741d03e21002a00b6ee9d8895af1fae9746a51308e67672b67
-  - path: scripts/ops/verify-mcp-keys.py
-    hash: a35c1f35481876cedc5bb4cf0c7fd4eceaea1c85e57d3c28e87560b3f9f342db
   - path: tests/fixtures/mock_mcp_server.py
     hash: e5124ccf90e18331b1e81557000a0bf0cc13e1fd7f0412250c5f37fb08e23021
   - path: tests/test_jcode_mcp_config.sh
@@ -19,12 +17,13 @@ sources:
     hash: 21c4be05f1922a08fa185aaa94f73941a785d5f380b7770431bdee7bf78115d6
   - path: tests/test_mcp_probe.sh
     hash: 07482a8311b81667003a304c3741feed20e311f1e28263a5bb3bcc5599e962ce
-sources_digest: ee4c7f35a95ffbbee8bdcbdd4a30243ce0236369364bb1d9d39a7858c8366489
+sources_digest: 5a812353162b0e0ba367cc63346f25dbece14c49c2c32ed9e40db2e51b20fb40
 links:
-  - to: auto-loop-core-engine
-    relation: part_of
-  - to: mcp-key-fallback
-    relation: uses
+  - to: cycle-orchestration-engine-routing
+    relation: produces
+    description: >-
+      The loop consumes the generated config and probe results before running a
+      cycle.
 generator:
   version: 1
 covers:
@@ -85,22 +84,15 @@ covers:
   - symbol: main
     kind: function
     at: 'scripts/core/jcode-mcp-probe.py:L189-L362'
-  - symbol: loop_env
-    kind: function
-    at: 'scripts/ops/verify-mcp-keys.py:L39-L51'
-  - symbol: main
-    kind: function
-    at: 'scripts/ops/verify-mcp-keys.py:L54-L75'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-Generation, verification, and probing of MCP server configs. Secrets live in the env block, never argv (ps-safe); the generator refuses partial configs when a required var is unset; the probe requires at least one proven readcheck per server and enforces the manifest's destructive-tool list and denylist. Config and manifest must stay in sync to avoid boot crash-loops.
+Generates and validates the MCP server configuration. jcode-mcp-config.py keeps secrets in the env block, never argv (to avoid ps leaks), and refuses partial configs; jcode-mcp-probe.py deterministically probes servers against a manifest, requiring at least one proven readcheck per server and exact destructive-tool matching. A manifest-sync test prevents boot crash-loops from config/manifest divergence.
 
 ## Related
 
-- part of [[auto-loop-core-engine]]
-- uses [[mcp-key-fallback]]
+- produces [[cycle-orchestration-engine-routing]] — The loop consumes the generated config and probe results before running a cycle.
 <!-- context:generated:end -->
 
 ## Notes

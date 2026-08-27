@@ -1,6 +1,6 @@
 ---
-name: WSL daemon lifecycle
-slug: wsl-daemon-lifecycle
+name: WSL daemon management
+slug: wsl-daemon-management
 type: system
 sources:
   - path: scripts/wsl/install-wsl-daemon.sh
@@ -11,8 +11,9 @@ sources:
     hash: 55fb93df7f080f48a322d005e6b1f76ec2de1c5283de176883b0644d69f39a6a
 sources_digest: 9492ae8c037a012dbfdfbe959108c9028822a628598cab08029dd84ec43e3b99
 links:
-  - to: auto-loop-core-engine
+  - to: cycle-orchestration-engine-routing
     relation: configures
+    description: The daemon runs auto-loop.sh as a background service.
 generator:
   version: 1
 covers: []
@@ -20,11 +21,11 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-Install/uninstall/status scripts for the per-user systemd service running auto-loop.sh under WSL, with linger guidance and strict error handling.
+Install/uninstall/status scripts for the per-user systemd service running auto-loop.sh in WSL, with strict error handling and guards for missing systemd.
 
 ## Related
 
-- configures [[auto-loop-core-engine]]
+- configures [[cycle-orchestration-engine-routing]] — The daemon runs auto-loop.sh as a background service.
 <!-- context:generated:end -->
 
 ## Notes

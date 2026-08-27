@@ -1,6 +1,6 @@
 ---
-name: Audit & telemetry ledgers
-slug: audit-telemetry-ledgers
+name: Session & context hygiene
+slug: session-context-hygiene
 type: system
 sources:
   - path: scripts/ops/tool-usage-audit.py
@@ -9,10 +9,10 @@ sources:
     hash: 006e9aac95a503a1e158d1c6f03a7bdf98f44322805509d886c627e74d4d41d0
   - path: scripts/ops/web-research-cost.py
     hash: 24d7735b6dc6defa0f80e75aeee37a13a40d4df43e9b38539be02df6fe23cbf2
-sources_digest: 05a5a8135b793a7ae3595f1faa0f4445138043d5ad416b12ef019fd435434902
-links:
-  - to: auto-loop-core-engine
-    relation: uses
+  - path: scripts/session-brief.py
+    hash: a6cd13941a50d768403e080d89e484683b33ec725c6ce151e4447074b784cea4
+sources_digest: a398bb32b4517fa4df46f1169d5605690e69c658c6734b9495e6225268966186
+links: []
 generator:
   version: 1
 covers:
@@ -52,15 +52,17 @@ covers:
   - symbol: main
     kind: function
     at: 'scripts/ops/web-research-cost.py:L79-L161'
+  - symbol: sh
+    kind: function
+    at: 'scripts/session-brief.py:L19-L23'
+  - symbol: main
+    kind: function
+    at: 'scripts/session-brief.py:L26-L63'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-Durable per-cycle ledgers and auditors: tool-usage-audit.py powers the cockpit Tool Analytics panel (dedup on filename+size+mtime, not name); turn-audit.py measures per-session LLM turn economics; web-research-cost.py corrects the naive 'fetch costs once' assumption by scoring residual re-read cost. All use only stdlib and always exit 0.
-
-## Related
-
-- uses [[auto-loop-core-engine]]
+Hooks and auditors that keep the agent's context measured and honest. session-brief.py injects a measured git-state brief at SessionStart (never blocking, never writing secrets); turn-audit.py measures per-session LLM turn economics; tool-usage-audit.py maintains a durable per-cycle tool ledger; web-research-cost.py corrects the naive 'fetch costs once' assumption by scoring residual re-read cost.
 <!-- context:generated:end -->
 
 ## Notes

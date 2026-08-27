@@ -199,9 +199,12 @@ def decide(f: dict) -> dict:
 
 # ── ForwardEmail teslim ─────────────────────────────────────────────────────────
 def _encode_subject(s: str) -> str:
-    # RFC 2047: tüm konuyu tek encoded-word yap (Türkçe karakter mangle olmasın).
-    b = base64.b64encode(s.encode("utf-8")).decode("ascii")
-    return f"=?UTF-8?B?{b}?="
+    # RFC 2047 DOĞRU kodlama: email.header.Header konuyu 75-karakter encoded-word
+    # sınırına uyacak şekilde (gerekirse çok kelimeye bölerek) kodlar. Elle tek base64
+    # encoded-word yapmak Türkçe konuda 76 karaktere çıkıp Gmail'de bozuk ("iso char")
+    # gösteriyordu (2026-08-27 canlı test). ASCII konu değişmeden döner.
+    from email.header import Header
+    return Header(s, "utf-8").encode()
 
 
 def send_fe(to: str, subject: str, text: str, html: str = "") -> dict:

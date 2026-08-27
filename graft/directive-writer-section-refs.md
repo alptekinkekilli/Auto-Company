@@ -1,18 +1,14 @@
 ---
-name: Production guard & directive safety
-slug: production-guard-directive-safety
+name: Directive writer & section refs
+slug: directive-writer-section-refs
 type: system
 sources:
   - path: scripts/core/directive_writer.py
     hash: 447057795ab4776c589695bd00450009df0af8fff481fa7a68c89244ca93a9a3
-  - path: scripts/prod-mechanism-guard.py
-    hash: e3d5c01038affa27aaed85106b6b8ff0705c6be14fa3b2caa1c21144fde5acee
   - path: tests/test_directive_section_refs.sh
     hash: 413742241d956ae77feb01e20780757ee86fa63f3699e3926a2ddeea81a53a71
-sources_digest: 1037ae3c9aad3b8f2b82836b0ef6454913a05d41dbda862835f00f20b7ed7ae4
-links:
-  - to: auto-loop-core-engine
-    relation: configures
+sources_digest: a925e7afda2d83caf94d4cc6796cb4d415c637387d9929d279253111ad4f6b09
+links: []
 generator:
   version: 1
 covers:
@@ -85,24 +81,11 @@ covers:
   - symbol: fn
     kind: function
     at: 'scripts/core/directive_writer.py:L477-L481'
-  - symbol: is_protected
-    kind: function
-    at: 'scripts/prod-mechanism-guard.py:L49-L52'
-  - symbol: check_sync
-    kind: function
-    at: 'scripts/prod-mechanism-guard.py:L55-L81'
-  - symbol: main
-    kind: function
-    at: 'scripts/prod-mechanism-guard.py:L84-L126'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-Tripwire hooks that protect production surfaces and directive integrity: prod-mechanism-guard.py blocks unplanned writes to protected paths unless a fresh marker exists (fail-open on malformed stdin, no-op under /app); directive_writer.py's undefined_section_refs() guards against the revision-11 freeze bug.
-
-## Related
-
-- configures [[auto-loop-core-engine]]
+directive_writer.py generates the human directive, with undefined_section_refs() guarding against references to absent sections (the bug that froze revision 11).
 <!-- context:generated:end -->
 
 ## Notes

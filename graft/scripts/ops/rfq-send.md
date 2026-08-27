@@ -1,6 +1,6 @@
-# scripts/ops/rfq-send.py · [[outreach-eligibility-sending]] [[rfq-send]]
+# scripts/ops/rfq-send.py · [[outreach-eligibility-send-gate]] [[rfq-send]]
 
-Anonim OPEX RFQ göndericisi — §15 Sponsor İzni kapısı, günlük/toplam cap'ler ve ForwardEmail teslimi ile fail-closed çalışan, tender send-gate'in RFQ kardeşi.
+Anonymized OPEX RFQ sender that fail-closes on §15 sponsor approval, enforces daily/total caps and anonymity, and delivers via ForwardEmail direct API.
 
 - _load_key · function · L61-L82 — API anahtarını env → runtime.env → macOS Keychain sırasıyla yükler ve env'e yazar.
 - _app_dir · function · L85-L87 — Script'in iki üst dizinini (repo kökü) mutlak yol olarak döndürür.
@@ -15,7 +15,7 @@ Anonim OPEX RFQ göndericisi — §15 Sponsor İzni kapısı, günlük/toplam ca
 - render · function · L155-L163 — Şablon adından scope'u çözüp vendor kümesi için subject/plain-text/HTML içeriği üretir.
 - anonymity_scan · function · L166-L171 — Render edilen metinde denylist (wowcar) sızıntısı olup olmadığını arar.
 - decide · function · L174-L197 — Bir vendor kaydını opt-out, never-twice, e-posta varlığı, anonimlik, cap'ler ve §15 izni sırasıyla değerlendirip ALLOW/REFUSE kararı döndürür.
-- _encode_subject · function · L201-L204 — Konuyu RFC 2047 base64 encoded-word'e çevirerek Türkçe karakter bozulmasını önler.
-- send_fe · function · L207-L225 — ForwardEmail /v1/emails'e Basic auth ile form-encoded e-posta gönderir ve yanıtı döndürür.
-- _mark_sent · function · L228-L231 — Gönderim sonrası kaydı 'Gönderildi' ve zaman damgası ile PATCH'ler.
-- main · function · L235-L277 — CLI girişi: --report ile cap/eligibility özeti, --record ile tek vendor kararı ve --send ile gerçek gönderim sonrası kaydı işaretler.
+- _encode_subject · function · L201-L207 — Encodes an email subject as RFC 2047 encoded-words via email.header.Header so Turkish subjects stay within the 75-char limit and render correctly in Gmail.
+- send_fe · function · L210-L228 — ForwardEmail /v1/emails'e Basic auth ile form-encoded e-posta gönderir ve yanıtı döndürür.
+- _mark_sent · function · L231-L234 — Gönderim sonrası kaydı 'Gönderildi' ve zaman damgası ile PATCH'ler.
+- main · function · L238-L280 — CLI girişi: --report ile cap/eligibility özeti, --record ile tek vendor kararı ve --send ile gerçek gönderim sonrası kaydı işaretler.

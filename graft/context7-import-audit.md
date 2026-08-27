@@ -8,9 +8,7 @@ sources:
   - path: tests/test_context7_check.sh
     hash: d4fc93cf6b456038f23e1e756019a7fa1b47a344b0385bc5cd3d3a5536834733
 sources_digest: f7ae9d084de3310f18d8d2a904d56dc005125358dc07afc4d0c220fae1cedc7a
-links:
-  - to: auto-loop-core-engine
-    relation: uses
+links: []
 generator:
   version: 1
 covers:
@@ -33,11 +31,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-context7-check.py audits cycles to ensure external library imports are accompanied by a Context7 documentation lookup; must not fire on the project's own stdlib-only ops scripts to avoid false alarms.
-
-## Related
-
-- uses [[auto-loop-core-engine]]
+context7-check.py audits cycles to ensure external library imports are accompanied by a Context7 documentation lookup, staying silent for stdlib-only and the project's own ops scripts to avoid false alarms.
 <!-- context:generated:end -->
 
 ## Notes

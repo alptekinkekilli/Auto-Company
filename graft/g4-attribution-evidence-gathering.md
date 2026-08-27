@@ -1,6 +1,6 @@
 ---
-name: G4 attribution & contact evidence
-slug: g4-attribution-contact-evidence
+name: G4 attribution & evidence gathering
+slug: g4-attribution-evidence-gathering
 type: system
 sources:
   - path: scripts/ops/g4-check.py
@@ -11,8 +11,9 @@ sources:
     hash: 426129aa4d430db932523139037190cd1c5106394e917a10fc73e29b823bc4d2
 sources_digest: 80da2d1af5dcdf83eaa2848a8d5f1be1eb4bc43af8080731f7b021dcba983f57
 links:
-  - to: outreach-eligibility-sending
-    relation: uses
+  - to: outreach-eligibility-send-gate
+    relation: produces
+    description: send-gate consumes g4-check's verdict to decide eligibility.
 generator:
   version: 1
 covers:
@@ -71,11 +72,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Determines whether a firm is G4-qualified by matching register addresses/IDs against published site contact info. g4-check.py does pure matching (Turkish İ-ı folding, coincidence guard, context requirements for short numbers); site-contact-evidence.py finds a firm's published email, treating a fetch with no rendered content as inconclusive, never negative.
+Determines whether a firm is the same legal entity (G4) by matching registry data against published website evidence. g4-check.py holds the pure matching logic (address anchors, registry IDs, domain extraction skipping authority sources); site-contact-evidence.py finds a firm's published contact email, treating a fetch with no rendered content as inconclusive, never negative.
 
 ## Related
 
-- uses [[outreach-eligibility-sending]]
+- produces [[outreach-eligibility-send-gate]] — send-gate consumes g4-check's verdict to decide eligibility.
 <!-- context:generated:end -->
 
 ## Notes

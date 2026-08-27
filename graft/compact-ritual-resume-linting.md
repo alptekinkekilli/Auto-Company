@@ -14,9 +14,7 @@ sources:
   - path: tests/test_compact_ritual_hardening.sh
     hash: de188f563de5c279fd57ce9442d97611df89cf84112ae99d4c6021ad45635051
 sources_digest: a197cb7f52298831dc305a1eb2c78fa466f5497a161e0089f9616dba6381229c
-links:
-  - to: session-context-tooling
-    relation: uses
+links: []
 generator:
   version: 1
 covers:
@@ -48,11 +46,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The compact-resume pipeline: preflight gates freshness on lint results (not just mtime), postcheck detects missing anchors and writes a history log, and resume-lint enforces the core anchor strings. Anchor strings must stay identical across four locations, enforced by a sync test.
-
-## Related
-
-- uses [[session-context-tooling]]
+The compact-resume workflow: preflight gates freshness on lint results (not just mtime), postcheck detects missing anchors and writes a JSON history log, and resume-lint enforces the canonical anchor set. A sync test pins the anchors identical across four locations.
 <!-- context:generated:end -->
 
 ## Notes
