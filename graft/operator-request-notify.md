@@ -11,17 +11,18 @@ sources:
     hash: 11bf5e9869e2e573b4a897e4df84053e4f58d759d3073a9e058705482cc31ef5
 sources_digest: ba38618d75af7b2d78014ffecbd813b6ab922015e6a25656c9f674ab3186ca1b
 links:
-  - to: dashboard-server
-    relation: uses
+  - to: operator-decision-panel-format
+    relation: depends_on
     description: >-
-      Consumes the operator-decision panel format produced by
-      dashboard/server.py; test_refusal_format depends on that format.
-  - to: refusal-format
-    relation: implements
+      Parses the REFUSE head-line + verbatim-body format written by the
+      cockpit's operator-decision panel; a line-anchored regex previously
+      flattened multi-line reasoning, so the head must stay a single bounded
+      line.
+  - to: prod-mechanism-guard
+    relation: part_of
     description: >-
-      Writes the REFUSE head-line + verbatim multi-line reasoning format that
-      test_refusal_format pins; must keep the head a single bounded line and
-      numbered points on separate lines.
+      The notify script is a production mechanism whose protected surfaces are
+      enforced by the guard.
 generator:
   version: 1
 covers:
@@ -251,12 +252,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Orchestrates Telegram notifications for operator requests and enforces deterministic resolution rules. Reads memories/ files (operator-requests.md, consensus.md, human-directive.md, JSON state), fingerprints content to dedup notifications (ignoring timestamp-only changes), re-notifies on material edits, suppresses HOLD/informational/research types, retries on Telegram failures, and persists dedup state across process restarts. Resolution per request type: document-procurement requires SHA-256 checksum-matched file under memories/operator-evidence/<id>/, credential requires PASS log with no secret-shaped tokens, legal/financial/adjudication require a structured 'Decision for OPREQ-<id>:' line in human-directive.md, expenditure/external-action require a complete 'Authorization for OPREQ-<id>:' block. Resolved requests disappear from consensus projection; audit logs record failures.
+Orchestrates Telegram notifications for operator requests and enforces deterministic per-type resolution rules. Reads operator-requests.md, consensus.md, human-directive.md, and a JSON state file under memories/, fingerprints content to dedup (ignoring timestamp-only changes), suppresses HOLD/informational/research-result types, retries on Telegram failure, and persists dedup state across restarts. Resolution rules are strict: document-procurement needs a SHA-256-matched file under memories/operator-evidence/<id>/, credential needs a PASS log with no secret-shaped tokens, legal/financial/adjudication decisions need a structured 'Decision for OPREQ-<id>:' line, and expenditure/authorization need a complete 'Authorization for OPREQ-<id>:' block. Resolved requests disappear from the consensus projection and failures are audit-logged.
 
 ## Related
 
-- uses [[dashboard-server]] — Consumes the operator-decision panel format produced by dashboard/server.py; test_refusal_format depends on that format.
-- implements [[refusal-format]] — Writes the REFUSE head-line + verbatim multi-line reasoning format that test_refusal_format pins; must keep the head a single bounded line and numbered points on separate lines.
+- depends on [[operator-decision-panel-format]] — Parses the REFUSE head-line + verbatim-body format written by the cockpit's operator-decision panel; a line-anchored regex previously flattened multi-line reasoning, so the head must stay a single bounded line.
+- part of [[prod-mechanism-guard]] — The notify script is a production mechanism whose protected surfaces are enforced by the guard.
 <!-- context:generated:end -->
 
 ## Notes

@@ -1,24 +1,24 @@
 ---
-name: Airtable access wrapper
-slug: airtable-access-wrapper
+name: Airtable ops wrappers
+slug: airtable-ops-wrappers
 type: system
 sources:
   - path: scripts/ops/airtable-read.py
     hash: 148f66145510c90e03256b7b37853122bcd892d51cba67f095ce700a0895e3e2
   - path: scripts/ops/airtable-write.py
     hash: 888d408c392193511145e11dfbe73841a6d7e3e743e396ab8c8fee8b9507ab7c
-  - path: scripts/ops/verify-mcp-keys.py
-    hash: a35c1f35481876cedc5bb4cf0c7fd4eceaea1c85e57d3c28e87560b3f9f342db
-sources_digest: c813a5d8e9050ea77f53be1b228211e0f316245773bafdb666acba59d612b946
+  - path: tests/test_airtable_read.sh
+    hash: f1c8fbb1b495e922c52d041bac7edbae8f100ab57606ebd987179783265325df
+  - path: tests/test_airtable_write.sh
+    hash: a51c25001935da566cca4a450cfc0906827eb332779f2b454b12d547b7a0e6e0
+sources_digest: 2021356891ac463bde76a17510d6206598905cc15d804b9b867e92529075e85e
 links:
-  - to: mcp-config-generation-probe
+  - to: rfq-send-pipeline
     relation: uses
-    description: >-
-      verify-mcp-keys.py inspects loop process env to confirm
-      Airtable/Linear/Context7 keys are well-formed.
-  - to: outreach-eligibility-gate-send-gate-py
+    description: RFQ send reads/writes its dedicated table through these wrappers.
+  - to: send-gate
     relation: uses
-    description: send-gate reads Outreach rows through the read wrapper.
+    description: Send gate reads rows and logs through the air() wrapper.
 generator:
   version: 1
 covers:
@@ -70,22 +70,16 @@ covers:
   - symbol: main
     kind: function
     at: 'scripts/ops/airtable-write.py:L145-L202'
-  - symbol: loop_env
-    kind: function
-    at: 'scripts/ops/verify-mcp-keys.py:L39-L51'
-  - symbol: main
-    kind: function
-    at: 'scripts/ops/verify-mcp-keys.py:L54-L75'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-Gates Airtable reads and writes to control context cost and safety. airtable-read.py refuses unscoped reads, caps max-records at 200 and pageSize at 100, shapes queries with fields/view/formula. airtable-write.py guard validates single-record writes (unknown fields, clear, replace) before API. air() wrapper carries URL-quoting fix.
+The airtable-read.py and airtable-write.py wrappers that gate all Airtable reads and writes to control context cost and validate single-record writes before they hit the API. Reads are scoped (fields/view/maxRecords, 200-record and 100-pageSize caps); writes refuse unknown fields, clears, and replacements unless explicit flags are passed.
 
 ## Related
 
-- uses [[mcp-config-generation-probe]] — verify-mcp-keys.py inspects loop process env to confirm Airtable/Linear/Context7 keys are well-formed.
-- uses [[outreach-eligibility-gate-send-gate-py]] — send-gate reads Outreach rows through the read wrapper.
+- uses [[rfq-send-pipeline]] — RFQ send reads/writes its dedicated table through these wrappers.
+- uses [[send-gate]] — Send gate reads rows and logs through the air() wrapper.
 <!-- context:generated:end -->
 
 ## Notes

@@ -1,22 +1,19 @@
 ---
-name: G4 attribution & contact evidence
-slug: g4-attribution-contact-evidence
+name: G4 attribution
+slug: g4-attribution
 type: system
 sources:
   - path: scripts/ops/g4-check.py
     hash: 719fa86c0e307ef71bf0bce8f49e2baab2bb522aec732b784b39c8f2d788aba8
   - path: scripts/ops/site-contact-evidence.py
     hash: 008b4735e6133445eff667f840f9c7faaeef8013b1363f6555b602a9d6fd048c
-sources_digest: 1627b649c4591fefbe53718943b83b073d34ecceb699cc194f34d1c884c4155e
+  - path: tests/test_g4_check.sh
+    hash: 426129aa4d430db932523139037190cd1c5106394e917a10fc73e29b823bc4d2
+sources_digest: 80da2d1af5dcdf83eaa2848a8d5f1be1eb4bc43af8080731f7b021dcba983f57
 links:
-  - to: airtable-access-wrapper
+  - to: send-gate
     relation: uses
-    description: Reads Outreach rows and Registry Bridge via Airtable.
-  - to: outreach-eligibility-gate-send-gate-py
-    relation: produces
-    description: >-
-      G4 verdict and contact evidence feed the eligibility decision and G4
-      re-derivation.
+    description: Send gate imports g4-check.py to re-derive G4 eligibility.
 generator:
   version: 1
 covers:
@@ -75,12 +72,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Determines whether a firm is G4 (government-affiliated) and finds published contact emails. site-contact-evidence.py escalates through browser-rendered DOM, raw HTML, and JS bundles, treating a fetch with no rendered content as inconclusive never negative. g4-check.py matches register address/registry IDs/domains with Turkish folding and coincidence guards.
+Determines whether a firm is a G4 legal entity by matching registry data (MERSİS, vergi no, ticaret sicil) against the firm's published website contact evidence. Includes g4-check.py decision logic and site-contact-evidence.py which escalates through rendered DOM, raw HTML, and JS bundles, treating a fetch with no rendered content as inconclusive, never negative.
 
 ## Related
 
-- uses [[airtable-access-wrapper]] — Reads Outreach rows and Registry Bridge via Airtable.
-- produces [[outreach-eligibility-gate-send-gate-py]] — G4 verdict and contact evidence feed the eligibility decision and G4 re-derivation.
+- uses [[send-gate]] — Send gate imports g4-check.py to re-derive G4 eligibility.
 <!-- context:generated:end -->
 
 ## Notes

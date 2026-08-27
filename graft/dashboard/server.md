@@ -1,4 +1,4 @@
-# dashboard/server.py · [[cockpit-server]] [[dashboard-server]]
+# dashboard/server.py · [[cockpit-server]] [[dashboard-server]] [[operator-decision-panel-format]]
 
 Local dashboard HTTP server for the Auto Company autonomous loop, exposing status, settings, directive, and operator-request controls across Windows/WSL/macOS/Linux hosts.
 

@@ -1,4 +1,4 @@
-# scripts/ops/site-contact-evidence.py · [[g4-attribution-contact-evidence]]
+# scripts/ops/site-contact-evidence.py · [[g4-attribution]]
 
 Finds a firm's published contact email across escalating sources, ensuring an unrendered fetch is reported as inconclusive rather than negative.
 

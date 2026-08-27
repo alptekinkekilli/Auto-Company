@@ -1,17 +1,19 @@
 ---
-name: Operator escalation & routing
-slug: operator-escalation-routing
+name: operator_action_router
+slug: operator-action-router
 type: system
 sources:
-  - path: scripts/core/auto-loop.sh
-    hash: b8f8a3989fee29f5a561d7f4d4eb8f558086586d603c5217caf20288b84d27ec
   - path: scripts/ops/operator-action-router.py
     hash: 25fd8206f44d0baa7b87a910d0d1846fe5ef1b155289d1a769994aff6817587e
-sources_digest: cef7b73431ce29966d515c5cda567005e2015c6066bf20774c2697c21e8b8c3e
+  - path: tests/test_operator_action_router.py
+    hash: 20f6bd56ba2238d0242627275af5749560272630a1212f9f9f22159d655d99ae
+sources_digest: eeb9735b11ba0ec109f87f095cfa8affc6afd00ebf34698caca0a50d1304a1aa
 links:
-  - to: auto-loop-core-auto-loop-sh
-    relation: part_of
-    description: apply_cycle_escalation and _consume_escalation live in auto-loop.sh.
+  - to: operator-request-notify
+    relation: uses
+    description: >-
+      Both consume operator-requests.md and human-directive.md under memories/
+      and share the same state-file conventions.
 generator:
   version: 1
 covers:
@@ -54,15 +56,24 @@ covers:
   - symbol: main
     kind: function
     at: 'scripts/ops/operator-action-router.py:L254-L296'
+  - symbol: check
+    kind: function
+    at: 'tests/test_operator_action_router.py:L27-L33'
+  - symbol: check_true
+    kind: function
+    at: 'tests/test_operator_action_router.py:L36-L37'
+  - symbol: make_app
+    kind: function
+    at: 'tests/test_operator_action_router.py:L40-L67'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-One-shot operator escalation (APP-238): consumed exactly once, refusal leaves it ARMED. operator-action-router.py prioritizes hold > opreq > directive with staleness floors and dedup. operator_request_notify.py maintains the OPREQ ledger.
+scripts/ops/operator-action-router.py routes operator actions with strict priority ordering (LOOP_HOLD > operator-requests > human-directive), staleness floors for directives, dedup within a repeat window, state clearing on empty sets, and fail-soft behavior when the memories/ directory is missing. It renders a Turkish digest and persists state to a file.
 
 ## Related
 
-- part of [[auto-loop-core-auto-loop-sh]] — apply_cycle_escalation and _consume_escalation live in auto-loop.sh.
+- uses [[operator-request-notify]] — Both consume operator-requests.md and human-directive.md under memories/ and share the same state-file conventions.
 <!-- context:generated:end -->
 
 ## Notes

@@ -1,5 +1,5 @@
 ---
-name: send_gate
+name: Send gate
 slug: send-gate
 type: system
 sources:
@@ -9,11 +9,19 @@ sources:
     hash: 4d0f03bd1b3e73a289e87cf0a56b25499b131e48fac01098b3f1d81755cb190d
 sources_digest: 260cbac1d830524fefee8831ec62d8032fb6948e871229aae8fb6af3055fb10f
 links:
+  - to: airtable-ops-wrappers
+    relation: uses
+    description: >-
+      Talks to Airtable via the air() wrapper with URL-quoting fix for table
+      names with spaces.
+  - to: g4-attribution
+    relation: uses
+    description: >-
+      Re-derives G4 by importing g4-check.py and requiring an exact firm-name
+      match in the Registry Bridge.
   - to: prod-mechanism-guard
     relation: part_of
-    description: >-
-      send-gate.py is one of the protected production surfaces the guard blocks
-      edits to.
+    description: send-gate.py is a protected production surface enforced by the guard.
 generator:
   version: 1
 covers:
@@ -57,11 +65,13 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-scripts/ops/send-gate.py is the outreach send policy gate, tested entirely offline by stubbing air() and g4_live(). Fails closed across 20 scenarios: daily/total caps (3/20), duplicate outreach, opt-out, non-Qualified status, missing email, G4 failure, TEST rows excluded by STATUS (not name), unrendered rows, GROUP_ROUTED requiring full registered title and karar no, self-contradictory rows, exclusion-ground length/English-marker checks, procurement-phase mismatch, a body-leak scanner flagging internal markers (persona names, verdict vocabulary, method/provenance), unsplit rows, follow-up mode (one authorized second contact), exact normalized firm-name matching for g4_live (rejecting token collisions), Website fallback only when the bridge row names no domain, and phase-check scoping to first-contact sends. Rules are justified by real incidents (Rayelsis, Arkenom, N.K.Y, Bilgi Birikim).
+scripts/ops/send-gate.py is the fail-closed outreach sender gate, refusing on any unknown or error across 20+ scenarios: daily/total caps (3/20), duplicate outreach, opt-out, non-Qualified status, missing email, G4 failure, TEST rows excluded by STATUS, unrendered rows, GROUP_ROUTED special case, self-contradictory rows, body-leak scanning for internal markers, unsplit rows, follow-up mode, exact normalized firm-name matching for g4_live (rejecting token collisions), and phase-check scoping to first-contact sends. It falls back to the Outreach row's Website field only when the bridge row names no domain.
 
 ## Related
 
-- part of [[prod-mechanism-guard]] — send-gate.py is one of the protected production surfaces the guard blocks edits to.
+- uses [[airtable-ops-wrappers]] — Talks to Airtable via the air() wrapper with URL-quoting fix for table names with spaces.
+- uses [[g4-attribution]] — Re-derives G4 by importing g4-check.py and requiring an exact firm-name match in the Registry Bridge.
+- part of [[prod-mechanism-guard]] — send-gate.py is a protected production surface enforced by the guard.
 <!-- context:generated:end -->
 
 ## Notes

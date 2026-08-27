@@ -1,6 +1,6 @@
 ---
-name: wowcar_vocabulary
-slug: wowcar-vocabulary
+name: wowcar_revenue_vocabulary
+slug: wowcar-revenue-vocabulary
 type: system
 sources:
   - path: scripts/ops/wowcar-revenue-vocabulary-acceptance.py
@@ -109,7 +109,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The WowCar revenue vocabulary acceptance tool (scripts/ops/wowcar-revenue-vocabulary-acceptance.py) checks that the candidate vocabulary at projects/wowcar/generator-source/kod either remains unchanged or contains exactly 14 anchor terms, writing a timestamped report to /tmp. The shell harness standardizes invocation and requires the mode to be exactly 'unchanged' or '14-anchor'.
+An acceptance harness (scripts/ops/wowcar-revenue-vocabulary-acceptance.py) that checks the WowCar revenue vocabulary either remains unchanged or contains exactly 14 anchor terms, with the candidate fixed to projects/wowcar/generator-source/kod. The bash wrapper standardizes invocation and enforces the mode is exactly 'unchanged' or '14-anchor'.
 <!-- context:generated:end -->
 
 ## Notes

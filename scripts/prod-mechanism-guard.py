@@ -30,6 +30,7 @@ PROTECTED_SUFFIXES = (
     "scripts/core/auto-loop.sh",
     "scripts/core/directive_writer.py",
     "scripts/ops/send-gate.py",
+    "scripts/ops/rfq-send.py",
     "dashboard/server.py",
     "docker-entrypoint.sh",
 )

@@ -1,4 +1,4 @@
-# scripts/ops/registry-archive.py · [[registry-ops]]
+# scripts/ops/registry-archive.py · [[ops-archive-and-state]]
 
 Deterministic fail-closed archival tool that moves old maintenance notes and frozen discovery sections out of candidate-registry.md into monthly archive files, preserving the protected live region byte-identical.
 

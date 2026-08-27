@@ -1,104 +1,15 @@
 ---
-name: Fail-closed invariant
-slug: fail-closed-invariant
-type: concept
+name: Wowcar revenue model
+slug: wowcar-revenue-model
+type: system
 sources:
-  - path: scripts/analyst/opportunity-analyst-jcode.sh
-    hash: 8250db61c0a1031c088076e240616d2771868957339ff80f5e730388b06e5395
-  - path: scripts/core/auto-loop.sh
-    hash: b8f8a3989fee29f5a561d7f4d4eb8f558086586d603c5217caf20288b84d27ec
-  - path: scripts/core/jcode-mcp-probe.py
-    hash: 60fdd2addf2f53741d03e21002a00b6ee9d8895af1fae9746a51308e67672b67
-  - path: scripts/ops/send-gate.py
-    hash: 6acd746a20aff7267d711d61350ac14d8fa0c17a1af95341625aa2bfd9a63f92
   - path: scripts/ops/wowcar-revenue-vocabulary-acceptance.py
     hash: bc164912338c15636cc9183c9327a6f77fdab6aebc86e2747f197f01f824fab2
-sources_digest: 75cc3fffdf424e59a6fb4f2d0c41a0e379bf781572b73c285722a528b5db5b2b
+sources_digest: 4ac41bf99d27b7821e402c8d05774f95ac477ff958d361739e49e65a248d1add
 links: []
 generator:
   version: 1
 covers:
-  - symbol: ServerError
-    kind: class
-    at: 'scripts/core/jcode-mcp-probe.py:L43-L44'
-  - symbol: StdioClient
-    kind: class
-    at: 'scripts/core/jcode-mcp-probe.py:L47-L155'
-  - symbol: __init__
-    kind: method
-    at: 'scripts/core/jcode-mcp-probe.py:L50-L65'
-  - symbol: _remaining
-    kind: method
-    at: 'scripts/core/jcode-mcp-probe.py:L67-L71'
-  - symbol: _send
-    kind: method
-    at: 'scripts/core/jcode-mcp-probe.py:L73-L79'
-  - symbol: _read_msg
-    kind: method
-    at: 'scripts/core/jcode-mcp-probe.py:L81-L102'
-  - symbol: request
-    kind: method
-    at: 'scripts/core/jcode-mcp-probe.py:L104-L116'
-  - symbol: notify
-    kind: method
-    at: 'scripts/core/jcode-mcp-probe.py:L118-L119'
-  - symbol: initialize
-    kind: method
-    at: 'scripts/core/jcode-mcp-probe.py:L121-L127'
-  - symbol: list_tools
-    kind: method
-    at: 'scripts/core/jcode-mcp-probe.py:L129-L137'
-  - symbol: call_tool
-    kind: method
-    at: 'scripts/core/jcode-mcp-probe.py:L139-L140'
-  - symbol: close
-    kind: method
-    at: 'scripts/core/jcode-mcp-probe.py:L142-L155'
-  - symbol: probe_server
-    kind: function
-    at: 'scripts/core/jcode-mcp-probe.py:L158-L168'
-  - symbol: judge_readcheck
-    kind: function
-    at: 'scripts/core/jcode-mcp-probe.py:L171-L186'
-  - symbol: main
-    kind: function
-    at: 'scripts/core/jcode-mcp-probe.py:L189-L362'
-  - symbol: phase_of
-    kind: function
-    at: 'scripts/ops/send-gate.py:L66-L91'
-  - symbol: body_claims
-    kind: function
-    at: 'scripts/ops/send-gate.py:L94-L101'
-  - symbol: load_key
-    kind: function
-    at: 'scripts/ops/send-gate.py:L104-L122'
-  - symbol: air
-    kind: function
-    at: 'scripts/ops/send-gate.py:L125-L135'
-  - symbol: sent_rows
-    kind: function
-    at: 'scripts/ops/send-gate.py:L138-L148'
-  - symbol: logged_sends
-    kind: function
-    at: 'scripts/ops/send-gate.py:L154-L177'
-  - symbol: counts
-    kind: function
-    at: 'scripts/ops/send-gate.py:L180-L198'
-  - symbol: opted_out
-    kind: function
-    at: 'scripts/ops/send-gate.py:L201-L215'
-  - symbol: body_leak_scan
-    kind: function
-    at: 'scripts/ops/send-gate.py:L236-L244'
-  - symbol: g4_live
-    kind: function
-    at: 'scripts/ops/send-gate.py:L247-L309'
-  - symbol: decide
-    kind: function
-    at: 'scripts/ops/send-gate.py:L312-L544'
-  - symbol: main
-    kind: function
-    at: 'scripts/ops/send-gate.py:L547-L583'
   - symbol: AcceptanceFailure
     kind: class
     at: 'scripts/ops/wowcar-revenue-vocabulary-acceptance.py:L383-L384'
@@ -196,7 +107,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Cross-cutting rule: any check that cannot complete is a REFUSE/NA, never an ALLOW/0. Appears in send-gate (REFUSE), budget gates (ccusage failure latches hold returning NA), MCP probe (server death fails), analyst runner (missing credential fails closed), and acceptance harness (AcceptanceFailure).
+The internal Wowcar financial model (model.py, build_xlsx.py, recalc.py, test.py, capraz.py, tanila.py, kohort.py) plus the acceptance harness that pins the live repo as an immutable baseline and proves candidate vocabulary/width edits produce byte-identical outputs.
 <!-- context:generated:end -->
 
 ## Notes

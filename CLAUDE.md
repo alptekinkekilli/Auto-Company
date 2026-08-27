@@ -157,7 +157,7 @@ for operator approval:
 
 - `scripts/core/auto-loop.sh` — budget gates, tier ladder, router
 - `scripts/core/directive_writer.py` and the directive/OPREQ flow
-- `scripts/ops/send-gate.py` and anything on the send path
+- `scripts/ops/send-gate.py` and `scripts/ops/rfq-send.py` — anything on the send path
 - Deploy pipeline / Coolify config / `runtime.env`
 - `dashboard/server.py` hold/decision endpoints
 

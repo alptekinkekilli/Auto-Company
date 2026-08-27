@@ -3,39 +3,59 @@ name: auto_loop
 slug: auto-loop
 type: system
 sources:
+  - path: docker-entrypoint.sh
+    hash: fbc2010d8d1d9dda2bc7ebd72fba1d674136624f968ff2f453bf7bbb894de017
   - path: scripts/core/auto-loop.sh
     hash: b8f8a3989fee29f5a561d7f4d4eb8f558086586d603c5217caf20288b84d27ec
   - path: tests/test_prompt_assembly.sh
     hash: 0cd8e397ee0db20d70eac066f7542b6dbabfec6bdd6d031cdc0e378da04876d6
   - path: tests/test_prompt_transport.sh
     hash: c5df34a0acc0d09b63a231df392960370ab146ceea135b5bcace427223300501
+  - path: tests/test_seteshape_lint.py
+    hash: c75dd121edbe7aed5432f718bdfff952149464b77f9ab22baced3682261ebc98
   - path: tests/test_tier_ladder_daily.sh
     hash: d0bfb4ace48e1fa9665e17059be3f618b46fda0dcf432544a6bb16c07a3ed8db
-sources_digest: a4461971d8736bd0d4fcfaf726ff97173f0f11707e56ebc6b628fd3d33b28aeb
+sources_digest: 76d3169bfa9656c0be9ccb1c7023bf40329bf6aba1d796995e4fba677806dcef
 links:
-  - to: prompt-transport
-    relation: implements
+  - to: operator-request-notify
+    relation: uses
     description: >-
-      auto-loop.sh's run_*_cycle_cli functions are the contract that
-      test_prompt_transport pins.
-  - to: set-e-lint
+      The loop's consensus projection is produced from operator_request_notify's
+      resolution state.
+  - to: set-e-shape-lint
     relation: validates
     description: >-
-      test_seteshape_lint scans auto-loop.sh for the fatal [ test ] && action
-      pattern that propagates exit 1.
+      The set-e-shape lint scans auto-loop.sh and docker-entrypoint.sh for the
+      fatal '[ test ] && action' pattern that killed an unguarded caller in
+      APP-240.
 generator:
   version: 1
-covers: []
+covers:
+  - symbol: _is_fatal_shape
+    kind: function
+    at: 'tests/test_seteshape_lint.py:L42-L43'
+  - symbol: _executable_lines
+    kind: function
+    at: 'tests/test_seteshape_lint.py:L46-L52'
+  - symbol: find_violations
+    kind: function
+    at: 'tests/test_seteshape_lint.py:L55-L84'
+  - symbol: SetEShapeLint
+    kind: class
+    at: 'tests/test_seteshape_lint.py:L87-L99'
+  - symbol: test_no_fatal_test_and_shapes
+    kind: method
+    at: 'tests/test_seteshape_lint.py:L88-L99'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-The core cockpit loop (scripts/core/auto-loop.sh) that assembles the FULL_PROMPT, transports it to engine CLIs, and applies daily-budget tier selection. Prompt assembly must keep XML section order (rules → consensus → snapshot → cycle_orders) and embed guardrail text without stray quotes/backticks/$() that would close the assignment early (a past production outage). Prompt transport: run_claude_cycle_cli and run_codex_cycle_cli pass the prompt via STDIN (codex uses '-' sentinel) to avoid E2BIG from the 131072-byte argv cap; run_jcode_cycle refuses prompts ≥126000 bytes with PROMPT-TOO-LARGE. apply_tier_ladder() selects tiers from daily budgets per engine (APP-263), reading budget-gate variables rather than computing them.
+The core orchestration loop (scripts/core/auto-loop.sh) that assembles FULL_PROMPT from guardrails, consensus, snapshot, and cycle_orders; transports prompts to engine CLIs (claude/codex via STDIN to avoid E2BIG, jcode via run subcommand argv with a 126000-byte guard); and applies the daily-budget tier ladder (APP-263). It is the subject of several regression tests because a stray double quote in a guardrail once closed an assignment early and caused a production outage that bash -n could not detect.
 
 ## Related
 
-- implements [[prompt-transport]] — auto-loop.sh's run_*_cycle_cli functions are the contract that test_prompt_transport pins.
-- validates [[set-e-lint]] — test_seteshape_lint scans auto-loop.sh for the fatal [ test ] && action pattern that propagates exit 1.
+- uses [[operator-request-notify]] — The loop's consensus projection is produced from operator_request_notify's resolution state.
+- validates [[set-e-shape-lint]] — The set-e-shape lint scans auto-loop.sh and docker-entrypoint.sh for the fatal '[ test ] && action' pattern that killed an unguarded caller in APP-240.
 <!-- context:generated:end -->
 
 ## Notes

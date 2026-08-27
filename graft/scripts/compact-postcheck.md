@@ -1,4 +1,4 @@
-# scripts/compact-postcheck.py · [[compact-ritual-directive-integrity]] [[compact-ritual-hooks]]
+# scripts/compact-postcheck.py · [[compact-ritual]] [[compact-ritual-hooks]]
 
 Post-compact audit hook that records whether the real compact_summary carried the required anchors, leaving a durable trace and a canary warning without blocking.
 
