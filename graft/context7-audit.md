@@ -1,0 +1,39 @@
+---
+name: Context7 audit
+slug: context7-audit
+type: system
+sources:
+  - path: scripts/ops/context7-check.py
+    hash: 4687b776e558caf660fad0d984e405c6a9498525648273569ac9a5feb544797e
+  - path: tests/test_context7_check.sh
+    hash: d4fc93cf6b456038f23e1e756019a7fa1b47a344b0385bc5cd3d3a5536834733
+sources_digest: f7ae9d084de3310f18d8d2a904d56dc005125358dc07afc4d0c220fae1cedc7a
+links: []
+generator:
+  version: 1
+covers:
+  - symbol: externals
+    kind: function
+    at: 'scripts/ops/context7-check.py:L59-L75'
+  - symbol: scan
+    kind: function
+    at: 'scripts/ops/context7-check.py:L78-L108'
+  - symbol: walk_calls
+    kind: function
+    at: 'scripts/ops/context7-check.py:L111-L122'
+  - symbol: verdict
+    kind: function
+    at: 'scripts/ops/context7-check.py:L125-L138'
+  - symbol: main
+    kind: function
+    at: 'scripts/ops/context7-check.py:L141-L170'
+---
+<!-- context:generated:start -->
+## Summary
+
+...
+<!-- context:generated:end -->
+
+## Notes
+
+_Anything written below the generated block is preserved when the graph is regenerated._

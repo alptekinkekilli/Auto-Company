@@ -1,4 +1,4 @@
-# scripts/core/codex-final-text.py
+# scripts/core/codex-final-text.py · [[cycle-counter-metadata]] [[final-text-extraction]]
 
 Standalone script that extracts the assistant's final message text from a codex exec JSONL event stream, failing soft so callers can fall back to raw content.
 

@@ -1,5 +1,5 @@
 ---
-name: Prod mechanism guard
+name: Prod-mechanism guard
 slug: prod-mechanism-guard
 type: system
 sources:
@@ -11,9 +11,6 @@ sources:
     hash: da4d25d4be3529f89c4c62e9b7099278b95d98a4336a9762bfe6c01e31030a97
 sources_digest: f3048e0e552e08587e98750fa82cfc6aaf3415016df85a47fd6ab4b79c70696f
 links:
-  - to: auto-loop-core
-    relation: validates
-    description: Protects the loop's core files from unplanned edits.
   - to: operator-request-notify
     relation: validates
     description: The notify script is a protected production surface.
@@ -40,7 +37,6 @@ A PreToolUse hook (scripts/prod-mechanism-guard.py) that blocks edits to product
 
 ## Related
 
-- validates [[auto-loop-core]] — Protects the loop's core files from unplanned edits.
 - validates [[operator-request-notify]] — The notify script is a protected production surface.
 - validates [[send-gate]] — rfq-send.py must be registered in the guard and pass --check-sync.
 <!-- context:generated:end -->

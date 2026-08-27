@@ -14,10 +14,7 @@ sources:
   - path: tests/test_compact_ritual_hardening.sh
     hash: de188f563de5c279fd57ce9442d97611df89cf84112ae99d4c6021ad45635051
 sources_digest: a197cb7f52298831dc305a1eb2c78fa466f5497a161e0089f9616dba6381229c
-links:
-  - to: auto-loop-core
-    relation: part_of
-    description: Runs as part of the loop's compact step before cycles.
+links: []
 generator:
   version: 1
 covers:
@@ -49,11 +46,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The context-compaction pipeline: preflight gates freshness on lint results (not mtime), postcheck detects missing anchors and writes a JSON history log, and resume-lint enforces the core anchor strings stay identical across four locations.
-
-## Related
-
-- part of [[auto-loop-core]] — Runs as part of the loop's compact step before cycles.
+...
 <!-- context:generated:end -->
 
 ## Notes

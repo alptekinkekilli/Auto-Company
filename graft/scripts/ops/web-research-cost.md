@@ -1,4 +1,4 @@
-# scripts/ops/web-research-cost.py · [[cost-measurement]] [[ops-audit-telemetry]]
+# scripts/ops/web-research-cost.py · [[cycle-analytics-ledger]]
 
 Measures the real token cost of web research cycles by computing residual re-read cost (output tokens x turns remaining) from kept ndjson streams.
 

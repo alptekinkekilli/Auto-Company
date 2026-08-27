@@ -8,10 +8,7 @@ sources:
   - path: tests/test_dashboard_server.py
     hash: 56e9073d5a9447df622cb3e0873d553053a3b16089534d427c177db772b933dd
 sources_digest: a00d09651be48cf7015196cad5672555ff241c03a2b27887a7ef361af457aa42
-links:
-  - to: ops-audit-telemetry
-    relation: uses
-    description: Powers the cockpit's analytics panels from the audit scripts' outputs.
+links: []
 generator:
   version: 1
 covers:
@@ -388,11 +385,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The cockpit dashboard server that parses status, action dispatch, engine runtime state, settings, cost summary, and log tailing, with spend windows anchored on ccusage blockStart.
-
-## Related
-
-- uses [[ops-audit-telemetry]] — Powers the cockpit's analytics panels from the audit scripts' outputs.
+...
 <!-- context:generated:end -->
 
 ## Notes

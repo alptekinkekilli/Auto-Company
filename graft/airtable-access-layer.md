@@ -1,24 +1,23 @@
 ---
-name: Airtable ops wrappers
-slug: airtable-ops-wrappers
+name: Airtable access layer
+slug: airtable-access-layer
 type: system
 sources:
   - path: scripts/ops/airtable-read.py
     hash: 148f66145510c90e03256b7b37853122bcd892d51cba67f095ce700a0895e3e2
   - path: scripts/ops/airtable-write.py
     hash: 888d408c392193511145e11dfbe73841a6d7e3e743e396ab8c8fee8b9507ab7c
-  - path: tests/test_airtable_read.sh
-    hash: f1c8fbb1b495e922c52d041bac7edbae8f100ab57606ebd987179783265325df
-  - path: tests/test_airtable_write.sh
-    hash: a51c25001935da566cca4a450cfc0906827eb332779f2b454b12d547b7a0e6e0
-sources_digest: 2021356891ac463bde76a17510d6206598905cc15d804b9b867e92529075e85e
+sources_digest: 43a42c7621b93d8e35ed7813326f7b761e954384d076a4d1b176afa770c1b952
 links:
-  - to: rfq-send-pipeline
+  - to: g4-identity-check
     relation: uses
-    description: RFQ send reads/writes its dedicated table through these wrappers.
-  - to: send-gate
+    description: Pulls registry bridge records for identity-attribution verdicts.
+  - to: registry-queue-watch
     relation: uses
-    description: Send gate reads rows and logs through the air() wrapper.
+    description: 'Reads the Registry Bridge, EKAP Bridge, and Ihale Outreach tables.'
+  - to: reply-watch
+    relation: uses
+    description: Reads outreach records from the Ihale Outreach table.
 generator:
   version: 1
 covers:
@@ -74,12 +73,13 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The airtable-read.py and airtable-write.py wrappers that gate all Airtable reads and writes to control context cost and validate single-record writes before they hit the API. Reads are scoped (fields/view/maxRecords, 200-record and 100-pageSize caps); writes refuse unknown fields, clears, and replacements unless explicit flags are passed.
+Scoped, auditable access to Airtable: airtable-read.py prevents cycles from pulling whole tables (which cost $2.41 in context re-reads) by refusing unscoped reads and always naming the fixing flag, while airtable-write.py provides a sanctioned single-record PATCH path with read-back verification, dry-run default, and guards against accidental data loss (--allow-clear, --replace for >300-char strings). Secrets come from logs/runtime.env or macOS Keychain, never argv.
 
 ## Related
 
-- uses [[rfq-send-pipeline]] — RFQ send reads/writes its dedicated table through these wrappers.
-- uses [[send-gate]] — Send gate reads rows and logs through the air() wrapper.
+- uses [[g4-identity-check]] — Pulls registry bridge records for identity-attribution verdicts.
+- uses [[registry-queue-watch]] — Reads the Registry Bridge, EKAP Bridge, and Ihale Outreach tables.
+- uses [[reply-watch]] — Reads outreach records from the Ihale Outreach table.
 <!-- context:generated:end -->
 
 ## Notes

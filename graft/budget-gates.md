@@ -1,0 +1,30 @@
+---
+name: Budget gates
+slug: budget-gates
+type: system
+sources:
+  - path: scripts/core/auto-loop.sh
+    hash: b8f8a3989fee29f5a561d7f4d4eb8f558086586d603c5217caf20288b84d27ec
+  - path: tests/test_budget_gates.sh
+    hash: 8d96846319108d7f4c41477e346d7ae803743be23e0bc4ca6de30e9f117e99c9
+  - path: tests/test_ccusage_failclosed.sh
+    hash: 366b96bee74416db05cc9752919b04304a49f5121d5802920a26641b196ef706
+  - path: tests/test_codex_spend_sources.sh
+    hash: 38e285a908cfdba71566f50ec2429fed8dc40ccdaaf68886e24e27399bba5bef
+  - path: tests/test_discretionary_budget.sh
+    hash: 32b2f12385f1bf8cc0984fc89d1181074406a1726028d2705d2224759cf6de7e
+sources_digest: f2ea7b183c86428703bcebb2398ad2c9cc508d7310d606c3d9c9b5f93b2738ea
+links: []
+generator:
+  version: 1
+covers: []
+---
+<!-- context:generated:start -->
+## Summary
+
+...
+<!-- context:generated:end -->
+
+## Notes
+
+_Anything written below the generated block is preserved when the graph is regenerated._

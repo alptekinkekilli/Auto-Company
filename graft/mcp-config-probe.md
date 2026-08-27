@@ -7,8 +7,6 @@ sources:
     hash: 7e5496c29eae3646af4874f74f0d70e22230b762a74acdfb7e38e93197b41aca
   - path: scripts/core/jcode-mcp-probe.py
     hash: 60fdd2addf2f53741d03e21002a00b6ee9d8895af1fae9746a51308e67672b67
-  - path: tests/fixtures/mock_mcp_server.py
-    hash: e5124ccf90e18331b1e81557000a0bf0cc13e1fd7f0412250c5f37fb08e23021
   - path: tests/test_jcode_mcp_config.sh
     hash: 3a26837a4685e40b45e3e8593459a69680a7bc6cc7e839f4ceb986c570a27025
   - path: tests/test_mcp_config_manifest_sync.sh
@@ -17,11 +15,8 @@ sources:
     hash: 21c4be05f1922a08fa185aaa94f73941a785d5f380b7770431bdee7bf78115d6
   - path: tests/test_mcp_probe.sh
     hash: 07482a8311b81667003a304c3741feed20e311f1e28263a5bb3bcc5599e962ce
-sources_digest: 5a812353162b0e0ba367cc63346f25dbece14c49c2c32ed9e40db2e51b20fb40
-links:
-  - to: auto-loop-core
-    relation: part_of
-    description: Boot-time dependency of the loop; config and probe run before cycles.
+sources_digest: 7714bb297ad615157b6487fa9ba4b5dfc812f5fc511db6d69fa58187a5994fc4
+links: []
 generator:
   version: 1
 covers:
@@ -86,11 +81,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Generates the MCP server config for the loop (keeping secrets in env, never argv) and deterministically probes each server's readchecks before boot. Enforces that the manifest's destructive tool list exactly matches live tools, that the denylist covers base and per-server tools, and that airtable/linear are absent from the loop config (OPREQ-A).
-
-## Related
-
-- part of [[auto-loop-core]] — Boot-time dependency of the loop; config and probe run before cycles.
+...
 <!-- context:generated:end -->
 
 ## Notes

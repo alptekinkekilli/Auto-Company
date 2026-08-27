@@ -1,5 +1,5 @@
 ---
-name: Send gate
+name: send_gate
 slug: send-gate
 type: system
 sources:
@@ -9,16 +9,6 @@ sources:
     hash: 4d0f03bd1b3e73a289e87cf0a56b25499b131e48fac01098b3f1d81755cb190d
 sources_digest: 260cbac1d830524fefee8831ec62d8032fb6948e871229aae8fb6af3055fb10f
 links:
-  - to: airtable-ops-wrappers
-    relation: uses
-    description: >-
-      Talks to Airtable via the air() wrapper with URL-quoting fix for table
-      names with spaces.
-  - to: g4-attribution
-    relation: uses
-    description: >-
-      Re-derives G4 by importing g4-check.py and requiring an exact firm-name
-      match in the Registry Bridge.
   - to: prod-mechanism-guard
     relation: part_of
     description: send-gate.py is a protected production surface enforced by the guard.
@@ -69,8 +59,6 @@ scripts/ops/send-gate.py is the fail-closed outreach sender gate, refusing on an
 
 ## Related
 
-- uses [[airtable-ops-wrappers]] — Talks to Airtable via the air() wrapper with URL-quoting fix for table names with spaces.
-- uses [[g4-attribution]] — Re-derives G4 by importing g4-check.py and requiring an exact firm-name match in the Registry Bridge.
 - part of [[prod-mechanism-guard]] — send-gate.py is a protected production surface enforced by the guard.
 <!-- context:generated:end -->
 

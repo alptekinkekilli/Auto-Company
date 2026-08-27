@@ -1,19 +1,14 @@
 ---
-name: G4 attribution
-slug: g4-attribution
+name: G4 attribution evidence
+slug: g4-attribution-evidence
 type: system
 sources:
   - path: scripts/ops/g4-check.py
     hash: 719fa86c0e307ef71bf0bce8f49e2baab2bb522aec732b784b39c8f2d788aba8
   - path: scripts/ops/site-contact-evidence.py
     hash: 008b4735e6133445eff667f840f9c7faaeef8013b1363f6555b602a9d6fd048c
-  - path: tests/test_g4_check.sh
-    hash: 426129aa4d430db932523139037190cd1c5106394e917a10fc73e29b823bc4d2
-sources_digest: 80da2d1af5dcdf83eaa2848a8d5f1be1eb4bc43af8080731f7b021dcba983f57
-links:
-  - to: send-gate
-    relation: uses
-    description: Send gate imports g4-check.py to re-derive G4 eligibility.
+sources_digest: 1627b649c4591fefbe53718943b83b073d34ecceb699cc194f34d1c884c4155e
+links: []
 generator:
   version: 1
 covers:
@@ -72,11 +67,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Determines whether a firm is a G4 legal entity by matching registry data (MERSİS, vergi no, ticaret sicil) against the firm's published website contact evidence. Includes g4-check.py decision logic and site-contact-evidence.py which escalates through rendered DOM, raw HTML, and JS bundles, treating a fetch with no rendered content as inconclusive, never negative.
-
-## Related
-
-- uses [[send-gate]] — Send gate imports g4-check.py to re-derive G4 eligibility.
+...
 <!-- context:generated:end -->
 
 ## Notes

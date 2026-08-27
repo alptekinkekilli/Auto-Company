@@ -50,40 +50,11 @@ ANON_DENY = ("wowcar",)
 
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
 
-# ── kümeye-özel kapsam (artifact section G, anonim — stratejik hacim YOK) ──────────
-SCOPE = {
- "bulut-güvenlik": "Web-tabanlı bir finansal operasyon kokpiti ve veri servisleri için üretim "
-    "ve test ortamı. TR veri-yerleşimi (KVKK/regülasyon) zorunludur; yedekli mimari, izleme, "
-    "felaket-kurtarma beklenir. Güvenlik tarafı: yedekleme (RPO/RTO hedefli), SOC/izleme, yıllık "
-    "sızma testi. Ölçek: orta-ölçekli başlangıç, aşamalı büyümeye açık.",
- "erp-efatura": "Muhasebe/finans, cari-hesap, sabit kıymet ve raporlama modülleri; TR mevzuat "
-    "(VUK / e-defter) uyumu. Ayrıca e-Fatura / e-Arşiv / e-İmza / KEP entegratör hizmeti. Ölçek: "
-    "kuruluş-aşaması küçük ekip (büyümeye açık), orta belge hacmi.",
- "kira": "İstanbul'da esnek/hazır ofis. Başlangıç küçük ekip; 6-12 ayda büyümeye açık "
-    "ölçeklenebilir koltuk/özel oda. Toplantı odası, internet, resepsiyon, aidat dahil. Tercih: "
-    "merkezi iş bölgeleri (Levent/Maslak/Ataşehir vb.). Teklifte bölge belirtilmesi rica olunur.",
- "pazarlama": "(a) Marka kimlik/konumlandırma, (b) PR / lansman ve medya ilişkileri, (c) dijital "
-    "performans edinimi. Sektör: finansal hizmet. Gerekirse gizlilik sözleşmesi (NDA) imzalanabilir.",
- "sigorta": "Kurumsal: işyeri (ofis/ekipman), siber sorumluluk, mesleki sorumluluk. Araç: finanse "
-    "edilen araçlar için kasko + trafik (portföy bazlı). Alacak: receivables / kredi alacak "
-    "sigortası. Ölçek: kuruluş-aşaması. NDA / anonim faaliyet profili ile paylaşım mümkündür.",
-}
-
-BODY_TMPL = (
- "Sayın Yetkili,\n\n"
- "Müvekkilimiz, Türkiye'de araç-finansmanı alanında bir operasyon kurmaktadır. Kuruluş "
- "aşamasındaki bütçeleme çalışması kapsamında aşağıdaki kalem için indikatif fiyatlandırma "
- "topluyoruz. Müşteri kimliği bu aşamada paylaşılmamaktadır.\n\n"
- "Kapsam:\n{scope}\n\n"
- "Rica ettiğimiz teklif formatı:\n"
- "- Birim / aylık indikatif fiyat (KDV hariç)\n"
- "- Fiyatın dayandığı varsayımlar ve hacim kademeleri\n"
- "- Kurulum / tek-seferlik maliyetler (varsa)\n"
- "- Teklif geçerlilik süresi\n\n"
- "Bu bir ön-fiyat çalışmasıdır; bağlayıcı sipariş değildir. Geri dönüşünüz için şimdiden "
- "teşekkür ederiz.\n\n"
- "Saygılarımızla,\n" + FROM_NAME + "\n"
-)
+# İçerik (subject/body/scope + imza) AYRI, protected-OLMAYAN modülde: rfq_template.py.
+# Metni orada serbestçe iterasyona açık tut; send mantığı (§15/caps/teslim) burada korunur.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import rfq_template  # noqa: E402
+SCOPE = rfq_template.SCOPE
 
 
 # ── anahtar yükleme (env → runtime.env → Keychain), send-gate deseni ──────────────
@@ -186,9 +157,8 @@ def render(f: dict) -> tuple[str, str]:
     scope = SCOPE.get(sablon)
     if not scope:
         raise ValueError(f"bilinmeyen şablon: {sablon!r}")
-    subject = f"İndikatif Fiyat Talebi — {f.get('Küme','')}"
-    text = BODY_TMPL.format(scope=scope)
-    return subject, text
+    kume = f.get("Küme", "")
+    return rfq_template.subject(kume), rfq_template.body(kume, scope)
 
 
 def anonymity_scan(text: str) -> str | None:

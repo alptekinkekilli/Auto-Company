@@ -1,4 +1,4 @@
-# scripts/ops/idle-skip-note.py
+# scripts/ops/idle-skip-note.py · [[escalation-idle-skip]] [[idle-skip-note]]
 
 Records a model-free idle-skip as one line per UTC day in consensus.md, updated in place and written atomically, so the loop leaves auditable 'checked, nothing moved' evidence without bloating the prompt.
 
