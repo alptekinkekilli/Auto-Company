@@ -110,12 +110,15 @@ RUN npm install -g ccusage && npm cache clean --force \
 # harness pins (scripts/ops/wowcar-revenue-vocabulary-acceptance.py verify_runtime)
 # via the python3-* apt packages above; this closes the last gap so
 # tests/test_wowcar_revenue_vocabulary_acceptance.sh runs green in the image.
-# Surgical: --no-deps leaves the apt-provided numpy untouched; --hash pins the exact
-# 1.0.0 wheel+sdist digests (auto-enables require-hashes). Pure-python, no C ext.
+# Surgical: --no-deps leaves the apt-provided numpy untouched; hashes pin the exact
+# 1.0.0 wheel+sdist digests. pip accepts --hash ONLY inside a requirements file (never
+# on the command line), so the single pin is written to a throwaway req file and fed via
+# -r --require-hashes. Pure-python, no C ext. Digests: requirements-wowcar-revenue-
+# vocabulary.txt.
 RUN apt-get update && apt-get install -y --no-install-recommends python3-pip \
-    && python3 -m pip install --break-system-packages --no-deps numpy-financial==1.0.0 \
-        --hash=sha256:bae534b357516f12258862d1f0181d911032d0467f215bfcd1c264b4da579047 \
-        --hash=sha256:f84341bc62b2485d5604a73d5fac7e91975b4b9cd5f4a5a9cf608902ea00cb40 \
+    && printf '%s\n' 'numpy-financial==1.0.0 --hash=sha256:bae534b357516f12258862d1f0181d911032d0467f215bfcd1c264b4da579047 --hash=sha256:f84341bc62b2485d5604a73d5fac7e91975b4b9cd5f4a5a9cf608902ea00cb40' > /tmp/nf-req.txt \
+    && python3 -m pip install --break-system-packages --no-deps --require-hashes -r /tmp/nf-req.txt \
+    && rm -f /tmp/nf-req.txt \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
