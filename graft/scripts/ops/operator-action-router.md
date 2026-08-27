@@ -1,4 +1,4 @@
-# scripts/ops/operator-action-router.py · [[operator-action-router]]
+# scripts/ops/operator-action-router.py · [[fail-open-vs-fail-closed-operational-philosophy]] [[operator-action-router]] [[telegram-notification]]
 
 Consolidated operator digest that reads local company state (LOOP_HOLD, open OPREQs, PENDING directive) and notifies the operator via Telegram only when there are actionable items and either the open set changed or the repeat window elapsed, staying silent and fail-soft otherwise.
 

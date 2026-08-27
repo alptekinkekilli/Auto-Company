@@ -1,8 +1,11 @@
-# scripts/ops/rfq_template.py
+# scripts/ops/rfq_template.py · [[opex-rfq-email-templates]]
 
-Module holding the RFQ email content (subject/body/SCOPE) so the text can be iterated freely without touching the protected send logic in rfq-send.py.
+Module defining the OPEX RFQ email content (subject, plain-text and HTML bodies, scope text, signature, and CID logo attachment) that rfq-send.py imports for sending indicative price requests.
 
-- _html_signature · function · L49-L56 — Loads the branded HTML signature from rfq_signature.html, extracting the <body> content, and falls back to a plain-text signature wrapped in <pre> if the file is missing.
-- subject · function · L61-L62 — Builds the email subject line asking for a price quote for the given category.
-- body · function · L65-L82 — Composes the full RFQ email body: anonymous intro, the category-specific scope, requested quote details, and the Appricode signature.
-- body_html · function · L85-L108 — Builds the text/html email part with the same humanized message plus the branded HTML signature, HTML-escaping the scope text.
+- _read_sig · function · L53-L57 — Reads the HTML signature file from disk, returning empty string if it cannot be opened.
+- _logo_b64 · function · L60-L62 — Extracts the base64 PNG logo payload from the signature HTML for use as a CID inline attachment.
+- _html_signature · function · L68-L76 — Extracts the signature body and rewrites the base64 logo data-URI to a cid: reference so Gmail renders the logo inline.
+- attachments · function · L82-L87 — Builds the CID inline logo attachment list for the send payload, returning an empty list when no logo is available.
+- subject · function · L98-L99 — Produces the RFQ email subject line naming the procurement category.
+- body · function · L102-L119 — Builds the plain-text RFQ request email, anonymizing the venture and listing the requested pricing details plus the signature.
+- body_html · function · L122-L142 — Builds the HTML RFQ email, HTML-escaping the scope text and embedding the HTML signature with the CID logo.

@@ -1,4 +1,4 @@
-# scripts/core/jcode-mcp-config.py · [[mcp-configuration-probe]] [[secrets-never-in-argv]]
+# scripts/core/jcode-mcp-config.py · [[atomic-write-and-compare-and-swap-discipline]] [[mcp-config-generation-and-probe]] [[mcp-configuration-and-probe]] [[secret-handling-and-env-sourcing]] [[secret-handling-convention]]
 
 Generates jcode's stdio-only MCP config from the repo's .mcp.json, bridging http servers through mcp-remote and skipping OPREQ-A-denied servers, so the loop's tool surface matches what jcode can actually connect to.
 

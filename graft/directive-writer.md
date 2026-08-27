@@ -5,14 +5,26 @@ type: file
 sources:
   - path: scripts/core/directive_writer.py
     hash: 447057795ab4776c589695bd00450009df0af8fff481fa7a68c89244ca93a9a3
-sources_digest: f4f863d4df3fc313e0dd21bd4e126bc92b8f46cf056589dd04f736eba34c9ebd
+  - path: scripts/ops/directive-rule-sweep.py
+    hash: 7284bd834ff1cf86bcc5f6d104cf23388bf9258dcc827b681f578e6ce7172c57
+  - path: scripts/ops/directive-staleness-watch.py
+    hash: 6597a8a3666b54131d1b782a8d8ee308e705e33dbed83429da857f9b1f0360fd
+sources_digest: c33cb878c31200586210f16883cbed0fb7ab8b0c0df83d67bf6c473d9edb06db
 links:
+  - to: auto-company-loop-core
+    relation: part_of
+    description: The directive writer is invoked by the loop and its helpers.
   - to: cockpit-server
     relation: implements
     description: The server routes all human-directive.md writes through this module.
   - to: opportunity-analyst
     relation: uses
     description: Used for snapshot/restore guardrail of human-directive.md.
+  - to: telegram-notification
+    relation: uses
+    description: >-
+      directive-staleness-watch.py alerts via telegram-notify.sh when a PENDING
+      directive ages past threshold.
 generator:
   version: 1
 covers:
@@ -85,16 +97,33 @@ covers:
   - symbol: fn
     kind: function
     at: 'scripts/core/directive_writer.py:L477-L481'
+  - symbol: key_phrases
+    kind: function
+    at: 'scripts/ops/directive-rule-sweep.py:L49-L52'
+  - symbol: covered
+    kind: function
+    at: 'scripts/ops/directive-rule-sweep.py:L55-L68'
+  - symbol: read_directive
+    kind: function
+    at: 'scripts/ops/directive-staleness-watch.py:L40-L56'
+  - symbol: last_line_matching
+    kind: function
+    at: 'scripts/ops/directive-staleness-watch.py:L59-L66'
+  - symbol: main
+    kind: function
+    at: 'scripts/ops/directive-staleness-watch.py:L69-L165'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-Deterministic single writer for memories/human-directive.md: locks, gates on in-flight PENDING directives, and refuses clobbering unless allow_pending is set. Used by both the cockpit server and the analyst runners as the safe restore path for human-directive.md.
+The sole writer for memories/human-directive.md, enforcing fail-closed rules: in-flight PENDING directives are never clobbered without --allow-pending, and the directive body is immutable after acceptance (only the ## Status value can change, via compare-and-swap). Every write goes through lock → read → in-flight gate → backup → atomic rename → verify → audit → notify.
 
 ## Related
 
+- part of [[auto-company-loop-core]] — The directive writer is invoked by the loop and its helpers.
 - implements [[cockpit-server]] — The server routes all human-directive.md writes through this module.
 - uses [[opportunity-analyst]] — Used for snapshot/restore guardrail of human-directive.md.
+- uses [[telegram-notification]] — directive-staleness-watch.py alerts via telegram-notify.sh when a PENDING directive ages past threshold.
 <!-- context:generated:end -->
 
 ## Notes

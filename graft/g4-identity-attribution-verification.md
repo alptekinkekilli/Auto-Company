@@ -1,19 +1,17 @@
 ---
-name: G4 attribution & evidence gathering
-slug: g4-attribution-evidence-gathering
+name: G4 identity-attribution verification
+slug: g4-identity-attribution-verification
 type: system
 sources:
   - path: scripts/ops/g4-check.py
     hash: 719fa86c0e307ef71bf0bce8f49e2baab2bb522aec732b784b39c8f2d788aba8
   - path: scripts/ops/site-contact-evidence.py
     hash: 008b4735e6133445eff667f840f9c7faaeef8013b1363f6555b602a9d6fd048c
-  - path: tests/test_g4_check.sh
-    hash: 426129aa4d430db932523139037190cd1c5106394e917a10fc73e29b823bc4d2
-sources_digest: 80da2d1af5dcdf83eaa2848a8d5f1be1eb4bc43af8080731f7b021dcba983f57
+sources_digest: 1627b649c4591fefbe53718943b83b073d34ecceb699cc194f34d1c884c4155e
 links:
-  - to: outreach-eligibility-send-gate
-    relation: produces
-    description: send-gate consumes g4-check's verdict to decide eligibility.
+  - to: airtable-access-layer
+    relation: uses
+    description: g4-check.py pulls records from the Airtable registry bridge.
 generator:
   version: 1
 covers:
@@ -72,11 +70,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Determines whether a firm is the same legal entity (G4) by matching registry data against published website evidence. g4-check.py holds the pure matching logic (address anchors, registry IDs, domain extraction skipping authority sources); site-contact-evidence.py finds a firm's published contact email, treating a fetch with no rendered content as inconclusive, never negative.
+Automates the G4 identity-attribution verdict for Turkish firms by testing a row's claim against live evidence rather than trusting the self-declared 'G4 PASS'. Requires both first-party contact and an anchor to the registered identity (address, registry number, or Profile bridge citation), and reports a claimed PASS that fails evidence as CLAIMED_PASS_UNVERIFIED rather than downgrading it.
 
 ## Related
 
-- produces [[outreach-eligibility-send-gate]] — send-gate consumes g4-check's verdict to decide eligibility.
+- uses [[airtable-access-layer]] — g4-check.py pulls records from the Airtable registry bridge.
 <!-- context:generated:end -->
 
 ## Notes

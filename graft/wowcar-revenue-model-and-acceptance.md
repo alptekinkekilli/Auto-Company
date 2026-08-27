@@ -1,6 +1,6 @@
 ---
-name: Wowcar revenue model & acceptance harness
-slug: wowcar-revenue-model-acceptance-harness
+name: Wowcar revenue model and acceptance
+slug: wowcar-revenue-model-and-acceptance
 type: system
 sources:
   - path: scripts/ops/wowcar-revenue-vocabulary-acceptance.py
@@ -107,7 +107,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The internal Wowcar financial model (model.py, build_xlsx.py, recalc.py, test.py, capraz.py, tanila.py, kohort.py) plus a fail-closed acceptance harness that pins the live repo as an immutable baseline and proves candidate vocabulary/width edits produce byte-identical outputs.
+The Wowcar financial model (model.py, build_xlsx.py, recalc.py, test.py, capraz.py, tanila.py, kohort.py) plus the fail-closed acceptance harness that pins the live repo as an immutable baseline and proves candidate vocabulary/width edits produce byte-identical outputs.
 <!-- context:generated:end -->
 
 ## Notes

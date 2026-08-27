@@ -1,6 +1,6 @@
 ---
-name: Airtable read/write guard layer
-slug: airtable-read-write-guard-layer
+name: Airtable access layer
+slug: airtable-access-layer
 type: system
 sources:
   - path: scripts/ops/airtable-read.py
@@ -13,11 +13,13 @@ sources:
     hash: a51c25001935da566cca4a450cfc0906827eb332779f2b454b12d547b7a0e6e0
 sources_digest: 2021356891ac463bde76a17510d6206598905cc15d804b9b867e92529075e85e
 links:
-  - to: outreach-eligibility-send-gate
-    relation: uses
-    description: >-
-      The send-gate and rfq-send scripts read/write Airtable through these
-      wrappers, so their caps and refusal messages are enforced here.
+  - to: auto-company-loop-core
+    relation: part_of
+    description: The loop and its ops scripts use these wrappers for Airtable access.
+  - to: fail-closed-decision-invariant
+    relation: implements
+  - to: ops-decision-scripts
+    relation: part_of
 generator:
   version: 1
 covers:
@@ -73,11 +75,13 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Wrappers that gate every Airtable read and write to control context cost and protect data integrity. airtable-read.py refuses unscoped reads, caps --all-fields and --max-records (200) and pageSize (100); airtable-write.py validates single-record writes (unknown fields, clears, replaces) before they hit the API. The guard functions were extracted from main() specifically to be testable offline.
+Scoped, auditable access to Airtable. airtable-read.py refuses unscoped reads (which cost $2.41 in context re-reads) and paginates with automatic POST /listRecords past a URL-length threshold; airtable-write.py is the sanctioned single-record write path with dry-run default, --allow-clear, and --replace guards, reading the row first and verifying after PATCH.
 
 ## Related
 
-- uses [[outreach-eligibility-send-gate]] — The send-gate and rfq-send scripts read/write Airtable through these wrappers, so their caps and refusal messages are enforced here.
+- part of [[auto-company-loop-core]] — The loop and its ops scripts use these wrappers for Airtable access.
+- implements [[fail-closed-decision-invariant]]
+- part of [[ops-decision-scripts]]
 <!-- context:generated:end -->
 
 ## Notes

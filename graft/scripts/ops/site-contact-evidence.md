@@ -1,4 +1,4 @@
-# scripts/ops/site-contact-evidence.py · [[fail-closed-measurement-invariant]] [[g4-attribution-evidence-gathering]]
+# scripts/ops/site-contact-evidence.py · [[fail-closed-decision-invariant]] [[g4-identity-attribution-verification]] [[ops-decision-scripts]]
 
 Finds a firm's published contact email across escalating sources, ensuring an unrendered fetch is reported as inconclusive rather than negative.
 

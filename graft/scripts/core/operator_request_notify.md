@@ -1,4 +1,4 @@
-# scripts/core/operator_request_notify.py · [[operator-decision-panel-format]] [[operator-request-notify]]
+# scripts/core/operator_request_notify.py · [[atomic-write-and-compare-and-swap-discipline]] [[operator-decision-panel-format]] [[operator-request-notify]] [[telegram-notification]]
 
 Deterministic operator-escalation gate that dedups, notifies via Telegram, and resolves OPREQ ledger requests, and regenerates the consensus.md Awaiting Operator projection.
 

@@ -1,4 +1,4 @@
-# scripts/ops/rfq-send.py · [[outreach-eligibility-send-gate]] [[rfq-send]]
+# scripts/ops/rfq-send.py · [[ops-decision-scripts]] [[rfq-send]]
 
 Anonymized OPEX RFQ sender that fail-closes on §15 sponsor approval, enforces daily/total caps and anonymity, and delivers via ForwardEmail direct API.
 
@@ -15,7 +15,6 @@ Anonymized OPEX RFQ sender that fail-closes on §15 sponsor approval, enforces d
 - render · function · L155-L163 — Şablon adından scope'u çözüp vendor kümesi için subject/plain-text/HTML içeriği üretir.
 - anonymity_scan · function · L166-L171 — Render edilen metinde denylist (wowcar) sızıntısı olup olmadığını arar.
 - decide · function · L174-L197 — Bir vendor kaydını opt-out, never-twice, e-posta varlığı, anonimlik, cap'ler ve §15 izni sırasıyla değerlendirip ALLOW/REFUSE kararı döndürür.
-- _encode_subject · function · L201-L207 — Encodes an email subject as RFC 2047 encoded-words via email.header.Header so Turkish subjects stay within the 75-char limit and render correctly in Gmail.
-- send_fe · function · L210-L228 — ForwardEmail /v1/emails'e Basic auth ile form-encoded e-posta gönderir ve yanıtı döndürür.
-- _mark_sent · function · L231-L234 — Gönderim sonrası kaydı 'Gönderildi' ve zaman damgası ile PATCH'ler.
-- main · function · L238-L280 — CLI girişi: --report ile cap/eligibility özeti, --record ile tek vendor kararı ve --send ile gerçek gönderim sonrası kaydı işaretler.
+- send_fe · function · L201-L226 — ForwardEmail /v1/emails'e Basic auth ile form-encoded e-posta gönderir ve yanıtı döndürür.
+- _mark_sent · function · L229-L232 — Gönderim sonrası kaydı 'Gönderildi' ve zaman damgası ile PATCH'ler.
+- main · function · L236-L278 — CLI girişi: --report ile cap/eligibility özeti, --record ile tek vendor kararı ve --send ile gerçek gönderim sonrası kaydı işaretler.

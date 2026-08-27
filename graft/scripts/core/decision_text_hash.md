@@ -1,4 +1,4 @@
-# scripts/core/decision_text_hash.py
+# scripts/core/decision_text_hash.py · [[decision-content-hash-canonicalization]]
 
 Canonical content hash for a KİK decision page, normalizing raw HTML into byte-identical text so both ends of the bridge compute the same hash regardless of client.
 

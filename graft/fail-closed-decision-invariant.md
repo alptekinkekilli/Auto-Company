@@ -1,6 +1,6 @@
 ---
-name: Fail-closed measurement invariant
-slug: fail-closed-measurement-invariant
+name: Fail-closed decision invariant
+slug: fail-closed-decision-invariant
 type: concept
 sources:
   - path: scripts/core/auto-loop.sh
@@ -9,10 +9,18 @@ sources:
     hash: 6acd746a20aff7267d711d61350ac14d8fa0c17a1af95341625aa2bfd9a63f92
   - path: scripts/ops/site-contact-evidence.py
     hash: 008b4735e6133445eff667f840f9c7faaeef8013b1363f6555b602a9d6fd048c
+  - path: scripts/ops/verify-mcp-keys.py
+    hash: a35c1f35481876cedc5bb4cf0c7fd4eceaea1c85e57d3c28e87560b3f9f342db
+  - path: tests/test_airtable_read.sh
+    hash: f1c8fbb1b495e922c52d041bac7edbae8f100ab57606ebd987179783265325df
   - path: tests/test_ccusage_failclosed.sh
     hash: 366b96bee74416db05cc9752919b04304a49f5121d5802920a26641b196ef706
-sources_digest: 53c398c0186c496fb403943d741849619a7e16b538b0eff6dbf6ee0ce26c4e6d
-links: []
+sources_digest: 7034289e72f4183c3a2f1b1b3a773c0df1d82f2bd213d3674b273a6dae3901b6
+links:
+  - to: budget-and-spend-accounting
+    relation: implements
+  - to: ops-decision-scripts
+    relation: implements
 generator:
   version: 1
 covers:
@@ -70,11 +78,22 @@ covers:
   - symbol: main
     kind: function
     at: 'scripts/ops/site-contact-evidence.py:L175-L196'
+  - symbol: loop_env
+    kind: function
+    at: 'scripts/ops/verify-mcp-keys.py:L39-L51'
+  - symbol: main
+    kind: function
+    at: 'scripts/ops/verify-mcp-keys.py:L54-L75'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-Across the codebase, any measurement that cannot complete must refuse or preserve the prior observation, never return a permissive default. ccusage degraded reads never lower a same-period prior; send-gate REFUSEs on incomplete checks; site-contact-evidence treats unrendered fetches as inconclusive; budget gates latch holds on first failure.
+Across all gates and probes, any check that cannot complete is a REFUSE, never an ALLOW: unmeasurable spend latches a hold, unreachable sites are INCONCLUSIVE not negative, missing credentials fail naming the variable, and degraded reads never lower prior observations.
+
+## Related
+
+- implements [[budget-and-spend-accounting]]
+- implements [[ops-decision-scripts]]
 <!-- context:generated:end -->
 
 ## Notes

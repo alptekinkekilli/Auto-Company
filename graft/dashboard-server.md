@@ -9,11 +9,10 @@ sources:
     hash: 56e9073d5a9447df622cb3e0873d553053a3b16089534d427c177db772b933dd
 sources_digest: a00d09651be48cf7015196cad5672555ff241c03a2b27887a7ef361af457aa42
 links:
-  - to: budget-spend-accounting
+  - to: auto-loop-orchestration-core
     relation: uses
-    description: >-
-      The dashboard displays budget and spend data computed from the same ledger
-      and ccusage sources.
+  - to: budget-and-spend-accounting
+    relation: uses
 generator:
   version: 1
 covers:
@@ -390,11 +389,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-dashboard/server.py serves the cockpit UI, parsing auto-loop.log for engine runtime state, computing spend windows anchored on ccusage blockStart, and tailing log files.
+dashboard/server.py serves the cockpit UI: status parsing, action dispatch, engine runtime state, cost summary, log tailing, and budget display, with a sibling sentry_client import.
 
 ## Related
 
-- uses [[budget-spend-accounting]] — The dashboard displays budget and spend data computed from the same ledger and ccusage sources.
+- uses [[auto-loop-orchestration-core]]
+- uses [[budget-and-spend-accounting]]
 <!-- context:generated:end -->
 
 ## Notes

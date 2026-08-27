@@ -1,5 +1,7 @@
 # projects/headinspect/src/index.ts · [[headinspect-worker]]
 
+Cloudflare Worker entrypoint that routes requests to health, badge, and inspect endpoints, validates URLs against an SSRF blocklist, follows redirects with a cap, and returns JSON/HTML/SVG responses.
+
 - fetch · method · L24-L83 — Routes incoming requests to health, inspect, badge, and root endpoints, applying CORS and JSON/HTML content negotiation.
 - TargetOk · type · L88-L88 — Type tag for a successfully validated target URL.
 - TargetErr · type · L89-L89 — Type tag for a failed target URL validation carrying an error message.

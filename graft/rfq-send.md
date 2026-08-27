@@ -4,10 +4,10 @@ slug: rfq-send
 type: system
 sources:
   - path: scripts/ops/rfq-send.py
-    hash: d687a23a667fca0d00ef63d03ff6a2602b9f75dd634b93fc89ec5e7369180b76
+    hash: 09815061d704b6bd2034469e3bfe3dfac7417f25761ea9ae845be4c5367fd225
   - path: tests/test_rfq_send.sh
     hash: da4d25d4be3529f89c4c62e9b7099278b95d98a4336a9762bfe6c01e31030a97
-sources_digest: 4969f4e38e343d47c053b76e7bc86212ee48cee7525a8b0b4a12948a36c2bbf7
+sources_digest: bf2e173450385e76019b2d680d7979018f692a27942a94211466a4943a05ce2d
 links:
   - to: prod-mechanism-guard
     relation: validates
@@ -57,18 +57,15 @@ covers:
   - symbol: decide
     kind: function
     at: 'scripts/ops/rfq-send.py:L174-L197'
-  - symbol: _encode_subject
-    kind: function
-    at: 'scripts/ops/rfq-send.py:L201-L207'
   - symbol: send_fe
     kind: function
-    at: 'scripts/ops/rfq-send.py:L210-L228'
+    at: 'scripts/ops/rfq-send.py:L201-L226'
   - symbol: _mark_sent
     kind: function
-    at: 'scripts/ops/rfq-send.py:L231-L234'
+    at: 'scripts/ops/rfq-send.py:L229-L232'
   - symbol: main
     kind: function
-    at: 'scripts/ops/rfq-send.py:L238-L280'
+    at: 'scripts/ops/rfq-send.py:L236-L278'
 ---
 <!-- context:generated:start -->
 ## Summary

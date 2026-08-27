@@ -1,4 +1,4 @@
-# scripts/compact-resume-lint.py · [[compact-ritual-hooks]] [[compact-ritual-resume-linting]]
+# scripts/compact-resume-lint.py · [[compact-ritual-and-directive-integrity]] [[compact-ritual-hooks]]
 
 A lint script that mechanically enforces the 'foreign-reader test' half of the compact ritual by rejecting stale measurement numbers in the resume and requiring all template sections.
 

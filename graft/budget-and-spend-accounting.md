@@ -1,6 +1,6 @@
 ---
-name: Budget & spend accounting
-slug: budget-spend-accounting
+name: Budget and spend accounting
+slug: budget-and-spend-accounting
 type: system
 sources:
   - path: scripts/core/auto-loop.sh
@@ -15,13 +15,14 @@ sources:
     hash: 38e285a908cfdba71566f50ec2429fed8dc40ccdaaf68886e24e27399bba5bef
   - path: tests/test_cost_model_hint.sh
     hash: c17d1daedaa46cd803aa562c933e2a0d75aa6f2a5f7e059fd47fa8961847f743
-sources_digest: 2cbe60ad78f30cad6a0df446408acc8f10b869265f715e536d53ddccc86f8d65
+  - path: tests/test_discretionary_budget.sh
+    hash: 32b2f12385f1bf8cc0984fc89d1181074406a1726028d2705d2224759cf6de7e
+sources_digest: 1ac87c49df315e6210912f155563a72fa068b726e1af9440476e4c21fff50f8a
 links:
-  - to: cycle-orchestration-engine-routing
+  - to: auto-loop-orchestration-core
     relation: part_of
-    description: >-
-      The budget gates live inside auto-loop.sh and gate which engine runs each
-      cycle.
+  - to: ops-decision-scripts
+    relation: uses
 generator:
   version: 1
 covers:
@@ -38,11 +39,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Measures and enforces spend across engines. engine-usage-cost.py prices token streams with a --model-hint fallback for watchdog-killed cycles; auto-loop.sh's evaluate_budget_gates enforces 15 APP-263 gates with fail-closed ccusage reads that never lower a same-period prior observation; codex spend is summed from two disjoint sources (ccusage + TOTAL_SPEND_LEDGER) rather than maxed.
+ccusage-based spend measurement plus the TOTAL_SPEND_LEDGER rows from jcode-harness cycles, summed (not maxed) across 5h/daily/weekly windows. Degraded reads never lower a same-period prior observation and latch a hold.
 
 ## Related
 
-- part of [[cycle-orchestration-engine-routing]] — The budget gates live inside auto-loop.sh and gate which engine runs each cycle.
+- part of [[auto-loop-orchestration-core]]
+- uses [[ops-decision-scripts]]
 <!-- context:generated:end -->
 
 ## Notes

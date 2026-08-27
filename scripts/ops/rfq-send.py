@@ -40,7 +40,7 @@ BASE = "appPLc31jSlgulX3D"
 TABLE = "tblzcGP7kNfkmPDGJ"          # Wowcar OPEX RFQ — tender tablolarından AYRI
 FE_ENDPOINT = "https://api.forwardemail.net/v1/emails"
 FROM_EMAIL = "tedarik@go.appricode.tr"
-FROM_NAME = "Appricode — Tedarik / Danışmanlık"
+FROM_NAME = "Appricode Tedarik"   # ASCII — non-ASCII display-name RFC2047 mangle'ini önler
 DAILY_CAP = 3
 TOTAL_CAP = 20
 
@@ -198,32 +198,30 @@ def decide(f: dict) -> dict:
 
 
 # ── ForwardEmail teslim ─────────────────────────────────────────────────────────
-def _encode_subject(s: str) -> str:
-    # RFC 2047 DOĞRU kodlama: email.header.Header konuyu 75-karakter encoded-word
-    # sınırına uyacak şekilde (gerekirse çok kelimeye bölerek) kodlar. Elle tek base64
-    # encoded-word yapmak Türkçe konuda 76 karaktere çıkıp Gmail'de bozuk ("iso char")
-    # gösteriyordu (2026-08-27 canlı test). ASCII konu değişmeden döner.
-    from email.header import Header
-    return Header(s, "utf-8").encode()
-
-
 def send_fe(to: str, subject: str, text: str, html: str = "") -> dict:
+    # JSON Nodemailer formatı (ForwardEmail "standard Nodemailer format" — Context7 doğrulandı):
+    # konu/gönderen-adı kodlaması Nodemailer'da doğru yapılır (elle RFC2047 sarma GEREKMEZ;
+    # tek-word base64 Türkçe konuda 75'i aşıp Gmail'de bozuluyordu). Logo CID inline attachment
+    # olarak gider — Gmail base64 data-URI'yi göstermez, cid'i render eder.
     key = _load_key("FORWARDEMAIL_API_KEY", "autocompany-forwardemail-key")
     if not key:
         raise SystemExit("FORWARDEMAIL_API_KEY yok (env/runtime.env/Keychain)")
     auth = base64.b64encode(f"{key}:".encode()).decode("ascii")
-    fields = {
+    payload = {
         "from": f"{FROM_NAME} <{FROM_EMAIL}>",
         "to": to,
-        "subject": _encode_subject(subject),
-        "text": text,        # text/plain FIRST (MIME alternatif sırası: az→çok tercih)
+        "subject": subject,     # raw — Nodemailer kodlar
+        "text": text,           # text/plain
     }
     if html:
-        fields["html"] = html
-    form = urllib.parse.urlencode(fields).encode("utf-8")
-    req = urllib.request.Request(FE_ENDPOINT, data=form, method="POST", headers={
+        payload["html"] = html
+    atts = rfq_template.attachments()
+    if atts:
+        payload["attachments"] = atts
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(FE_ENDPOINT, data=data, method="POST", headers={
         "Authorization": "Basic " + auth,
-        "Content-Type": "application/x-www-form-urlencoded"})
+        "Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=30) as r:
         return {"status": r.status, "body": json.loads(r.read().decode("utf-8", "replace"))}
 

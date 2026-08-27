@@ -1,6 +1,6 @@
 ---
-name: Secrets never in argv
-slug: secrets-never-in-argv
+name: Secret handling convention
+slug: secret-handling-convention
 type: concept
 sources:
   - path: scripts/core/jcode-mcp-config.py
@@ -12,7 +12,9 @@ sources:
   - path: tests/test_mcp_key_fallback.sh
     hash: 21c4be05f1922a08fa185aaa94f73941a785d5f380b7770431bdee7bf78115d6
 sources_digest: c73011dc45f8214aaa8bd30154b2039a634202986bd827468d3ceb2701bf6951
-links: []
+links:
+  - to: mcp-config-generation-and-probe
+    relation: implements
 generator:
   version: 1
 covers:
@@ -38,7 +40,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-MCP configs and key handling keep secrets in env blocks, never process argv, to avoid ps exposure; verify-mcp-keys reads /proc environ and prints only lengths/shapes.
+Secrets live in env blocks or Keychain, never in argv (ps exposure) and never printed (only lengths/shapes). MCP config keeps ${VAR} placeholders in argv with real values in env; verify-mcp-keys reads the loop's /proc environ rather than a fresh shell.
+
+## Related
+
+- implements [[mcp-config-generation-and-probe]]
 <!-- context:generated:end -->
 
 ## Notes

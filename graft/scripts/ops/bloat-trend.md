@@ -1,4 +1,4 @@
-# scripts/ops/bloat-trend.py
+# scripts/ops/bloat-trend.py · [[fail-open-vs-fail-closed-operational-philosophy]] [[turn-economy-and-bloat-trend-monitoring]]
 
 Tracks whether per-cycle turn-economy metrics are improving across a rolling window, and alerts only on a genuine regression or on the two-consecutive-window target being met, so the watcher can be retired.
 
