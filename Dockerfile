@@ -103,6 +103,21 @@ ENV JCODE_NO_TELEMETRY=1
 RUN npm install -g ccusage && npm cache clean --force \
     && chown -R 10001:10001 /usr/local/lib/node_modules/ccusage
 
+# numpy-financial: the ONLY Wowcar revenue-vocabulary generator dependency
+# (projects/wowcar/generator-source/kod) not shipped as a Debian package — it is a
+# NumPy-org PyPI-only spinoff, absent from trixie apt. Every OTHER generator dep
+# (numpy 2.2.4, openpyxl 3.1.5, et-xmlfile 2.0.0) already matches the acceptance
+# harness pins (scripts/ops/wowcar-revenue-vocabulary-acceptance.py verify_runtime)
+# via the python3-* apt packages above; this closes the last gap so
+# tests/test_wowcar_revenue_vocabulary_acceptance.sh runs green in the image.
+# Surgical: --no-deps leaves the apt-provided numpy untouched; --hash pins the exact
+# 1.0.0 wheel+sdist digests (auto-enables require-hashes). Pure-python, no C ext.
+RUN apt-get update && apt-get install -y --no-install-recommends python3-pip \
+    && python3 -m pip install --break-system-packages --no-deps numpy-financial==1.0.0 \
+        --hash=sha256:bae534b357516f12258862d1f0181d911032d0467f215bfcd1c264b4da579047 \
+        --hash=sha256:f84341bc62b2485d5604a73d5fac7e91975b4b9cd5f4a5a9cf608902ea00cb40 \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY . .
 
