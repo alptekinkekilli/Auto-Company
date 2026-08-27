@@ -1,7 +1,7 @@
 {
   "version": 1,
   "model": "openai:deepseek-ai/DeepSeek-V4-Flash-0731",
-  "repoDigest": "35cb4aed0c75414a91ccd24554635538ef8183c4569ff0d1324d55043eabc236",
+  "repoDigest": "3ece2d1d6260b21e4743839b38808eabad76d0a4d74ca76fe4b73c01f72d5a7f",
   "files": [
     {
       "path": "dashboard/app.js",
@@ -344,6 +344,10 @@
       "hash": "24d7735b6dc6defa0f80e75aeee37a13a40d4df43e9b38539be02df6fe23cbf2"
     },
     {
+      "path": "scripts/ops/wowcar-revenue-vocabulary-acceptance.py",
+      "hash": "bc164912338c15636cc9183c9327a6f77fdab6aebc86e2747f197f01f824fab2"
+    },
+    {
       "path": "scripts/prod-mechanism-guard.py",
       "hash": "df90f44c6e799ee5505f180b9c47889d0ebfe295a0fd99b661438f51a8dd6bf2"
     },
@@ -526,20 +530,22 @@
     {
       "path": "tests/test_turn_audit.sh",
       "hash": "ce3eb2af3fea266a763a0ca266f3c658f8498b604570c229141654d685f6c9e8"
+    },
+    {
+      "path": "tests/test_wowcar_revenue_vocabulary_acceptance.sh",
+      "hash": "2d2ccfe9406d4effbc4872168e5d1f2a48f41842d8ac28397be5a2809dd28083"
     }
   ],
   "nodes": [
     {
-      "slug": "airtable-access-wrappers",
-      "name": "Airtable access wrappers",
+      "slug": "airtable-read-write-guards",
+      "name": "Airtable read/write guards",
       "type": "system",
       "sources": [
         "scripts/ops/airtable-read.py",
-        "scripts/ops/airtable-write.py",
-        "tests/test_airtable_read.sh",
-        "tests/test_airtable_write.sh"
+        "scripts/ops/airtable-write.py"
       ],
-      "sourcesDigest": "2021356891ac463bde76a17510d6206598905cc15d804b9b867e92529075e85e"
+      "sourcesDigest": "43a42c7621b93d8e35ed7813326f7b761e954384d076a4d1b176afa770c1b952"
     },
     {
       "slug": "auto-company-site-functions",
@@ -552,56 +558,41 @@
       "sourcesDigest": "d765296cba06e0858b94642f9c57598b0a01dbdbf1099116ab94c5ce24458b9c"
     },
     {
-      "slug": "auto-loop-core",
-      "name": "auto-loop core",
-      "type": "system",
-      "sources": [
-        "scripts/core/auto-loop.sh"
-      ],
-      "sourcesDigest": "9acc0249ddcf7d53dc97c65117d01ec63059f34e1003f3864d7b48ce6de9355a"
-    },
-    {
-      "slug": "auto-loop-sh-core-loop",
-      "name": "auto-loop.sh core loop",
-      "type": "system",
-      "sources": [
-        "scripts/core/auto-loop.sh"
-      ],
-      "sourcesDigest": "9acc0249ddcf7d53dc97c65117d01ec63059f34e1003f3864d7b48ce6de9355a"
-    },
-    {
-      "slug": "browse-extract",
-      "name": "browse-extract",
-      "type": "system",
-      "sources": [
-        "scripts/ops/browse-extract.py",
-        "tests/test_browse_extract.sh"
-      ],
-      "sourcesDigest": "c49e107369cdb204a557d35cefc2912be60f908dd3ecbd13bb775bee6cc668bc"
-    },
-    {
-      "slug": "budget-spend-accounting",
-      "name": "Budget & spend accounting",
+      "slug": "auto-loop",
+      "name": "auto-loop",
       "type": "system",
       "sources": [
         "scripts/core/auto-loop.sh",
-        "tests/test_budget_gates.sh",
-        "tests/test_ccusage_failclosed.sh",
-        "tests/test_codex_spend_sources.sh",
-        "tests/test_discretionary_budget.sh"
+        "tests/test_prompt_assembly.sh",
+        "tests/test_prompt_transport.sh",
+        "tests/test_tier_ladder_daily.sh"
       ],
-      "sourcesDigest": "f2ea7b183c86428703bcebb2398ad2c9cc508d7310d606c3d9c9b5f93b2738ea"
+      "sourcesDigest": "a4461971d8736bd0d4fcfaf726ff97173f0f11707e56ebc6b628fd3d33b28aeb"
     },
     {
-      "slug": "claude-code-hooks",
-      "name": "Claude Code hooks",
+      "slug": "auto-loop-core",
+      "name": "Auto-loop core",
+      "type": "system",
+      "sources": [
+        "scripts/core/auto-loop.sh",
+        "scripts/core/codex-final-text.py",
+        "scripts/core/directive_writer.py",
+        "scripts/core/engine-usage-cost.py",
+        "scripts/core/jcode-mcp-config.py",
+        "scripts/core/jcode-mcp-probe.py",
+        "scripts/core/operator_request_notify.py"
+      ],
+      "sourcesDigest": "0568cd859dfa097c2d113861ea02ae15ea53e4760b0ad0d8a789a5ce689b0a41"
+    },
+    {
+      "slug": "claude-code-hooks-pretooluse-sessionstart",
+      "name": "Claude Code hooks (PreToolUse/SessionStart)",
       "type": "system",
       "sources": [
         "scripts/prod-mechanism-guard.py",
-        "scripts/session-brief.py",
-        "tests/test_prod_mechanism_guard.sh"
+        "scripts/session-brief.py"
       ],
-      "sourcesDigest": "cca34ac3b6513cc92ece2da41fd8889b0a8a7733795a80bf4d24d702af1f4555"
+      "sourcesDigest": "569be6755fcfc4da6381cf4afc5e059f8838053811c1b1d328a5f480dbd7665a"
     },
     {
       "slug": "cockpit-dashboard",
@@ -621,11 +612,20 @@
       "sources": [
         "scripts/compact-postcheck.py",
         "scripts/compact-preflight.py",
-        "scripts/compact-resume-lint.py",
-        "tests/test_compact_anchor_sync.py",
-        "tests/test_compact_ritual_hardening.sh"
+        "scripts/compact-resume-lint.py"
       ],
-      "sourcesDigest": "a197cb7f52298831dc305a1eb2c78fa466f5497a161e0089f9616dba6381229c"
+      "sourcesDigest": "8a29be38a180ad8d9499a56cd3d111ad43039671f2ed2e59086a14253cad9064"
+    },
+    {
+      "slug": "compact-ritual-scripts",
+      "name": "Compact ritual scripts",
+      "type": "system",
+      "sources": [
+        "scripts/compact-postcheck.py",
+        "scripts/compact-preflight.py",
+        "scripts/compact-resume-lint.py"
+      ],
+      "sourcesDigest": "8a29be38a180ad8d9499a56cd3d111ad43039671f2ed2e59086a14253cad9064"
     },
     {
       "slug": "container-bootstrap",
@@ -646,37 +646,13 @@
       "sourcesDigest": "e120476879431ac8f01406f0c7056c596e84ad05a3bdffa80c27718e3d312c80"
     },
     {
-      "slug": "context7-tool-usage-audit",
-      "name": "Context7 & tool-usage audit",
-      "type": "system",
-      "sources": [
-        "scripts/ops/context7-check.py",
-        "scripts/ops/tool-usage-audit.py",
-        "tests/test_context7_check.sh"
-      ],
-      "sourcesDigest": "cc53b12c50ac90d87af77f15e693fdcdd8514f00b68d83326c9571070c2e195f"
-    },
-    {
-      "slug": "cycle-counter-metadata",
-      "name": "Cycle counter & metadata",
-      "type": "system",
-      "sources": [
-        "scripts/core/auto-loop.sh",
-        "tests/test_cycle_counter.sh",
-        "tests/test_cycle_metadata.sh",
-        "tests/test_mixed_harness.sh"
-      ],
-      "sourcesDigest": "16f57a317e5f38443d3956fb9ab4976945ef01692772d4b9938de7e7b8b4e5e9"
-    },
-    {
       "slug": "dashboard-server",
       "name": "Dashboard server",
       "type": "system",
       "sources": [
-        "dashboard/server.py",
-        "tests/test_dashboard_server.py"
+        "dashboard/server.py"
       ],
-      "sourcesDigest": "a00d09651be48cf7015196cad5672555ff241c03a2b27887a7ef361af457aa42"
+      "sourcesDigest": "8b82355bba156c61c76505ae335656f264eff4fc117d0a477f2c27a30456f883"
     },
     {
       "slug": "directive-writer",
@@ -691,26 +667,17 @@
       "sourcesDigest": "a241dea3d7a4b796dc586887632af1230d3ebb6276ab48f6517ec15141e6e259"
     },
     {
-      "slug": "directive-writer-section-refs",
-      "name": "Directive writer & section refs",
-      "type": "system",
+      "slug": "fail-closed-measurement-invariant",
+      "name": "Fail-closed measurement invariant",
+      "type": "concept",
       "sources": [
-        "scripts/analyst/opportunity-analyst-jcode.sh",
-        "scripts/core/directive_writer.py",
-        "tests/test_analyst_engine.sh",
-        "tests/test_directive_section_refs.sh"
-      ],
-      "sourcesDigest": "f7fec3d715834a02838e8cf08041f8fb3daa7891a96700a6684ad2f736f213f1"
-    },
-    {
-      "slug": "engine-cost-model-hint",
-      "name": "Engine cost model & hint",
-      "type": "system",
-      "sources": [
+        "scripts/core/auto-loop.sh",
         "scripts/core/engine-usage-cost.py",
+        "scripts/ops/site-contact-evidence.py",
+        "tests/test_ccusage_failclosed.sh",
         "tests/test_cost_model_hint.sh"
       ],
-      "sourcesDigest": "a2b1bd124cd7ba74dd31158bdb8c9a13eb57a4917ac2311a98c871d74b0f03bc"
+      "sourcesDigest": "a1f477f8acb8ba858bfa3b0a21c77bbc156913188e1bff8962a65c73548d12d8"
     },
     {
       "slug": "g4-attribution-contact-evidence",
@@ -718,10 +685,9 @@
       "type": "system",
       "sources": [
         "scripts/ops/g4-check.py",
-        "scripts/ops/site-contact-evidence.py",
-        "tests/test_g4_check.sh"
+        "scripts/ops/site-contact-evidence.py"
       ],
-      "sourcesDigest": "80da2d1af5dcdf83eaa2848a8d5f1be1eb4bc43af8080731f7b021dcba983f57"
+      "sourcesDigest": "1627b649c4591fefbe53718943b83b073d34ecceb699cc194f34d1c884c4155e"
     },
     {
       "slug": "headinspect-service",
@@ -734,17 +700,6 @@
         "projects/headinspect/src/render.ts"
       ],
       "sourcesDigest": "cb61b3ccfe05c907fe9c1d45e555e1e03b1607816df1e7ac11b12c3268891960"
-    },
-    {
-      "slug": "idle-skip-escalation",
-      "name": "Idle-skip & escalation",
-      "type": "system",
-      "sources": [
-        "scripts/core/auto-loop.sh",
-        "tests/test_escalation.sh",
-        "tests/test_idle_skip.sh"
-      ],
-      "sourcesDigest": "215b69606a8c58c65539e98063fb19dfae6025e516b16c4f6a53302e634a1bfe"
     },
     {
       "slug": "jcode-pilot-smoke-test",
@@ -766,23 +721,19 @@
       "sourcesDigest": "9c7f69c3ab695cdfeb60af9d2cf604e2afa439aa980e0d9141de96a1ce39e8cb"
     },
     {
-      "slug": "mcp-config-probe",
-      "name": "MCP config & probe",
+      "slug": "mcp-config-key-handling",
+      "name": "MCP config & key handling",
       "type": "system",
       "sources": [
         "scripts/core/jcode-mcp-config.py",
         "scripts/core/jcode-mcp-probe.py",
-        "tests/fixtures/mock_mcp_server.py",
-        "tests/test_jcode_mcp_config.sh",
-        "tests/test_mcp_config_manifest_sync.sh",
-        "tests/test_mcp_key_fallback.sh",
-        "tests/test_mcp_probe.sh"
+        "scripts/ops/verify-mcp-keys.py"
       ],
-      "sourcesDigest": "5a812353162b0e0ba367cc63346f25dbece14c49c2c32ed9e40db2e51b20fb40"
+      "sourcesDigest": "f05ab069a6ee9c80b42b8808951d60e4035e8ca7a144240e09cd75577f327e4b"
     },
     {
-      "slug": "operator-decision-refusal-format",
-      "name": "Operator decision & refusal format",
+      "slug": "operator-decision-panel",
+      "name": "operator-decision-panel",
       "type": "system",
       "sources": [
         "dashboard/server.py",
@@ -792,16 +743,14 @@
       "sourcesDigest": "11e7adec91819c8c7079618f531dba4d8397079ab99ec03decfea7e8642be03b"
     },
     {
-      "slug": "operator-request-notification",
-      "name": "Operator request & notification",
+      "slug": "operator-request-action-routing",
+      "name": "Operator request & action routing",
       "type": "system",
       "sources": [
         "scripts/core/operator_request_notify.py",
-        "scripts/ops/operator-action-router.py",
-        "tests/test_operator_action_router.py",
-        "tests/test_operator_request_notify.py"
+        "scripts/ops/operator-action-router.py"
       ],
-      "sourcesDigest": "9d0a605d2827017229970922c770241ebe8fae6eb4e884058e6cc728945a9011"
+      "sourcesDigest": "3588201e7e84d699269275cc8946bbe92b876cb372147e259d1e5ec8d68291ef"
     },
     {
       "slug": "opportunity-analyst",
@@ -831,18 +780,18 @@
       "sourcesDigest": "ec0e551f95ef3587f18a2e0b68fc50d6ca8650135cece721a289f4db44543178"
     },
     {
-      "slug": "prompt-assembly-contract",
-      "name": "Prompt assembly contract",
-      "type": "concept",
+      "slug": "prod-mechanism-guard",
+      "name": "prod-mechanism-guard",
+      "type": "system",
       "sources": [
-        "scripts/core/auto-loop.sh",
-        "tests/test_prompt_assembly.sh"
+        "scripts/prod-mechanism-guard.py",
+        "tests/test_prod_mechanism_guard.sh"
       ],
-      "sourcesDigest": "e8cd96191dd830ff7d1230db371cd214965460659eec8c4eec0a5365fc14376d"
+      "sourcesDigest": "85f695b540190c148b455d6cc63e72dbb881bcb53a6cf3d680c51a434fc47b16"
     },
     {
       "slug": "prompt-transport-contract",
-      "name": "Prompt transport contract",
+      "name": "prompt-transport-contract",
       "type": "concept",
       "sources": [
         "scripts/core/auto-loop.sh",
@@ -851,8 +800,8 @@
       "sourcesDigest": "022c606470caf59b9766e07697dde5326e996c4c0f5c36881fc53a41c04a8d0a"
     },
     {
-      "slug": "registry-archive-py",
-      "name": "registry-archive.py",
+      "slug": "registry-archive",
+      "name": "registry-archive",
       "type": "system",
       "sources": [
         "scripts/ops/registry-archive.py",
@@ -870,8 +819,8 @@
       "sourcesDigest": "5ff39050e2ffebfcb89290b663b10deb8e198c076c45e5893acf920e54d83301"
     },
     {
-      "slug": "registry-queue-watch-py",
-      "name": "registry-queue-watch.py",
+      "slug": "registry-queue-watch",
+      "name": "registry-queue-watch",
       "type": "system",
       "sources": [
         "scripts/ops/registry-queue-watch.py",
@@ -880,8 +829,8 @@
       "sourcesDigest": "878ae52108871773ccdef2f91facc355fd5f130052a7558e98c93f83cf21f6fd"
     },
     {
-      "slug": "reply-watch-py",
-      "name": "reply-watch.py",
+      "slug": "reply-watch",
+      "name": "reply-watch",
       "type": "system",
       "sources": [
         "scripts/ops/reply-watch.py",
@@ -890,8 +839,20 @@
       "sourcesDigest": "ce5714749921b9400cfaa17af0fe9932f3146e57178b31a75e3812be36b83d8e"
     },
     {
-      "slug": "send-gate-py",
-      "name": "send-gate.py",
+      "slug": "secrets-never-in-argv",
+      "name": "Secrets never in argv",
+      "type": "concept",
+      "sources": [
+        "scripts/core/jcode-mcp-config.py",
+        "scripts/ops/verify-mcp-keys.py",
+        "tests/test_jcode_mcp_config.sh",
+        "tests/test_mcp_key_fallback.sh"
+      ],
+      "sourcesDigest": "c73011dc45f8214aaa8bd30154b2039a634202986bd827468d3ceb2701bf6951"
+    },
+    {
+      "slug": "send-gate",
+      "name": "send-gate",
       "type": "system",
       "sources": [
         "scripts/ops/send-gate.py",
@@ -910,7 +871,7 @@
     },
     {
       "slug": "set-e-shape-lint",
-      "name": "set -e shape lint",
+      "name": "set-e-shape-lint",
       "type": "concept",
       "sources": [
         "docker-entrypoint.sh",
@@ -968,8 +929,8 @@
       "sourcesDigest": "fdaeeb7e96b128caaf56f24722d43c264ce856d635c7315a709e6c4879ccc4f1"
     },
     {
-      "slug": "state-snapshot-py",
-      "name": "state-snapshot.py",
+      "slug": "state-snapshot",
+      "name": "state-snapshot",
       "type": "system",
       "sources": [
         "scripts/ops/state-snapshot.py",
@@ -978,18 +939,73 @@
       "sourcesDigest": "b22d6b1127d5b052b726fc0dc5a244376cf2f7f1b8d621a83596632c9199dcd2"
     },
     {
-      "slug": "tier-ladder-selection",
-      "name": "Tier ladder selection",
+      "slug": "test-extraction-strategy",
+      "name": "Test extraction strategy",
       "type": "concept",
       "sources": [
-        "scripts/core/auto-loop.sh",
-        "tests/test_tier_ladder_daily.sh"
+        "tests/test_active_window.sh",
+        "tests/test_budget_gates.sh",
+        "tests/test_cycle_counter.sh",
+        "tests/test_escalation.sh",
+        "tests/test_idle_skip.sh",
+        "tests/test_mixed_harness.sh"
       ],
-      "sourcesDigest": "e2254c052a9a09ae5e7b4ea291f115e745a1de6cb8568f6af3a808db2e06b150"
+      "sourcesDigest": "38748d0fbb2b0c4c894a7d36e7b0f9b31e1face09f0a6a1cab879c7cbe856374"
     },
     {
-      "slug": "tool-usage-audit-py",
-      "name": "tool-usage-audit.py",
+      "slug": "test-suite-for-auto-loop-core",
+      "name": "Test suite for auto-loop core",
+      "type": "system",
+      "sources": [
+        "tests/test_active_window.sh",
+        "tests/test_budget_gates.sh",
+        "tests/test_ccusage_failclosed.sh",
+        "tests/test_codex_spend_sources.sh",
+        "tests/test_cycle_counter.sh",
+        "tests/test_cycle_metadata.sh",
+        "tests/test_discretionary_budget.sh",
+        "tests/test_escalation.sh",
+        "tests/test_idle_skip.sh",
+        "tests/test_mixed_harness.sh"
+      ],
+      "sourcesDigest": "a33e2fef1404d6dfab231469bea07640ada0bd9ad42b1c3d420caa35d7d88455"
+    },
+    {
+      "slug": "test-suite-for-mcp-config-probe",
+      "name": "Test suite for MCP config & probe",
+      "type": "system",
+      "sources": [
+        "tests/fixtures/mock_mcp_server.py",
+        "tests/test_jcode_mcp_config.sh",
+        "tests/test_mcp_config_manifest_sync.sh",
+        "tests/test_mcp_key_fallback.sh",
+        "tests/test_mcp_probe.sh"
+      ],
+      "sourcesDigest": "95f75b25463a13b61ac2e2137f4221b7c2a81c9a9422a2ec1cfe820e9ff6a39e"
+    },
+    {
+      "slug": "test-suite-for-ops-scripts",
+      "name": "Test suite for ops scripts",
+      "type": "system",
+      "sources": [
+        "tests/test_airtable_read.sh",
+        "tests/test_airtable_write.sh",
+        "tests/test_browse_extract.sh",
+        "tests/test_compact_anchor_sync.py",
+        "tests/test_compact_ritual_hardening.sh",
+        "tests/test_context7_check.sh",
+        "tests/test_cost_model_hint.sh",
+        "tests/test_dashboard_server.py",
+        "tests/test_directive_section_refs.sh",
+        "tests/test_g4_check.sh",
+        "tests/test_operator_action_router.py",
+        "tests/test_operator_request_notify.py"
+      ],
+      "sourcesDigest": "144be663fa9fd04ab152fb3a579fa9dcfcc4cb12ee8d21d82a60cebcf1c99446"
+    },
+    {
+      "slug": "tool-usage-audit",
+      "name": "tool-usage-audit",
       "type": "system",
       "sources": [
         "scripts/ops/tool-usage-audit.py",
@@ -998,8 +1014,8 @@
       "sourcesDigest": "a34a96243cdbd57c7896fc7d5f5a4dde3fcdd8a6a1bca52ea9921948d1a6dab2"
     },
     {
-      "slug": "turn-audit-py",
-      "name": "turn-audit.py",
+      "slug": "turn-economy",
+      "name": "turn-economy",
       "type": "system",
       "sources": [
         "scripts/ops/turn-audit.py",
@@ -1017,8 +1033,27 @@
       "sourcesDigest": "b640af07b633d17a562a8a5f854a19c94a33c6169c66e46291f8978bc47e1945"
     },
     {
-      "slug": "wsl-daemon-lifecycle",
-      "name": "WSL daemon lifecycle",
+      "slug": "wowcar-revenue-relabel-acceptance-harness",
+      "name": "Wowcar revenue relabel acceptance harness",
+      "type": "file",
+      "sources": [
+        "scripts/ops/wowcar-revenue-vocabulary-acceptance.py"
+      ],
+      "sourcesDigest": "4ac41bf99d27b7821e402c8d05774f95ac477ff958d361739e49e65a248d1add"
+    },
+    {
+      "slug": "wowcar-vocabulary-acceptance",
+      "name": "wowcar-vocabulary-acceptance",
+      "type": "system",
+      "sources": [
+        "scripts/ops/wowcar-revenue-vocabulary-acceptance.py",
+        "tests/test_wowcar_revenue_vocabulary_acceptance.sh"
+      ],
+      "sourcesDigest": "4eb70e546cbb6fb7a1344012fe2a8672d9debb3e0ce1f627feeb641de13670bb"
+    },
+    {
+      "slug": "wsl-systemd-daemon-scripts",
+      "name": "WSL systemd daemon scripts",
       "type": "system",
       "sources": [
         "scripts/wsl/install-wsl-daemon.sh",

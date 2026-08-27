@@ -1,6 +1,6 @@
 ---
-name: send-gate.py
-slug: send-gate-py
+name: send-gate
+slug: send-gate
 type: system
 sources:
   - path: scripts/ops/send-gate.py
@@ -8,7 +8,10 @@ sources:
   - path: tests/test_send_gate.sh
     hash: 4d0f03bd1b3e73a289e87cf0a56b25499b131e48fac01098b3f1d81755cb190d
 sources_digest: 260cbac1d830524fefee8831ec62d8032fb6948e871229aae8fb6af3055fb10f
-links: []
+links:
+  - to: prod-mechanism-guard
+    relation: validates
+    description: Guard blocks edits to send-gate.py.
 generator:
   version: 1
 covers:
@@ -52,7 +55,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Offline-testable refusal gate for outreach sends, fail-closed across 20 scenarios: daily/total caps, duplicate outreach, opt-out, non-Qualified status, missing email, G4 failure, TEST rows excluded by STATUS, unrendered rows, GROUP_ROUTED special case, self-contradictory rows, body-leak scanner for internal markers, unsplit rows, follow-up mode, exact normalized firm-name matching for g4_live, Website fallback, and phase-check scoping to first-contact sends. Refuses on any unknown or error.
+Offline, fail-closed refusal policy for outreach sends, tested as pure policy by stubbing air() and g4_live(). Enforces daily/total caps, duplicate/opt-out detection, non-Qualified status, missing email, G4 failure, TEST-row exclusion by STATUS, unrendered rows, GROUP_ROUTED special case, self-contradictory rows, body-leak scanning for internal markers, follow-up mode, exact normalized firm-name matching for g4_live, and phase-check scoping to first-contact sends. Refuses on any unknown or error.
+
+## Related
+
+- validates [[prod-mechanism-guard]] — Guard blocks edits to send-gate.py.
 <!-- context:generated:end -->
 
 ## Notes

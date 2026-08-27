@@ -1,6 +1,6 @@
 ---
-name: reply-watch.py
-slug: reply-watch-py
+name: reply-watch
+slug: reply-watch
 type: system
 sources:
   - path: scripts/ops/reply-watch.py
@@ -37,7 +37,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Outreach outcome watcher that classifies email replies, bounces, and silence for five real firms. Replies are reported once and never as silence; bounces are flagged as delivery failures (explicitly not silence); silence is phrased as an observation ('hüküm değil'); state persistence suppresses duplicate alerts; and a failure superseded by a later Sent (Rayelsis case) is not reported as a delivery problem.
+Outreach outcome watcher classifying email replies, bounces, and silence for five real firms. Reports replies once and never as silence, flags bounces as delivery failures (explicitly not silence), keeps fresh sends quiet, and phrases silence alerts as observations ('hüküm değil'). Uses lexicographically comparable ISO timestamps and a 72-hour silence threshold; state persistence suppresses duplicate alerts; a failure superseded by a later Sent is not reported as a delivery problem.
 <!-- context:generated:end -->
 
 ## Notes

@@ -1,6 +1,6 @@
 ---
-name: tool-usage-audit.py
-slug: tool-usage-audit-py
+name: tool-usage-audit
+slug: tool-usage-audit
 type: system
 sources:
   - path: scripts/ops/tool-usage-audit.py
@@ -28,7 +28,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Audits a jcode NDJSON event stream, categorizing tool usage (ctx7, airtable_r/w, linear, browser harness+MCP, browser_mcp, graft) with per-MCP-tool-name counts only for MCP tools. Ledger is idempotent (second run appends nothing), backfills new cycle files, re-audits rewritten files (cycle counter resets on container restart) rather than deduping by filename, and counts the browse-extract.py harness as browser usage to prevent faking A/B drops.
+Audits jcode NDJSON event streams, categorizing tools (ctx7, airtable_r/w combining script+MCP, linear, browser combining harness+MCP, graft) and recording per-MCP-tool-name counts only for MCP tools. Re-audits rewritten cycle files (cycle counter resets on container restart) rather than deduping by filename, backfills new files, and counts the browse-extract.py harness as browser usage to prevent faking A/B drops. --report exits 0 even when the ndjson directory is missing.
 <!-- context:generated:end -->
 
 ## Notes

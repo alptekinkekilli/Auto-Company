@@ -1,5 +1,5 @@
 ---
-name: Prompt transport contract
+name: prompt-transport-contract
 slug: prompt-transport-contract
 type: concept
 sources:
@@ -9,11 +9,11 @@ sources:
     hash: c5df34a0acc0d09b63a231df392960370ab146ceea135b5bcace427223300501
 sources_digest: 022c606470caf59b9766e07697dde5326e996c4c0f5c36881fc53a41c04a8d0a
 links:
-  - to: auto-loop-sh-core-loop
+  - to: auto-loop
     relation: validates
     description: >-
-      test_prompt_transport.sh extracts the transport function bodies and runs
-      them against a stub engine binary.
+      test_prompt_transport.sh pins this contract against auto-loop.sh's CLI
+      functions.
 generator:
   version: 1
 covers: []
@@ -21,11 +21,11 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-Cycle prompts are transported to engine CLIs via STDIN (codex uses the `-` sentinel) rather than as an argv argument, avoiding Linux's 131072-byte per-argument E2BIG cap. run_jcode_cycle refuses prompts >=126000 bytes with a named PROMPT-TOO-LARGE reason before spawning, while passing normal-size prompts as the run subcommand's argv.
+Cycle prompts must be transported to engine CLIs via STDIN (Claude; Codex uses the '-' sentinel) rather than as argv, because Linux's 131072-byte per-argument cap causes E2BIG failures. jcode refuses prompts >=126000 bytes with a named PROMPT-TOO-LARGE reason before spawning, while passing normal-size prompts as the run subcommand's argv.
 
 ## Related
 
-- validates [[auto-loop-sh-core-loop]] — test_prompt_transport.sh extracts the transport function bodies and runs them against a stub engine binary.
+- validates [[auto-loop]] — test_prompt_transport.sh pins this contract against auto-loop.sh's CLI functions.
 <!-- context:generated:end -->
 
 ## Notes

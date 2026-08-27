@@ -1,6 +1,6 @@
 ---
-name: registry-queue-watch.py
-slug: registry-queue-watch-py
+name: registry-queue-watch
+slug: registry-queue-watch
 type: system
 sources:
   - path: scripts/ops/registry-queue-watch.py
@@ -25,7 +25,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Airtable-backed watcher (APP-277) that alerts only above threshold and respects cooldown via a state file, and distinguishes an empty bridge queue with many attribution-Held firms as a company gap rather than an operator gap. It also detects EKAP-only queues (a v1 blind spot) and clears state when the queue drains so the next backlog alerts immediately.
+Watcher (APP-277) that fires only above threshold and respects cooldown, and distinguishes an empty bridge queue with many attribution-Held firms as a company gap rather than an operator gap. Detects EKAP-only queues (a v1 blind spot), persists cooldown in a state file, and clears state when the queue drains so the next backlog alerts immediately. Stubs Airtable by monkey-patching urllib.request.urlopen.
 <!-- context:generated:end -->
 
 ## Notes

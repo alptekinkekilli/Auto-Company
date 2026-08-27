@@ -1,32 +1,24 @@
 ---
-name: MCP config & probe
-slug: mcp-config-probe
+name: MCP config & key handling
+slug: mcp-config-key-handling
 type: system
 sources:
   - path: scripts/core/jcode-mcp-config.py
     hash: 7e5496c29eae3646af4874f74f0d70e22230b762a74acdfb7e38e93197b41aca
   - path: scripts/core/jcode-mcp-probe.py
     hash: 60fdd2addf2f53741d03e21002a00b6ee9d8895af1fae9746a51308e67672b67
-  - path: tests/fixtures/mock_mcp_server.py
-    hash: e5124ccf90e18331b1e81557000a0bf0cc13e1fd7f0412250c5f37fb08e23021
-  - path: tests/test_jcode_mcp_config.sh
-    hash: 3a26837a4685e40b45e3e8593459a69680a7bc6cc7e839f4ceb986c570a27025
-  - path: tests/test_mcp_config_manifest_sync.sh
-    hash: 372a198973bc97e73dd00c1acafe2fe458887504be2f5ef9849242d6549c1112
-  - path: tests/test_mcp_key_fallback.sh
-    hash: 21c4be05f1922a08fa185aaa94f73941a785d5f380b7770431bdee7bf78115d6
-  - path: tests/test_mcp_probe.sh
-    hash: 07482a8311b81667003a304c3741feed20e311f1e28263a5bb3bcc5599e962ce
-sources_digest: 5a812353162b0e0ba367cc63346f25dbece14c49c2c32ed9e40db2e51b20fb40
+  - path: scripts/ops/verify-mcp-keys.py
+    hash: a35c1f35481876cedc5bb4cf0c7fd4eceaea1c85e57d3c28e87560b3f9f342db
+sources_digest: f05ab069a6ee9c80b42b8808951d60e4035e8ca7a144240e09cd75577f327e4b
 links:
   - to: auto-loop-core
-    relation: configures
+    relation: produces
     description: >-
-      auto-loop.sh's JCODE_MCP_CONFIG_REQUIRED preflight list must match the
-      manifest; OPREQ-A requires airtable/linear absent from loop config.
+      Generates and validates the MCP config the loop boots with; a
+      config/manifest mismatch causes a boot crash-loop.
   - to: ops-probe-audit-scripts
-    relation: uses
-    description: verify-mcp-keys checks the same .mcp.json mcpServers section.
+    relation: part_of
+    description: verify-mcp-keys.py is one of the ops probes.
 generator:
   version: 1
 covers:
@@ -87,16 +79,22 @@ covers:
   - symbol: main
     kind: function
     at: 'scripts/core/jcode-mcp-probe.py:L189-L362'
+  - symbol: loop_env
+    kind: function
+    at: 'scripts/ops/verify-mcp-keys.py:L39-L51'
+  - symbol: main
+    kind: function
+    at: 'scripts/ops/verify-mcp-keys.py:L54-L75'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-The MCP server configuration and validation layer: jcode-mcp-config.py generates the loop's .mcp.json keeping secrets in the env block (never argv, to avoid ps leaks), jcode-mcp-probe.py deterministically probes servers against a manifest (exact tool set match, denylist coverage, at least one proven readcheck per server), and jcode-mcp-manifest.json is the source of truth. A macOS Keychain fallback fires only outside the container.
+The machinery that turns .mcp.json into a runtime MCP config and validates it: jcode-mcp-config.py generates the config keeping secrets in the env block (never argv, to avoid ps exposure), jcode-mcp-probe.py deterministically probes each server requiring at least one proven readcheck, and verify-mcp-keys.py checks key shape from the running loop's /proc environ. Key invariants: airtable/linear are deliberately absent from the loop config (OPREQ-A), and the Keychain fallback fires on macOS but never inside the container.
 
 ## Related
 
-- configures [[auto-loop-core]] — auto-loop.sh's JCODE_MCP_CONFIG_REQUIRED preflight list must match the manifest; OPREQ-A requires airtable/linear absent from loop config.
-- uses [[ops-probe-audit-scripts]] — verify-mcp-keys checks the same .mcp.json mcpServers section.
+- produces [[auto-loop-core]] — Generates and validates the MCP config the loop boots with; a config/manifest mismatch causes a boot crash-loop.
+- part of [[ops-probe-audit-scripts]] — verify-mcp-keys.py is one of the ops probes.
 <!-- context:generated:end -->
 
 ## Notes

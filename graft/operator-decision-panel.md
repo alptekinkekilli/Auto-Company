@@ -1,6 +1,6 @@
 ---
-name: Operator decision & refusal format
-slug: operator-decision-refusal-format
+name: operator-decision-panel
+slug: operator-decision-panel
 type: system
 sources:
   - path: dashboard/server.py
@@ -10,7 +10,12 @@ sources:
   - path: tests/test_refusal_format.sh
     hash: 11bf5e9869e2e573b4a897e4df84053e4f58d759d3073a9e058705482cc31ef5
 sources_digest: 11e7adec91819c8c7079618f531dba4d8397079ab99ec03decfea7e8642be03b
-links: []
+links:
+  - to: auto-loop
+    relation: part_of
+    description: >-
+      operator_request_notify.py lives under scripts/core alongside
+      auto-loop.sh.
 generator:
   version: 1
 covers:
@@ -321,7 +326,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The cockpit's operator-decision panel writes operator decisions and the notify script updates request status and audit log. The format uses a short bounded REFUSE head line followed by verbatim multi-line reasoning, because a line-anchored regex previously flattened reasoning into one long line and broke the parser.
+The cockpit's operator-decision panel writes a refusal format: a short bounded REFUSE head line followed by verbatim multi-line reasoning, so numbered points survive as separate lines. operator_request_notify.py transitions request status to REFUSED and writes a single audit entry idempotently. A line-anchored regex previously flattened multi-line reasoning into one long line, breaking the parser.
+
+## Related
+
+- part of [[auto-loop]] — operator_request_notify.py lives under scripts/core alongside auto-loop.sh.
 <!-- context:generated:end -->
 
 ## Notes

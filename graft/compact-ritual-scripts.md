@@ -1,6 +1,6 @@
 ---
-name: Compact Ritual
-slug: compact-ritual
+name: Compact ritual scripts
+slug: compact-ritual-scripts
 type: system
 sources:
   - path: scripts/compact-postcheck.py
@@ -11,11 +11,11 @@ sources:
     hash: e8e8ee947a10358614b0125b2d236f26238308fff1b686565581748cf19122d3
 sources_digest: 8a29be38a180ad8d9499a56cd3d111ad43039671f2ed2e59086a14253cad9064
 links:
-  - to: context-watch
+  - to: auto-loop-core
     relation: uses
     description: >-
-      context-watch.py emits the compact-ritual directive at 60% context
-      fullness, triggering this ritual.
+      The compact ritual runs as part of the loop's lifecycle to keep context
+      bounded.
 generator:
   version: 1
 covers:
@@ -38,11 +38,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The measurable compact ritual: a preflight that counts open items that would be lost, a resume linter enforcing the foreign-reader test (banning stale numeric claims while allowing commit SHAs/task IDs as stable anchors), and a postcheck that verifies the compact_summary carries the five mandatory anchor sections. All are fail-open canaries that never block compaction, and the anchor list is kept in sync across the linter and postcheck.
+The compact-preflight/postcheck/resume-lint trio that hardens the compact ritual. Preflight gates freshness on lint results (not just mtime), postcheck detects missing anchors and writes a JSON log line, and resume-lint enforces the canonical anchor strings. A cross-file sync test pins the anchors identical across the two Python scripts, the resume template, and the hardening fixture.
 
 ## Related
 
-- uses [[context-watch]] — context-watch.py emits the compact-ritual directive at 60% context fullness, triggering this ritual.
+- uses [[auto-loop-core]] — The compact ritual runs as part of the loop's lifecycle to keep context bounded.
 <!-- context:generated:end -->
 
 ## Notes

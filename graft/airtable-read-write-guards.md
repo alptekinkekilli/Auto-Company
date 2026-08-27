@@ -1,23 +1,19 @@
 ---
-name: Airtable access wrappers
-slug: airtable-access-wrappers
+name: Airtable read/write guards
+slug: airtable-read-write-guards
 type: system
 sources:
   - path: scripts/ops/airtable-read.py
     hash: 148f66145510c90e03256b7b37853122bcd892d51cba67f095ce700a0895e3e2
   - path: scripts/ops/airtable-write.py
     hash: 888d408c392193511145e11dfbe73841a6d7e3e743e396ab8c8fee8b9507ab7c
-  - path: tests/test_airtable_read.sh
-    hash: f1c8fbb1b495e922c52d041bac7edbae8f100ab57606ebd987179783265325df
-  - path: tests/test_airtable_write.sh
-    hash: a51c25001935da566cca4a450cfc0906827eb332779f2b454b12d547b7a0e6e0
-sources_digest: 2021356891ac463bde76a17510d6206598905cc15d804b9b867e92529075e85e
+sources_digest: 43a42c7621b93d8e35ed7813326f7b761e954384d076a4d1b176afa770c1b952
 links:
-  - to: mcp-config-probe
+  - to: auto-loop-core
     relation: uses
     description: >-
-      Airtable is an MCP server whose key shape verify-mcp-keys checks (keys
-      contain a dot).
+      The loop uses these wrappers for all Airtable reads/writes; their scoping
+      caps are what keep context costs bounded.
 generator:
   version: 1
 covers:
@@ -73,11 +69,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The read/write wrappers that gate Airtable access to control context cost and data integrity. airtable-read.py refuses unscoped reads (exit 2), caps --all-fields and --max-records at 200, caps pageSize at 100, and shapes record-ID filters into OR(RECORD_ID()=...) combined with --formula via AND. airtable-write.py's guard validates single-record writes offline: unknown fields refused unless --force, clearing non-empty requires --allow-clear, substantial replacement requires --replace.
+Two wrappers that gate Airtable access to control context cost and data integrity. airtable-read.py enforces scoping (refuses unscoped reads, caps max-records at 200 and pageSize at 100, requires --force for --all-fields) and shapes queries (record IDs become OR(RECORD_ID()=...) formulas ANDed with --formula). airtable-write.py's guard validates single-record writes before hitting the API: unknown fields refused unless --force, clearing non-empty fields needs --allow-clear, substantial value replacement needs --replace.
 
 ## Related
 
-- uses [[mcp-config-probe]] — Airtable is an MCP server whose key shape verify-mcp-keys checks (keys contain a dot).
+- uses [[auto-loop-core]] — The loop uses these wrappers for all Airtable reads/writes; their scoping caps are what keep context costs bounded.
 <!-- context:generated:end -->
 
 ## Notes

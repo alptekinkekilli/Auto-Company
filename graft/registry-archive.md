@@ -1,6 +1,6 @@
 ---
-name: registry-archive.py
-slug: registry-archive-py
+name: registry-archive
+slug: registry-archive
 type: system
 sources:
   - path: scripts/ops/registry-archive.py
@@ -43,7 +43,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Archives stale dated sections from a candidate registry markdown file into a monthly archive while preserving a protected live span (from `## Selected` through the end of `## Exhausted patterns / lessons`) byte-identical. Frozen-pattern sections inside the protected region are never moved; undated and non-frozen content is left untouched; pointer lines are inserted; and the tool is idempotent with dry-run/apply/check modes and eligibility-aware advisory behavior.
+Archives stale dated sections from a candidate registry markdown file while preserving a protected live span (from '## Selected' through the end of '## Exhausted patterns / lessons') byte-identical. Moves notes and frozen-pattern sections verbatim into a monthly archive, inserts pointer lines, leaves undated/non-frozen content untouched, is idempotent, and never moves frozen-pattern sections inside the protected region. --check stays silent when nothing is archivable even above threshold; --allow-undated-month forces undated sections into a month.
 <!-- context:generated:end -->
 
 ## Notes

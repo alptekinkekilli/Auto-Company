@@ -20,15 +20,13 @@ links:
   - to: auto-loop-core
     relation: uses
     description: >-
-      state-snapshot, tool-usage-audit, turn-audit, web-research-cost all parse
-      artifacts (logs/cycle-ndjson, logs/.jcode, memories/*) produced by the
-      loop; verify-mcp-keys reads the running auto-loop.sh process env via
-      /proc.
-  - to: mcp-config-probe
+      These probes are invoked by the auto-loop cycle; their always-exit-0 and
+      read-only contracts are what let the loop call them without risk.
+  - to: mcp-config-key-handling
     relation: uses
     description: >-
-      verify-mcp-keys parses /app/.mcp.json mcpServers and checks each server's
-      key shape.
+      verify-mcp-keys.py reads /app/.mcp.json and the running loop's environment
+      to validate MCP server keys.
 generator:
   version: 1
 covers:
@@ -111,12 +109,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A family of read-only, standard-library-only Python probes that inspect the running loop's state, logs, and spend without mutating the world. They share conventions: always exit 0 so a probe failure never kills the calling cycle, print grep-friendly reports, and treat missing/errored data as inconclusive rather than negative. They are the instrumentation layer the cockpit and post-cycle hooks consume.
+A family of read-only, standard-library-only Python probes and auditors that inspect the running system's state, logs, and MCP configuration. They share conventions: always exit 0 so a probe failure never kills the calling cycle, print machine-readable verdict lines, and treat missing/errored data as inconclusive rather than negative. They read only local files under the app root and write only their own state files (atomically via temp file + os.replace).
 
 ## Related
 
-- uses [[auto-loop-core]] — state-snapshot, tool-usage-audit, turn-audit, web-research-cost all parse artifacts (logs/cycle-ndjson, logs/.jcode, memories/*) produced by the loop; verify-mcp-keys reads the running auto-loop.sh process env via /proc.
-- uses [[mcp-config-probe]] — verify-mcp-keys parses /app/.mcp.json mcpServers and checks each server's key shape.
+- uses [[auto-loop-core]] — These probes are invoked by the auto-loop cycle; their always-exit-0 and read-only contracts are what let the loop call them without risk.
+- uses [[mcp-config-key-handling]] — verify-mcp-keys.py reads /app/.mcp.json and the running loop's environment to validate MCP server keys.
 <!-- context:generated:end -->
 
 ## Notes
