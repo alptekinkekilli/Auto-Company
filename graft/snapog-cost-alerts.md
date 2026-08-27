@@ -15,12 +15,9 @@ sources:
     hash: 518ec45652bc5010bbd34856e527e2dc9c2dfa525aea151ff467f3a802c9da81
 sources_digest: fe1d8fd6fcb0f308eb0c4072f436e2986ea169f87521e188c20ca981540b20fa
 links:
-  - to: snapog-schema
-    relation: uses
-    description: Queries D1 tables defined in migrations.
-  - to: snapog-worker
+  - to: snapog-service
     relation: part_of
-    description: Scheduled handler in index.ts invokes runCostAlertCheck.
+    description: Scheduled handler in src/index.ts triggers runCostAlertCheck.
 generator:
   version: 1
 covers:
@@ -70,12 +67,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Cron-triggered cost-alerting system (every 6h) running five independent checks against D1 and R2 (via a narrow GraphQL client for R2 storage bytes). Thresholds isolated in one file (ALERT_THRESHOLDS) so the CFO can revise numbers without touching check logic; severity escalates to critical at 1.5x. Checks are deliberately isolated — a thrown error is logged and treated as no alert to prevent false positives. Delivery posts only when alerts are non-empty, falling back to log-only mode when ALERT_WEBHOOK_URL is unset.
+Cron-triggered (every 6h) cost-alerting pipeline: five independent checks against D1 and R2 (via a thin Cloudflare Analytics GraphQL client), thresholds isolated in one file sourced from the CFO cost model, and a webhook deliverer that falls back to log-only mode when ALERT_WEBHOOK_URL is unset. Checks are deliberately isolated — a thrown error is logged and treated as no alert to prevent false positives.
 
 ## Related
 
-- uses [[snapog-schema]] — Queries D1 tables defined in migrations.
-- part of [[snapog-worker]] — Scheduled handler in index.ts invokes runCostAlertCheck.
+- part of [[snapog-service]] — Scheduled handler in src/index.ts triggers runCostAlertCheck.
 <!-- context:generated:end -->
 
 ## Notes

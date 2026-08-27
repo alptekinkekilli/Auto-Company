@@ -4,10 +4,10 @@ slug: prompt-assembly-contract
 type: concept
 sources:
   - path: scripts/core/auto-loop.sh
-    hash: f3e965e3aed59b32903f95d8be2954d7b966aa422c82a10fa581359fd906bb0b
+    hash: b8f8a3989fee29f5a561d7f4d4eb8f558086586d603c5217caf20288b84d27ec
   - path: tests/test_prompt_assembly.sh
     hash: 0cd8e397ee0db20d70eac066f7542b6dbabfec6bdd6d031cdc0e378da04876d6
-sources_digest: d52802f9bd10db20b4abd223179e1db74a972827d591949478f7fa57c2e7bc7e
+sources_digest: e8cd96191dd830ff7d1230db371cd214965460659eec8c4eec0a5365fc14376d
 links:
   - to: auto-loop-sh-core-loop
     relation: validates

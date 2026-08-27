@@ -1,7 +1,7 @@
 {
   "version": 1,
   "model": "openai:deepseek-ai/DeepSeek-V4-Flash-0731",
-  "repoDigest": "33d11ea7a2cb92afb9f479d3e040d08f7106edc4aa25826011a30cc2fa73bf30",
+  "repoDigest": "35cb4aed0c75414a91ccd24554635538ef8183c4569ff0d1324d55043eabc236",
   "files": [
     {
       "path": "dashboard/app.js",
@@ -157,7 +157,7 @@
     },
     {
       "path": "scripts/core/auto-loop.sh",
-      "hash": "f3e965e3aed59b32903f95d8be2954d7b966aa422c82a10fa581359fd906bb0b"
+      "hash": "b8f8a3989fee29f5a561d7f4d4eb8f558086586d603c5217caf20288b84d27ec"
     },
     {
       "path": "scripts/core/bridge_leak_scan.py",
@@ -552,22 +552,13 @@
       "sourcesDigest": "d765296cba06e0858b94642f9c57598b0a01dbdbf1099116ab94c5ce24458b9c"
     },
     {
-      "slug": "auto-loop",
-      "name": "Auto Loop",
-      "type": "system",
-      "sources": [
-        "scripts/core/auto-loop.sh"
-      ],
-      "sourcesDigest": "37ab20fc08031b66afd3689d1156671eff37d4ad8b4d6b223063c5bb09234e8f"
-    },
-    {
       "slug": "auto-loop-core",
       "name": "auto-loop core",
       "type": "system",
       "sources": [
         "scripts/core/auto-loop.sh"
       ],
-      "sourcesDigest": "37ab20fc08031b66afd3689d1156671eff37d4ad8b4d6b223063c5bb09234e8f"
+      "sourcesDigest": "9acc0249ddcf7d53dc97c65117d01ec63059f34e1003f3864d7b48ce6de9355a"
     },
     {
       "slug": "auto-loop-sh-core-loop",
@@ -576,16 +567,7 @@
       "sources": [
         "scripts/core/auto-loop.sh"
       ],
-      "sourcesDigest": "37ab20fc08031b66afd3689d1156671eff37d4ad8b4d6b223063c5bb09234e8f"
-    },
-    {
-      "slug": "bridge-leak-scanner",
-      "name": "Bridge Leak Scanner",
-      "type": "file",
-      "sources": [
-        "scripts/core/bridge_leak_scan.py"
-      ],
-      "sourcesDigest": "b640af07b633d17a562a8a5f854a19c94a33c6169c66e46291f8978bc47e1945"
+      "sourcesDigest": "9acc0249ddcf7d53dc97c65117d01ec63059f34e1003f3864d7b48ce6de9355a"
     },
     {
       "slug": "browse-extract",
@@ -608,7 +590,7 @@
         "tests/test_codex_spend_sources.sh",
         "tests/test_discretionary_budget.sh"
       ],
-      "sourcesDigest": "a04fc31ea989f5932fec4aa79082433f470bcbf894e9cba22820c08cccb0c419"
+      "sourcesDigest": "f2ea7b183c86428703bcebb2398ad2c9cc508d7310d606c3d9c9b5f93b2738ea"
     },
     {
       "slug": "claude-code-hooks",
@@ -627,31 +609,14 @@
       "type": "system",
       "sources": [
         "dashboard/app.js",
-        "dashboard/sentry_client.py"
-      ],
-      "sourcesDigest": "f7cffd86cee6a866334be6fc13e2b3724150ee08680c1996bf52b88ccc7091f6"
-    },
-    {
-      "slug": "cockpit-server",
-      "name": "Cockpit Server",
-      "type": "system",
-      "sources": [
+        "dashboard/sentry_client.py",
         "dashboard/server.py"
       ],
-      "sourcesDigest": "8b82355bba156c61c76505ae335656f264eff4fc117d0a477f2c27a30456f883"
-    },
-    {
-      "slug": "codex-final-text-extractor",
-      "name": "Codex Final Text Extractor",
-      "type": "file",
-      "sources": [
-        "scripts/core/codex-final-text.py"
-      ],
-      "sourcesDigest": "50f7d26269f033eca96271260397036b6cb8e3cc93d3bb1d120e0c11189605b9"
+      "sourcesDigest": "c3eeec88fbadc17427d51f65b1a682adbd4d4eb429313cc3a6c06273f937d76d"
     },
     {
       "slug": "compact-ritual",
-      "name": "Compact ritual",
+      "name": "Compact Ritual",
       "type": "system",
       "sources": [
         "scripts/compact-postcheck.py",
@@ -663,19 +628,8 @@
       "sourcesDigest": "a197cb7f52298831dc305a1eb2c78fa466f5497a161e0089f9616dba6381229c"
     },
     {
-      "slug": "compact-ritual-hooks",
-      "name": "Compact Ritual Hooks",
-      "type": "system",
-      "sources": [
-        "scripts/compact-postcheck.py",
-        "scripts/compact-preflight.py",
-        "scripts/compact-resume-lint.py"
-      ],
-      "sourcesDigest": "8a29be38a180ad8d9499a56cd3d111ad43039671f2ed2e59086a14253cad9064"
-    },
-    {
-      "slug": "container-entrypoint",
-      "name": "Container Entrypoint",
+      "slug": "container-bootstrap",
+      "name": "Container Bootstrap",
       "type": "system",
       "sources": [
         "docker-entrypoint.sh"
@@ -690,15 +644,6 @@
         "scripts/context-watch.py"
       ],
       "sourcesDigest": "e120476879431ac8f01406f0c7056c596e84ad05a3bdffa80c27718e3d312c80"
-    },
-    {
-      "slug": "context7-docs-cli",
-      "name": "Context7 Docs CLI",
-      "type": "file",
-      "sources": [
-        "scripts/analyst/codex-skill/autocompany-opportunity-director/scripts/context7_docs.sh"
-      ],
-      "sourcesDigest": "d015b3a02ab7360603b113092f672eafcdd3a21270b3ab056880f098f44b12c1"
     },
     {
       "slug": "context7-tool-usage-audit",
@@ -721,7 +666,7 @@
         "tests/test_cycle_metadata.sh",
         "tests/test_mixed_harness.sh"
       ],
-      "sourcesDigest": "9a1dd64b9f2ba14ebdc027aebb361a503b67042a2c912c4265432458230529cf"
+      "sourcesDigest": "16f57a317e5f38443d3956fb9ab4976945ef01692772d4b9938de7e7b8b4e5e9"
     },
     {
       "slug": "dashboard-server",
@@ -736,13 +681,14 @@
     {
       "slug": "directive-writer",
       "name": "Directive Writer",
-      "type": "file",
+      "type": "concept",
       "sources": [
         "dashboard/server.py",
         "scripts/analyst/opportunity-analyst-jcode.sh",
-        "scripts/analyst/opportunity-analyst.sh"
+        "scripts/analyst/opportunity-analyst.sh",
+        "scripts/analyst/promote_directive.py"
       ],
-      "sourcesDigest": "63eaf4d30c35d1884710aa15325ee7f700976641bf884681803ba6349c2ea100"
+      "sourcesDigest": "a241dea3d7a4b796dc586887632af1230d3ebb6276ab48f6517ec15141e6e259"
     },
     {
       "slug": "directive-writer-section-refs",
@@ -778,40 +724,16 @@
       "sourcesDigest": "80da2d1af5dcdf83eaa2848a8d5f1be1eb4bc43af8080731f7b021dcba983f57"
     },
     {
-      "slug": "headinspect-inspection-logic",
-      "name": "HeadInspect Inspection Logic",
-      "type": "file",
-      "sources": [
-        "projects/headinspect/src/inspect.ts"
-      ],
-      "sourcesDigest": "8d2336c69721310ec5798dc9040b95d4e02506d8a61539e3b7f87a1b22612515"
-    },
-    {
-      "slug": "headinspect-rendering",
-      "name": "HeadInspect Rendering",
-      "type": "file",
-      "sources": [
-        "projects/headinspect/src/render.ts"
-      ],
-      "sourcesDigest": "c1fd5ab5035979e15031a703d3af275a0f68bfd9fa619bad6929d3e848f8e2d2"
-    },
-    {
-      "slug": "headinspect-schema",
-      "name": "HeadInspect Schema",
-      "type": "file",
-      "sources": [
-        "projects/headinspect/migrations/0001_hits.sql"
-      ],
-      "sourcesDigest": "749d2c2597b768efd8b2d98fa11448a3fea8bb6aa07962bec8ae443dd5bd793b"
-    },
-    {
-      "slug": "headinspect-worker",
-      "name": "HeadInspect Worker",
+      "slug": "headinspect-service",
+      "name": "HeadInspect Service",
       "type": "system",
       "sources": [
-        "projects/headinspect/src/index.ts"
+        "projects/headinspect/migrations/0001_hits.sql",
+        "projects/headinspect/src/index.ts",
+        "projects/headinspect/src/inspect.ts",
+        "projects/headinspect/src/render.ts"
       ],
-      "sourcesDigest": "1651f2a75c6cc66090673b59fbb99aa23cb05a94ef661e0b49dea46746359d52"
+      "sourcesDigest": "cb61b3ccfe05c907fe9c1d45e555e1e03b1607816df1e7ac11b12c3268891960"
     },
     {
       "slug": "idle-skip-escalation",
@@ -822,7 +744,7 @@
         "tests/test_escalation.sh",
         "tests/test_idle_skip.sh"
       ],
-      "sourcesDigest": "0a83911f1fd490006bbd9514cf7f8f6fabe7cc535284de3c452f1962bdce58c1"
+      "sourcesDigest": "215b69606a8c58c65539e98063fb19dfae6025e516b16c4f6a53302e634a1bfe"
     },
     {
       "slug": "jcode-pilot-smoke-test",
@@ -832,6 +754,16 @@
         "scripts/analyst/jcode-pilot-smoke.sh"
       ],
       "sourcesDigest": "580997342635860ff744d27a36e889c902bd03a27837c94edb20c5bb745f01b5"
+    },
+    {
+      "slug": "loop-driver",
+      "name": "Loop Driver",
+      "type": "system",
+      "sources": [
+        "scripts/core/auto-loop.sh",
+        "scripts/core/codex-final-text.py"
+      ],
+      "sourcesDigest": "9c7f69c3ab695cdfeb60af9d2cf604e2afa439aa980e0d9141de96a1ce39e8cb"
     },
     {
       "slug": "mcp-config-probe",
@@ -872,32 +804,17 @@
       "sourcesDigest": "9d0a605d2827017229970922c770241ebe8fae6eb4e884058e6cc728945a9011"
     },
     {
-      "slug": "operator-request-notify",
-      "name": "Operator Request Notify",
-      "type": "file",
-      "sources": [
-        "dashboard/server.py",
-        "scripts/core/operator_request_notify.py"
-      ],
-      "sourcesDigest": "8e026a3fe67d983c691aa55f62be57d3036735e2371063b2462835eb4a5203bb"
-    },
-    {
-      "slug": "opportunity-analyst-codex",
-      "name": "Opportunity Analyst (codex)",
+      "slug": "opportunity-analyst",
+      "name": "Opportunity Analyst",
       "type": "system",
       "sources": [
-        "scripts/analyst/opportunity-analyst.sh"
+        "scripts/analyst/codex-skill/autocompany-opportunity-director/scripts/context7_docs.sh",
+        "scripts/analyst/merge_registry.py",
+        "scripts/analyst/opportunity-analyst-jcode.sh",
+        "scripts/analyst/opportunity-analyst.sh",
+        "scripts/analyst/promote_directive.py"
       ],
-      "sourcesDigest": "da007f9034018dbd0503170144e8be4cae497ce9a604927f47722d34c5692a01"
-    },
-    {
-      "slug": "opportunity-analyst-jcode",
-      "name": "Opportunity Analyst (jcode)",
-      "type": "system",
-      "sources": [
-        "scripts/analyst/opportunity-analyst-jcode.sh"
-      ],
-      "sourcesDigest": "7f8e7d6a9e197732a06d93ee9f99e03a2a50ef0721c7d992f3621f154f72a6b3"
+      "sourcesDigest": "0e30aa01e58354844cc15ea6a1e05fcee433c04412f00d5b4955c540c51d2eaf"
     },
     {
       "slug": "ops-probe-audit-scripts",
@@ -914,15 +831,6 @@
       "sourcesDigest": "ec0e551f95ef3587f18a2e0b68fc50d6ca8650135cece721a289f4db44543178"
     },
     {
-      "slug": "promotion-gate",
-      "name": "Promotion Gate",
-      "type": "file",
-      "sources": [
-        "scripts/analyst/promote_directive.py"
-      ],
-      "sourcesDigest": "529774ce95135d20964e1d42a6242cf44c9928383f17eac44213ac8385a782b9"
-    },
-    {
       "slug": "prompt-assembly-contract",
       "name": "Prompt assembly contract",
       "type": "concept",
@@ -930,7 +838,7 @@
         "scripts/core/auto-loop.sh",
         "tests/test_prompt_assembly.sh"
       ],
-      "sourcesDigest": "d52802f9bd10db20b4abd223179e1db74a972827d591949478f7fa57c2e7bc7e"
+      "sourcesDigest": "e8cd96191dd830ff7d1230db371cd214965460659eec8c4eec0a5365fc14376d"
     },
     {
       "slug": "prompt-transport-contract",
@@ -940,7 +848,7 @@
         "scripts/core/auto-loop.sh",
         "tests/test_prompt_transport.sh"
       ],
-      "sourcesDigest": "784a97c5426b950cf3ba16542c92830014f14cdb63b07e34995ef319dd7d6e26"
+      "sourcesDigest": "022c606470caf59b9766e07697dde5326e996c4c0f5c36881fc53a41c04a8d0a"
     },
     {
       "slug": "registry-archive-py",
@@ -953,9 +861,9 @@
       "sourcesDigest": "19cec281a0f24ce825491428331ca5006618cbdd419a7fc31cebd53d832015d2"
     },
     {
-      "slug": "registry-merge",
-      "name": "Registry Merge",
-      "type": "file",
+      "slug": "registry-merge-invariants",
+      "name": "Registry Merge Invariants",
+      "type": "concept",
       "sources": [
         "scripts/analyst/merge_registry.py"
       ],
@@ -1009,7 +917,7 @@
         "scripts/core/auto-loop.sh",
         "tests/test_seteshape_lint.py"
       ],
-      "sourcesDigest": "9824d739a8c16a9c17da633b63408b2b7b9e7e2774b57a88b9e2854207b5a193"
+      "sourcesDigest": "e3103dc607cbc3502d7cf66ff0e032fae35606c99d8bae8d61f841d9295998d0"
     },
     {
       "slug": "snapog-cost-alerts",
@@ -1025,8 +933,8 @@
       "sourcesDigest": "fe1d8fd6fcb0f308eb0c4072f436e2986ea169f87521e188c20ca981540b20fa"
     },
     {
-      "slug": "snapog-landing-pages",
-      "name": "SnapOG Landing Pages",
+      "slug": "snapog-landing-dashboard",
+      "name": "SnapOG Landing/Dashboard",
       "type": "file",
       "sources": [
         "projects/_archive/snapog/src/dashboard/pages.ts"
@@ -1034,27 +942,8 @@
       "sourcesDigest": "aa49b78a6522f0383edeedf2bbb936457599ccfbd81b5ce65f2e99c6e243ad03"
     },
     {
-      "slug": "snapog-north-star-metric",
-      "name": "SnapOG North-Star Metric",
-      "type": "file",
-      "sources": [
-        "docs/operations/north-star-metric-query.sql"
-      ],
-      "sourcesDigest": "91dcfb3b617798695902ce25230879b0ebdf6c4ac53fe80d36c1db48d76a29a9"
-    },
-    {
-      "slug": "snapog-og-rendering",
-      "name": "SnapOG OG Rendering",
-      "type": "system",
-      "sources": [
-        "projects/_archive/snapog/src/og/render.ts",
-        "projects/_archive/snapog/src/og/templates.ts"
-      ],
-      "sourcesDigest": "33ae7a75e47eef85db34a1438baacae47da77dae7fb7876ade82ebe4c7f21f57"
-    },
-    {
-      "slug": "snapog-sample-scripts",
-      "name": "SnapOG Sample Scripts",
+      "slug": "snapog-sample-tests",
+      "name": "SnapOG Sample Tests",
       "type": "system",
       "sources": [
         "projects/_archive/snapog/sample/alerts-dry-run.sh",
@@ -1064,34 +953,19 @@
       "sourcesDigest": "ce9cb2a773c1290423006a58fe8d649723cb56a07022127ba072ed0d87b79c56"
     },
     {
-      "slug": "snapog-schema",
-      "name": "SnapOG Schema",
+      "slug": "snapog-service",
+      "name": "SnapOG Service",
       "type": "system",
       "sources": [
         "projects/_archive/snapog/migrations/0001_init.sql",
         "projects/_archive/snapog/migrations/0002_waitlist.sql",
-        "projects/_archive/snapog/migrations/0003_cache_key_tracking.sql"
-      ],
-      "sourcesDigest": "8820226ce02d1d9ebb352867760d54a674115efb44b492597558e611bb10dc93"
-    },
-    {
-      "slug": "snapog-waitlist-function",
-      "name": "SnapOG Waitlist Function",
-      "type": "file",
-      "sources": [
-        "projects/_archive/snapog/src/dashboard/pages.ts"
-      ],
-      "sourcesDigest": "aa49b78a6522f0383edeedf2bbb936457599ccfbd81b5ce65f2e99c6e243ad03"
-    },
-    {
-      "slug": "snapog-worker",
-      "name": "SnapOG Worker",
-      "type": "system",
-      "sources": [
+        "projects/_archive/snapog/migrations/0003_cache_key_tracking.sql",
         "projects/_archive/snapog/src/index.ts",
+        "projects/_archive/snapog/src/og/render.ts",
+        "projects/_archive/snapog/src/og/templates.ts",
         "projects/_archive/snapog/src/types.ts"
       ],
-      "sourcesDigest": "3a502edd4ac88332d9c5d9708afe48ce4227dfd0fbbe3aa4b9aebdc3c5ff6165"
+      "sourcesDigest": "fdaeeb7e96b128caaf56f24722d43c264ce856d635c7315a709e6c4879ccc4f1"
     },
     {
       "slug": "state-snapshot-py",
@@ -1111,7 +985,7 @@
         "scripts/core/auto-loop.sh",
         "tests/test_tier_ladder_daily.sh"
       ],
-      "sourcesDigest": "824da56e05c877fc937fe9fe5a8d42086dd21df51868365fe37d84abb6a39531"
+      "sourcesDigest": "e2254c052a9a09ae5e7b4ea291f115e745a1de6cb8568f6af3a808db2e06b150"
     },
     {
       "slug": "tool-usage-audit-py",
@@ -1132,6 +1006,15 @@
         "tests/test_turn_audit.sh"
       ],
       "sourcesDigest": "d172c81ad96a0a7833800c32917ff357b620817a9ca217cba878f3d6f8500ea3"
+    },
+    {
+      "slug": "value-sensitive-leak-scanner",
+      "name": "Value-Sensitive Leak Scanner",
+      "type": "concept",
+      "sources": [
+        "scripts/core/bridge_leak_scan.py"
+      ],
+      "sourcesDigest": "b640af07b633d17a562a8a5f854a19c94a33c6169c66e46291f8978bc47e1945"
     },
     {
       "slug": "wsl-daemon-lifecycle",

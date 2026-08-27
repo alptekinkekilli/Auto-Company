@@ -1,5 +1,5 @@
 ---
-name: Compact ritual
+name: Compact Ritual
 slug: compact-ritual
 type: system
 sources:
@@ -20,6 +20,11 @@ links:
     description: >-
       Compact runs as part of the loop lifecycle; session-brief surfaces
       /tmp/compact-preflight.md open items.
+  - to: context-watch
+    relation: uses
+    description: >-
+      context-watch.py emits the compact-ritual directive at 60% context
+      fullness, triggering this ritual.
 generator:
   version: 1
 covers:
@@ -51,11 +56,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The context-compaction pipeline: compact-preflight.py gates freshness on lint results (not just mtime), compact-postcheck.py detects missing anchors and writes a JSON history line, compact-resume-lint.py enforces the ZORUNLU anchors, and a shared set of anchor strings (İLK İŞ, KARAR, DOĞRULANMAMIŞ, BEKLEYEN, İZLEYİCİ) must stay identical across all four locations.
+The measurable compact ritual: a preflight that counts open items that would be lost, a resume linter enforcing the foreign-reader test (banning stale numeric claims while allowing commit SHAs/task IDs as stable anchors), and a postcheck that verifies the compact_summary carries the five mandatory anchor sections. All are fail-open canaries that never block compaction, and the anchor list is kept in sync across the linter and postcheck.
 
 ## Related
 
 - uses [[auto-loop-core]] — Compact runs as part of the loop lifecycle; session-brief surfaces /tmp/compact-preflight.md open items.
+- uses [[context-watch]] — context-watch.py emits the compact-ritual directive at 60% context fullness, triggering this ritual.
 <!-- context:generated:end -->
 
 ## Notes

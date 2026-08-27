@@ -4,10 +4,10 @@ slug: prompt-transport-contract
 type: concept
 sources:
   - path: scripts/core/auto-loop.sh
-    hash: f3e965e3aed59b32903f95d8be2954d7b966aa422c82a10fa581359fd906bb0b
+    hash: b8f8a3989fee29f5a561d7f4d4eb8f558086586d603c5217caf20288b84d27ec
   - path: tests/test_prompt_transport.sh
     hash: c5df34a0acc0d09b63a231df392960370ab146ceea135b5bcace427223300501
-sources_digest: 784a97c5426b950cf3ba16542c92830014f14cdb63b07e34995ef319dd7d6e26
+sources_digest: 022c606470caf59b9766e07697dde5326e996c4c0f5c36881fc53a41c04a8d0a
 links:
   - to: auto-loop-sh-core-loop
     relation: validates

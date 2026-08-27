@@ -4,14 +4,14 @@ slug: cycle-counter-metadata
 type: system
 sources:
   - path: scripts/core/auto-loop.sh
-    hash: f3e965e3aed59b32903f95d8be2954d7b966aa422c82a10fa581359fd906bb0b
+    hash: b8f8a3989fee29f5a561d7f4d4eb8f558086586d603c5217caf20288b84d27ec
   - path: tests/test_cycle_counter.sh
     hash: ab58cfed1b942c55ff2422535c8904c0292904f40786afc3cb7a66774d635065
   - path: tests/test_cycle_metadata.sh
     hash: ed0597fda8cb7dd8c8f45b5dea353e18374e12a7f4b247afab630f455e708c2e
   - path: tests/test_mixed_harness.sh
     hash: bd8a1f81df957e0bfdfacf44982a2274a58809d5f9bd8618c64c3efeecb868cc
-sources_digest: 9a1dd64b9f2ba14ebdc027aebb361a503b67042a2c912c4265432458230529cf
+sources_digest: 16f57a317e5f38443d3956fb9ab4976945ef01692772d4b9938de7e7b8b4e5e9
 links:
   - to: auto-loop-core
     relation: part_of

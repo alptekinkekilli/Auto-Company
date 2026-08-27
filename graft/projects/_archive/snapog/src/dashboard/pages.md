@@ -1,4 +1,4 @@
-# projects/_archive/snapog/src/dashboard/pages.ts · [[snapog-landing-pages]] [[snapog-waitlist-function]]
+# projects/_archive/snapog/src/dashboard/pages.ts · [[snapog-landing-dashboard]]
 
 Module defining all HTML page templates and shared CSS for the SnapOG dashboard and landing site.
 

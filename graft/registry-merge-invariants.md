@@ -1,15 +1,15 @@
 ---
-name: Registry Merge
-slug: registry-merge
-type: file
+name: Registry Merge Invariants
+slug: registry-merge-invariants
+type: concept
 sources:
   - path: scripts/analyst/merge_registry.py
     hash: 55719338148054fff06780400062453a037e4bf10fe5817f04536b5c85ade7d1
 sources_digest: 5ff39050e2ffebfcb89290b663b10deb8e198c076c45e5893acf920e54d83301
 links:
-  - to: opportunity-analyst-codex
-    relation: implements
-    description: Pass 2 of the codex analyst.
+  - to: opportunity-analyst
+    relation: part_of
+    description: Pass-2 of the analyst pipeline.
 generator:
   version: 1
 covers:
@@ -59,11 +59,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Deterministic PASS-2 merge tool that surgically replaces only the 'live decision state' span of candidate-registry.md (between ## Selected and ## Exhausted patterns / lessons) while leaving the ~180KB append-only historical journal byte-identical. Enforces invariants: no candidate ID may disappear, no duplicate axes, and the identity of active candidates cannot be rewritten — only verdict changes allowed. Heading matching via regex on heading text (not whitespace) to survive cosmetic edits; ID extraction anchored to cell starts to avoid prose false positives; fail-closed with read-back verification and restoration on failure. Never trusts model instruction-following — proves prefix/suffix byte-identity via exact string slicing and hashes.
+merge_registry.py surgically replaces only the live decision-state span of candidate-registry.md (between ## Selected and ## Exhausted patterns / lessons) while leaving the ~180KB append-only journal byte-identical. Enforces invariants: no candidate ID may disappear, no duplicate axes, and the identity of active candidates cannot be rewritten — only verdict changes are allowed. Fail-closed with read-back verification and restoration on failure.
 
 ## Related
 
-- implements [[opportunity-analyst-codex]] — Pass 2 of the codex analyst.
+- part of [[opportunity-analyst]] — Pass-2 of the analyst pipeline.
 <!-- context:generated:end -->
 
 ## Notes

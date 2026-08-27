@@ -4,10 +4,10 @@ slug: tier-ladder-selection
 type: concept
 sources:
   - path: scripts/core/auto-loop.sh
-    hash: f3e965e3aed59b32903f95d8be2954d7b966aa422c82a10fa581359fd906bb0b
+    hash: b8f8a3989fee29f5a561d7f4d4eb8f558086586d603c5217caf20288b84d27ec
   - path: tests/test_tier_ladder_daily.sh
     hash: d0bfb4ace48e1fa9665e17059be3f618b46fda0dcf432544a6bb16c07a3ed8db
-sources_digest: 824da56e05c877fc937fe9fe5a8d42086dd21df51868365fe37d84abb6a39531
+sources_digest: e2254c052a9a09ae5e7b4ea291f115e745a1de6cb8568f6af3a808db2e06b150
 links:
   - to: auto-loop-sh-core-loop
     relation: validates

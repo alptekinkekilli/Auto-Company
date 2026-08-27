@@ -4,8 +4,8 @@ slug: auto-loop-sh-core-loop
 type: system
 sources:
   - path: scripts/core/auto-loop.sh
-    hash: f3e965e3aed59b32903f95d8be2954d7b966aa422c82a10fa581359fd906bb0b
-sources_digest: 37ab20fc08031b66afd3689d1156671eff37d4ad8b4d6b223063c5bb09234e8f
+    hash: b8f8a3989fee29f5a561d7f4d4eb8f558086586d603c5217caf20288b84d27ec
+sources_digest: 9acc0249ddcf7d53dc97c65117d01ec63059f34e1003f3864d7b48ce6de9355a
 links:
   - to: prompt-assembly-contract
     relation: implements

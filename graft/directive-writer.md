@@ -1,7 +1,7 @@
 ---
 name: Directive Writer
 slug: directive-writer
-type: file
+type: concept
 sources:
   - path: dashboard/server.py
     hash: 999b44bc7671293e78906611b1dfd46bcf6efcc520ed92623a17281766a7fc85
@@ -9,17 +9,18 @@ sources:
     hash: 8250db61c0a1031c088076e240616d2771868957339ff80f5e730388b06e5395
   - path: scripts/analyst/opportunity-analyst.sh
     hash: a0a766435a1f9e501b97cca96bb30314440de72fd569313488d3b80d5f9c55a5
-sources_digest: 63eaf4d30c35d1884710aa15325ee7f700976641bf884681803ba6349c2ea100
+  - path: scripts/analyst/promote_directive.py
+    hash: 9c45147f1730fc30545b94a30428d54e0bd40f04506aa3db00614880ec93d677
+sources_digest: a241dea3d7a4b796dc586887632af1230d3ebb6276ab48f6517ec15141e6e259
 links:
-  - to: cockpit-server
-    relation: implements
-    description: Server routes all directive writes through it.
-  - to: opportunity-analyst-codex
+  - to: cockpit-dashboard
     relation: uses
-    description: Used for snapshot/restore of human-directive.md.
-  - to: opportunity-analyst-jcode
+    description: server.py routes all directive writes through directive_writer.py.
+  - to: opportunity-analyst
     relation: uses
-    description: restore_directive guardrail uses directive_writer.py.
+    description: >-
+      promote_directive.py and the analyst runners use directive_writer.py to
+      safely restore or promote human-directive.md.
 generator:
   version: 1
 covers:
@@ -227,17 +228,31 @@ covers:
   - symbol: main
     kind: function
     at: 'dashboard/server.py:L1983-L2005'
+  - symbol: sha256
+    kind: function
+    at: 'scripts/analyst/promote_directive.py:L91-L92'
+  - symbol: audit
+    kind: function
+    at: 'scripts/analyst/promote_directive.py:L95-L98'
+  - symbol: blocked
+    kind: function
+    at: 'scripts/analyst/promote_directive.py:L101-L104'
+  - symbol: notify
+    kind: function
+    at: 'scripts/analyst/promote_directive.py:L107-L113'
+  - symbol: main
+    kind: function
+    at: 'scripts/analyst/promote_directive.py:L116-L225'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-The single deterministic writer for memories/human-directive.md. Locks, gates on in-flight PENDING directives, and refuses clobbering unless allow_pending is set. Used by the cockpit server, auto-loop, and both analyst runners as the safe restore path.
+The single deterministic writer for memories/human-directive.md: locks, gates on in-flight PENDING directives, and refuses clobbering unless allow_pending is set. All directive writes (dashboard, analyst, loop) must route through it; it is also used for snapshot/restore guardrails with hash checks.
 
 ## Related
 
-- implements [[cockpit-server]] — Server routes all directive writes through it.
-- uses [[opportunity-analyst-codex]] — Used for snapshot/restore of human-directive.md.
-- uses [[opportunity-analyst-jcode]] — restore_directive guardrail uses directive_writer.py.
+- uses [[cockpit-dashboard]] — server.py routes all directive writes through directive_writer.py.
+- uses [[opportunity-analyst]] — promote_directive.py and the analyst runners use directive_writer.py to safely restore or promote human-directive.md.
 <!-- context:generated:end -->
 
 ## Notes

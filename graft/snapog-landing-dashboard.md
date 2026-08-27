@@ -1,15 +1,15 @@
 ---
-name: SnapOG Landing Pages
-slug: snapog-landing-pages
+name: SnapOG Landing/Dashboard
+slug: snapog-landing-dashboard
 type: file
 sources:
   - path: projects/_archive/snapog/src/dashboard/pages.ts
     hash: 6a33d1b6152ee8ea3ee6f5617105ce757c915627156072dd9cb1f3b78e32b4af
 sources_digest: aa49b78a6522f0383edeedf2bbb936457599ccfbd81b5ce65f2e99c6e243ad03
 links:
-  - to: snapog-worker
-    relation: implements
-    description: Renders the / and /dashboard routes.
+  - to: snapog-service
+    relation: part_of
+    description: Rendered by the Worker's / and /dashboard routes.
 generator:
   version: 1
 covers:
@@ -41,11 +41,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Server-side HTML template module for the landing page and dashboard, embedding the 'Carbon Terminal' aesthetic (dark surfaces, amber accent, JetBrains Mono/DM Sans, dot-grid). Uses template literals only, no client framework; threads the host argument into code examples and meta tags to build absolute URLs; embeds a live OG preview hitting the actual /og endpoint.
+Server-side HTML template module (no client framework) rendering the marketing landing page and dashboard with the 'Carbon Terminal' aesthetic. Threads the host argument into code examples and meta tags to build absolute URLs, and embeds a live OG image preview hitting the actual /og endpoint.
 
 ## Related
 
-- implements [[snapog-worker]] — Renders the / and /dashboard routes.
+- part of [[snapog-service]] — Rendered by the Worker's / and /dashboard routes.
 <!-- context:generated:end -->
 
 ## Notes
