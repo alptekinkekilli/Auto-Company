@@ -32,12 +32,30 @@ SCOPE = {
     "detayları NDA / anonim profil ile paylaşabiliriz.",
 }
 
+import os as _os
+import re as _re
+
+# Düz-metin imza (text/plain parçası) — HTML imzayla tutarlı.
 SIGNATURE = (
  "Sevgiler,\n"
- "Appricode · Tedarik & İş Geliştirme\n"
- "tedarik@go.appricode.tr · appricode.tr"
+ "Alptekin Kekilli — Founder & Managing Partner\n"
+ "Appricode LLC\n"
+ "M +90 546 645 64 79 · E alp@appricode.tr · W appricode.tr\n"
+ "Piyalepaşa Blv. No:71 Kat:11, Şişli, İstanbul"
 )
-# NOT: İstenirse buraya kişi adı + telefon eklenebilir (yanıt oranını artırır).
+
+# HTML imza (text/html parçası) — operatörün sağladığı markalı imza (logo gömülü PNG).
+# rfq_signature.html'in <body> içi çıkarılır; dosya yoksa düz-metin imzaya düşülür.
+def _html_signature() -> str:
+    path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "rfq_signature.html")
+    try:
+        doc = open(path, encoding="utf-8").read()
+        m = _re.search(r"<body[^>]*>(.*)</body>", doc, _re.S | _re.I)
+        return (m.group(1) if m else doc).strip()
+    except OSError:
+        return "<pre>" + SIGNATURE + "</pre>"
+
+HTML_SIGNATURE = _html_signature()
 
 
 def subject(kume: str) -> str:
@@ -61,4 +79,30 @@ def body(kume: str, scope: str) -> str:
         "Bu bir ön araştırma; bağlayıcı bir sipariş değil. Uygun olursa kısa bir görüşme de "
         "yapabiliriz. Ayıracağınız vakit için şimdiden teşekkür ederiz.\n\n"
         + SIGNATURE + "\n"
+    )
+
+
+def body_html(kume: str, scope: str) -> str:
+    """text/html parçası — aynı humanize metin + markalı HTML imza."""
+    sc = scope.replace("&", "&amp;").replace("<", "&lt;")
+    return (
+        '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;color:#222222;">'
+        "<p>Merhaba,</p>"
+        "<p>Ben Appricode'dan yazıyorum. Şu sıralar, kurulum aşamasındaki bir "
+        "<b>araç-finansmanı girişiminin</b> tedarik hazırlığını yürütüyoruz ve bu kapsamda "
+        f"sizden {kume.lower()} tarafında kısa bir <b>indikatif</b> fiyat teklifi rica edeceğiz. "
+        "Girişimin adını bu aşamada paylaşamıyoruz; ihtiyacın sektörünü ve teknik çerçevesini "
+        "aşağıda bulabilirsiniz.</p>"
+        f"<p><b>İhtiyacımız:</b><br>{sc}</p>"
+        "<p>Teklifte şunlar bize çok yardımcı olur:</p>"
+        "<ul>"
+        "<li>Aylık / birim indikatif fiyat (KDV hariç)</li>"
+        "<li>Fiyatın dayandığı varsayımlar ve varsa hacim kademeleri</li>"
+        "<li>Varsa kurulum / tek seferlik maliyetler</li>"
+        "<li>Teklifin geçerlilik süresi</li>"
+        "</ul>"
+        "<p>Bu bir <b>ön araştırma</b>; bağlayıcı bir sipariş değil. Uygun olursa kısa bir "
+        "görüşme de yapabiliriz. Ayıracağınız vakit için şimdiden teşekkür ederiz.</p>"
+        '<div style="margin-top:18px;">' + HTML_SIGNATURE + "</div>"
+        "</div>"
     )

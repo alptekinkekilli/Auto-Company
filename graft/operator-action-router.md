@@ -1,5 +1,5 @@
 ---
-name: Operator action router
+name: operator_action_router
 slug: operator-action-router
 type: system
 sources:
@@ -9,17 +9,11 @@ sources:
     hash: 20f6bd56ba2238d0242627275af5749560272630a1212f9f9f22159d655d99ae
 sources_digest: eeb9735b11ba0ec109f87f095cfa8affc6afd00ebf34698caca0a50d1304a1aa
 links:
-  - to: operator-escalation-gate
-    relation: uses
-    description: Mirrors operator_request_notify.py's regexes to parse OPREQ entries.
   - to: operator-request-notify
     relation: uses
     description: >-
       Both consume operator-requests.md and human-directive.md under memories/
       and share the same state-file conventions.
-  - to: telegram-notification
-    relation: uses
-    description: Sends the consolidated digest via telegram-notify.sh.
 generator:
   version: 1
 covers:
@@ -75,13 +69,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Telegram firehose digest that consolidates the operator's actionable items into a single 'what needs YOU' message, covering only locally-truthful signals: a LOOP_HOLD latch, open OPREQ entries, and a PENDING directive past a floor age. Only speaks when the open set's stable identity changes or ROUTER_REPEAT_HOURS elapses; age is excluded from the identity to avoid hourly re-alerts, and state clears when the set empties so the next open item alerts immediately.
+scripts/ops/operator-action-router.py routes operator actions with strict priority ordering (LOOP_HOLD > operator-requests > human-directive), staleness floors for directives, dedup within a repeat window, state clearing on empty sets, and fail-soft behavior when the memories/ directory is missing. It renders a Turkish digest and persists state to a file.
 
 ## Related
 
-- uses [[operator-escalation-gate]] — Mirrors operator_request_notify.py's regexes to parse OPREQ entries.
 - uses [[operator-request-notify]] — Both consume operator-requests.md and human-directive.md under memories/ and share the same state-file conventions.
-- uses [[telegram-notification]] — Sends the consolidated digest via telegram-notify.sh.
 <!-- context:generated:end -->
 
 ## Notes

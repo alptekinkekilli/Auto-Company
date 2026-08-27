@@ -8,7 +8,9 @@ sources:
   - path: tests/test_dashboard_server.py
     hash: 56e9073d5a9447df622cb3e0873d553053a3b16089534d427c177db772b933dd
 sources_digest: a00d09651be48cf7015196cad5672555ff241c03a2b27887a7ef361af457aa42
-links: []
+links:
+  - to: audit-telemetry-ledgers
+    relation: uses
 generator:
   version: 1
 covers:
@@ -385,7 +387,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-...
+The cockpit dashboard (dashboard/server.py) with status parsing, action dispatch, engine runtime state, cost summary, and log tailing; imports a sibling sentry_client.
+
+## Related
+
+- uses [[audit-telemetry-ledgers]]
 <!-- context:generated:end -->
 
 ## Notes

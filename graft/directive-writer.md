@@ -5,9 +5,7 @@ type: file
 sources:
   - path: scripts/core/directive_writer.py
     hash: 447057795ab4776c589695bd00450009df0af8fff481fa7a68c89244ca93a9a3
-  - path: tests/test_directive_section_refs.sh
-    hash: 413742241d956ae77feb01e20780757ee86fa63f3699e3926a2ddeea81a53a71
-sources_digest: a925e7afda2d83caf94d4cc6796cb4d415c637387d9929d279253111ad4f6b09
+sources_digest: f4f863d4df3fc313e0dd21bd4e126bc92b8f46cf056589dd04f736eba34c9ebd
 links:
   - to: cockpit-server
     relation: implements

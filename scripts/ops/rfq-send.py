@@ -158,7 +158,9 @@ def render(f: dict) -> tuple[str, str]:
     if not scope:
         raise ValueError(f"bilinmeyen şablon: {sablon!r}")
     kume = f.get("Küme", "")
-    return rfq_template.subject(kume), rfq_template.body(kume, scope)
+    return (rfq_template.subject(kume),
+            rfq_template.body(kume, scope),
+            rfq_template.body_html(kume, scope))
 
 
 def anonymity_scan(text: str) -> str | None:
@@ -178,10 +180,10 @@ def decide(f: dict) -> dict:
     if not email:
         return {"ok": False, "reason": "form-only vendor — manuel gönderim (makine form doldurmaz)"}
     try:
-        subject, text = render(f)
+        subject, text, html = render(f)
     except ValueError as e:
         return {"ok": False, "reason": str(e)}
-    leak = anonymity_scan(subject + "\n" + text)
+    leak = anonymity_scan(subject + "\n" + text + "\n" + html)
     if leak:
         return {"ok": False, "reason": leak}
     day, total = _caps_now()
@@ -191,7 +193,8 @@ def decide(f: dict) -> dict:
         return {"ok": False, "reason": f"toplam cap dolu ({total}/{TOTAL_CAP})"}
     if not _sponsor_ok(f):        # §15 — EN SON, en pahalı; hepsi geçse bile izin şart
         return {"ok": False, "reason": "§15 Sponsor İzni YOK (fail-closed) — operatör işaretlemeli"}
-    return {"ok": True, "reason": "ALLOW", "email": email, "subject": subject, "text": text}
+    return {"ok": True, "reason": "ALLOW", "email": email,
+            "subject": subject, "text": text, "html": html}
 
 
 # ── ForwardEmail teslim ─────────────────────────────────────────────────────────
@@ -201,17 +204,20 @@ def _encode_subject(s: str) -> str:
     return f"=?UTF-8?B?{b}?="
 
 
-def send_fe(to: str, subject: str, text: str) -> dict:
+def send_fe(to: str, subject: str, text: str, html: str = "") -> dict:
     key = _load_key("FORWARDEMAIL_API_KEY", "autocompany-forwardemail-key")
     if not key:
         raise SystemExit("FORWARDEMAIL_API_KEY yok (env/runtime.env/Keychain)")
     auth = base64.b64encode(f"{key}:".encode()).decode("ascii")
-    form = urllib.parse.urlencode({
+    fields = {
         "from": f"{FROM_NAME} <{FROM_EMAIL}>",
         "to": to,
         "subject": _encode_subject(subject),
-        "text": text,
-    }).encode("utf-8")
+        "text": text,        # text/plain FIRST (MIME alternatif sırası: az→çok tercih)
+    }
+    if html:
+        fields["html"] = html
+    form = urllib.parse.urlencode(fields).encode("utf-8")
     req = urllib.request.Request(FE_ENDPOINT, data=form, method="POST", headers={
         "Authorization": "Basic " + auth,
         "Content-Type": "application/x-www-form-urlencoded"})
@@ -261,7 +267,7 @@ def main() -> int:
     if not a.send:
         print("(dry-run — gönderim için --send)")
         return 0
-    res = send_fe(d["email"], d["subject"], d["text"])
+    res = send_fe(d["email"], d["subject"], d["text"], d.get("html", ""))
     ok = 200 <= res["status"] < 300 and res["body"].get("_id") or res["body"].get("id")
     if ok:
         _mark_sent(a.record)

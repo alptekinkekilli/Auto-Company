@@ -7,17 +7,16 @@ sources:
     hash: 148f66145510c90e03256b7b37853122bcd892d51cba67f095ce700a0895e3e2
   - path: scripts/ops/airtable-write.py
     hash: 888d408c392193511145e11dfbe73841a6d7e3e743e396ab8c8fee8b9507ab7c
-sources_digest: 43a42c7621b93d8e35ed7813326f7b761e954384d076a4d1b176afa770c1b952
+  - path: tests/test_airtable_read.sh
+    hash: f1c8fbb1b495e922c52d041bac7edbae8f100ab57606ebd987179783265325df
+  - path: tests/test_airtable_write.sh
+    hash: a51c25001935da566cca4a450cfc0906827eb332779f2b454b12d547b7a0e6e0
+sources_digest: 2021356891ac463bde76a17510d6206598905cc15d804b9b867e92529075e85e
 links:
-  - to: g4-identity-check
+  - to: mcp-configuration-probe
     relation: uses
-    description: Pulls registry bridge records for identity-attribution verdicts.
-  - to: registry-queue-watch
+  - to: outreach-eligibility-sending
     relation: uses
-    description: 'Reads the Registry Bridge, EKAP Bridge, and Ihale Outreach tables.'
-  - to: reply-watch
-    relation: uses
-    description: Reads outreach records from the Ihale Outreach table.
 generator:
   version: 1
 covers:
@@ -73,13 +72,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Scoped, auditable access to Airtable: airtable-read.py prevents cycles from pulling whole tables (which cost $2.41 in context re-reads) by refusing unscoped reads and always naming the fixing flag, while airtable-write.py provides a sanctioned single-record PATCH path with read-back verification, dry-run default, and guards against accidental data loss (--allow-clear, --replace for >300-char strings). Secrets come from logs/runtime.env or macOS Keychain, never argv.
+The read/write wrappers that gate Airtable access to control context cost and validate writes. Reads are scoped (refuse unscoped reads, cap --all-fields and --max-records at 200, pageSize at 100); writes go through a guard that refuses unknown fields, clears, and substantial replacements unless explicit flags are given. The air() wrapper carries a URL-quoting fix for table names with spaces.
 
 ## Related
 
-- uses [[g4-identity-check]] — Pulls registry bridge records for identity-attribution verdicts.
-- uses [[registry-queue-watch]] — Reads the Registry Bridge, EKAP Bridge, and Ihale Outreach tables.
-- uses [[reply-watch]] — Reads outreach records from the Ihale Outreach table.
+- uses [[mcp-configuration-probe]]
+- uses [[outreach-eligibility-sending]]
 <!-- context:generated:end -->
 
 ## Notes

@@ -1,6 +1,8 @@
-# scripts/ops/rfq_template.py · [[rfq-outreach-content]]
+# scripts/ops/rfq_template.py
 
-Module holding the non-sensitive RFQ email content (scope text, signature, subject, body) that rfq-send.py imports, so the copy can be iterated without touching protected send logic.
+Module holding the RFQ email content (subject/body/SCOPE) so the text can be iterated freely without touching the protected send logic in rfq-send.py.
 
-- subject · function · L43-L44 — Builds the email subject line asking for a price quote for the given category.
-- body · function · L47-L64 — Composes the full RFQ email body: anonymous intro, the category-specific scope, requested quote details, and the Appricode signature.
+- _html_signature · function · L49-L56 — Loads the branded HTML signature from rfq_signature.html, extracting the <body> content, and falls back to a plain-text signature wrapped in <pre> if the file is missing.
+- subject · function · L61-L62 — Builds the email subject line asking for a price quote for the given category.
+- body · function · L65-L82 — Composes the full RFQ email body: anonymous intro, the category-specific scope, requested quote details, and the Appricode signature.
+- body_html · function · L85-L108 — Builds the text/html email part with the same humanized message plus the branded HTML signature, HTML-escaping the scope text.

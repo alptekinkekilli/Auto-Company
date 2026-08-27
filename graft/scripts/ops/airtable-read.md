@@ -1,4 +1,4 @@
-# scripts/ops/airtable-read.py · [[airtable-access-layer]] [[airtable-read-write-guards]]
+# scripts/ops/airtable-read.py · [[airtable-access-layer]]
 
 The only sanctioned way for a cycle to read an Airtable table, enforcing strict query scoping and compact output to keep context re-read costs low.
 

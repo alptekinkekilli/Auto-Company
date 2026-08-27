@@ -1,5 +1,5 @@
 ---
-name: Prod-mechanism guard
+name: prod_mechanism_guard
 slug: prod-mechanism-guard
 type: system
 sources:
