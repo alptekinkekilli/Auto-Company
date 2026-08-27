@@ -1,4 +1,4 @@
-# scripts/ops/web-research-cost.py · [[ops-probe-audit-scripts]]
+# scripts/ops/web-research-cost.py · [[audit-telemetry-tooling]]
 
 Measures the real token cost of web research cycles by computing residual re-read cost (output tokens x turns remaining) from kept ndjson streams.
 

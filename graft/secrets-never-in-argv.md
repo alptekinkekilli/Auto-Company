@@ -7,15 +7,10 @@ sources:
     hash: 7e5496c29eae3646af4874f74f0d70e22230b762a74acdfb7e38e93197b41aca
   - path: scripts/ops/verify-mcp-keys.py
     hash: a35c1f35481876cedc5bb4cf0c7fd4eceaea1c85e57d3c28e87560b3f9f342db
-  - path: tests/test_jcode_mcp_config.sh
-    hash: 3a26837a4685e40b45e3e8593459a69680a7bc6cc7e839f4ceb986c570a27025
   - path: tests/test_mcp_key_fallback.sh
     hash: 21c4be05f1922a08fa185aaa94f73941a785d5f380b7770431bdee7bf78115d6
-sources_digest: c73011dc45f8214aaa8bd30154b2039a634202986bd827468d3ceb2701bf6951
-links:
-  - to: mcp-config-key-handling
-    relation: implements
-    description: The generator and key verification implement this invariant.
+sources_digest: 05c6ba4c758f4d3ca34611d9ffe6f36713eb52d1736fb0290eefc60c6781c05c
+links: []
 generator:
   version: 1
 covers:
@@ -41,11 +36,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A security invariant spanning MCP config generation, key verification, and the Keychain fallback: secret values must live in the env block or /proc environ, never in process argv where ps could expose them. The Keychain fallback fires on macOS but must never fire inside the container where the security binary doesn't exist.
-
-## Related
-
-- implements [[mcp-config-key-handling]] — The generator and key verification implement this invariant.
+MCP config keeps secrets in env block, never argv where ps could expose them; verify-mcp-keys reads loop process env via /proc rather than docker exec fresh shell; keychain fallback never fires in container.
 <!-- context:generated:end -->
 
 ## Notes

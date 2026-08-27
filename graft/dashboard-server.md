@@ -5,13 +5,18 @@ type: system
 sources:
   - path: dashboard/server.py
     hash: 999b44bc7671293e78906611b1dfd46bcf6efcc520ed92623a17281766a7fc85
-sources_digest: 8b82355bba156c61c76505ae335656f264eff4fc117d0a477f2c27a30456f883
+  - path: tests/test_refusal_format.sh
+    hash: 11bf5e9869e2e573b4a897e4df84053e4f58d759d3073a9e058705482cc31ef5
+sources_digest: 6c64398b7eb3a91701554b0fb5f4b95567cf19e0d90091627d4aa3fa4fd0fcc5
 links:
-  - to: auto-loop-core
+  - to: auto-loop-core-auto-loop-sh
     relation: uses
+    description: Parses auto-loop.log and budget state for display.
+  - to: refusal-format
+    relation: produces
     description: >-
-      Reads auto-loop.log and budget state produced by the loop; protected by
-      prod-mechanism-guard.
+      Produces the operator-decision panel / refusal format consumed by
+      operator_request_notify.
 generator:
   version: 1
 covers:
@@ -223,11 +228,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The web dashboard (dashboard/server.py) exposing status, action dispatch, engine runtime state, settings, cost summary, and log tailing. Parses the persistent auto-loop.log to reflect the latest boot, anchors spend windows on ccusage blockStart with rolling fallback, and splits weekly cost on Monday-UTC.
+dashboard/server.py serves status, action dispatch, engine runtime state, settings, cost summary, and log tailing, parsing persistent auto-loop.log for latest boot. Protected production surface.
 
 ## Related
 
-- uses [[auto-loop-core]] — Reads auto-loop.log and budget state produced by the loop; protected by prod-mechanism-guard.
+- uses [[auto-loop-core-auto-loop-sh]] — Parses auto-loop.log and budget state for display.
+- produces [[refusal-format]] — Produces the operator-decision panel / refusal format consumed by operator_request_notify.
 <!-- context:generated:end -->
 
 ## Notes

@@ -15,9 +15,12 @@ sources:
     hash: 518ec45652bc5010bbd34856e527e2dc9c2dfa525aea151ff467f3a802c9da81
 sources_digest: fe1d8fd6fcb0f308eb0c4072f436e2986ea169f87521e188c20ca981540b20fa
 links:
-  - to: snapog-og-image-service
+  - to: snapog-schema
+    relation: uses
+    description: Queries usage_events and api_keys tables for metrics.
+  - to: snapog-worker
     relation: part_of
-    description: Triggered by the scheduled handler in index.ts.
+    description: scheduled handler entry point.
 generator:
   version: 1
 covers:
@@ -67,11 +70,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A cron-triggered cost-alerting pipeline (every 6h) that runs five independent D1/R2 checks against thresholds sourced from the CFO cost model, escalates severity to critical at 1.5x threshold, and posts alerts to a webhook (or falls back to log-only mode). Checks are deliberately isolated — a thrown error is logged and treated as no alert to prevent false positives; the R2 storage check uses a thin GraphQL client that returns null on any failure.
+Cron-triggered cost-alerting system (every 6h) running five independent checks against D1 (D1 writes/day, 14-day cache hit rate, new signups, active users, R2 storage via a thin Cloudflare Analytics GraphQL client). Thresholds isolated in thresholds.ts (sourced from the CFO cost model) so the CFO can revise numbers without touching check logic; severity escalates to critical at 1.5× threshold. Checks are deliberately isolated — a thrown error is logged and treated as no alert, preventing false positives. Delivery via webhook.ts falls back to log-only mode when ALERT_WEBHOOK_URL is unset.
 
 ## Related
 
-- part of [[snapog-og-image-service]] — Triggered by the scheduled handler in index.ts.
+- uses [[snapog-schema]] — Queries usage_events and api_keys tables for metrics.
+- part of [[snapog-worker]] — scheduled handler entry point.
 <!-- context:generated:end -->
 
 ## Notes

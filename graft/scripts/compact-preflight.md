@@ -1,4 +1,4 @@
-# scripts/compact-preflight.py · [[compact-ritual-hooks]] [[compact-ritual-scripts]]
+# scripts/compact-preflight.py · [[compact-ritual-directive-integrity]] [[compact-ritual-hooks]]
 
 Pre-compact hook that measures what would be lost in a compact and writes a report to /tmp for the post-compact session-brief to carry forward.
 

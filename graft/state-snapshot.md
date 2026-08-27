@@ -1,5 +1,5 @@
 ---
-name: state-snapshot
+name: state_snapshot
 slug: state-snapshot
 type: system
 sources:
@@ -31,7 +31,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Snapshots local state (human-directive.md status/sha16, OPREQ open counts) and computes DELTA change-detection. Missing ledger prints an error but still exits 0; errored fields are excluded from the next DELTA. All fields are local since a 2026-08-24 re-charter, with bridge/send/reply fields retired; --skip-network exercises the offline path.
+scripts/ops/state-snapshot.py produces a local state snapshot (all fields local since the 2026-08-24 re-charter; bridge/send/reply fields retired) with DELTA change-detection: first-run, none, named changes, and error exclusion. A missing ledger prints an error but still exits 0, and errored fields are excluded from the next DELTA. --skip-network path avoids network calls.
 <!-- context:generated:end -->
 
 ## Notes

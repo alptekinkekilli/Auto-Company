@@ -1,5 +1,5 @@
 ---
-name: send-gate
+name: send_gate
 slug: send-gate
 type: system
 sources:
@@ -10,8 +10,10 @@ sources:
 sources_digest: 260cbac1d830524fefee8831ec62d8032fb6948e871229aae8fb6af3055fb10f
 links:
   - to: prod-mechanism-guard
-    relation: validates
-    description: Guard blocks edits to send-gate.py.
+    relation: part_of
+    description: >-
+      send-gate.py is one of the protected production surfaces the guard blocks
+      edits to.
 generator:
   version: 1
 covers:
@@ -55,11 +57,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Offline, fail-closed refusal policy for outreach sends, tested as pure policy by stubbing air() and g4_live(). Enforces daily/total caps, duplicate/opt-out detection, non-Qualified status, missing email, G4 failure, TEST-row exclusion by STATUS, unrendered rows, GROUP_ROUTED special case, self-contradictory rows, body-leak scanning for internal markers, follow-up mode, exact normalized firm-name matching for g4_live, and phase-check scoping to first-contact sends. Refuses on any unknown or error.
+scripts/ops/send-gate.py is the outreach send policy gate, tested entirely offline by stubbing air() and g4_live(). Fails closed across 20 scenarios: daily/total caps (3/20), duplicate outreach, opt-out, non-Qualified status, missing email, G4 failure, TEST rows excluded by STATUS (not name), unrendered rows, GROUP_ROUTED requiring full registered title and karar no, self-contradictory rows, exclusion-ground length/English-marker checks, procurement-phase mismatch, a body-leak scanner flagging internal markers (persona names, verdict vocabulary, method/provenance), unsplit rows, follow-up mode (one authorized second contact), exact normalized firm-name matching for g4_live (rejecting token collisions), Website fallback only when the bridge row names no domain, and phase-check scoping to first-contact sends. Rules are justified by real incidents (Rayelsis, Arkenom, N.K.Y, Bilgi Birikim).
 
 ## Related
 
-- validates [[prod-mechanism-guard]] — Guard blocks edits to send-gate.py.
+- part of [[prod-mechanism-guard]] — send-gate.py is one of the protected production surfaces the guard blocks edits to.
 <!-- context:generated:end -->
 
 ## Notes

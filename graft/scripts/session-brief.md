@@ -1,4 +1,4 @@
-# scripts/session-brief.py · [[claude-code-hooks-pretooluse-sessionstart]]
+# scripts/session-brief.py · [[prod-mechanism-guard-session-brief]]
 
 SessionStart hook that injects a measured, non-stale session briefing into the context, never blocking the session.
 

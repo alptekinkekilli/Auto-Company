@@ -1,4 +1,4 @@
-# scripts/ops/verify-mcp-keys.py · [[mcp-config-key-handling]] [[ops-probe-audit-scripts]] [[secrets-never-in-argv]]
+# scripts/ops/verify-mcp-keys.py · [[airtable-access-wrapper]] [[secrets-never-in-argv]]
 
 Post-deploy check that each MCP server's key is present and well-shaped in the loop process's own environment, without ever printing a secret.
 

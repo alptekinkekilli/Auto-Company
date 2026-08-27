@@ -9,9 +9,14 @@ sources:
     hash: 008b4735e6133445eff667f840f9c7faaeef8013b1363f6555b602a9d6fd048c
 sources_digest: 1627b649c4591fefbe53718943b83b073d34ecceb699cc194f34d1c884c4155e
 links:
-  - to: ops-probe-audit-scripts
-    relation: part_of
-    description: site-contact-evidence.py is one of the ops probes.
+  - to: airtable-access-wrapper
+    relation: uses
+    description: Reads Outreach rows and Registry Bridge via Airtable.
+  - to: outreach-eligibility-gate-send-gate-py
+    relation: produces
+    description: >-
+      G4 verdict and contact evidence feed the eligibility decision and G4
+      re-derivation.
 generator:
   version: 1
 covers:
@@ -70,11 +75,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The G4 attribution decision logic and its evidence-gathering. g4-check.py contains the pure matching functions (address anchor, registry ID anchor, domain extraction) with Turkish İ-ı folding and coincidence guards. site-contact-evidence.py escalates through browser-rendered DOM, raw HTML, and JS bundles to find a published contact email, treating a fetch with no rendered content as inconclusive, never negative.
+Determines whether a firm is G4 (government-affiliated) and finds published contact emails. site-contact-evidence.py escalates through browser-rendered DOM, raw HTML, and JS bundles, treating a fetch with no rendered content as inconclusive never negative. g4-check.py matches register address/registry IDs/domains with Turkish folding and coincidence guards.
 
 ## Related
 
-- part of [[ops-probe-audit-scripts]] — site-contact-evidence.py is one of the ops probes.
+- uses [[airtable-access-wrapper]] — Reads Outreach rows and Registry Bridge via Airtable.
+- produces [[outreach-eligibility-gate-send-gate-py]] — G4 verdict and contact evidence feed the eligibility decision and G4 re-derivation.
 <!-- context:generated:end -->
 
 ## Notes

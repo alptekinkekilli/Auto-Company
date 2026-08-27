@@ -1,5 +1,5 @@
 ---
-name: auto-loop
+name: auto_loop
 slug: auto-loop
 type: system
 sources:
@@ -13,19 +13,16 @@ sources:
     hash: d0bfb4ace48e1fa9665e17059be3f618b46fda0dcf432544a6bb16c07a3ed8db
 sources_digest: a4461971d8736bd0d4fcfaf726ff97173f0f11707e56ebc6b628fd3d33b28aeb
 links:
-  - to: prompt-transport-contract
+  - to: prompt-transport
     relation: implements
     description: >-
-      auto-loop.sh's run_claude_cycle_cli/run_codex_cycle_cli/run_jcode_cycle
-      must honor the STDIN/argv transport contract.
-  - to: set-e-shape-lint
+      auto-loop.sh's run_*_cycle_cli functions are the contract that
+      test_prompt_transport pins.
+  - to: set-e-lint
     relation: validates
-    description: 'auto-loop.sh is linted for the fatal [ test ] && action set -e pattern.'
-  - to: turn-economy
-    relation: uses
     description: >-
-      The loop's turn-feedback slot feeds the turn-economy policy audited by
-      turn-audit.py.
+      test_seteshape_lint scans auto-loop.sh for the fatal [ test ] && action
+      pattern that propagates exit 1.
 generator:
   version: 1
 covers: []
@@ -33,13 +30,12 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-The cockpit's core orchestration loop: assembles the FULL_PROMPT from guardrail text, consensus, snapshot, and cycle counters; transports the prompt to engine CLIs (Claude via STDIN, Codex via '-' sentinel, jcode via argv with a 126000-byte PROMPT-TOO-LARGE refusal); and selects daily-budget tiers via apply_tier_ladder(). Guardrail assembly is fragile — a stray double quote previously closed the assignment early and caused a production outage that bash -n could not detect.
+The core cockpit loop (scripts/core/auto-loop.sh) that assembles the FULL_PROMPT, transports it to engine CLIs, and applies daily-budget tier selection. Prompt assembly must keep XML section order (rules → consensus → snapshot → cycle_orders) and embed guardrail text without stray quotes/backticks/$() that would close the assignment early (a past production outage). Prompt transport: run_claude_cycle_cli and run_codex_cycle_cli pass the prompt via STDIN (codex uses '-' sentinel) to avoid E2BIG from the 131072-byte argv cap; run_jcode_cycle refuses prompts ≥126000 bytes with PROMPT-TOO-LARGE. apply_tier_ladder() selects tiers from daily budgets per engine (APP-263), reading budget-gate variables rather than computing them.
 
 ## Related
 
-- implements [[prompt-transport-contract]] — auto-loop.sh's run_claude_cycle_cli/run_codex_cycle_cli/run_jcode_cycle must honor the STDIN/argv transport contract.
-- validates [[set-e-shape-lint]] — auto-loop.sh is linted for the fatal [ test ] && action set -e pattern.
-- uses [[turn-economy]] — The loop's turn-feedback slot feeds the turn-economy policy audited by turn-audit.py.
+- implements [[prompt-transport]] — auto-loop.sh's run_*_cycle_cli functions are the contract that test_prompt_transport pins.
+- validates [[set-e-lint]] — test_seteshape_lint scans auto-loop.sh for the fatal [ test ] && action pattern that propagates exit 1.
 <!-- context:generated:end -->
 
 ## Notes

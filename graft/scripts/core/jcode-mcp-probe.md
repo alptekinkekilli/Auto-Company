@@ -1,4 +1,4 @@
-# scripts/core/jcode-mcp-probe.py · [[auto-loop-core]] [[mcp-config-key-handling]]
+# scripts/core/jcode-mcp-probe.py · [[fail-closed-invariant]] [[mcp-config-generation-probe]]
 
 Deterministic MCP boot probe that speaks the MCP protocol itself to verify config/manifest parity, tool reachability, destructive-tool denylist coverage, and a real read-only call per server, failing closed on any mismatch.
 

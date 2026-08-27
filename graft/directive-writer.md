@@ -7,14 +7,12 @@ sources:
     hash: 447057795ab4776c589695bd00450009df0af8fff481fa7a68c89244ca93a9a3
 sources_digest: f4f863d4df3fc313e0dd21bd4e126bc92b8f46cf056589dd04f736eba34c9ebd
 links:
-  - to: cockpit-dashboard
+  - to: cockpit-server
     relation: implements
-    description: server.py routes directive writes through this writer.
+    description: The server routes all human-directive.md writes through this module.
   - to: opportunity-analyst
     relation: uses
-    description: >-
-      The analyst uses directive_writer.py for safe snapshot/restore of
-      human-directive.md.
+    description: Used for snapshot/restore guardrail of human-directive.md.
 generator:
   version: 1
 covers:
@@ -91,12 +89,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The single deterministic writer for memories/human-directive.md: it locks, gates on in-flight PENDING directives, and refuses to clobber unless allow_pending is set. All directive writes from the dashboard, the analyst, and the loop must route through it.
+Deterministic single writer for memories/human-directive.md: locks, gates on in-flight PENDING directives, and refuses clobbering unless allow_pending is set. Used by both the cockpit server and the analyst runners as the safe restore path for human-directive.md.
 
 ## Related
 
-- implements [[cockpit-dashboard]] — server.py routes directive writes through this writer.
-- uses [[opportunity-analyst]] — The analyst uses directive_writer.py for safe snapshot/restore of human-directive.md.
+- implements [[cockpit-server]] — The server routes all human-directive.md writes through this module.
+- uses [[opportunity-analyst]] — Used for snapshot/restore guardrail of human-directive.md.
 <!-- context:generated:end -->
 
 ## Notes

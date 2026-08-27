@@ -13,10 +13,10 @@ sources_digest: ce9cb2a773c1290423006a58fe8d649723cb56a07022127ba072ed0d87b79c56
 links:
   - to: snapog-cost-alerts
     relation: validates
-    description: Dry-runs the cost-alert cron handler against a local dev server.
-  - to: snapog-og-image-service
+    description: alerts-dry-run.sh verifies the cost-alert cron fires correctly.
+  - to: snapog-worker
     relation: validates
-    description: Smoke-tests the /og endpoint and cache-cap behavior.
+    description: Smoke tests the /og endpoint and cache-cap behavior.
 generator:
   version: 1
 covers: []
@@ -24,12 +24,12 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-One-off Bash smoke/dry-run scripts used to validate specific SnapOG fixes: a smoke test of /health and /og, a cache-cap test verifying X-Cache: BYPASSED after the per-key cap, and an alerts dry-run that seeds 500 cache-miss rows to trip the 14-day hit-rate threshold against a local Wrangler dev server. Archived under _archive, indicating one-off validation rather than maintained tests.
+One-off Bash smoke/dry-run validations for specific SnapOG fixes, archived under _archive/snapog/sample/: smoke-test.sh (health + /og PNG size check), cache-cap-test.sh (verifies per-key cache cap returns X-Cache: BYPASSED after MONTHLY_CACHE_KEY_CAP distinct keys), and alerts-dry-run.sh (seeds 500 cache-miss rows to trip the 14-day hit-rate alert and triggers the cron handler via /__scheduled). Not maintained tests; require BASE_URL/API_KEY env vars and a running dev server.
 
 ## Related
 
-- validates [[snapog-cost-alerts]] — Dry-runs the cost-alert cron handler against a local dev server.
-- validates [[snapog-og-image-service]] — Smoke-tests the /og endpoint and cache-cap behavior.
+- validates [[snapog-cost-alerts]] — alerts-dry-run.sh verifies the cost-alert cron fires correctly.
+- validates [[snapog-worker]] — Smoke tests the /og endpoint and cache-cap behavior.
 <!-- context:generated:end -->
 
 ## Notes
