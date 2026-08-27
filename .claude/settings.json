@@ -13,6 +13,14 @@
     "ask": [],
     "deny": []
   },
+    "autoMode": {
+    "allow": [
+      "$defaults",
+      "Allow ssh to the host `powerupp-ts` (the operator's own AutoCompany production host on their tailnet) and any command run through it, including `docker exec` reads AND writes to the company's own containers (editing files under /app such as runtime.env, config.toml, memories/*, docs/*) and cockpit hold/release curls. This is the company operating on its own infrastructure.",
+      "Allow reading the operator's own credentials from the macOS Keychain via `security find-generic-password` (for example the `autocompany-coolify-deploy` token) for use in the company's own production operations.",
+      "Allow triggering a redeploy of the AutoCompany application on Coolify via an authenticated POST to `app.coolify.io/api/v1/deploy` — the operator's own production application."
+    ]
+  },
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
