@@ -3116,6 +3116,15 @@ Priorities, in order: (1) the Human Directive, per the rules above; (2) only the
             >/dev/null 2>&1 || true
     fi
 
+    # RFQ (OPEX tedarik) yanıt-takibi (2026-08-28). reply-watch'ın RFQ ikizi: AYRI tablo
+    # (Wowcar OPEX RFQ), alıcı-rolü dili, iki outcome (yanıt/sessizlik). CF Worker /inbound
+    # yanıtı RFQ satırına YAZAR (Reply log + Son yanıt); bu yalnız NOTİCE eder. Aynı disiplin:
+    # mevcut return anı, kendi cooldown'u, Airtable'a asla yazmaz, cycle'ı düşürmez.
+    if [ -f "$SCRIPT_DIR/../ops/rfq-reply-watch.py" ]; then
+        python3 "$SCRIPT_DIR/../ops/rfq-reply-watch.py" --app "$PROJECT_DIR" \
+            >/dev/null 2>&1 || true
+    fi
+
     # Registry size advisory (2026-08-03). candidate-registry.md hit 359KB with ~90%
     # append-only history; the analyst reads the whole file into an Opus prompt daily.
     # Log-only nudge at the same return moment; the archival itself is operator-run
