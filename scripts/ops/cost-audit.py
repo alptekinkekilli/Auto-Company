@@ -141,6 +141,36 @@ def read_tool_inventory(path: str) -> dict:
     return {name: [t["name"] for t in info.get("tools", [])] for name, info in servers.items()}
 
 
+def read_disabled_tools(app: str) -> set:
+    """Tools HIDDEN from the loop's real jcode prompt prefix via `--disabled-tools`
+    (JCODE_TOOLS_DENY). The MCP schema-cache lists every tool a server advertises; jcode
+    then HIDES this subset before building the prefix (jcode `--disabled-tools` = "hide
+    after applying the selected profile"), so the raw cache OVER-reports the surface the
+    model actually pays for. §5 subtracts these to show the true in-prefix count and stop
+    a false "N never-called tools still advertised" trim finding on tools already trimmed.
+
+    Source of truth, in the same precedence the loop uses: process env, then runtime.env
+    override, then the `auto-loop.sh` default (the authoritative value when unset)."""
+    raw = os.environ.get("JCODE_TOOLS_DENY", "")
+    if not raw:
+        try:
+            for line in open(os.path.join(app, "logs", "runtime.env"), encoding="utf-8"):
+                if line.startswith("JCODE_TOOLS_DENY="):
+                    raw = line.split("=", 1)[1].strip().strip('"').strip("'")
+                    break
+        except OSError:
+            pass
+    if not raw:
+        try:
+            txt = open(os.path.join(app, "scripts", "core", "auto-loop.sh"), encoding="utf-8").read()
+            m = re.search(r'JCODE_TOOLS_DENY="\$\{JCODE_TOOLS_DENY:-([^}]*)\}"', txt)
+            if m:
+                raw = m.group(1)
+        except OSError:
+            pass
+    return {t.strip() for t in raw.split(",") if t.strip()}
+
+
 def fmt_money(x: float) -> str:
     return f"${x:,.2f}"
 
@@ -274,14 +304,20 @@ def build_report(app: str, days: int) -> str:
     L.append("")
     if inventory:
         used = jc.get("tools", {})
-        L.append(f"| server | advertised | called on {report_day} | never called |")
-        L.append("|---|---|---|---|")
+        denied = read_disabled_tools(app)
+        L.append(f"| server | advertised (raw) | loop-hidden | in prefix | called on {report_day} |")
+        L.append("|---|---|---|---|---|")
         for srv, names in sorted(inventory.items()):
             called = {n for n in used if n.startswith(f"mcp__{srv}__")}
-            L.append(f"| {srv} | {len(names)} | {len(called)} | {len(names) - len(called)} |")
+            hidden = sum(1 for nm in names if denied & {nm, f"mcp__{srv}__{nm}"})
+            L.append(f"| {srv} | {len(names)} | {hidden} | {len(names) - hidden} | {len(called)} |")
         L.append("")
-        L.append("An advertised tool costs prompt tokens on every turn whether or not it is "
-                 "ever called. Trimming is a denylist change — operator work, not company work.")
+        L.append("**advertised (raw)** = MCP schema-cache inventory. **loop-hidden** = removed "
+                 "from the model prefix by `--disabled-tools` (JCODE_TOOLS_DENY), so **in "
+                 "prefix** is what actually costs per-turn tokens — cross-check §4's `tools=`. "
+                 "A trim candidate is a tool still *in prefix* yet never *called*; a loop-hidden "
+                 "tool is ALREADY trimmed and must not be re-flagged. Trimming is a denylist "
+                 "change — operator work, not company work.")
     else:
         L.append("NOT MEASURED — MCP schema cache unreadable.")
     L.append("")
