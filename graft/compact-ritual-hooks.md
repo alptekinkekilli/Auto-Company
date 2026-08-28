@@ -11,14 +11,15 @@ sources:
     hash: acbd35a8779fa472cd8164183bcc13c79e716e9e05a51473b0cd2e1b5e2375d1
   - path: scripts/compact-resume-lint.py
     hash: e8e8ee947a10358614b0125b2d236f26238308fff1b686565581748cf19122d3
-sources_digest: d2deeac1293676cc298f20dece4303bda8fc4beb118ac862af9f1aa5e1ec1f7a
+  - path: scripts/context-watch.py
+    hash: e9aa872c3ee33e6f175760da5b09d5cddda1ffdab5ac78c667547e492910bf96
+sources_digest: 3e1f7decf296003fe5b5c4e8235d5f7ca6726cf6b6d57abf44a9e917d93999f8
 links:
-  - to: context-watch
+  - to: auto-loop
     relation: uses
     description: >-
-      compact-preflight.py writes /tmp/compact-preflight.md for session-brief.py
-      to read after compact; the hooks are triggered by the same compact ritual
-      context-watch.py directs.
+      compact-report reads loop state via SSH/docker exec and
+      discretionary-spend.ndjson.
 generator:
   version: 1
 covers:
@@ -67,15 +68,21 @@ covers:
   - symbol: main
     kind: function
     at: 'scripts/compact-resume-lint.py:L39-L71'
+  - symbol: kullanim
+    kind: function
+    at: 'scripts/context-watch.py:L33-L50'
+  - symbol: main
+    kind: function
+    at: 'scripts/context-watch.py:L53-L102'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-Set of Claude Code hooks that make the compact ritual measurable and safe: compact-preflight.py counts open items (unpushed commits, uncommitted changes, stashes) that would be lost; compact-report.py prints an operational digest (repo↔prod sync, OPREQ, directives, holds, pending external actions, loop health) via SSH to the powerupp-ts host; compact-resume-lint.py enforces the 'foreign-reader test' banning stale numeric claims (YASAK) and requiring template sections (ZORUNLU); compact-postcheck.py verifies the generated compact_summary carries the five mandatory anchors. All are fail-open (never block compact, always exit 0) and depend only on the Python standard library plus git/SSH CLIs.
+A family of Claude Code hook scripts that make the compact ritual measurable and safe: preflight counts open items that would be lost, resume-lint enforces the foreign-reader test on the resume file, report prints an operational digest, postcheck verifies the compact_summary carries key anchors, and context-watch monitors context-window fullness and emits a compact directive at 60%. All are fail-open and never block the compact itself.
 
 ## Related
 
-- uses [[context-watch]] — compact-preflight.py writes /tmp/compact-preflight.md for session-brief.py to read after compact; the hooks are triggered by the same compact ritual context-watch.py directs.
+- uses [[auto-loop]] — compact-report reads loop state via SSH/docker exec and discretionary-spend.ndjson.
 <!-- context:generated:end -->
 
 ## Notes

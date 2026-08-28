@@ -1,4 +1,4 @@
-# tests/test_compact_anchor_sync.py · [[compact-ritual-and-directive-integrity]]
+# tests/test_compact_anchor_sync.py · [[anchor-string-consistency]]
 
 Test that the four corners of the compact ritual (postcheck ANKORLAR, resume-lint ZORUNLU, template, hardening fixture) stay in sync with each other and with a known anchor set, failing via exit code on drift.
 

@@ -7,6 +7,9 @@ sources:
     hash: 9c45147f1730fc30545b94a30428d54e0bd40f04506aa3db00614880ec93d677
 sources_digest: 529774ce95135d20964e1d42a6242cf44c9928383f17eac44213ac8385a782b9
 links:
+  - to: directive-writer
+    relation: uses
+    description: Writes the new directive through directive_writer.py.
   - to: opportunity-analyst
     relation: part_of
     description: Pass 3 of the analyst pipeline.
@@ -32,10 +35,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Deterministic, fail-closed gate deciding whether the analyst's report may overwrite memories/human-directive.md. Uses pure regex (never an LLM) to block promotion on any risk-keyword hit (outreach, payment, deployment, legal, external writes), missing verdict keywords, or escalation language near the current Active Validation ID from consensus.md. Requires live directive Status DONE, backs up to human-directive-backups/, writes new directive with PENDING status and audit metadata, verifies via read-back and diff. Always exits 0 printing PROMOTED or BLOCKED: <reason>; deliberately over-includes risk terms to favor manual review over false negatives.
+Deterministic, fail-closed gate deciding whether the analyst's report may overwrite human-directive.md. Uses pure regex (never an LLM) to block on risk keywords, missing verdicts, or escalation language near the current Active Validation ID; requires the live directive Status to be DONE, backs up, writes PENDING, and verifies via read-back. Always exits 0 printing PROMOTED or BLOCKED.
 
 ## Related
 
+- uses [[directive-writer]] — Writes the new directive through directive_writer.py.
 - part of [[opportunity-analyst]] — Pass 3 of the analyst pipeline.
 <!-- context:generated:end -->
 

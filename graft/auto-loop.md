@@ -1,61 +1,37 @@
 ---
-name: auto_loop
+name: Auto Loop
 slug: auto-loop
 type: system
 sources:
-  - path: docker-entrypoint.sh
-    hash: fbc2010d8d1d9dda2bc7ebd72fba1d674136624f968ff2f453bf7bbb894de017
   - path: scripts/core/auto-loop.sh
-    hash: b8f8a3989fee29f5a561d7f4d4eb8f558086586d603c5217caf20288b84d27ec
-  - path: tests/test_prompt_assembly.sh
-    hash: 0cd8e397ee0db20d70eac066f7542b6dbabfec6bdd6d031cdc0e378da04876d6
-  - path: tests/test_prompt_transport.sh
-    hash: c5df34a0acc0d09b63a231df392960370ab146ceea135b5bcace427223300501
-  - path: tests/test_seteshape_lint.py
-    hash: c75dd121edbe7aed5432f718bdfff952149464b77f9ab22baced3682261ebc98
-  - path: tests/test_tier_ladder_daily.sh
-    hash: d0bfb4ace48e1fa9665e17059be3f618b46fda0dcf432544a6bb16c07a3ed8db
-sources_digest: 76d3169bfa9656c0be9ccb1c7023bf40329bf6aba1d796995e4fba677806dcef
+    hash: 332728052d5c8e3d8dbb64ca1d391062fc22c656cdb0a87d5e258b4f688d6103
+sources_digest: e83a8e8032c2bc43a843b2b950aa2034327797a2081555c358b8a4ed9f508ec7
 links:
-  - to: operator-request-notify
+  - to: cockpit-dashboard
+    relation: produces
+    description: Writes the state files and ledgers the dashboard reads via /api/status.
+  - to: container-entrypoint
+    relation: depends_on
+    description: >-
+      Launched by the entrypoint; its boot-epoch stamp gates the MCP-config
+      freshness check.
+  - to: directive-writer
     relation: uses
-    description: >-
-      The loop's consensus projection is produced from operator_request_notify's
-      resolution state.
-  - to: set-e-shape-lint
-    relation: validates
-    description: >-
-      The set-e-shape lint scans auto-loop.sh and docker-entrypoint.sh for the
-      fatal '[ test ] && action' pattern that killed an unguarded caller in
-      APP-240.
+    description: Restores/snapshots human-directive.md through directive_writer.py.
 generator:
   version: 1
-covers:
-  - symbol: _is_fatal_shape
-    kind: function
-    at: 'tests/test_seteshape_lint.py:L42-L43'
-  - symbol: _executable_lines
-    kind: function
-    at: 'tests/test_seteshape_lint.py:L46-L52'
-  - symbol: find_violations
-    kind: function
-    at: 'tests/test_seteshape_lint.py:L55-L84'
-  - symbol: SetEShapeLint
-    kind: class
-    at: 'tests/test_seteshape_lint.py:L87-L99'
-  - symbol: test_no_fatal_test_and_shapes
-    kind: method
-    at: 'tests/test_seteshape_lint.py:L88-L99'
+covers: []
 ---
 <!-- context:generated:start -->
 ## Summary
 
-The core orchestration loop (scripts/core/auto-loop.sh) that assembles FULL_PROMPT from guardrails, consensus, snapshot, and cycle_orders; transports prompts to engine CLIs (claude/codex via STDIN to avoid E2BIG, jcode via run subcommand argv with a 126000-byte guard); and applies the daily-budget tier ladder (APP-263). It is the subject of several regression tests because a stray double quote in a guardrail once closed an assignment early and caused a production outage that bash -n could not detect.
+The 24/7 autonomous loop that keeps a CLI engine (Claude/Codex/jcode) running in fresh sessions, using memories/consensus.md as the relay baton between cycles. Enforces a four-gate budget model, alternate routing and tier ladders, and a JCODE_TOOLS_DENY denylist that trims context and blocks destructive MCP tools while keeping read tools.
 
 ## Related
 
-- uses [[operator-request-notify]] — The loop's consensus projection is produced from operator_request_notify's resolution state.
-- validates [[set-e-shape-lint]] — The set-e-shape lint scans auto-loop.sh and docker-entrypoint.sh for the fatal '[ test ] && action' pattern that killed an unguarded caller in APP-240.
+- produces [[cockpit-dashboard]] — Writes the state files and ledgers the dashboard reads via /api/status.
+- depends on [[container-entrypoint]] — Launched by the entrypoint; its boot-epoch stamp gates the MCP-config freshness check.
+- uses [[directive-writer]] — Restores/snapshots human-directive.md through directive_writer.py.
 <!-- context:generated:end -->
 
 ## Notes

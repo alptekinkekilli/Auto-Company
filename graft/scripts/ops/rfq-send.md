@@ -1,6 +1,6 @@
-# scripts/ops/rfq-send.py · [[ops-decision-scripts]] [[rfq-send]]
+# scripts/ops/rfq-send.py · [[fail-closed-measurement-invariant]] [[rfq-send-py]] [[rfq-send-tool]]
 
-Anonymized OPEX RFQ sender that fail-closes on §15 sponsor approval, enforces daily/total caps and anonymity, and delivers via ForwardEmail direct API.
+CLI that sends anonymous OPEX RFQ emails to vendors, fail-closed on §15 sponsor approval, daily/total caps, and anonymity scan.
 
 - _load_key · function · L61-L82 — API anahtarını env → runtime.env → macOS Keychain sırasıyla yükler ve env'e yazar.
 - _app_dir · function · L85-L87 — Script'in iki üst dizinini (repo kökü) mutlak yol olarak döndürür.
@@ -15,6 +15,6 @@ Anonymized OPEX RFQ sender that fail-closes on §15 sponsor approval, enforces d
 - render · function · L155-L163 — Şablon adından scope'u çözüp vendor kümesi için subject/plain-text/HTML içeriği üretir.
 - anonymity_scan · function · L166-L171 — Render edilen metinde denylist (wowcar) sızıntısı olup olmadığını arar.
 - decide · function · L174-L197 — Bir vendor kaydını opt-out, never-twice, e-posta varlığı, anonimlik, cap'ler ve §15 izni sırasıyla değerlendirip ALLOW/REFUSE kararı döndürür.
-- send_fe · function · L201-L226 — ForwardEmail /v1/emails'e Basic auth ile form-encoded e-posta gönderir ve yanıtı döndürür.
+- send_fe · function · L201-L226 — Delivers the rendered RFQ email to ForwardEmail's /v1/emails endpoint using Nodemailer JSON format with Basic auth.
 - _mark_sent · function · L229-L232 — Gönderim sonrası kaydı 'Gönderildi' ve zaman damgası ile PATCH'ler.
 - main · function · L236-L278 — CLI girişi: --report ile cap/eligibility özeti, --record ile tek vendor kararı ve --send ile gerçek gönderim sonrası kaydı işaretler.

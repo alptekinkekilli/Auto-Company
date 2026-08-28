@@ -7,16 +7,17 @@ sources:
     hash: fbc2010d8d1d9dda2bc7ebd72fba1d674136624f968ff2f453bf7bbb894de017
 sources_digest: 4859f8b1dfb24f857df1d999107a7d92d7c4d14a2c247976ae81cbb021029d23
 links:
-  - to: autonomous-loop
+  - to: auto-loop
+    relation: produces
+    description: Launches scripts/core/auto-loop.sh as a background process.
+  - to: auto-loop
     relation: configures
     description: >-
-      Launches scripts/core/auto-loop.sh and stamps the boot-epoch file the
-      loop's MCP-config freshness gate reads.
-  - to: cockpit-server
-    relation: configures
-    description: >-
-      Launches dashboard/server.py as a background process and applies
-      runtime.env overrides it reads.
+      Applies runtime.env overrides and stamps boot-epoch for the MCP-config
+      freshness gate.
+  - to: cockpit-dashboard
+    relation: produces
+    description: Launches dashboard/server.py as a background process.
 generator:
   version: 1
 covers: []
@@ -24,12 +25,13 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-PID-1 bootstrap for the Auto-Company service: drops privileges to app user via gosu, stamps a boot-epoch file for the loop's MCP-config freshness gate, applies operator overrides from runtime.env (parsed literally to avoid shell-special-character corruption), then launches dashboard/server.py and scripts/core/auto-loop.sh as background processes, waiting on either to exit so the container restarts. Persists state across redeploys by symlinking docs/ and .claude/skills/ into the memories volume, relocating CLAUDE_CONFIG_DIR and CODEX_HOME onto the logs volume, and seeding Codex auth only on first boot to avoid token rotation 401s. set +e guard around wait -n so a non-zero child exit still produces a diagnostic naming the dead process; trap forwards TERM/INT to all children.
+PID-1 bootstrap that drops privileges via gosu, stamps the boot-epoch file for the MCP freshness gate, applies operator overrides from runtime.env (parsed literally to avoid shell-special-char corruption), and launches the dashboard and auto-loop as background processes, restarting the container if either exits. Persists state across redeploys via symlinks and volume relocations, and seeds Codex auth only on first boot to avoid token-rotation 401s.
 
 ## Related
 
-- configures [[autonomous-loop]] — Launches scripts/core/auto-loop.sh and stamps the boot-epoch file the loop's MCP-config freshness gate reads.
-- configures [[cockpit-server]] — Launches dashboard/server.py as a background process and applies runtime.env overrides it reads.
+- produces [[auto-loop]] — Launches scripts/core/auto-loop.sh as a background process.
+- configures [[auto-loop]] — Applies runtime.env overrides and stamps boot-epoch for the MCP-config freshness gate.
+- produces [[cockpit-dashboard]] — Launches dashboard/server.py as a background process.
 <!-- context:generated:end -->
 
 ## Notes

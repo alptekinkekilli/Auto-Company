@@ -1,4 +1,4 @@
-# scripts/core/bridge_leak_scan.py · [[analyst-tooling]]
+# scripts/core/bridge_leak_scan.py · [[bridge-leak-scanner]] [[deterministic-gates-over-llm-trust]] [[fail-open-monitoring]]
 
 Value-sensitive scanner that flags session/credential leaks in EKAP Bridge records only when a secret key appears with a real value, avoiding word-presence false positives.
 

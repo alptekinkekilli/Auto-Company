@@ -1,4 +1,4 @@
-# scripts/ops/reply-watch.py · [[airtable-queue-watchers]] [[fail-open-vs-fail-closed-operational-philosophy]] [[ops-watchers]]
+# scripts/ops/reply-watch.py · [[operator-escalation]] [[outcome-watchers-reply-rfq]] [[reply-watch]]
 
 Advisory watcher that detects the outcome of outreach sends (reply, delivery failure, or silence) and notifies the operator once per row per outcome class, persisting state in a JSON file.
 

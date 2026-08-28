@@ -1,4 +1,4 @@
-# scripts/ops/verify-mcp-keys.py · [[fail-closed-decision-invariant]] [[ops-decision-scripts]] [[secret-handling-convention]]
+# scripts/ops/verify-mcp-keys.py · [[fail-closed-measurement-invariant]] [[mcp-key-verification]] [[secret-hygiene-no-argv-leaks]]
 
 Post-deploy check that each MCP server's key is present and well-shaped in the loop process's own environment, without ever printing a secret.
 

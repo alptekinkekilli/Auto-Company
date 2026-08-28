@@ -1,19 +1,15 @@
 ---
-name: operator_action_router
+name: operator-action-router
 slug: operator-action-router
-type: system
+type: file
 sources:
   - path: scripts/ops/operator-action-router.py
     hash: 25fd8206f44d0baa7b87a910d0d1846fe5ef1b155289d1a769994aff6817587e
-  - path: tests/test_operator_action_router.py
-    hash: 20f6bd56ba2238d0242627275af5749560272630a1212f9f9f22159d655d99ae
-sources_digest: eeb9735b11ba0ec109f87f095cfa8affc6afd00ebf34698caca0a50d1304a1aa
+sources_digest: 0630049afb5a60689dd7ae19e5af7d3257975de56f3e2aac81ea6b433cddc8ee
 links:
-  - to: operator-request-notify
+  - to: telegram-notify
     relation: uses
-    description: >-
-      Both consume operator-requests.md and human-directive.md under memories/
-      and share the same state-file conventions.
+    description: Sends the digest via the shared Telegram script.
 generator:
   version: 1
 covers:
@@ -56,24 +52,15 @@ covers:
   - symbol: main
     kind: function
     at: 'scripts/ops/operator-action-router.py:L254-L296'
-  - symbol: check
-    kind: function
-    at: 'tests/test_operator_action_router.py:L27-L33'
-  - symbol: check_true
-    kind: function
-    at: 'tests/test_operator_action_router.py:L36-L37'
-  - symbol: make_app
-    kind: function
-    at: 'tests/test_operator_action_router.py:L40-L67'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-scripts/ops/operator-action-router.py routes operator actions with strict priority ordering (LOOP_HOLD > operator-requests > human-directive), staleness floors for directives, dedup within a repeat window, state clearing on empty sets, and fail-soft behavior when the memories/ directory is missing. It renders a Turkish digest and persists state to a file.
+Telegram firehose digest consolidating operator's actionable items into one 'what needs YOU' message. Covers only locally-truthful signals: LOOP_HOLD latch, open OPREQ entries, PENDING directive past floor age. Hashes open set's stable identity into state file, speaks only when set changes or ROUTER_REPEAT_HOURS elapses. Excludes Airtable-backed queues and Sentry liveness (need network/outside container). Advisory-only, never writes to Airtable/Linear/directive.
 
 ## Related
 
-- uses [[operator-request-notify]] — Both consume operator-requests.md and human-directive.md under memories/ and share the same state-file conventions.
+- uses [[telegram-notify]] — Sends the digest via the shared Telegram script.
 <!-- context:generated:end -->
 
 ## Notes

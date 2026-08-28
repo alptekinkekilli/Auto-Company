@@ -1,14 +1,12 @@
 ---
 name: Session brief hook
 slug: session-brief-hook
-type: file
+type: system
 sources:
   - path: scripts/session-brief.py
     hash: a6cd13941a50d768403e080d89e484683b33ec725c6ce151e4447074b784cea4
 sources_digest: 77a08c55273fd8415d52a44771613fd9b92c20dead94083ce126b831c87145a6
-links:
-  - to: compact-ritual-and-directive-integrity
-    relation: uses
+links: []
 generator:
   version: 1
 covers:
@@ -22,11 +20,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-SessionStart hook injecting a measured git-state brief, optionally running .claude/brief-extra.sh and surfacing fresh /tmp/compact-preflight.md items. Never blocks, never writes secrets, measurements override summary text.
-
-## Related
-
-- uses [[compact-ritual-and-directive-integrity]]
+...
 <!-- context:generated:end -->
 
 ## Notes

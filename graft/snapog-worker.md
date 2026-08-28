@@ -3,23 +3,28 @@ name: SnapOG Worker
 slug: snapog-worker
 type: system
 sources:
+  - path: projects/_archive/snapog/migrations/0001_init.sql
+    hash: 5a2ecc41dbff948e5d8f895feb80ae4145864f3703776f737cda73c84fec8623
+  - path: projects/_archive/snapog/migrations/0002_waitlist.sql
+    hash: 541f4f76f6f87aab342fe067acbcc746587f600d1e76028fe97a4c67c8b3202a
+  - path: projects/_archive/snapog/migrations/0003_cache_key_tracking.sql
+    hash: a672bc9c2f87bedb83312ef869d3ea29305f96bcca7241131ce1130edcb4ee75
   - path: projects/_archive/snapog/src/index.ts
     hash: c484536a0f66188fa0ac986f34c605540b32efb599ec1ae08d091b89a20d2954
+  - path: projects/_archive/snapog/src/og/render.ts
+    hash: c74a09fcf98afae74090c3b72b8b4c7f84252e7f0aca090d1418352cd48d8094
+  - path: projects/_archive/snapog/src/og/templates.ts
+    hash: bfc8c9e61038224564b61c55c627b2d86d9ba2514dd47f64a717e94f0be8b810
   - path: projects/_archive/snapog/src/types.ts
     hash: 1551e13c618a1b8ceaa8b5189318810934889c1d4e822425cb830e7efb45bc15
-sources_digest: 3a502edd4ac88332d9c5d9708afe48ce4227dfd0fbbe3aa4b9aebdc3c5ff6165
+sources_digest: fdaeeb7e96b128caaf56f24722d43c264ce856d635c7315a709e6c4879ccc4f1
 links:
   - to: snapog-cost-alerts
     relation: uses
-    description: scheduled handler invokes runCostAlertCheck from src/alerts/index.ts.
-  - to: snapog-og-rendering
-    relation: uses
-    description: >-
-      Calls generateOGImage/buildCacheKey from src/og/render.ts for image
-      generation and deterministic cache keys.
-  - to: snapog-schema
-    relation: uses
-    description: 'Persists users, api_keys, usage_events, api_key_cache_keys to D1.'
+    description: scheduled handler invokes runCostAlertCheck from ./alerts.
+  - to: snapog-landing
+    relation: produces
+    description: Landing page embeds a live OG image preview hitting the /og endpoint.
 generator:
   version: 1
 covers:
@@ -50,6 +55,39 @@ covers:
   - symbol: scheduled
     kind: method
     at: 'projects/_archive/snapog/src/index.ts:L360-L370'
+  - symbol: generateOGImage
+    kind: function
+    at: 'projects/_archive/snapog/src/og/render.ts:L11-L23'
+  - symbol: buildCacheKey
+    kind: function
+    at: 'projects/_archive/snapog/src/og/render.ts:L26-L37'
+  - symbol: StyleObject
+    kind: type
+    at: 'projects/_archive/snapog/src/og/templates.ts:L6-L6'
+  - symbol: VNode
+    kind: type
+    at: 'projects/_archive/snapog/src/og/templates.ts:L8-L15'
+  - symbol: AccentBar
+    kind: function
+    at: 'projects/_archive/snapog/src/og/templates.ts:L18-L33'
+  - symbol: Header
+    kind: function
+    at: 'projects/_archive/snapog/src/og/templates.ts:L36-L83'
+  - symbol: Footer
+    kind: function
+    at: 'projects/_archive/snapog/src/og/templates.ts:L86-L133'
+  - symbol: defaultTemplate
+    kind: function
+    at: 'projects/_archive/snapog/src/og/templates.ts:L136-L202'
+  - symbol: blogTemplate
+    kind: function
+    at: 'projects/_archive/snapog/src/og/templates.ts:L205-L286'
+  - symbol: articleTemplate
+    kind: function
+    at: 'projects/_archive/snapog/src/og/templates.ts:L289-L461'
+  - symbol: buildElement
+    kind: function
+    at: 'projects/_archive/snapog/src/og/templates.ts:L463-L472'
   - symbol: Tier
     kind: type
     at: 'projects/_archive/snapog/src/types.ts:L3-L3'
@@ -66,13 +104,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Hono-based Cloudflare Worker generating Open Graph images on demand. Routes /og (image generation with API-key validation, monthly usage limits, R2 caching), / and /register (landing and key creation with waitlist for paid tiers), /dashboard (usage stats), and a scheduled cron cost-alert check. Hashes API keys before storage, counts usage even on cache hits, bypasses R2 writes when the per-key cache cap is exceeded (still rendering and counting, returning X-Cache: BYPASSED), uses waitUntil for fire-and-forget ops, enforces a free-tier watermark, and validates input params with length limits.
+Hono-based Cloudflare Worker that generates Open Graph images on demand, with D1 persistence (users, API keys, usage events, cache-key tracking) and R2 caching. Hashes API keys before storage, counts usage even on cache hits, and caps distinct cache keys per key per month (beyond which /og still renders but skips R2 put and returns X-Cache: BYPASSED) to prevent unique-URL storage abuse.
 
 ## Related
 
-- uses [[snapog-cost-alerts]] — scheduled handler invokes runCostAlertCheck from src/alerts/index.ts.
-- uses [[snapog-og-rendering]] — Calls generateOGImage/buildCacheKey from src/og/render.ts for image generation and deterministic cache keys.
-- uses [[snapog-schema]] — Persists users, api_keys, usage_events, api_key_cache_keys to D1.
+- uses [[snapog-cost-alerts]] — scheduled handler invokes runCostAlertCheck from ./alerts.
+- produces [[snapog-landing]] — Landing page embeds a live OG image preview hitting the /og endpoint.
 <!-- context:generated:end -->
 
 ## Notes

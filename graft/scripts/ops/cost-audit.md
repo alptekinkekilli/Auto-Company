@@ -1,4 +1,4 @@
-# scripts/ops/cost-audit.py · [[atomic-write-and-compare-and-swap-discipline]] [[cost-and-budget-accounting]]
+# scripts/ops/cost-audit.py · [[atomic-write-discipline]] [[cost-audit]]
 
 Deterministic daily cost audit that reads on-disk logs and writes memories/cost-audit.md so the Opportunity Analyst interprets measured numbers instead of computing them.
 

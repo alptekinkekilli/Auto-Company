@@ -3,6 +3,8 @@ name: SnapOG Cost Alerts
 slug: snapog-cost-alerts
 type: system
 sources:
+  - path: projects/_archive/snapog/sample/alerts-dry-run.sh
+    hash: fabd322c673a2e7f93273116221eac10392cdbf3d6cd8eb5457e6c960b67797c
   - path: projects/_archive/snapog/src/alerts/check.ts
     hash: fa0fdacdc3a2b495e86f2e70be76d1cadba5f829c78f39010a53d479eb5192c4
   - path: projects/_archive/snapog/src/alerts/graphql.ts
@@ -13,14 +15,14 @@ sources:
     hash: 4331a806e43a7f426bd69778ffaafb0324ab5237ef6f12f16e2f730c724087d2
   - path: projects/_archive/snapog/src/alerts/webhook.ts
     hash: 518ec45652bc5010bbd34856e527e2dc9c2dfa525aea151ff467f3a802c9da81
-sources_digest: fe1d8fd6fcb0f308eb0c4072f436e2986ea169f87521e188c20ca981540b20fa
+sources_digest: a023a03dd2af6e7e9df9fb798dd0f07e79cfd170b044341747face1efa394741
 links:
-  - to: snapog-schema
-    relation: uses
-    description: Queries usage_events and api_keys tables for metrics.
   - to: snapog-worker
     relation: part_of
-    description: scheduled handler entry point.
+    description: Scheduled handler in index.ts triggers runCostAlertCheck.
+  - to: snapog-worker
+    relation: uses
+    description: Queries the same D1 DB and R2 bucket the worker writes.
 generator:
   version: 1
 covers:
@@ -70,12 +72,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Cron-triggered cost-alerting system (every 6h) running five independent checks against D1 (D1 writes/day, 14-day cache hit rate, new signups, active users, R2 storage via a thin Cloudflare Analytics GraphQL client). Thresholds isolated in thresholds.ts (sourced from the CFO cost model) so the CFO can revise numbers without touching check logic; severity escalates to critical at 1.5× threshold. Checks are deliberately isolated — a thrown error is logged and treated as no alert, preventing false positives. Delivery via webhook.ts falls back to log-only mode when ALERT_WEBHOOK_URL is unset.
+Cron-triggered cost-alerting pipeline (every 6h) running five independent checks against D1 and R2, with thresholds isolated in one file sourced from the CFO cost model so numbers can be revised without touching check logic. Checks are deliberately isolated (a thrown error is treated as no alert) and delivery is best-effort, falling back to log-only when the webhook URL is unset.
 
 ## Related
 
-- uses [[snapog-schema]] — Queries usage_events and api_keys tables for metrics.
-- part of [[snapog-worker]] — scheduled handler entry point.
+- part of [[snapog-worker]] — Scheduled handler in index.ts triggers runCostAlertCheck.
+- uses [[snapog-worker]] — Queries the same D1 DB and R2 bucket the worker writes.
 <!-- context:generated:end -->
 
 ## Notes

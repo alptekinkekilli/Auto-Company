@@ -1,4 +1,4 @@
-# scripts/ops/state-snapshot.py · [[ops-archive-and-state]] [[ops-decision-scripts]]
+# scripts/ops/state-snapshot.py · [[audit-tools-turn-tool-state]] [[state-snapshot-probe]]
 
 One-call cycle state snapshot that collapses the per-cycle probe fan-out into a single turn, printing local state hashes plus a DELTA line against the previous snapshot so an unchanged world can be dismissed in one glance.
 

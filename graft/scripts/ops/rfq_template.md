@@ -1,4 +1,4 @@
-# scripts/ops/rfq_template.py · [[opex-rfq-email-templates]]
+# scripts/ops/rfq_template.py · [[rfq-template]]
 
 Module defining the OPEX RFQ email content (subject, plain-text and HTML bodies, scope text, signature, and CID logo attachment) that rfq-send.py imports for sending indicative price requests.
 

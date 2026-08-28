@@ -1,19 +1,18 @@
 ---
-name: set_e_shape_lint
+name: set -e shape lint
 slug: set-e-shape-lint
 type: concept
 sources:
   - path: docker-entrypoint.sh
     hash: fbc2010d8d1d9dda2bc7ebd72fba1d674136624f968ff2f453bf7bbb894de017
   - path: scripts/core/auto-loop.sh
-    hash: b8f8a3989fee29f5a561d7f4d4eb8f558086586d603c5217caf20288b84d27ec
+    hash: 332728052d5c8e3d8dbb64ca1d391062fc22c656cdb0a87d5e258b4f688d6103
   - path: tests/test_seteshape_lint.py
     hash: c75dd121edbe7aed5432f718bdfff952149464b77f9ab22baced3682261ebc98
-sources_digest: e3103dc607cbc3502d7cf66ff0e032fae35606c99d8bae8d61f841d9295998d0
+sources_digest: c3ec89f2e2a2a6d25650258e550e1de45591254f2976e1cc728b205195123f6c
 links:
-  - to: auto-loop
+  - to: auto-loop-sh-core-loop
     relation: validates
-    description: Asserts zero violations in auto-loop.sh and docker-entrypoint.sh.
 generator:
   version: 1
 covers:
@@ -36,11 +35,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A deliberately narrow lint for a fatal set -e pattern: a '[ test ] && action' list used as a function's last command or immediately before a bare return propagates a false test's exit status 1 and kills an unguarded caller (root cause of APP-240). It deliberately does not flag done/fi/esac terminators (set -e exempts the left operand of AND-OR lists) and skips lines ending in '|| true' or '|| :', to avoid false-positives on the safe redirect-fed loop form in docker-entrypoint.sh's runtime.env parser.
+A fatal pattern: a `[ test ] && action` list used as a function's last command or before a bare return propagates exit status 1 and kills an unguarded caller (APP-240 root cause). The lint is deliberately narrow, exempting AND-OR left operands and `|| true`/`|| :` tails.
 
 ## Related
 
-- validates [[auto-loop]] — Asserts zero violations in auto-loop.sh and docker-entrypoint.sh.
+- validates [[auto-loop-sh-core-loop]]
 <!-- context:generated:end -->
 
 ## Notes
