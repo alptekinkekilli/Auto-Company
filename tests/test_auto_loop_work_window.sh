@@ -38,6 +38,14 @@ chk "\$_workwin_inject present in both cycle_orders blocks (got $n_inject)" "[ '
 chk "inject gated on open AND empty discretionary line" \
   "grep -q '\[ \"\$_workwin_open\" = \"1\" \] && \[ -z \"\$_discretionary_line\" \]' '$LOOP'"
 
+# Watchdog (alarm layer) is wired post-cycle and set-e safe.
+chk "watchdog helper invoked post-cycle" \
+  "grep -q 'work-window-watchdog.py\" --cycle' '$LOOP'"
+chk "watchdog capture is set-e safe (|| true)" \
+  "grep -q '_wwd_alarm=\$(.*work-window-watchdog.py.*) || true' '$LOOP'"
+chk "watchdog alarm only sent when non-empty" \
+  "grep -q '\[ -n \"\$_wwd_alarm\" \] && \[ -n \"\${TELEGRAM_BOT_TOKEN' '$LOOP'"
+
 # --- Layer 2: contract behaviour at the exact call site -------------------------------
 tmp="$(mktemp -d)"; mkdir -p "$tmp/logs"
 call() { printf '%s' "$1" | python3 "$WW" --cycle "$2" --app "$tmp" 2>/dev/null; }

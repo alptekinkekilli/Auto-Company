@@ -3312,6 +3312,19 @@ Priorities, in order: (1) the Human Directive, per the rules above; (2) only the
 $(printf '%s' "${RESULT_TEXT:-}" | head -c 600)" >/dev/null 2>&1 || true
     fi
 
+    # WORK-WINDOW WATCHDOG (alarm layer for the work-window brake). If the window was open
+    # yet the loop emitted an empty-cycle admission for THRESHOLD consecutive cycles, the
+    # brake is being ignored (or everything is genuinely blocked) — surface it ONCE on
+    # crossing. Informational: the helper exits 0 always and prints only when it wants to
+    # alarm. set -e safe: the `|| true` on the capture keeps a non-zero from killing the loop.
+    if [ -f "$SCRIPT_DIR/../ops/work-window-watchdog.py" ]; then
+        _wwd_failed=0; [ -n "${cycle_failed_reason:-}" ] && _wwd_failed=1
+        _wwd_alarm=$({ printf '%s\n' "${RESULT_TEXT:-}"; sed -n '/## What We Did This Cycle/,/^## /p' "$CONSENSUS_FILE" 2>/dev/null | head -20; } | python3 "$SCRIPT_DIR/../ops/work-window-watchdog.py" --cycle "$loop_count" --app "$PROJECT_DIR" --open "${_workwin_open:-0}" --failed "$_wwd_failed" 2>/dev/null) || true
+        if [ -n "$_wwd_alarm" ] && [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+            bash "$SCRIPT_DIR/telegram-notify.sh" "$_wwd_alarm" >/dev/null 2>&1 || true
+        fi
+    fi
+
     # Discretionary-spend ledger + idle cadence (operator decision 2026-08-04). A cycle
     # whose snapshot DELTA was `none` had no external trigger, so its cost counts against
     # the day's discretionary cap (read back at the next prompt build), and the next sleep
