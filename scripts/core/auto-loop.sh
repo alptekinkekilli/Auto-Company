@@ -2748,6 +2748,27 @@ while true; do
         *)               _cycle_idle=0 ;;
     esac
 
+    # WORK-WINDOW BRAKE (2026-08-29). A tracked-surface change opens a K-cycle window;
+    # while it is open the cycle is NOT idle-skipped and an empty-cycle confirmation is
+    # declared invalid (order injected into <cycle_orders> below), so a change's follow-on
+    # work is not orphaned by the very next DELTA:none. work-window.py: exit 10 = OPEN,
+    # 0 = CLOSED; fail-closed (unreadable state / unparseable DELTA => OPEN). Kill switch
+    # WORK_WINDOW_ENABLED=0 read LIVE from runtime.env (like IDLE_SKIP). set -e safe: the
+    # exit code is captured via `|| _rc=$?` — a bare `var=$(cmd-exit-10)` would trip set -e
+    # and kill the loop (the APP-240 crash-loop trap).
+    _workwin_open=0
+    _workwin_line=""
+    _workwin_flag=$(_read_runtime_env_key WORK_WINDOW_ENABLED)
+    [ -z "$_workwin_flag" ] && _workwin_flag="${WORK_WINDOW_ENABLED:-1}"
+    if [ "$_workwin_flag" = "1" ] && [ -f "$SCRIPT_DIR/../ops/work-window.py" ]; then
+        _workwin_rc=0
+        _workwin_line=$(printf '%s' "$_snapshot_block" | python3 "$SCRIPT_DIR/../ops/work-window.py" --cycle "$loop_count" --app "$PROJECT_DIR" 2>/dev/null) || _workwin_rc=$?
+        case "$_workwin_rc" in
+            0)  _workwin_open=0 ;;
+            *)  _workwin_open=1 ;;  # 10 = open; anything else (error/timeout) = fail-closed OPEN
+        esac
+    fi
+
     # IDLE-SKIP (operator-approved 2026-08-06). Measured on the first watch-mode day:
     # 8 cycles / $9.48, of which 6 were idle and cost $6.35 to conclude that nothing had
     # moved. Those six each burned 4-6 tool calls and ~600k cached prompt tokens to
@@ -2777,7 +2798,7 @@ while true; do
     _today_utc=$(date -u +%Y-%m-%d)
     _idle_skip_flag=$(_read_runtime_env_key IDLE_SKIP_ENABLED)
     [ -z "$_idle_skip_flag" ] && _idle_skip_flag="${IDLE_SKIP_ENABLED:-1}"
-    if _idle_skip_due "$_cycle_idle" "$_full_cycle_stamp" "$_today_utc" "$_idle_skip_flag"; then
+    if [ "$_workwin_open" != "1" ] && _idle_skip_due "$_cycle_idle" "$_full_cycle_stamp" "$_today_utc" "$_idle_skip_flag"; then
         _skip_ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
         printf '{"date":"%s","ts":"%s","cycle":%s,"reason":"delta-none-after-full-cycle"}\n' \
             "$_today_utc" "$_skip_ts" "$loop_count" \
@@ -2854,6 +2875,13 @@ PYDISC
     if [ "$(printf '%s\n' "$_disc_today $_disc_cap" | awk '{print ($1 >= $2) ? 1 : 0}')" = "1" ]; then
         _discretionary_line="⚠ DISCRETIONARY BUDGET SPENT — \$${_disc_today} of \$${_disc_cap} today has gone to cycles that had no external trigger. For the rest of this UTC day: NO new exploration, source-mining, scanning or feasibility reading. Allowed: Human Directive work, OPREQ handling, bridge/reply/send-gate handling, and CLOSING OUT an already-bounded task with its stop condition. If none of those has work, say so in ONE line, update consensus, and end the cycle immediately — an empty cycle is the correct output, not a reason to find something."
     fi
+    # Work-window order (window computed above): inject ONLY when the window is open AND
+    # we are NOT over the discretionary cap — over cap, that backstop's "empty is correct"
+    # line governs (money wins), so the two never contradict. Empty otherwise => no-op line.
+    _workwin_inject=""
+    if [ "$_workwin_open" = "1" ] && [ -z "$_discretionary_line" ]; then
+        _workwin_inject="$_workwin_line"
+    fi
     _turnfb_line=""
     if [ -f "$LOG_DIR/.last-turn-audit" ]; then
         _ta_prev=$(cat "$LOG_DIR/.last-turn-audit" 2>/dev/null || true)
@@ -2901,6 +2929,7 @@ This is Cycle #$loop_count.
 $_discovery_line
 $_turnfb_line
 $_discretionary_line
+$_workwin_inject
 Priorities, in order: (1) the Human Directive, per the rules above; (2) only the surfaces the snapshot's DELTA names as changed; (3) ONE milestone, persisted to \`memories/consensus.md\`, then end the cycle within the ~40-tool-call budget (rule 7). Act decisively.
 </cycle_orders>"
 
@@ -2957,6 +2986,7 @@ This is Cycle #$loop_count.
 $_discovery_line
 $_turnfb_line
 $_discretionary_line
+$_workwin_inject
 Priorities, in order: (1) the Human Directive, per the rules above; (2) only the surfaces the snapshot's DELTA names as changed; (3) ONE milestone, persisted to \`memories/consensus.md\`, then end the cycle within the ~40-tool-call budget (rule 7). Act decisively.
 </cycle_orders>"
     fi

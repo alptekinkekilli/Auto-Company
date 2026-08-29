@@ -215,15 +215,18 @@ covers:
   - symbol: read_tool_inventory
     kind: function
     at: 'scripts/ops/cost-audit.py:L134-L141'
+  - symbol: read_disabled_tools
+    kind: function
+    at: 'scripts/ops/cost-audit.py:L144-L171'
   - symbol: fmt_money
     kind: function
-    at: 'scripts/ops/cost-audit.py:L144-L145'
+    at: 'scripts/ops/cost-audit.py:L174-L175'
   - symbol: build_report
     kind: function
-    at: 'scripts/ops/cost-audit.py:L148-L303'
+    at: 'scripts/ops/cost-audit.py:L178-L339'
   - symbol: main
     kind: function
-    at: 'scripts/ops/cost-audit.py:L306-L324'
+    at: 'scripts/ops/cost-audit.py:L342-L360'
   - symbol: build_line
     kind: function
     at: 'scripts/ops/idle-skip-note.py:L26-L34'
