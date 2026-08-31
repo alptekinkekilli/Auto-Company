@@ -39,9 +39,9 @@ sake.
   has produced (e.g. `cycle49-wowcar-charter-persistence-receipt-2026-08-24.md`).
 - `memories/cost-audit.md` — TODAY's deterministic cost measurements (interpret,
   never recompute; if missing or stale, say so and skip that section).
-- `graft/` — versioned repo cards (prose + exact `file:line` per script/concept).
-  For any question about the company's own mechanisms, grep `graft/INDEX.md` and
-  the relevant card BEFORE reading source files — cheaper and usually sufficient.
+- Read `scripts/`, `docs/`, and the workbook source files DIRECTLY for any question
+  about the company's own mechanisms. (The `graft/` repo-card index is not provisioned
+  in this audit workspace — do not grep for it; go straight to source.)
 
 Do not silently treat missing artifacts as negative evidence. Mark them **missing**
 and name exactly which directive requirement they leave unsatisfied.
