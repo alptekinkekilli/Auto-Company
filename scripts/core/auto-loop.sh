@@ -2893,6 +2893,13 @@ PYDISC
                 ;;
         esac
     fi
+    # Turn-bloat HARD brake (OPREQ-3): if BLOATED cycles are STACKING (streak >= K), replace the
+    # soft advisory above with a hard persist-and-end mandate. turn-bloat-brake.py prints the hard
+    # line only while a streak is active, else empty. set -e safe (`|| true` on the capture).
+    if [ -f "$SCRIPT_DIR/../ops/turn-bloat-brake.py" ]; then
+        _tb_hard=$(python3 "$SCRIPT_DIR/../ops/turn-bloat-brake.py" --feedback --app "$PROJECT_DIR" 2>/dev/null) || true
+        [ -n "$_tb_hard" ] && _turnfb_line="$_tb_hard"
+    fi
     FULL_PROMPT="$PROMPT
 
 ---
@@ -3221,6 +3228,15 @@ Priorities, in order: (1) the Human Directive, per the rules above; (2) only the
             # cycle behaves — measured 2026-08-03, five consecutive BLOATED cycles.
             # Written every audited cycle (ok included) so a recovery clears the flag.
             [ -n "$_ta_line" ] && printf '%s\n' "$_ta_line" > "$LOG_DIR/.last-turn-audit" 2>/dev/null || true
+            # Turn-bloat streak (OPREQ-3): record this cycle's verdict; escalate (Telegram) on
+            # the crossing to K consecutive BLOATED. set -e safe (`|| true` on the capture).
+            if [ -n "$_ta_line" ] && [ -f "$SCRIPT_DIR/../ops/turn-bloat-brake.py" ]; then
+                _tb_verdict=$(printf '%s' "$_ta_line" | sed -n 's/.*verdict=\([A-Za-z]*\).*/\1/p')
+                _tb_alarm=$(python3 "$SCRIPT_DIR/../ops/turn-bloat-brake.py" --record --cycle "$loop_count" --verdict "${_tb_verdict:-ok}" --app "$PROJECT_DIR" 2>/dev/null) || true
+                if [ -n "$_tb_alarm" ] && [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+                    bash "$SCRIPT_DIR/telegram-notify.sh" "$_tb_alarm" >/dev/null 2>&1 || true
+                fi
+            fi
             # Only BLOATED is pushed. CHATTY stays in the log where it can be read when
             # someone is looking at cost, because a notification that arrives on 41% of
             # cycles (measured over 34 cycles with the old bars) trains the operator to
@@ -3322,6 +3338,18 @@ $(printf '%s' "${RESULT_TEXT:-}" | head -c 600)" >/dev/null 2>&1 || true
         _wwd_alarm=$({ printf '%s\n' "${RESULT_TEXT:-}"; sed -n '/## What We Did This Cycle/,/^## /p' "$CONSENSUS_FILE" 2>/dev/null | head -20; } | python3 "$SCRIPT_DIR/../ops/work-window-watchdog.py" --cycle "$loop_count" --app "$PROJECT_DIR" --open "${_workwin_open:-0}" --failed "$_wwd_failed" 2>/dev/null) || true
         if [ -n "$_wwd_alarm" ] && [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
             bash "$SCRIPT_DIR/telegram-notify.sh" "$_wwd_alarm" >/dev/null 2>&1 || true
+        fi
+    fi
+
+    # LEDGER-INTEGRITY GUARD (Program Audit 2026-08-31 §3.1 — the ledger silently lost §5*/§6
+    # sections + 3 OPEX-row records with no incident note and no backup/git trail). Each cycle:
+    # roll a backup of the ledger + consensus into logs/state-backups/ (the recovery source that
+    # did not exist), and alarm on content loss (section/row/size drop without an incident note).
+    # Informational: helper exits 0 always, prints only to alarm. set -e safe (`|| true`).
+    if [ -f "$SCRIPT_DIR/../ops/ledger-guard.py" ]; then
+        _lg_alarm=$(python3 "$SCRIPT_DIR/../ops/ledger-guard.py" --cycle "$loop_count" --app "$PROJECT_DIR" 2>/dev/null) || true
+        if [ -n "$_lg_alarm" ] && [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+            bash "$SCRIPT_DIR/telegram-notify.sh" "$_lg_alarm" >/dev/null 2>&1 || true
         fi
     fi
 
