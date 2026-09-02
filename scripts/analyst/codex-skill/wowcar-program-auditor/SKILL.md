@@ -67,8 +67,12 @@ and name exactly which directive requirement they leave unsatisfied.
    first run (2026-08-24) declared all five source documents deleted and built its
    headline verdict on it — the files were present the whole time, checksums intact;
    the empty result was your own tool error. Before claiming any file, directory, or
-   section is missing: (a) run TWO independent checks (`ls -la <exact path>` AND
-   `find <parent> -maxdepth 2 -name '<pattern>'` or `stat`); (b) paste the exact
+   section is missing: (a) run TWO independent DETERMINISTIC-OUTPUT checks — `ls -la
+   <exact path>` AND `stat <exact path>` (or `grep -c '<pattern>' <file>` for a
+   section). **NEVER use `find -name` as an existence check: it is non-functional in
+   this audit workspace (returns rc=0 with empty output for files that demonstrably
+   exist — OPREQ-INFRA-AUDITOR-FIND-BROKEN-001, 2026-09-02) and is the exact tool
+   class that produced the 2026-08-24 false-deletion headline.** (b) paste the exact
    commands AND their raw output into the report next to the claim; (c) if the two
    disagree, or an empty result is consistent with a tool/cwd error, the verdict is
    UNVERIFIED — never ABSENT. A false deletion claim is the single most damaging
