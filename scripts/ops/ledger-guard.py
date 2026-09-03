@@ -35,7 +35,7 @@ BACKUP_DIR_REL = "logs/state-backups"
 SECTION_RE = re.compile(r"^## ", re.MULTILINE)
 ROWREF_RE = re.compile(r"OPEX Kalemleri!A\d+")
 INCIDENT_RE = re.compile(
-    r"incident|restored|restore|inadvertent|geri getir|kay[ıi]p|lost|erased|truncat|overwr|reconstruct",
+    r"incident|restored|restore|inadvertent|geri getir|kay[ıi]p|lost|erased|truncat|overwr|reconstruct|prune|compacted",
     re.IGNORECASE,
 )
 
