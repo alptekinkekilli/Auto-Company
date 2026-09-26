@@ -17,13 +17,13 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(git -C "$HERE" rev-parse --show-toplevel)"
 cd "$ROOT"
 
-GRAFT_VERSION="${GRAFT_VERSION:-0.13.0}"   # .mcp.json ile aynı olmalı; birlikte yükseltin
-KEYCHAIN_SERVICE="${GRAFT_KEYCHAIN_SERVICE:-autocompany-together-key}"
+GRAFT_VERSION="${GRAFT_VERSION:-0.20.0}"   # .mcp.json ile aynı olmalı; birlikte yükseltin
+KEYCHAIN_SERVICE="${GRAFT_KEYCHAIN_SERVICE:-huggingface-token}"
 
 if [[ " $* " == *" --deep "* ]]; then
   export GRAFT_PROVIDER="${GRAFT_PROVIDER:-openai}"
-  export GRAFT_BASE_URL="${GRAFT_BASE_URL:-https://api.together.ai/v1}"
-  export GRAFT_MODEL="${GRAFT_MODEL:-deepseek-ai/DeepSeek-V4-Flash-0731}"
+  export GRAFT_BASE_URL="${GRAFT_BASE_URL:-https://router.huggingface.co/v1}"
+  export GRAFT_MODEL="${GRAFT_MODEL:-deepseek-ai/DeepSeek-V4-Flash-0731:deepinfra}"
   if [ -z "${GRAFT_API_KEY:-}" ]; then
     GRAFT_API_KEY="$(security find-generic-password -w -a "$USER" -s "$KEYCHAIN_SERVICE" 2>/dev/null)" || {
       echo "HATA: LLM anahtarı Keychain'de bulunamadı ($KEYCHAIN_SERVICE)." >&2
@@ -34,7 +34,7 @@ if [[ " $* " == *" --deep "* ]]; then
   fi
 fi
 
-npx -y "@nanonets/graft@$GRAFT_VERSION" build "$@"
+npx -y "@nanonets/graft@$GRAFT_VERSION" build --no-gitignore "$@"
 
 # Bilinen graft tuhaflığı: sembol özeti "stale" işaretlenip yeniden hesaplanmayabiliyor
 # ("meaning: 0 computed, N cached, 1 stale"). --no-reuse de çözmüyor; özet cache'ini
@@ -49,7 +49,7 @@ npx -y "@nanonets/graft@$GRAFT_VERSION" build "$@"
 if [[ " $* " == *" --deep "* ]] && npx -y "@nanonets/graft@$GRAFT_VERSION" check 2>&1 | grep -q "stale summaries"; then
   echo "  graft: özet cache'i takıldı — temizlenip yeniden üretiliyor"
   rm -f graft/.cache/summaries.json
-  npx -y "@nanonets/graft@$GRAFT_VERSION" build "$@"
+  npx -y "@nanonets/graft@$GRAFT_VERSION" build --no-gitignore "$@"
 fi
 
 # --- deponun ignore kuralını geri koy ---

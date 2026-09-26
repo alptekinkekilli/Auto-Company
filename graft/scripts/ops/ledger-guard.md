@@ -1,4 +1,4 @@
-# scripts/ops/ledger-guard.py · [[auto-loop-harness]] [[ledger-guard]]
+# scripts/ops/ledger-guard.py · [[auto-loop-harness]] [[directive-governance-watchers]] [[ledger-guard]]
 
 Post-cycle integrity guard that rolls a backup of the Gate-0 conflict ledger and consensus.md, compares content metrics against the previous cycle, and prints a violation line when content drops without an incident marker so silent ledger loss becomes visible.
 

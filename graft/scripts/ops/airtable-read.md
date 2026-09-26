@@ -1,4 +1,4 @@
-# scripts/ops/airtable-read.py · [[airtable-read-wrapper]]
+# scripts/ops/airtable-read.py · [[airtable-read-wrapper]] [[airtable-read-write-wrappers]]
 
 The only sanctioned way for a cycle to read an Airtable table, enforcing strict query scoping and compact output to keep context re-read costs low.
 

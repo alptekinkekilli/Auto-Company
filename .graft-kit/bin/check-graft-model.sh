@@ -6,18 +6,18 @@
 # (tek küçük istek) bunu önceden test eder.
 #
 # Kullanım:
-#   GRAFT_API_KEY="$(security find-generic-password -w -a "$USER" -s autocompany-together-key)" \
+#   GRAFT_API_KEY="$(security find-generic-password -w -a "$USER" -s huggingface-token)" \
 #     bash shared/scripts/check-graft-model.sh
 #
 # Anahtar argv'ye YAZILMAZ; yalnızca environment üzerinden okunur.
 set -euo pipefail
 
-BASE="${GRAFT_BASE_URL:-https://api.together.ai/v1}"
-MODEL="${GRAFT_MODEL:-deepseek-ai/DeepSeek-V4-Flash-0731}"
+BASE="${GRAFT_BASE_URL:-https://router.huggingface.co/v1}"
+MODEL="${GRAFT_MODEL:-deepseek-ai/DeepSeek-V4-Flash-0731:deepinfra}"
 
 [ -n "${GRAFT_API_KEY:-}" ] || {
   echo "HATA: GRAFT_API_KEY tanımlı değil." >&2
-  echo "Örn: GRAFT_API_KEY=\"\$(security find-generic-password -w -a \"\$USER\" -s autocompany-together-key)\" $0" >&2
+  echo "Örn: GRAFT_API_KEY=\"\$(security find-generic-password -w -a \"\$USER\" -s huggingface-token)\" $0" >&2
   exit 1
 }
 

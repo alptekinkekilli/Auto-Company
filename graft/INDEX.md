@@ -13,6 +13,7 @@ graph, not in these files: `graft callers <symbol>` is the only way to read them
 
 - [airtable-ops-watchers](airtable-ops-watchers.md) — Airtable ops watchers · scripts/ops/registry-queue-watch.py, scripts/ops/reply-watch.py, scripts/ops/rfq-reply-watch.py
 - [airtable-read-wrapper](airtable-read-wrapper.md) — Airtable read wrapper · scripts/ops/airtable-read.py
+- [airtable-read-write-wrappers](airtable-read-write-wrappers.md) — Airtable read/write wrappers · scripts/ops/airtable-read.py, scripts/ops/airtable-write.py
 - [airtable-write-guard](airtable-write-guard.md) — Airtable write guard · scripts/ops/airtable-write.py
 - [analyst-engine](analyst-engine.md) — Analyst engine · scripts/analyst/opportunity-analyst-jcode.sh
 - [analyst-tooling](analyst-tooling.md) — Analyst Tooling · scripts/analyst/codex-skill/autocompany-opportunity-director/scripts/context7_docs.sh, scripts/analyst/jcode-pilot-smoke.sh
@@ -20,6 +21,10 @@ graph, not in these files: `graft callers <symbol>` is the only way to read them
 - [auto-loop-core-engine](auto-loop-core-engine.md) — auto-loop core engine · scripts/core/auto-loop.sh
 - [auto-loop-daemon](auto-loop-daemon.md) — Auto Loop Daemon · scripts/core/auto-loop.sh
 - [auto-loop-harness](auto-loop-harness.md) — Auto-loop harness · scripts/core/auto-loop.sh, scripts/ops/ledger-guard.py, scripts/ops/state-snapshot.py, scripts/ops/tool-usage-audit.py, scripts/ops/turn-audit.py, scripts/ops/turn-bloat-brake.py, scripts/ops/verify-mcp-keys.py, scripts/ops/web-research-cost.py, scripts/ops/work-window-watchdog.py, scripts/ops/work-window.py
+- [auto-loop-orchestration](auto-loop-orchestration.md) — Auto-loop orchestration · scripts/linux/noop-action.sh, scripts/linux/status-linux.sh, scripts/macos/install-daemon.sh, scripts/macos/status-mac.sh
+- [bridge-leak-scanner](bridge-leak-scanner.md) — Bridge leak scanner · scripts/core/bridge_leak_scan.py
+- [browser-extraction-harness](browser-extraction-harness.md) — Browser extraction harness · scripts/ops/browse-extract.py
+- [budget-calibration-and-cost-audit](budget-calibration-and-cost-audit.md) — Budget calibration and cost audit · scripts/ops/budget-calibration-report.py, scripts/ops/cost-audit.py
 - [budget-gates](budget-gates.md) — Budget gates · scripts/core/auto-loop.sh
 - [cockpit-dashboard](cockpit-dashboard.md) — Cockpit Dashboard · dashboard/app.js, dashboard/sentry_client.py
 - [cockpit-server](cockpit-server.md) — Cockpit Server · dashboard/server.py
@@ -27,26 +32,43 @@ graph, not in these files: `graft callers <symbol>` is the only way to read them
 - [compact-ritual](compact-ritual.md) — Compact ritual · scripts/compact_yol.py, scripts/compact-postcheck.py, scripts/compact-preflight.py, scripts/compact-resume-lint.py, scripts/session-brief.py
 - [compact-ritual-hooks](compact-ritual-hooks.md) — Compact Ritual Hooks · scripts/compact_yol.py, scripts/compact-postcheck.py, scripts/compact-preflight.py, scripts/compact-report.py, scripts/compact-resume-lint.py
 - [container-entrypoint](container-entrypoint.md) — Container Entrypoint · docker-entrypoint.sh
+- [content-hash-provenance](content-hash-provenance.md) — Content-hash provenance · scripts/core/decision_text_hash.py, scripts/ops/kik-decision-read.py
 - [context-watch-hook](context-watch-hook.md) — Context Watch Hook · scripts/context-watch.py
+- [context7-compliance-checker](context7-compliance-checker.md) — Context7 compliance checker · scripts/ops/context7-check.py
 - [cost-model-hint](cost-model-hint.md) — Cost model hint · scripts/core/auto-loop.sh
 - [dashboard-server](dashboard-server.md) — dashboard server · dashboard/server.py, tests/test_dashboard_server.py
+- [directive-governance-watchers](directive-governance-watchers.md) — Directive governance watchers · scripts/ops/directive-rule-sweep.py, scripts/ops/directive-staleness-watch.py, scripts/ops/ledger-guard.py
 - [directive-writer](directive-writer.md) — Directive Writer · dashboard/server.py, scripts/analyst/opportunity-analyst.sh, scripts/analyst/promote_directive.py, scripts/core/directive_writer.py, tests/test_directive_section_refs.sh
 - [discretionary-budget-cap](discretionary-budget-cap.md) — discretionary budget cap · scripts/core/auto-loop.sh, tests/test_discretionary_budget.sh
+- [docker-disk-space-guard](docker-disk-space-guard.md) — Docker disk-space guard · scripts/ops/docker-prune-safe.sh
+- [engine-cost-adapter](engine-cost-adapter.md) — Engine cost adapter · scripts/core/engine-usage-cost.py
 - [escalation-one-shot-semantics](escalation-one-shot-semantics.md) — escalation one-shot semantics · scripts/core/auto-loop.sh, tests/test_escalation.sh
+- [evidence-extraction-and-verification](evidence-extraction-and-verification.md) — Evidence extraction and verification · scripts/ops/extract-axis-evidence.py, scripts/ops/g4-check.py
+- [final-text-extractors](final-text-extractors.md) — Final-text extractors · scripts/core/codex-final-text.py, scripts/core/jcode-final-text.py
 - [g4-check](g4-check.md) — g4 check · scripts/ops/g4-check.py, tests/test_g4_check.sh
+- [graft-auto-refresh-hook](graft-auto-refresh-hook.md) — Graft auto-refresh hook · scripts/graft-auto-refresh.py
 - [headinspect-schema](headinspect-schema.md) — HeadInspect Schema · projects/headinspect/migrations/0001_hits.sql
 - [headinspect-worker](headinspect-worker.md) — HeadInspect Worker · projects/headinspect/src/index.ts, projects/headinspect/src/inspect.ts, projects/headinspect/src/render.ts
+- [human-directive-writer](human-directive-writer.md) — Human directive writer · scripts/core/directive_writer.py
 - [idle-skip-mechanism](idle-skip-mechanism.md) — idle-skip mechanism · scripts/core/auto-loop.sh, scripts/ops/idle-skip-note.py, tests/test_discretionary_budget.sh, tests/test_idle_skip.sh
+- [idle-skip-note-recorder](idle-skip-note-recorder.md) — Idle-skip note recorder · scripts/ops/idle-skip-note.py
+- [ki-k-decision-reader](ki-k-decision-reader.md) — KİK decision reader · scripts/ops/kik-decision-read.py
 - [ledger-guard](ledger-guard.md) — ledger guard · scripts/ops/ledger-guard.py, tests/test_ledger_guard.py
+- [linear-workstream-tracker](linear-workstream-tracker.md) — Linear workstream tracker · scripts/ops/linear-track.py
+- [loop-lifecycle-and-monitoring](loop-lifecycle-and-monitoring.md) — Loop lifecycle and monitoring · scripts/core/monitor.sh, scripts/core/sentry-heartbeat.sh, scripts/core/stop-loop.sh
+- [mcp-config-generation-and-probe](mcp-config-generation-and-probe.md) — MCP config generation and probe · scripts/core/jcode-mcp-config.py, scripts/core/jcode-mcp-probe.py
 - [mcp-config-sync-invariant](mcp-config-sync-invariant.md) — MCP config sync invariant · scripts/core/auto-loop.sh, scripts/core/jcode-mcp-config.py, tests/test_mcp_config_manifest_sync.sh
 - [mcp-key-fallback](mcp-key-fallback.md) — MCP key fallback · scripts/core/jcode-mcp-config.py, tests/test_jcode_mcp_config.sh, tests/test_mcp_key_fallback.sh
 - [mcp-probe](mcp-probe.md) — MCP probe · scripts/core/jcode-mcp-probe.py, tests/fixtures/mock_mcp_server.py, tests/test_mcp_probe.sh
 - [mcp-verification](mcp-verification.md) — MCP verification · scripts/ops/verify-mcp-keys.py
 - [mixed-harness-attribution](mixed-harness-attribution.md) — mixed-harness attribution · scripts/core/auto-loop.sh, tests/test_mixed_harness.sh
 - [mock-mcp-server-fixture](mock-mcp-server-fixture.md) — Mock MCP server fixture · tests/fixtures/mock_mcp_server.py
-- [operator-action-router](operator-action-router.md) — operator action router · scripts/ops/operator-action-router.py, tests/test_operator_action_router.py
+- [operator-action-router](operator-action-router.md) — Operator action router · scripts/ops/operator-action-router.py, tests/test_operator_action_router.py
+- [operator-escalation-gate](operator-escalation-gate.md) — Operator escalation gate · scripts/core/operator_request_notify.py
 - [operator-request-notify](operator-request-notify.md) — operator request notify · scripts/core/operator_request_notify.py, tests/test_operator_request_notify.py, tests/test_refusal_format.sh
+- [operator-usage-reporter](operator-usage-reporter.md) — Operator usage reporter · scripts/ops/operator-usage-report.sh
 - [opportunity-analyst](opportunity-analyst.md) — Opportunity Analyst · scripts/analyst/merge_registry.py, scripts/analyst/opportunity-analyst-jcode.sh, scripts/analyst/opportunity-analyst.sh, scripts/analyst/promote_directive.py
+- [opportunity-analyst-cron](opportunity-analyst-cron.md) — Opportunity analyst cron · scripts/ops/opportunity-analyst-cron.sh
 - [outreach-eligibility-gate](outreach-eligibility-gate.md) — Outreach eligibility gate · scripts/ops/send-gate.py, scripts/ops/site-contact-evidence.py
 - [outreach-watchers](outreach-watchers.md) — outreach watchers · scripts/ops/reply-watch.py, scripts/ops/rfq-reply-watch.py, tests/test_reply_watch.sh, tests/test_rfq_reply_watch.sh
 - [prod-mechanism-guard](prod-mechanism-guard.md) — Prod-mechanism guard · scripts/prod-mechanism-guard.py, tests/test_prod_mechanism_guard.sh
@@ -54,6 +76,7 @@ graph, not in these files: `graft callers <symbol>` is the only way to read them
 - [prompt-transport-contract](prompt-transport-contract.md) — prompt transport contract · scripts/core/auto-loop.sh, tests/test_prompt_transport.sh
 - [refusal-format-contract](refusal-format-contract.md) — refusal format contract · dashboard/server.py, scripts/core/operator_request_notify.py, tests/test_refusal_format.sh
 - [registry-archive](registry-archive.md) — registry archive · scripts/ops/registry-archive.py, tests/test_registry_archive.sh
+- [registry-archiver](registry-archiver.md) — Registry archiver · scripts/ops/registry-archive.py
 - [registry-merge](registry-merge.md) — Registry Merge · scripts/analyst/merge_registry.py
 - [registry-queue-watch](registry-queue-watch.md) — registry queue watch · scripts/ops/registry-queue-watch.py, tests/test_registry_queue_watch.sh
 - [rfq-send](rfq-send.md) — rfq send · scripts/ops/rfq-send.py, tests/test_rfq_send.sh
@@ -68,12 +91,14 @@ graph, not in these files: `graft callers <symbol>` is the only way to read them
 - [snapog-smoke-tests](snapog-smoke-tests.md) — SnapOG Smoke Tests · projects/_archive/snapog/sample/alerts-dry-run.sh, projects/_archive/snapog/sample/cache-cap-test.sh, projects/_archive/snapog/sample/smoke-test.sh
 - [snapog-worker](snapog-worker.md) — SnapOG Worker · projects/_archive/snapog/src/index.ts, projects/_archive/snapog/src/og/render.ts, projects/_archive/snapog/src/og/templates.ts, projects/_archive/snapog/src/types.ts
 - [state-snapshot](state-snapshot.md) — State snapshot · scripts/ops/state-snapshot.py, tests/test_state_snapshot.sh
+- [telegram-notification-channel](telegram-notification-channel.md) — Telegram notification channel · scripts/core/telegram-notify.sh
 - [telegram-notify-shell-out](telegram-notify-shell-out.md) — Telegram notify shell-out · scripts/core/telegram-notify.sh
 - [test-harnesses](test-harnesses.md) — Test harnesses · tests/test_active_window.sh, tests/test_airtable_read.sh, tests/test_airtable_write.sh, tests/test_analyst_engine.sh, tests/test_auto_loop_ledger_guard.sh, tests/test_auto_loop_work_window.sh, tests/test_browse_extract.sh, tests/test_budget_gates.sh, tests/test_ccusage_failclosed.sh, tests/test_codex_spend_sources.sh, tests/test_compact_anchor_sync.py, tests/test_compact_ritual_hardening.sh, tests/test_compact_yol.py, tests/test_context7_check.sh, tests/test_cost_audit_tool_surface.py, tests/test_cost_model_hint.sh, tests/test_cycle_counter.sh, tests/test_cycle_metadata.sh
 - [tier-ladder-daily-budget](tier-ladder-daily-budget.md) — tier ladder daily budget · scripts/core/auto-loop.sh, tests/test_tier_ladder_daily.sh
 - [tool-usage-audit](tool-usage-audit.md) — tool usage audit · scripts/ops/tool-usage-audit.py, tests/test_tool_usage_audit.sh
 - [turn-bloat-brake](turn-bloat-brake.md) — turn bloat brake · scripts/ops/turn-bloat-brake.py, tests/test_turn_bloat_brake.py
 - [turn-economy-audit](turn-economy-audit.md) — turn economy audit · scripts/ops/turn-audit.py, tests/test_turn_audit.sh
+- [turn-economy-trend-watcher](turn-economy-trend-watcher.md) — Turn-economy trend watcher · scripts/ops/bloat-trend.py
 - [work-window-brake](work-window-brake.md) — Work-window brake · scripts/ops/state-snapshot.py, scripts/ops/work-window-watchdog.py, scripts/ops/work-window.py, tests/test_work_window.py
 - [work-window-watchdog](work-window-watchdog.md) — work window watchdog · scripts/ops/work-window-watchdog.py, tests/test_work_window_watchdog.py
 - [wowcar-revenue-relabel-acceptance](wowcar-revenue-relabel-acceptance.md) — Wowcar revenue relabel acceptance · scripts/ops/wowcar-revenue-vocabulary-acceptance.py

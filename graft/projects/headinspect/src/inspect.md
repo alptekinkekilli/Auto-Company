@@ -1,5 +1,7 @@
 # projects/headinspect/src/inspect.ts · [[headinspect-worker]]
 
+Pure functions module that categorizes HTTP response headers, generates per-header commentary and sanity flags, summarizes Set-Cookie without exposing raw values, and grades overall header security with a letter score.
+
 - Category · type · L4-L11 — Union type enumerating the header buckets used to group and order headers in reports.
 - HeaderEntry · interface · L13-L19 — Data holder describing one categorized header with its commentary and sanity flag.
 - RedirectHop · interface · L21-L25 — Data holder recording one redirect step's status and endpoints.
