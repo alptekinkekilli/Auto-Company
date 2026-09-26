@@ -11,7 +11,7 @@ sources:
     hash: 11bf5e9869e2e573b4a897e4df84053e4f58d759d3073a9e058705482cc31ef5
 sources_digest: 11e7adec91819c8c7079618f531dba4d8397079ab99ec03decfea7e8642be03b
 links:
-  - to: operator-request-notify-py
+  - to: operator-request-notify
     relation: implements
 generator:
   version: 1
@@ -323,11 +323,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Operator-decision REFUSE lines must be a short bounded head line followed by verbatim multi-line text (numbered points survive as separate lines); a line-anchored regex previously flattened this and broke the parser.
+Operator refusals are written as a short single-bounded REFUSE head line followed by verbatim multi-line reasoning; a line-anchored regex previously flattened the reasoning into one long line and broke the parser. The decision file must retain numbered points as separate lines and re-notification must be idempotent (no duplicate audit entries).
 
 ## Related
 
-- implements [[operator-request-notify-py]]
+- implements [[operator-request-notify]]
 <!-- context:generated:end -->
 
 ## Notes

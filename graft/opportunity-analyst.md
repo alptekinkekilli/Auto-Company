@@ -3,9 +3,6 @@ name: Opportunity Analyst
 slug: opportunity-analyst
 type: system
 sources:
-  - path: >-
-      scripts/analyst/codex-skill/autocompany-opportunity-director/scripts/context7_docs.sh
-    hash: 79198378c25b2ff21cf5e4e2eda13f55c29ac806bd7f9d2bb0cba11a6268c447
   - path: scripts/analyst/merge_registry.py
     hash: 55719338148054fff06780400062453a037e4bf10fe5817f04536b5c85ade7d1
   - path: scripts/analyst/opportunity-analyst-jcode.sh
@@ -14,21 +11,18 @@ sources:
     hash: a0a766435a1f9e501b97cca96bb30314440de72fd569313488d3b80d5f9c55a5
   - path: scripts/analyst/promote_directive.py
     hash: 9c45147f1730fc30545b94a30428d54e0bd40f04506aa3db00614880ec93d677
-sources_digest: 0e30aa01e58354844cc15ea6a1e05fcee433c04412f00d5b4955c540c51d2eaf
+sources_digest: 466cd5357bc86cd54e0c0bc2a6c4b3756df89d6f333d6ec3e184072f3ff7d3a8
 links:
-  - to: auto-loop
-    relation: uses
+  - to: auto-loop-daemon
+    relation: produces
     description: >-
-      Reads human-directive.md, consensus.md, operator-decisions.md that the
-      loop maintains.
+      Writes analysis-directive.md and candidate-registry.md that inform the
+      loop's directives.
   - to: directive-writer
     relation: uses
-    description: restore_directive and promotion use directive_writer.py for safe writes.
-  - to: promotion-gate
-    relation: implements
     description: >-
-      promote_directive.py is the deterministic gate deciding whether the report
-      may overwrite human-directive.md.
+      Restores human-directive.md via directive_writer.py with snapshot/hash
+      guardrails.
 generator:
   version: 1
 covers:
@@ -93,13 +87,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Independent 'second-brain' that invokes Codex or jcode with the opportunity-director skill to audit the Tender Track portfolio and produce a decision report plus candidate-registry update. Never auto-applies directives: it writes drafts, splices only the live span of the registry via merge_registry.py, and runs a deterministic promotion gate. Records session IDs for budget exclusion and persists raw ndjson streams for cost calibration.
+Independent 'second-brain' (APP-221) that invokes Codex (gpt-5.6-sol) or jcode (claude-opus-5) with the autocompany-opportunity-director skill to audit the Tender Track / Wowcar portfolio and produce a decision report plus candidate-registry update. Never auto-applies directives: writes analysis-directive.md as draft only, splices only the live span of candidate-registry.md via merge_registry.py, and runs a deterministic promotion gate. Records thread/session IDs to logs for budget exclusion. The 2026-08-24 re-charter retires registry merge and directive promotion for the jcode variant, which now writes only analysis-directive.md in audit-only mode.
 
 ## Related
 
-- uses [[auto-loop]] — Reads human-directive.md, consensus.md, operator-decisions.md that the loop maintains.
-- uses [[directive-writer]] — restore_directive and promotion use directive_writer.py for safe writes.
-- implements [[promotion-gate]] — promote_directive.py is the deterministic gate deciding whether the report may overwrite human-directive.md.
+- produces [[auto-loop-daemon]] — Writes analysis-directive.md and candidate-registry.md that inform the loop's directives.
+- uses [[directive-writer]] — Restores human-directive.md via directive_writer.py with snapshot/hash guardrails.
 <!-- context:generated:end -->
 
 ## Notes

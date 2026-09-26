@@ -1,4 +1,4 @@
-# scripts/ops/cost-audit.py · [[atomic-write-discipline]] [[cost-audit]]
+# scripts/ops/cost-audit.py
 
 Deterministic daily cost-audit script that reads spend/loop/jcode logs from disk and writes a markdown report so the Opportunity Analyst interprets measured numbers instead of computing them.
 

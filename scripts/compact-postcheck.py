@@ -14,7 +14,8 @@ edebilir; yokluk her zaman kayıp demek değildir, ama varlığı ritüelin ger�
 teslim edildiğine dair ölçülebilir bir sinyaldir.
 
 Hook girdisi (stdin JSON): PostCompact `compact_summary` alanı taşır
-(Claude Code hooks dokümanı). Env override'lar yalnız test içindir.
+(Claude Code hooks dokümanı). Yollar repo adına özeldir (scripts/compact_yol.py);
+env override'lar (COMPACT_RESUME_PATH, COMPACT_HISTORY_LOG) yalnız test içindir.
 """
 from __future__ import annotations
 
@@ -23,8 +24,12 @@ import json
 import os
 import sys
 
-RESUME = os.environ.get("COMPACT_RESUME_PATH", "/tmp/compact-resume.md")
-LOG = os.environ.get("COMPACT_HISTORY_LOG", "/tmp/compact-history.log")
+sys.dont_write_bytecode = True  # hedef projede scripts/__pycache__ bırakma
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import compact_yol  # noqa: E402
+
+RESUME = compact_yol.yol("resume")
+LOG = compact_yol.yol("history")
 
 # compact-resume-lint.py'deki ZORUNLU tuple'la senkron tutulmalı — biri
 # değişirse diğeri de gözden geçirilir.

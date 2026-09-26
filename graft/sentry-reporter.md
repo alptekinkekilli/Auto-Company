@@ -1,15 +1,15 @@
 ---
 name: Sentry Reporter
 slug: sentry-reporter
-type: file
+type: system
 sources:
   - path: dashboard/sentry_client.py
     hash: 96977bb6701f18064edb69c783e53bdb73c930c8ddadcd1caf47583b42700df4
 sources_digest: d14955d1810e44ac017b77743809ea9e510da96b9f40c625eb3bfe88e5d2372d
 links:
-  - to: cockpit-dashboard
+  - to: cockpit-server
     relation: part_of
-    description: Imported by server.py for error reporting.
+    description: Imported by the server for error reporting.
 generator:
   version: 1
 covers:
@@ -23,11 +23,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Minimal stdlib-only Sentry error reporter that POSTs to the legacy Store API, deliberately avoiding sentry-sdk because the container has no pip deps. Best-effort: any failure is caught and logged, never raised, so monitoring cannot crash the dashboard.
+Minimal stdlib-only Sentry error reporter for the dashboard, deliberately avoiding sentry-sdk because the container has no pip deps. Builds a Sentry event and POSTs to the legacy Store API via urllib.request. Best-effort: any failure is caught and logged to stderr, never raised, so monitoring cannot crash the dashboard. DSN parsed and cached at import time; 3s timeout; X-Sentry-Auth header with sentry_version=7.
 
 ## Related
 
-- part of [[cockpit-dashboard]] — Imported by server.py for error reporting.
+- part of [[cockpit-server]] — Imported by the server for error reporting.
 <!-- context:generated:end -->
 
 ## Notes

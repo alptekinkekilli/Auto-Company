@@ -3,12 +3,6 @@ name: SnapOG Worker
 slug: snapog-worker
 type: system
 sources:
-  - path: projects/_archive/snapog/migrations/0001_init.sql
-    hash: 5a2ecc41dbff948e5d8f895feb80ae4145864f3703776f737cda73c84fec8623
-  - path: projects/_archive/snapog/migrations/0002_waitlist.sql
-    hash: 541f4f76f6f87aab342fe067acbcc746587f600d1e76028fe97a4c67c8b3202a
-  - path: projects/_archive/snapog/migrations/0003_cache_key_tracking.sql
-    hash: a672bc9c2f87bedb83312ef869d3ea29305f96bcca7241131ce1130edcb4ee75
   - path: projects/_archive/snapog/src/index.ts
     hash: c484536a0f66188fa0ac986f34c605540b32efb599ec1ae08d091b89a20d2954
   - path: projects/_archive/snapog/src/og/render.ts
@@ -17,14 +11,14 @@ sources:
     hash: bfc8c9e61038224564b61c55c627b2d86d9ba2514dd47f64a717e94f0be8b810
   - path: projects/_archive/snapog/src/types.ts
     hash: 1551e13c618a1b8ceaa8b5189318810934889c1d4e822425cb830e7efb45bc15
-sources_digest: fdaeeb7e96b128caaf56f24722d43c264ce856d635c7315a709e6c4879ccc4f1
+sources_digest: e881da696eaa398ab2fec54b40926ad1f03d5afa6b2a5c125460831ebd1319cd
 links:
   - to: snapog-cost-alerts
     relation: uses
-    description: scheduled handler invokes runCostAlertCheck from ./alerts.
-  - to: snapog-landing
-    relation: produces
-    description: Landing page embeds a live OG image preview hitting the /og endpoint.
+    description: Scheduled handler invokes runCostAlertCheck.
+  - to: snapog-schema
+    relation: uses
+    description: 'Persists users, api_keys, usage_events, and cache-key tracking to D1.'
 generator:
   version: 1
 covers:
@@ -104,12 +98,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Hono-based Cloudflare Worker that generates Open Graph images on demand, with D1 persistence (users, API keys, usage events, cache-key tracking) and R2 caching. Hashes API keys before storage, counts usage even on cache hits, and caps distinct cache keys per key per month (beyond which /og still renders but skips R2 put and returns X-Cache: BYPASSED) to prevent unique-URL storage abuse.
+Hono-based Cloudflare Worker generating Open Graph images on demand. Routes /og (validate key, enforce monthly limits, cache to R2), / and /register (landing + key creation with waitlist), /dashboard. Hashes API keys (SHA-256) before storage, counts usage even on cache hits, bypasses R2 writes when the per-key cache cap is exceeded (still renders and counts, returns X-Cache: BYPASSED), enforces free-tier watermark, validates input length limits, uses waitUntil for fire-and-forget. Scheduled cron runs the cost-alert check.
 
 ## Related
 
-- uses [[snapog-cost-alerts]] — scheduled handler invokes runCostAlertCheck from ./alerts.
-- produces [[snapog-landing]] — Landing page embeds a live OG image preview hitting the /og endpoint.
+- uses [[snapog-cost-alerts]] — Scheduled handler invokes runCostAlertCheck.
+- uses [[snapog-schema]] — Persists users, api_keys, usage_events, and cache-key tracking to D1.
 <!-- context:generated:end -->
 
 ## Notes

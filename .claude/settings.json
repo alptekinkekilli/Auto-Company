@@ -13,7 +13,7 @@
     "ask": [],
     "deny": []
   },
-    "autoMode": {
+  "autoMode": {
     "allow": [
       "$defaults",
       "Allow ssh to the host `powerupp-ts` (the operator's own AutoCompany production host on their tailnet) and any command run through it, including `docker exec` reads AND writes to the company's own containers (editing files under /app such as runtime.env, config.toml, memories/*, docs/*) and cockpit hold/release curls. This is the company operating on its own infrastructure.",
@@ -22,7 +22,8 @@
     ]
   },
   "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "CONTEXT_WINDOW": "1000000"
   },
   "enableAllProjectMcpServers": true,
   "hooks": {
@@ -71,6 +72,15 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/scripts/compact-report.py"
+          }
+        ]
+      },
+      {
+        "matcher": "manual|auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/scripts/compact-preflight.py"
           }
         ]
       }

@@ -7,16 +7,11 @@ sources:
     hash: fbc2010d8d1d9dda2bc7ebd72fba1d674136624f968ff2f453bf7bbb894de017
 sources_digest: 4859f8b1dfb24f857df1d999107a7d92d7c4d14a2c247976ae81cbb021029d23
 links:
-  - to: auto-loop
-    relation: produces
+  - to: auto-loop-daemon
+    relation: uses
     description: Launches scripts/core/auto-loop.sh as a background process.
-  - to: auto-loop
-    relation: configures
-    description: >-
-      Applies runtime.env overrides and stamps boot-epoch for the MCP-config
-      freshness gate.
-  - to: cockpit-dashboard
-    relation: produces
+  - to: cockpit-server
+    relation: uses
     description: Launches dashboard/server.py as a background process.
 generator:
   version: 1
@@ -25,13 +20,12 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-PID-1 bootstrap that drops privileges via gosu, stamps the boot-epoch file for the MCP freshness gate, applies operator overrides from runtime.env (parsed literally to avoid shell-special-char corruption), and launches the dashboard and auto-loop as background processes, restarting the container if either exits. Persists state across redeploys via symlinks and volume relocations, and seeds Codex auth only on first boot to avoid token-rotation 401s.
+PID-1 bootstrap for the Auto-Company container: drops privileges to app via gosu, stamps a boot-epoch file for the loop's MCP-config freshness gate, applies operator overrides from runtime.env (parsed literally to avoid shell-special-char corruption), then launches the dashboard and auto-loop as background processes, waiting on either to exit so the container restarts. Persists state across redeploys by symlinking docs/ and .claude/skills/ into the memories volume, relocating CLAUDE_CONFIG_DIR and CODEX_HOME onto the logs volume, and seeding Codex auth only on first boot to avoid token-rotation 401s. set +e guard around wait -n so a non-zero child exit still produces a diagnostic; trap forwards TERM/INT to all children.
 
 ## Related
 
-- produces [[auto-loop]] — Launches scripts/core/auto-loop.sh as a background process.
-- configures [[auto-loop]] — Applies runtime.env overrides and stamps boot-epoch for the MCP-config freshness gate.
-- produces [[cockpit-dashboard]] — Launches dashboard/server.py as a background process.
+- uses [[auto-loop-daemon]] — Launches scripts/core/auto-loop.sh as a background process.
+- uses [[cockpit-server]] — Launches dashboard/server.py as a background process.
 <!-- context:generated:end -->
 
 ## Notes

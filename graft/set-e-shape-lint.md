@@ -6,12 +6,12 @@ sources:
   - path: docker-entrypoint.sh
     hash: fbc2010d8d1d9dda2bc7ebd72fba1d674136624f968ff2f453bf7bbb894de017
   - path: scripts/core/auto-loop.sh
-    hash: 332728052d5c8e3d8dbb64ca1d391062fc22c656cdb0a87d5e258b4f688d6103
+    hash: b3850b8050b576a46bfa19953ae0492889b603967275721a09344b9589552d56
   - path: tests/test_seteshape_lint.py
     hash: c75dd121edbe7aed5432f718bdfff952149464b77f9ab22baced3682261ebc98
-sources_digest: c3ec89f2e2a2a6d25650258e550e1de45591254f2976e1cc728b205195123f6c
+sources_digest: 918bf884625cb5b341044db80777d7643d544bc5f02699b0d167946cab6fa2d1
 links:
-  - to: auto-loop-sh-core-loop
+  - to: auto-loop-core-engine
     relation: validates
 generator:
   version: 1
@@ -35,11 +35,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A fatal pattern: a `[ test ] && action` list used as a function's last command or before a bare return propagates exit status 1 and kills an unguarded caller (APP-240 root cause). The lint is deliberately narrow, exempting AND-OR left operands and `|| true`/`|| :` tails.
+A fatal `[ test ] && action` list used as a function's last command or immediately before a bare return propagates a false test's exit status 1 and kills an unguarded caller (root cause of APP-240). The lint deliberately skips `done`/`fi`/`esac` terminators and `|| true`/`|| :` tails to avoid false positives on the safe redirect-fed loop form.
 
 ## Related
 
-- validates [[auto-loop-sh-core-loop]]
+- validates [[auto-loop-core-engine]]
 <!-- context:generated:end -->
 
 ## Notes

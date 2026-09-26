@@ -1,18 +1,20 @@
 ---
-name: operator_request_notify
+name: operator request notify
 slug: operator-request-notify
-type: file
+type: system
 sources:
   - path: scripts/core/operator_request_notify.py
     hash: 422b3f99a0cf654022883399da8d8ae7b28d7a6b7bffc2ddfc68dd4d987217ac
-sources_digest: 7f77a59f480f9b1823884e1b689d9e56d5ce8506070183f94139e8dc343ae4ac
+  - path: tests/test_operator_request_notify.py
+    hash: 07fef3026944da791037a735c7e5cea15cdb4f53eabaecf7affda422400f016f
+  - path: tests/test_refusal_format.sh
+    hash: 11bf5e9869e2e573b4a897e4df84053e4f58d759d3073a9e058705482cc31ef5
+sources_digest: ba38618d75af7b2d78014ffecbd813b6ab922015e6a25656c9f674ab3186ca1b
 links:
-  - to: directive-writer
+  - to: operator-action-router
     relation: uses
-    description: Resolution verification requires a human-directive.md reference.
-  - to: telegram-notify
-    relation: uses
-    description: Sends notifications through the shared Telegram script.
+  - to: refusal-format-contract
+    relation: implements
 generator:
   version: 1
 covers:
@@ -115,16 +117,139 @@ covers:
   - symbol: main
     kind: function
     at: 'scripts/core/operator_request_notify.py:L976-L988'
+  - symbol: make_send_fn
+    kind: function
+    at: 'tests/test_operator_request_notify.py:L40-L50'
+  - symbol: _send
+    kind: function
+    at: 'tests/test_operator_request_notify.py:L44-L47'
+  - symbol: block_text
+    kind: function
+    at: 'tests/test_operator_request_notify.py:L53-L70'
+  - symbol: OperatorRequestNotifyTests
+    kind: class
+    at: 'tests/test_operator_request_notify.py:L73-L777'
+  - symbol: setUp
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L74-L87'
+  - symbol: tearDown
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L89-L91'
+  - symbol: write_requests
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L93-L96'
+  - symbol: noop_sleep
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L98-L99'
+  - symbol: test_new_request_notified_once
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L102-L118'
+  - symbol: test_unchanged_request_not_renotified
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L121-L126'
+  - symbol: test_timestamp_only_change_does_not_renotify
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L129-L138'
+  - symbol: test_material_change_renotifies_once
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L141-L155'
+  - symbol: test_ordinary_hold_type_never_notifies
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L158-L177'
+  - symbol: test_telegram_failure_not_marked_notified_then_recovers
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L180-L195'
+  - symbol: test_document_procurement_resolution_verifies_checksum_then_disappears
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L202-L244'
+  - symbol: test_document_procurement_resolution_blocks_on_checksum_mismatch
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L248-L279'
+  - symbol: test_document_procurement_resolution_blocks_path_outside_evidence_dir
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L283-L308'
+  - symbol: test_credential_resolution_requires_pass_log_without_secrets
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L312-L353'
+  - symbol: test_credential_resolution_blocks_if_log_contains_secret_shaped_token
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L355-L400'
+  - symbol: test_legal_decision_resolution_requires_structured_decision_line
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L405-L435'
+  - symbol: test_adjudication_pending_resolution_requires_structured_decision_line
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L441-L480'
+  - symbol: test_expenditure_resolution_requires_structured_authorization_block
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L485-L523'
+  - symbol: test_dedup_state_persists_across_process_reinstantiation
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L528-L538'
+  - symbol: _must_not_be_called
+    kind: function
+    at: 'tests/test_operator_request_notify.py:L534-L535'
+  - symbol: test_requests_md_write_failure_does_not_lose_notified_state
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L544-L565'
+  - symbol: test_authorization_complete_block_passes
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L585-L588'
+  - symbol: test_authorization_blank_field_does_not_borrow_next_line
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L590-L598'
+  - symbol: test_authorization_missing_field_reported
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L600-L604'
+  - symbol: _refuse_run
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L613-L621'
+  - symbol: test_refuse_closes_the_request_as_refused_not_resolved
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L623-L631'
+  - symbol: test_refuse_works_without_an_authorization_block
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L633-L640'
+  - symbol: test_prose_mentioning_refusal_does_not_close_anything
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L642-L651'
+  - symbol: test_bare_refuse_with_two_requests_fails_closed
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L653-L661'
+  - symbol: test_named_refuse_targets_only_that_request
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L663-L673'
+  - symbol: _evidence
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L683-L689'
+  - symbol: test_evidence_files_in_the_directive_resolves
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L691-L699'
+  - symbol: test_evidence_files_in_the_request_block_still_resolves
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L701-L713'
+  - symbol: test_directive_entry_with_a_wrong_checksum_is_rejected
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L715-L723'
+  - symbol: test_directive_entry_cannot_escape_the_evidence_directory
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L725-L734'
+  - symbol: test_evidence_files_scoped_to_the_resolving_block
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L736-L766'
+  - symbol: test_decision_token_with_digits_and_underscore_resolves
+    kind: method
+    at: 'tests/test_operator_request_notify.py:L768-L777'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-Deterministic operator-escalation gate for the knowledge base. Only component allowed to decide if an OPREQ is new/changed (SHA-256 material_hash), send Telegram notifications (only on ok:true), flip OPEN→RESOLVED via type-specific checks (verify_document_procurement enforces checksum-matched files confined to memories/operator-evidence/ with path-traversal protection), and regenerate ## Awaiting Operator projection. Always exits 0. Only seven ALLOWED_TYPES trigger.
+Orchestrates Telegram notifications for operator requests and enforces deterministic resolution rules per request type: document-procurement needs a SHA-256-matched file under memories/operator-evidence/<id>/, credential needs a PASS log with no secret-shaped tokens, legal/financial/adjudication need a structured Decision line, and expenditure/external-action need a complete Authorization block. Dedup uses a content fingerprint ignoring timestamp-only changes; resolved requests disappear from the consensus projection.
 
 ## Related
 
-- uses [[directive-writer]] — Resolution verification requires a human-directive.md reference.
-- uses [[telegram-notify]] — Sends notifications through the shared Telegram script.
+- uses [[operator-action-router]]
+- implements [[refusal-format-contract]]
 <!-- context:generated:end -->
 
 ## Notes

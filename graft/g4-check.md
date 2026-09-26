@@ -1,15 +1,16 @@
 ---
-name: g4-check
+name: g4 check
 slug: g4-check
-type: file
+type: system
 sources:
   - path: scripts/ops/g4-check.py
     hash: 719fa86c0e307ef71bf0bce8f49e2baab2bb522aec732b784b39c8f2d788aba8
-sources_digest: e47298fddc2eacfb0ba6a82f12150cbd0deb55432756d5004128f2796ba6b41f
+  - path: tests/test_g4_check.sh
+    hash: 426129aa4d430db932523139037190cd1c5106394e917a10fc73e29b823bc4d2
+sources_digest: 542228c29abd6900d4324bc37cd02aeb0e7333c24f02e4c7a73a5a887d54d8a6
 links:
-  - to: site-contact-evidence
+  - to: send-gate
     relation: uses
-    description: Reuses the render-first examiner to fetch firm's site and contact pages.
 generator:
   version: 1
 covers:
@@ -50,11 +51,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Automates G4 identity-attribution verdict for Turkish firms by testing a row's claim against live evidence rather than trusting self-declared 'G4 PASS'. Requires first-party contact (domain owned by firm) AND anchor to registered identity: registered address on site (Turkish-aware normalization ignoring administrative tail tokens), registry number (MERSİS/vergi/sicil), or agreeing Profile bridge citation. Reports claimed PASS failing evidence as CLAIMED_PASS_UNVERIFIED, never downgrades.
+Pure decision logic matching register addresses/registry IDs/domains against website data, with Turkish dotted/dotless İ-ı folding, a coincidence guard rejecting different addresses on the same street pattern, and context-dependent number matching (10-digit vergi no accepted bare, 6-digit sicil requires the word 'sicil' nearby).
 
 ## Related
 
-- uses [[site-contact-evidence]] — Reuses the render-first examiner to fetch firm's site and contact pages.
+- uses [[send-gate]]
 <!-- context:generated:end -->
 
 ## Notes

@@ -1,4 +1,4 @@
-# scripts/ops/state-snapshot.py · [[audit-tools-turn-tool-state]] [[state-snapshot-probe]]
+# scripts/ops/state-snapshot.py · [[auto-loop-harness]] [[state-snapshot]] [[work-window-brake]]
 
 One-call cycle state snapshot that collapses the per-cycle probe fan-out into a single turn, printing local state hashes plus a DELTA line against the previous snapshot so an unchanged world can be dismissed in one glance.
 

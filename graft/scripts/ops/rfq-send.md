@@ -1,4 +1,4 @@
-# scripts/ops/rfq-send.py · [[fail-closed-measurement-invariant]] [[rfq-send-py]] [[rfq-send-tool]]
+# scripts/ops/rfq-send.py · [[rfq-send]] [[rfq-send-pipeline]]
 
 CLI that sends anonymous OPEX RFQ emails to vendors, fail-closed on §15 sponsor approval, daily/total caps, and anonymity scan.
 

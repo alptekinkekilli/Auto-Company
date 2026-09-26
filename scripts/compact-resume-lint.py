@@ -13,15 +13,21 @@ başka gün iki compact üst üste ritüeli yarıda kesti. Bu betik iki şeyi co
 Commit SHA'ları ve iş/görev id'leri SERBESTTİR: onlar çapa/referanstır,
 bayatlayan ölçüm değildir.
 
-Kullanım: python3 scripts/compact-resume-lint.py [/tmp/compact-resume.md]
+Kullanım: python3 scripts/compact-resume-lint.py [resume-yolu]
+  (varsayılan: repo adına özel resume — `python3 scripts/compact_yol.py resume`)
 Çıkış: 0 temiz; 1 ihlal (satır numarası + gerekçeyle listeler).
 """
 from __future__ import annotations
 
+import os
 import re
 import sys
 
-VARSAYILAN = "/tmp/compact-resume.md"
+sys.dont_write_bytecode = True  # hedef projede scripts/__pycache__ bırakma
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import compact_yol  # noqa: E402
+
+VARSAYILAN = compact_yol.yol("resume")
 
 # Her desen gerçek bir kazadan türedi; yenisini eklerken gerekçesini yaz.
 YASAK = (

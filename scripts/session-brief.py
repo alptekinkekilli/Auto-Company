@@ -14,6 +14,11 @@ from __future__ import annotations
 import datetime as dt
 import os
 import subprocess
+import sys
+
+sys.dont_write_bytecode = True  # hedef projede scripts/__pycache__ bırakma
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import compact_yol  # noqa: E402
 
 
 def sh(args, cwd=None):
@@ -25,7 +30,7 @@ def sh(args, cwd=None):
 
 def main() -> int:
     kok = os.getcwd()
-    L = [f"## Oturum brifingi (ölçüldü {dt.datetime.now(dt.timezone.utc).strftime('%H:%M')} UTC)",
+    L = [f"## Oturum brifingi (ölçüldü {dt.datetime.now().strftime('%H:%M')})",
          "Aşağıdakiler İDDİA DEĞİL, şu anki ölçüm. Özet metniyle çelişirse ÖLÇÜM haklıdır."]
 
     dal = sh(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=kok) or "?"
@@ -47,9 +52,19 @@ def main() -> int:
         if cikti:
             L.append(cikti)
 
+    # Resume dosyasının GERÇEK yolu (repo adına özel): içerik enjekte EDİLMEZ,
+    # ajan compact sonrası nereden okuyacağını / ritüelde nereye yazacağını bilsin.
+    resume = compact_yol.yol("resume")
+    try:
+        r_yas = (dt.datetime.now().timestamp() - os.path.getmtime(resume)) / 60
+        r_durum = f"var, {int(r_yas)} dk önce güncellendi — compact sonrasıysa Read ile oku"
+    except OSError:
+        r_durum = "YOK"
+    L.append(f"- **resume dosyası**: `{resume}` ({r_durum})")
+
     # PreCompact ön-kontrolü taze ise açık kalemleri yeni bağlama taşı.
     try:
-        pf = "/tmp/compact-preflight.md"
+        pf = compact_yol.yol("preflight")
         yas = (dt.datetime.now().timestamp() - os.path.getmtime(pf)) / 60
         if yas < 120:
             uyari = [s.strip() for s in open(pf).read().splitlines() if s.strip().startswith("- ⚠")]

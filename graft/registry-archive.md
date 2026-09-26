@@ -1,11 +1,13 @@
 ---
-name: registry-archive
+name: registry archive
 slug: registry-archive
-type: file
+type: system
 sources:
   - path: scripts/ops/registry-archive.py
     hash: 125be575d2da1c70effa433e2eabe55e5e7e7851fc89719651a1520bb76ee651
-sources_digest: e1f03a784f0cc33f0cfca177e13c34aa09a5af68f354504d4c93c2597bc2f823
+  - path: tests/test_registry_archive.sh
+    hash: 4ca1be679dfb4867f1e05625b59c587e0a40e525f53c35404d535f93017e5c76
+sources_digest: 19cec281a0f24ce825491428331ca5006618cbdd419a7fc31cebd53d832015d2
 links: []
 generator:
   version: 1
@@ -41,7 +43,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Deterministically archives stale history from candidate-registry.md into monthly files, shrinking the live file analysts read daily. Moves maintenance notes older than 14 days and frozen PART A/Cycle N sections older than 3 days, replacing with pointer lines. Protected live region must remain byte-identical, reconstruction verified via SHA-256 before any write. Fail-closed (invariant violation exits 2, writes nothing), compare-and-swap on mtime prevents concurrent edits. --check suppresses invariant failures to avoid killing loop's return moment.
+Archives stale dated sections from a candidate registry markdown while preserving a protected live span (from ## Selected through ## Exhausted patterns / lessons) byte-identical; dry-run writes nothing, apply moves notes and frozen-pattern sections verbatim into a monthly archive, and --check stays silent when nothing is archivable.
 <!-- context:generated:end -->
 
 ## Notes

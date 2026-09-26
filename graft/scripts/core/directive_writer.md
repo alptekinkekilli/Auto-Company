@@ -1,4 +1,4 @@
-# scripts/core/directive_writer.py · [[atomic-write-discipline]] [[directive-writer]] [[fail-closed-evidence]]
+# scripts/core/directive_writer.py · [[directive-writer]]
 
 Single locked pipeline for writing the human directive file, enforcing in-flight protection and body immutability via atomic writes, backups, and audit.
 

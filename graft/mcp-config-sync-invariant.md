@@ -3,24 +3,43 @@ name: MCP config sync invariant
 slug: mcp-config-sync-invariant
 type: concept
 sources:
-  - path: tests/test_jcode_mcp_config.sh
-    hash: 3a26837a4685e40b45e3e8593459a69680a7bc6cc7e839f4ceb986c570a27025
+  - path: scripts/core/auto-loop.sh
+    hash: b3850b8050b576a46bfa19953ae0492889b603967275721a09344b9589552d56
+  - path: scripts/core/jcode-mcp-config.py
+    hash: 7e5496c29eae3646af4874f74f0d70e22230b762a74acdfb7e38e93197b41aca
   - path: tests/test_mcp_config_manifest_sync.sh
     hash: 372a198973bc97e73dd00c1acafe2fe458887504be2f5ef9849242d6549c1112
-  - path: tests/test_mcp_key_fallback.sh
-    hash: 21c4be05f1922a08fa185aaa94f73941a785d5f380b7770431bdee7bf78115d6
-  - path: tests/test_mcp_probe.sh
-    hash: 07482a8311b81667003a304c3741feed20e311f1e28263a5bb3bcc5599e962ce
-sources_digest: 81e578683fe3be807e72c1f06d92408015601631b429cc15a49d88cdcdab06ca
-links: []
+sources_digest: 07dbd38727fb615ddd5ff2078c8f0a6a6d8bfb8f1efef98bbea9a113ceeb0732
+links:
+  - to: mcp-key-fallback
+    relation: depends_on
+  - to: mcp-probe
+    relation: depends_on
 generator:
   version: 1
-covers: []
+covers:
+  - symbol: expand
+    kind: function
+    at: 'scripts/core/jcode-mcp-config.py:L96-L108'
+  - symbol: sub
+    kind: function
+    at: 'scripts/core/jcode-mcp-config.py:L100-L105'
+  - symbol: convert
+    kind: function
+    at: 'scripts/core/jcode-mcp-config.py:L111-L162'
+  - symbol: main
+    kind: function
+    at: 'scripts/core/jcode-mcp-config.py:L165-L276'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-...
+The generated loop config's mcpServers set must stay in sync with the manifest and the hardcoded JCODE_MCP_CONFIG_REQUIRED preflight list, or the boot crash-loops; every non-exempt manifest server needs a readcheck, and airtable/linear must be absent from the loop config (OPREQ-A).
+
+## Related
+
+- depends on [[mcp-key-fallback]]
+- depends on [[mcp-probe]]
 <!-- context:generated:end -->
 
 ## Notes

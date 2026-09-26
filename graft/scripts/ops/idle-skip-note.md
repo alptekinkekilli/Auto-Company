@@ -1,4 +1,4 @@
-# scripts/ops/idle-skip-note.py · [[atomic-write-discipline]] [[idle-skip-discretionary-budget]] [[idle-skip-note]]
+# scripts/ops/idle-skip-note.py · [[idle-skip-mechanism]]
 
 Records a model-free idle-skip as one line per UTC day in consensus.md, updated in place and written atomically, so the loop leaves auditable 'checked, nothing moved' evidence without bloating the prompt.
 

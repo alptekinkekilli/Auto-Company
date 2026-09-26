@@ -1,4 +1,4 @@
-# scripts/ops/turn-audit.py · [[audit-tools-turn-tool-state]] [[tool-usage-analytics]]
+# scripts/ops/turn-audit.py · [[auto-loop-harness]] [[turn-economy-audit]]
 
 Turn-level waste accounting classifier over jcode's daily log, reporting per-session turn count, context growth, cache traffic, priced floor, tool census, wait-share, and a risk-calibrated verdict (ok/CHATTY/BLOATED).
 

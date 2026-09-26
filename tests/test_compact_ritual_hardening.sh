@@ -6,13 +6,19 @@
 #   2) scripts/compact-postcheck.py — resume ankorlarının compact_summary içinde
 #      görünüp görünmediğini doğru hesaplayıp log'a doğru JSON satırı yazıyor mu.
 #
-# İki script de COMPACT_RESUME_PATH/COMPACT_BLOCK_MARKER/COMPACT_HISTORY_LOG
-# env override'larıyla test edilir — gerçek /tmp/compact-resume.md'ye ASLA
-# dokunulmaz (o dosya kullanıcının kanonik, canlı resume'u olabilir).
+#   3) yol izolasyonu — preflight gerçek (repo adına özel) ön-kontrol dosyasına
+#      yazmıyor mu, brifing resume'un gerçek yolunu basıyor mu, yol cwd'den
+#      bağımsız mı.
+#
+# Scriptler COMPACT_RESUME_PATH/COMPACT_PREFLIGHT_PATH/COMPACT_BLOCK_MARKER/
+# COMPACT_HISTORY_LOG env override'larıyla sandbox'a yönlendirilir — gerçek
+# ritüel dosyalarına (python3 scripts/compact_yol.py resume|preflight|marker|
+# history) ASLA dokunulmaz (kullanıcının kanonik, canlı resume'u olabilir).
 #
 #   bash tests/test_compact_ritual_hardening.sh
 set -uo pipefail
 cd "$(dirname "$0")/.."
+KOK="$(pwd)"
 fail=0
 check() { if [ "$2" = "$3" ]; then echo "  PASS $1"; else echo "  FAIL $1: expected exit $3 got $2"; fail=1; fi; }
 check_has() { if echo "$2" | grep -qF "$3"; then echo "  PASS $1"; else echo "  FAIL $1: beklenen alt-dize yok: $3"; fail=1; fi; }
@@ -23,6 +29,16 @@ RESUME_OK="$SB/resume-ok.md"
 RESUME_BAD="$SB/resume-bad.md"
 MARKER="$SB/marker"
 LOG="$SB/history.log"
+SB_PF="$SB/preflight.md"
+
+# GERÇEK ön-kontrol dosyası (repo adına özel): test ona ASLA yazmamalı — sonda
+# mtime'ı karşılaştırılır.
+mtime_of() { python3 -c "import os,sys; p=sys.argv[1]; print(os.path.getmtime(p) if os.path.exists(p) else 'yok')" "$1"; }
+REAL_PF="$(env -u COMPACT_PREFLIGHT_PATH python3 scripts/compact_yol.py preflight)"
+REAL_PF_MTIME="$(mtime_of "$REAL_PF")"
+# Her preflight/brief çağrısı ön-kontrolü sandbox'a yazar/okur. export: yeni
+# eklenen bir çağrı da env'i unutamaz.
+export COMPACT_PREFLIGHT_PATH="$SB_PF"
 
 # Lint'i gerçekten geçen minimal bir resume (zorunlu bölümler + sayısız).
 cat >"$RESUME_OK" <<'EOF'
@@ -127,6 +143,19 @@ out=$(printf '' | COMPACT_RESUME_PATH="$RESUME_OK" COMPACT_HISTORY_LOG="$LOG" py
 r=$?
 check "20 bos stdin cokmuyor" "$r" 0
 check_not_has "21 bos ozette kanarya uyarisi YOK (gurultu yok)" "$out" "kanarya"
+
+echo "== yol izolasyonu (compact_yol.py) =="
+if [ -s "$SB_PF" ]; then echo "  PASS 22 preflight ciktisi sandbox'a yazildi"; else echo "  FAIL 22 sandbox preflight dosyasi yok/bos: $SB_PF"; fail=1; fi
+SONRA="$(mtime_of "$REAL_PF")"
+if [ "$SONRA" = "$REAL_PF_MTIME" ]; then echo "  PASS 23 gercek preflight dosyasina dokunulmadi ($REAL_PF, mtime $SONRA)"; else echo "  FAIL 23 gercek preflight degisti: $REAL_PF_MTIME -> $SONRA"; fail=1; fi
+out=$(COMPACT_RESUME_PATH="$RESUME_OK" python3 scripts/session-brief.py 2>/dev/null)
+check_has "24 brifing override edilen resume yolunu basiyor" "$out" "$RESUME_OK"
+VARS_RESUME="$(env -u COMPACT_RESUME_PATH python3 scripts/compact_yol.py resume)"
+check_has "25 varsayilan resume yolu repo adini tasiyor" "$VARS_RESUME" "/tmp/compact-$(python3 scripts/compact_yol.py ad)-resume.md"
+out=$(env -u COMPACT_RESUME_PATH python3 scripts/session-brief.py 2>/dev/null)
+check_has "26 brifing varsayilan (repo adina ozel) resume yolunu basiyor" "$out" "$VARS_RESUME"
+out=$(cd / && env -u COMPACT_RESUME_PATH python3 "$KOK/scripts/compact_yol.py" resume)
+check_has "27 cwd=/ iken ayni yol (kok betigin konumundan)" "$out" "$VARS_RESUME"
 
 echo "=================================="
 if [ "$fail" -eq 0 ]; then echo "TÜMÜ YEŞİL"; else echo "KIRMIZI VAR"; fi

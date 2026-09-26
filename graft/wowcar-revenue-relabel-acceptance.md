@@ -6,7 +6,12 @@ sources:
   - path: scripts/ops/wowcar-revenue-vocabulary-acceptance.py
     hash: bc164912338c15636cc9183c9327a6f77fdab6aebc86e2747f197f01f824fab2
 sources_digest: 4ac41bf99d27b7821e402c8d05774f95ac477ff958d361739e49e65a248d1add
-links: []
+links:
+  - to: state-snapshot
+    relation: uses
+    description: >-
+      Shares the same hashing discipline (SHA-256 manifest, canonical digests)
+      used to detect Wowcar source changes.
 generator:
   version: 1
 covers:
@@ -107,7 +112,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-...
+A fail-closed acceptance harness pinning the live Wowcar repo as an immutable baseline and proving a candidate copy with eight approved vocabulary edits plus six column-width adjustments produces byte-identical outputs. Hard-pins CPython 3.13.5, LibreOffice, and exact library versions; verifies the whole tree against a SHA-256 manifest; reverses edits deterministically to prove byte-equality.
+
+## Related
+
+- uses [[state-snapshot]] — Shares the same hashing discipline (SHA-256 manifest, canonical digests) used to detect Wowcar source changes.
 <!-- context:generated:end -->
 
 ## Notes

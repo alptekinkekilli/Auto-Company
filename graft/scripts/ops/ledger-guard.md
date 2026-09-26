@@ -1,12 +1,14 @@
-# scripts/ops/ledger-guard.py
+# scripts/ops/ledger-guard.py · [[auto-loop-harness]] [[ledger-guard]]
 
-- _env_int · function · L43-L48 — def _env_int(name: str, default: int) -> int
-- _env_float · function · L51-L55 — def _env_float(name: str, default: float) -> float
-- _app · function · L58-L59 — def _app(arg: str | None) -> Path
-- _find_ledger · function · L62-L69 — def _find_ledger(app: Path) -> Path | None
-- _metrics · function · L72-L84 — def _metrics(path: Path) -> dict | None
-- _backup · function · L87-L101 — def _backup(app: Path, cycle: int, path: Path, keep: int) -> None
-- _load_state · function · L104-L108 — def _load_state(path: Path) -> dict
-- _save_state · function · L111-L118 — def _save_state(path: Path, state: dict) -> None
-- _check · function · L121-L146 — def _check(name: str, cur: dict | None, prev: dict | None, drop_sections: int, drop_rows: int, drop_frac: float) -> str | None
-- main · function · L149-L212 — def main() -> int
+Post-cycle integrity guard that rolls a backup of the Gate-0 conflict ledger and consensus.md, compares content metrics against the previous cycle, and prints a violation line when content drops without an incident marker so silent ledger loss becomes visible.
+
+- _env_int · function · L43-L48 — Reads an integer environment variable, falling back to the default when unset, non-numeric, or non-positive.
+- _env_float · function · L51-L55 — Reads a float environment variable, falling back to the default on unset or non-numeric values.
+- _app · function · L58-L59 — Resolves the app root path, defaulting to the repo root two levels above this script when no argument is given.
+- _find_ledger · function · L62-L69 — Locates the live Gate-0 conflict ledger file, preferring the gate0-named match and returning the most recently modified candidate.
+- _metrics · function · L72-L84 — Computes the integrity metrics (section count, OPEX row refs, byte size, sha16, incident marker) for a guarded file, or None if unreadable.
+- _backup · function · L87-L101 — Copies the guarded file into the rolling backup dir keyed by cycle and prunes to the newest N backups per basename, swallowing all errors.
+- _load_state · function · L104-L108 — Loads the previous cycle's guard state JSON, returning an empty dict on any read/parse failure.
+- _save_state · function · L111-L118 — Atomically writes the guard state JSON via a temp file and os.replace, swallowing any write error.
+- _check · function · L121-L146 — Compares current vs previous metrics and returns a violation string when content dropped beyond thresholds without an incident marker, or None otherwise.
+- main · function · L149-L212 — Orchestrates the guard run: backs up and measures each guarded file, compares against last cycle's metrics, reports violations, and persists new state while always exiting 0.

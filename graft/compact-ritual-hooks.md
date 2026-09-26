@@ -3,38 +3,45 @@ name: Compact Ritual Hooks
 slug: compact-ritual-hooks
 type: system
 sources:
+  - path: scripts/compact_yol.py
+    hash: 617adabc76e0edaa59787115e1c95e883fa607510c8483a701a97df4539f17da
   - path: scripts/compact-postcheck.py
-    hash: 936578b4cf3b3bc9cca8769a142a20956d097aa08db4e84c963f1329c075857c
+    hash: 9584b13bce7ed4eba756912e4a2fbd65beaa2f46bf8cb0238b29d77574ca258f
   - path: scripts/compact-preflight.py
-    hash: e05718ceddc1954b8cefcea9ad00d143d0adb92d0d5547b55fe3916e5fbdb0b3
+    hash: 879a08b82fae1518773088e60a44ea3e7e941736c9e7e46593201797bf951797
   - path: scripts/compact-report.py
     hash: acbd35a8779fa472cd8164183bcc13c79e716e9e05a51473b0cd2e1b5e2375d1
   - path: scripts/compact-resume-lint.py
-    hash: e8e8ee947a10358614b0125b2d236f26238308fff1b686565581748cf19122d3
-  - path: scripts/context-watch.py
-    hash: e9aa872c3ee33e6f175760da5b09d5cddda1ffdab5ac78c667547e492910bf96
-sources_digest: 3e1f7decf296003fe5b5c4e8235d5f7ca6726cf6b6d57abf44a9e917d93999f8
+    hash: 721ece8bebbdbef80a1b67bb8573a3083b213175e0bda2277a9c46b976c300e1
+sources_digest: 6e11740780dc883b8f9529d0b785c680a65f78067736607b6fb743ec07d0f06f
 links:
-  - to: auto-loop
+  - to: auto-loop-daemon
     relation: uses
-    description: >-
-      compact-report reads loop state via SSH/docker exec and
-      discretionary-spend.ndjson.
+    description: compact-report.py reads the cockpit state file and loop telemetry via SSH.
 generator:
   version: 1
 covers:
   - symbol: main
     kind: function
-    at: 'scripts/compact-postcheck.py:L34-L74'
+    at: 'scripts/compact-postcheck.py:L39-L79'
   - symbol: sh
     kind: function
-    at: 'scripts/compact-preflight.py:L24-L28'
+    at: 'scripts/compact-preflight.py:L52-L56'
+  - symbol: hook_payload
+    kind: function
+    at: 'scripts/compact-preflight.py:L59-L68'
+  - symbol: resume_lint_gecer_mi
+    kind: function
+    at: 'scripts/compact-preflight.py:L71-L87'
+  - symbol: resume_durumu
+    kind: function
+    at: 'scripts/compact-preflight.py:L90-L100'
   - symbol: repo_report
     kind: function
-    at: 'scripts/compact-preflight.py:L31-L48'
+    at: 'scripts/compact-preflight.py:L103-L120'
   - symbol: main
     kind: function
-    at: 'scripts/compact-preflight.py:L51-L80'
+    at: 'scripts/compact-preflight.py:L123-L193'
   - symbol: sh
     kind: function
     at: 'scripts/compact-report.py:L30-L35'
@@ -67,22 +74,31 @@ covers:
     at: 'scripts/compact-report.py:L202-L212'
   - symbol: main
     kind: function
-    at: 'scripts/compact-resume-lint.py:L39-L71'
-  - symbol: kullanim
+    at: 'scripts/compact-resume-lint.py:L45-L77'
+  - symbol: temizle
     kind: function
-    at: 'scripts/context-watch.py:L33-L50'
+    at: 'scripts/compact_yol.py:L57-L60'
+  - symbol: _git
+    kind: function
+    at: 'scripts/compact_yol.py:L63-L69'
+  - symbol: repo_adi
+    kind: function
+    at: 'scripts/compact_yol.py:L72-L89'
+  - symbol: yol
+    kind: function
+    at: 'scripts/compact_yol.py:L92-L95'
   - symbol: main
     kind: function
-    at: 'scripts/context-watch.py:L53-L102'
+    at: 'scripts/compact_yol.py:L98-L107'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-A family of Claude Code hook scripts that make the compact ritual measurable and safe: preflight counts open items that would be lost, resume-lint enforces the foreign-reader test on the resume file, report prints an operational digest, postcheck verifies the compact_summary carries key anchors, and context-watch monitors context-window fullness and emits a compact directive at 60%. All are fail-open and never block the compact itself.
+Pre/Post compact hooks that make the Claude Code compact ritual measurable and safe. compact-preflight.py scans git repos for uncommitted/unpushed/stash risk and validates resume freshness (mtime + lint); auto-block is one-shot (second attempt always passes) to surface errors at hard context limits. compact-report.py answers 'where is the company operationally?' via repo↔prod sync, OPREQ, directives, holds, and loop health (SSH to powerupp-ts with BatchMode). compact-postcheck.py audits whether compact_summary carried the five mandatory resume anchors. All fail open and never block compact.
 
 ## Related
 
-- uses [[auto-loop]] — compact-report reads loop state via SSH/docker exec and discretionary-spend.ndjson.
+- uses [[auto-loop-daemon]] — compact-report.py reads the cockpit state file and loop telemetry via SSH.
 <!-- context:generated:end -->
 
 ## Notes
