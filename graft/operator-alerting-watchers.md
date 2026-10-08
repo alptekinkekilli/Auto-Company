@@ -1,5 +1,5 @@
 ---
-name: Operator Alerting Watchers
+name: Operator alerting watchers
 slug: operator-alerting-watchers
 type: system
 sources:
@@ -11,18 +11,12 @@ sources:
     hash: a6ab97903f7cb5a67e749e16ded1a76ba0e022f2faf2e19ce7b0ad094ab441a7
 sources_digest: 5c3c228beb25ca54708c6ee339112c30711eb6f9e12a565531de8aa90bda240e
 links:
-  - to: fail-closed-eligibility-gates
+  - to: outreach-eligibility-send-gate
     relation: uses
-    description: >-
-      Watchers classify against the same Airtable tables (Registry Bridge, EKAP
-      Bridge, Ihale Outreach) that the eligibility gates read, sharing the
-      notion of pending/held rows.
-  - to: rfq-send-pipeline
+    description: These watchers complement the send gate by alerting on post-send outcomes.
+  - to: rfq-procurement-flow
     relation: uses
-    description: >-
-      rfq-reply-watch.py is the advisory half of the RFQ flow; rfq-send.py marks
-      successful sends and the watcher only detects replies/silence, omitting a
-      delivery-failure branch because sends are only marked on success.
+    description: rfq-reply-watch.py is the advisory half of the RFQ flow.
 generator:
   version: 1
 covers:
@@ -81,12 +75,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A family of advisory, read-only watcher scripts that monitor Airtable queues and outreach records to alert an operator via Telegram when human attention is warranted. They never write back to Airtable, only to small local JSON state files for escalation throttling (notify once per outcome class, then at most once per repeat window). They share a common pattern: fetch (paginated Airtable reads), classify (outcome detection against a persistent state file), notify (shell out to scripts/core/telegram-notify.sh with secrets from logs/runtime.env). Distinct problems are deliberately separated in messages (e.g. 'operator is the bottleneck' vs 'we never asked').
+Advisory, read-only watchers that notify an operator via Telegram without ever writing back to Airtable: reply-watch.py (outreach replies, delivery failures, or silence, with a supersession rule where a later Sent overrides an earlier failure), registry-queue-watch.py (MERSİS session worthiness from three Airtable queues, matching firms by first word of legal title, separating 'operator is the bottleneck' from 'we never asked'), and rfq-reply-watch.py. All use a local JSON state file for at-most-once-per-outcome alerting, shell out to scripts/core/telegram-notify.sh with secrets from logs/runtime.env, and support --dry-run and --fixture test modes sharing the same classify code path.
 
 ## Related
 
-- uses [[fail-closed-eligibility-gates]] — Watchers classify against the same Airtable tables (Registry Bridge, EKAP Bridge, Ihale Outreach) that the eligibility gates read, sharing the notion of pending/held rows.
-- uses [[rfq-send-pipeline]] — rfq-reply-watch.py is the advisory half of the RFQ flow; rfq-send.py marks successful sends and the watcher only detects replies/silence, omitting a delivery-failure branch because sends are only marked on success.
+- uses [[outreach-eligibility-send-gate]] — These watchers complement the send gate by alerting on post-send outcomes.
+- uses [[rfq-procurement-flow]] — rfq-reply-watch.py is the advisory half of the RFQ flow.
 <!-- context:generated:end -->
 
 ## Notes

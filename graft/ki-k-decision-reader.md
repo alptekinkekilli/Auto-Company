@@ -7,11 +7,16 @@ sources:
     hash: 4f2060cbaaa784433de9720f1e9a3bfb3ba6c06cab00fae0efa0a426e5c926de
 sources_digest: d0430e1b2184f3b5ab5ef2ec2df0217a8110eb3508d564651dace20265543677
 links:
-  - to: content-hash-provenance
-    relation: uses
+  - to: ki-k-decision-content-hash-decision-text-hash
+    relation: implements
     description: >-
-      Dynamically imports decision_text_hash.py to compute the canonical hash
-      for comparability with the bridge.
+      Dynamically imports decision_text_hash.py via importlib to guarantee hash
+      comparability with the bridge.
+  - to: session-leak-scanner-bridge-leak-scan
+    relation: validates
+    description: >-
+      The bridge's recorded content_hash is what bridge_leak_scan passes as a
+      public evidence field.
 generator:
   version: 1
 covers:
@@ -40,11 +45,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Fetches a Turkish public procurement decision page in a single call and returns a compact digest, avoiding the multi-turn browser round-trips that killed agent cycles. Uses curl with browser UA (urllib fails TLS on macOS), retries on short responses, extracts exclusion sentences only after dropping quoted legislation so a quoted article is never mistaken for a real exclusion, and recomputes the hash via dynamic import of decision_text_hash.py to guarantee comparability.
+Fetches a Turkish public procurement (KİK) decision page in a single call and returns a compact digest: decision number/date, meeting/agenda numbers, contracting authority, tender reference, complainant (explicitly distinguished from an excluded firm), the operative 'karar verildi' sentence, and the canonical content hash. Uses curl with browser user-agent (urllib fails TLS on macOS), retries up to three times on short/empty responses, extracts exclusion sentences only after dropping quoted legislation so a quoted article is never mistaken for a real exclusion, and computes the hash by dynamically importing decision_text_hash.py to guarantee comparability with the bridge's recorded value.
 
 ## Related
 
-- uses [[content-hash-provenance]] — Dynamically imports decision_text_hash.py to compute the canonical hash for comparability with the bridge.
+- implements [[ki-k-decision-content-hash-decision-text-hash]] — Dynamically imports decision_text_hash.py via importlib to guarantee hash comparability with the bridge.
+- validates [[session-leak-scanner-bridge-leak-scan]] — The bridge's recorded content_hash is what bridge_leak_scan passes as a public evidence field.
 <!-- context:generated:end -->
 
 ## Notes

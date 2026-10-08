@@ -1,4 +1,4 @@
-# scripts/ops/cost-audit.py · [[auto-loop-orchestration]] [[cost-audit]]
+# scripts/ops/cost-audit.py · [[budget-calibration-cost-audit]]
 
 Deterministic daily cost-audit script that reads spend/loop/jcode logs from disk and writes a markdown report so the Opportunity Analyst interprets measured numbers instead of computing them.
 

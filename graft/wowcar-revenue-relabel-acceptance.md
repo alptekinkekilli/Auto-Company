@@ -1,17 +1,17 @@
 ---
-name: Wowcar Revenue Relabel Acceptance
+name: Wowcar revenue relabel acceptance
 slug: wowcar-revenue-relabel-acceptance
-type: system
+type: file
 sources:
   - path: scripts/ops/wowcar-revenue-vocabulary-acceptance.py
     hash: bc164912338c15636cc9183c9327a6f77fdab6aebc86e2747f197f01f824fab2
 sources_digest: 4ac41bf99d27b7821e402c8d05774f95ac477ff958d361739e49e65a248d1add
 links:
-  - to: state-snapshot-consensus
+  - to: state-snapshot-delta-probing
     relation: uses
     description: >-
-      The Wowcar source tree hash in state-snapshot.py covers the same
-      projects/wowcar/ files this harness pins as baseline.
+      The Wowcar source tree hash in state-snapshot.py tracks the same repo this
+      harness pins as baseline.
 generator:
   version: 1
 covers:
@@ -112,11 +112,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A fail-closed acceptance harness for a temporary Wowcar revenue relabel, pinning the live repository as an immutable baseline and proving a candidate copy with eight approved vocabulary edits (replacing 'Faiz geliri' with 'Vade farkı geliri') plus six column-width adjustments produces byte-identical outputs. It hard-pins CPython 3.13.5, LibreOffice, and exact library versions, compares the tree against a pinned SHA-256 manifest, reverses edits deterministically to prove byte-equality, and runs the build/recalc/test/capraz chain plus a numeric probe. Deterministic environment settings (PYTHONHASHSEED=0, PYTHONDONTWRITEBYTECODE=1) and exact form-distribution/anchor counts make the edits verifiable.
+wowcar-revenue-vocabulary-acceptance.py is a fail-closed acceptance harness pinning the live Wowcar repo as an immutable baseline (SHA-256 manifest + canonical JSON root digest) and proving a candidate copy with eight approved vocabulary edits plus six column-width adjustments produces byte-identical outputs. Hard-pins CPython 3.13.5, LibreOffice 25.2.3.2, and exact library versions; reverses edits deterministically to prove byte-equality; runs the full build/recalc/test/capraz chain and a numeric model sweep. Uses PYTHONHASHSEED=0 and PYTHONDONTWRITEBYTECODE=1 for determinism.
 
 ## Related
 
-- uses [[state-snapshot-consensus]] — The Wowcar source tree hash in state-snapshot.py covers the same projects/wowcar/ files this harness pins as baseline.
+- uses [[state-snapshot-delta-probing]] — The Wowcar source tree hash in state-snapshot.py tracks the same repo this harness pins as baseline.
 <!-- context:generated:end -->
 
 ## Notes

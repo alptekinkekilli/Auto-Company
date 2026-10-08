@@ -1,4 +1,4 @@
-# scripts/ops/work-window-watchdog.py · [[cycle-escalation-brakes]] [[work-window-watchdog]]
+# scripts/ops/work-window-watchdog.py · [[operational-guard-tripwires]] [[work-window-bloat-brakes]]
 
 The alarm layer that makes a model ignoring the work-window brake visible by printing a Telegram alarm when an open window coincides with empty-cycle admissions for THRESHOLD consecutive cycles.
 

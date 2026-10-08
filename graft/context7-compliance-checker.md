@@ -6,7 +6,12 @@ sources:
   - path: scripts/ops/context7-check.py
     hash: 4687b776e558caf660fad0d984e405c6a9498525648273569ac9a5feb544797e
 sources_digest: 7b9324b6606ae2451e7e0e246f5f0afc951e0c21403a03d682250a5b8758309e
-links: []
+links:
+  - to: mcp-config-generation-boot-probe
+    relation: validates
+    description: >-
+      Complements the boot probe by checking actual cycle behavior, not just
+      boot-time protocol facts.
 generator:
   version: 1
 covers:
@@ -29,7 +34,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Checks per-cycle ndjson logs to detect whether an agent wrote code importing an external library without first calling the Context7 MCP tool. Deliberately avoids prefiltering on exact JSON strings (which caused silent false negatives), parses JSON lines rather than regexing code payloads, treats missing stdlib entries as false positives only, and reports to the LOG rather than blocking.
+Compliance checker inspecting per-cycle ndjson logs to detect whether an agent wrote code importing an external library without first calling the Context7 MCP tool. Deliberately avoids prefiltering on exact JSON strings (which previously caused silent false negatives), parses JSON lines rather than regexing code payloads, treats missing stdlib entries as false positives only, and reports to the LOG rather than blocking or pushing to Telegram.
+
+## Related
+
+- validates [[mcp-config-generation-boot-probe]] — Complements the boot probe by checking actual cycle behavior, not just boot-time protocol facts.
 <!-- context:generated:end -->
 
 ## Notes

@@ -1,4 +1,4 @@
-# scripts/core/operator_request_notify.py · [[operator-escalation-gate]] [[operator-request-notify]] [[refusal-format]]
+# scripts/core/operator_request_notify.py · [[fail-closed-atomic-state-writes]] [[operator-escalation-gate-operator-request-notify]]
 
 Deterministic operator-escalation gate that dedups, notifies via Telegram, and resolves OPREQ ledger requests, and regenerates the consensus.md Awaiting Operator projection.
 

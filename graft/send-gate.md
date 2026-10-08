@@ -3,63 +3,27 @@ name: send gate
 slug: send-gate
 type: system
 sources:
-  - path: scripts/ops/send-gate.py
-    hash: 6acd746a20aff7267d711d61350ac14d8fa0c17a1af95341625aa2bfd9a63f92
+  - path: tests/test_rfq_send.sh
+    hash: da4d25d4be3529f89c4c62e9b7099278b95d98a4336a9762bfe6c01e31030a97
   - path: tests/test_send_gate.sh
     hash: 4d0f03bd1b3e73a289e87cf0a56b25499b131e48fac01098b3f1d81755cb190d
-sources_digest: 260cbac1d830524fefee8831ec62d8032fb6948e871229aae8fb6af3055fb10f
+sources_digest: b9c595d31d560e66deb88d9d01033008661c0417a03fba124ffaf1729c7c63a4
 links:
-  - to: prod-mechanism-guard
-    relation: part_of
-    description: send-gate.py is a protected production surface.
+  - to: g4-check
+    relation: uses
+    description: g4_live is stubbed in tests but called in production
 generator:
   version: 1
-covers:
-  - symbol: phase_of
-    kind: function
-    at: 'scripts/ops/send-gate.py:L66-L91'
-  - symbol: body_claims
-    kind: function
-    at: 'scripts/ops/send-gate.py:L94-L101'
-  - symbol: load_key
-    kind: function
-    at: 'scripts/ops/send-gate.py:L104-L122'
-  - symbol: air
-    kind: function
-    at: 'scripts/ops/send-gate.py:L125-L135'
-  - symbol: sent_rows
-    kind: function
-    at: 'scripts/ops/send-gate.py:L138-L148'
-  - symbol: logged_sends
-    kind: function
-    at: 'scripts/ops/send-gate.py:L154-L177'
-  - symbol: counts
-    kind: function
-    at: 'scripts/ops/send-gate.py:L180-L198'
-  - symbol: opted_out
-    kind: function
-    at: 'scripts/ops/send-gate.py:L201-L215'
-  - symbol: body_leak_scan
-    kind: function
-    at: 'scripts/ops/send-gate.py:L236-L244'
-  - symbol: g4_live
-    kind: function
-    at: 'scripts/ops/send-gate.py:L247-L309'
-  - symbol: decide
-    kind: function
-    at: 'scripts/ops/send-gate.py:L312-L544'
-  - symbol: main
-    kind: function
-    at: 'scripts/ops/send-gate.py:L547-L583'
+covers: []
 ---
 <!-- context:generated:start -->
 ## Summary
 
-scripts/ops/send-gate.py is the fail-closed outreach refusal gate, tested entirely offline with stubbed air()/g4_live() calls. It enforces daily/total caps, duplicate outreach, opt-out, non-Qualified status, missing email, G4 failure, TEST-row exclusion by STATUS, unrendered rows, GROUP_ROUTED special case, self-contradictory rows, exclusion-ground length/English markers, procurement-phase mismatch, a body-leak scanner for internal markers, unsplit rows, follow-up mode, exact normalized firm-name matching for g4_live, and Website fallback only when the bridge row names no domain.
+send-gate.py is the fail-closed outreach refusal gate: daily/total caps (3/20), duplicate outreach, opt-out detection, non-Qualified status, missing email, G4 failure, TEST rows excluded by STATUS, unrendered rows, GROUP_ROUTED special case requiring full registered title and karar no, self-contradictory rows, exclusion-ground length/English-marker checks, procurement-phase mismatch, a body-leak scanner flagging internal markers (persona names, verdict vocabulary, method/provenance), unsplit rows, follow-up mode (one authorized second contact), exact normalized firm-name matching for g4_live (rejecting token collisions), fallback to the Outreach row's Website field only when the bridge row names no domain, and phase-check scoping to first-contact sends only. It refuses on any unknown or error.
 
 ## Related
 
-- part of [[prod-mechanism-guard]] — send-gate.py is a protected production surface.
+- uses [[g4-check]] — g4_live is stubbed in tests but called in production
 <!-- context:generated:end -->
 
 ## Notes

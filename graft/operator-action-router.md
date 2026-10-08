@@ -9,12 +9,14 @@ sources:
     hash: 20f6bd56ba2238d0242627275af5749560272630a1212f9f9f22159d655d99ae
 sources_digest: eeb9735b11ba0ec109f87f095cfa8affc6afd00ebf34698caca0a50d1304a1aa
 links:
-  - to: operator-escalation-gate
+  - to: loop-lifecycle-monitoring-core-shell
     relation: uses
-    description: Parses the same OPREQ ledger in memories/operator-requests.md.
-  - to: telegram-notification-channel
+    description: >-
+      Depends on scripts/core/telegram-notify.sh and sources logs/runtime.env
+      for credentials.
+  - to: operator-request-notification
     relation: uses
-    description: Sends the digest via scripts/core/telegram-notify.sh.
+    description: The router feeds the notification digest
 generator:
   version: 1
 covers:
@@ -70,12 +72,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Telegram firehose digest consolidating the operator's actionable items into a single 'what needs YOU' message, covering only locally-truthful signals: LOOP_HOLD latch, open OPREQ entries, and a PENDING directive past a floor age. Hashes the open set's stable identity and only speaks when the set changes or ROUTER_REPEAT_HOURS elapses; age is excluded from the directive identity to avoid hourly re-alerts, and state clears when the set empties so the next open item alerts immediately.
+Telegram firehose digest consolidating the operator's actionable items into a single 'what needs YOU' message, covering only locally-truthful signals: a LOOP_HOLD latch, open OPREQ entries, and a PENDING directive past a floor age. Hashes the open set's stable identity into state and only speaks when the set changes or ROUTER_REPEAT_HOURS elapses. Deliberately excludes Airtable-backed queues and Sentry liveness (need network calls or run outside the container); age is excluded from the directive identity to avoid hourly re-alerts; state clears when the set empties so the next open item alerts immediately.
 
 ## Related
 
-- uses [[operator-escalation-gate]] — Parses the same OPREQ ledger in memories/operator-requests.md.
-- uses [[telegram-notification-channel]] — Sends the digest via scripts/core/telegram-notify.sh.
+- uses [[loop-lifecycle-monitoring-core-shell]] — Depends on scripts/core/telegram-notify.sh and sources logs/runtime.env for credentials.
+- uses [[operator-request-notification]] — The router feeds the notification digest
 <!-- context:generated:end -->
 
 ## Notes

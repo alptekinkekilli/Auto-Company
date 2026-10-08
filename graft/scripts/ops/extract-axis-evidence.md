@@ -1,4 +1,4 @@
-# scripts/ops/extract-axis-evidence.py · [[axis-evidence-extraction]]
+# scripts/ops/extract-axis-evidence.py · [[evidence-extraction-g4-verification]]
 
 Extracts every screened axis heading with its body from discovery scan markdown files and writes an evidence pack, failing closed if any heading has an empty body or counts mismatch.
 

@@ -6,7 +6,12 @@ sources:
   - path: scripts/ops/linear-track.py
     hash: 5a0cc4bf3713dd3351302a4e9ed446432c92217afdbefd6fa9ee87a9ccd4f730
 sources_digest: ab4334d9d2bf19461212de4e4796a9e06c905727151e75e3aa148fac2d49e754
-links: []
+links:
+  - to: operator-action-router
+    relation: uses
+    description: >-
+      operator-action-router.py deliberately excludes Linear-backed queues
+      because they need network calls.
 generator:
   version: 1
 covers:
@@ -44,7 +49,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Enforces a workstream discipline for Linear: appends checklist items to one long-lived 'track' issue per workstream instead of opening a new issue per finding. cmd_new only creates a real issue if --why matches one of three hardcoded justifications (independent-owner, own-lifecycle, durable-capability). Handles Linear's normalization of ticked boxes to uppercase - [X], and uses Keychain fallback because GUI-launched processes never get the interactive-shell env var.
+Enforces a workstream discipline for Linear: appends checklist items to one long-lived 'track' issue per workstream instead of opening a new issue for every finding. cmd_new creates a real issue only if --why matches one of three hardcoded justifications (independent-owner, own-lifecycle, durable-capability). Tracks are hardcoded (APP-269, APP-276, APP-277, APP-246, APP-221). Notable gotchas: Linear normalizes ticked boxes to uppercase - [X] so the list command counts both cases; the Keychain fallback exists because GUI-launched processes never get the interactive-shell env var; cmd_done refuses to tick when zero or multiple items match the needle.
+
+## Related
+
+- uses [[operator-action-router]] — operator-action-router.py deliberately excludes Linear-backed queues because they need network calls.
 <!-- context:generated:end -->
 
 ## Notes

@@ -53,6 +53,7 @@ def doc(entries, extra_bullet=None, note=None):
 
 def run(d, cycle, env=None, dry=False):
     e = dict(os.environ)
+    e["CONSENSUS_PRUNE_KEEP"] = "12"  # fixtures are built around 12; default is 8
     e.update(env or {})
     cmd = [sys.executable, str(SCRIPT), "--cycle", str(cycle), "--app", str(d)]
     if dry:
@@ -157,6 +158,23 @@ check("(i) dry-run: reports, writes nothing",
 d = newapp(); consensus(d).write_text(doc(BIG, note="- _Archive note (cycle 5): 1 older entries (cycles 1..1) moved to docs/operations/consensus-archive-2026-09.md. Not for routine reading — grep by cycle number only._\n\n"), encoding="utf-8")
 run(d, 743)
 check("(k) single fresh note replaces old", consensus(d).read_text(encoding="utf-8").count("_Archive note") == 1)
+
+# (m) runtime.env override beats process env (KEEP=12 in env, 5 in runtime.env)
+d = newapp(); consensus(d).write_text(doc(BIG), encoding="utf-8")
+(d / "logs/runtime.env").write_text("FOO=1\nCONSENSUS_PRUNE_KEEP=5\n", encoding="utf-8")
+run(d, 743)
+check("(m) runtime.env KEEP override", len(re.findall(r"(?m)^- \*\*Cycle", consensus(d).read_text(encoding="utf-8"))) == 5)
+(d / "logs/runtime.env").write_text("CONSENSUS_PRUNE_ENABLED=0\n", encoding="utf-8")
+consensus(d).write_text(doc(BIG), encoding="utf-8"); b0 = consensus(d).read_bytes(); rc, out = run(d, 744)
+check("(m2) runtime.env kill switch", out.strip() == "" and consensus(d).read_bytes() == b0)
+
+# (n) entries <= keep while over threshold -> 'insufficient' line, NO streak alarm, untouched
+d = newapp(); consensus(d).write_text(doc(BIG[:12]).replace("x" * 40, "x" * 400), encoding="utf-8")
+b0 = consensus(d).read_bytes()
+outs = [run(d, c)[1] for c in (1, 2, 3, 4)]
+check("(n) insufficient line, no alarm, untouched",
+      all("insufficient" in o for o in outs) and not any("CONSENSUS-PRUNE —" in o for o in outs)
+      and consensus(d).read_bytes() == b0)
 
 # (l) guard integration: guard(N) -> prune(N) -> model appends -> guard(N+1) silent; real deletion later alarms
 d = newapp(); consensus(d).write_text(doc(BIG), encoding="utf-8")

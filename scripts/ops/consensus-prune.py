@@ -29,7 +29,7 @@ holds the pre-prune copy — the recovery source):
 
 Triggers only when the file is >= CONSENSUS_PRUNE_MIN_BYTES (default 70000: the 120 KB
 argv cap minus ~40 KB of non-consensus prompt minus a buffer) AND there is something to
-archive. Env: CONSENSUS_PRUNE_ENABLED=0 (kill switch), CONSENSUS_PRUNE_KEEP (12),
+archive. Env: CONSENSUS_PRUNE_ENABLED=0 (kill switch), CONSENSUS_PRUNE_KEEP (8; logs/runtime.env overrides the process env for every CONSENSUS_PRUNE_* key),
 CONSENSUS_PRUNE_MIN_BYTES (70000), CONSENSUS_PRUNE_SKIP_ALARM (3).
 Exit code is always 0 (informational helper; the loop never fails over it).
 """
@@ -58,12 +58,33 @@ INCIDENT_WORDS_RE = re.compile(
 )
 
 
+_RUNTIME_ENV: dict = {}
+
+
+def _load_runtime_env(app: Path) -> None:
+    """logs/runtime.env is the operator's live override file (same idiom as
+    IDLE_SKIP_ENABLED in auto-loop.sh): a key there beats the process env, so KEEP /
+    MIN_BYTES / ENABLED can be tuned without a redeploy. Flat KEY=VALUE lines only."""
+    try:
+        for ln in (app / "logs/runtime.env").read_text(encoding="utf-8", errors="replace").splitlines():
+            ln = ln.strip()
+            if ln.startswith("CONSENSUS_PRUNE_") and "=" in ln:
+                k, v = ln.split("=", 1)
+                _RUNTIME_ENV[k.strip()] = v.strip().strip('"').strip("'")
+    except Exception:
+        pass
+
+
 def _env_int(name: str, default: int) -> int:
     try:
-        v = int(os.environ.get(name, "").strip())
+        v = int((_RUNTIME_ENV.get(name) or os.environ.get(name, "")).strip())
         return v if v > 0 else default
     except (ValueError, TypeError):
         return default
+
+
+def _env_flag(name: str, default: str) -> str:
+    return (_RUNTIME_ENV.get(name) or os.environ.get(name, default)).strip()
 
 
 def _app(arg: str | None) -> Path:
@@ -175,11 +196,15 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true", help="report only; write nothing")
     args = ap.parse_args()
 
-    if os.environ.get("CONSENSUS_PRUNE_ENABLED", "1").strip() == "0":
+    app = _app(args.app)
+    _load_runtime_env(app)
+    if _env_flag("CONSENSUS_PRUNE_ENABLED", "1") == "0":
         return 0
 
-    app = _app(args.app)
-    keep = _env_int("CONSENSUS_PRUNE_KEEP", 12)
+    # KEEP default 8 (recalibrated after the first prod run, 2026-10-08: 12 entries = 29 KB
+    # on top of 51 KB of non-entry sections left the prompt at 121.7 KB, 1.7 KB over the
+    # cap). Still above work-window K=5 and turn-bloat K=3.
+    keep = _env_int("CONSENSUS_PRUNE_KEEP", 8)
     min_bytes = _env_int("CONSENSUS_PRUNE_MIN_BYTES", 70000)
     skip_alarm = _env_int("CONSENSUS_PRUNE_SKIP_ALARM", 3)
     cpath = app / CONSENSUS_REL
@@ -236,7 +261,16 @@ def main() -> int:
     wwd_kb = sizes.get(SECTION_HEADER, 0) // 1024
     kd_kb = sizes.get("## Key Decisions Made", 0) // 1024
     if len(entries) <= keep:
-        return finish_skip(f"only {len(entries)} entries (keep {keep}); whatwedid={wwd_kb}KB keydecisions={kd_kb}KB total={len(data)//1024}KB", over)
+        # Nothing left to archive yet the file is over threshold: that is not a prune
+        # failure (no streak), it is the other sections outgrowing their share — the
+        # trigger for a separate Key Decisions / section pass. Logged every cycle on purpose.
+        if not args.dry_run:
+            state["skipped_streak"] = 0
+            state["last_cycle"] = args.cycle
+            _save_state(spath, state)
+        sys.stdout.write(f"[CONSENSUS-PRUNE] insufficient: {len(entries)} entries <= keep {keep}, file still "
+                         f"{len(data)//1024}KB (whatwedid={wwd_kb}KB keydecisions={kd_kb}KB) — other sections need their own pass\n")
+        return 0
 
     keep_nums = set(sorted((n for n, _ in entries), reverse=True)[:keep])
     kept = [(n, ls) for n, ls in entries if n in keep_nums]

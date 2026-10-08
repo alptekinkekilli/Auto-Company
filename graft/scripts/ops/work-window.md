@@ -1,4 +1,4 @@
-# scripts/ops/work-window.py · [[cycle-escalation-brakes]] [[work-window-brake]]
+# scripts/ops/work-window.py · [[operational-guard-tripwires]] [[work-window-bloat-brakes]]
 
 A fail-closed brake that opens a K-cycle work window whenever a tracked surface changes, forcing the harness to advance one queued item instead of emitting a valid empty-cycle confirmation.
 

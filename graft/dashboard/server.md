@@ -1,4 +1,4 @@
-# dashboard/server.py · [[cockpit-dashboard]] [[dashboard-server]] [[directive-write-gate]] [[refusal-format]]
+# dashboard/server.py · [[cockpit-dashboard]] [[directive-write-gate]]
 
 Local dashboard HTTP server for the Auto Company autonomous loop, exposing status, settings, directive, and operator-request controls across Windows/WSL/macOS/Linux hosts.
 

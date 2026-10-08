@@ -6,7 +6,12 @@ sources:
   - path: scripts/graft-auto-refresh.py
     hash: 678e4a269c718dc9043afa096157f5d835cb3099883d31954de70ff10a4bfe33
 sources_digest: 349cf6c8fc1b8b2d774551e2842a1220b68910aa7da6e08ac140a57584d3d3b4
-links: []
+links:
+  - to: auto-loop-orchestration
+    relation: uses
+    description: >-
+      Runs as a SessionStart hook in the loop, writing logs/graft-freshness.json
+      for the cockpit.
 generator:
   version: 1
 covers:
@@ -35,7 +40,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-SessionStart hook that triggers a paid deep graft-card build only when git history shows genuine staleness (commits-behind > 40 AND last graft commit age > 24h), using a lock file and 30-minute relaunch marker. Deliberately fail-open (always exits 0), non-blocking (detached via start_new_session), and never touches the Together API key (it lives in graft-build.sh).
+SessionStart hook that conditionally triggers a paid deep build of graft cards only when git history shows genuine staleness, using a double threshold (commits-behind > GRAFT_MAX_BEHIND default 40 AND last graft commit age > GRAFT_MAX_AGE_H default 24h). Deliberately fail-open (always exits 0), non-blocking (launches detached via start_new_session), with a lock file and 30-minute relaunch marker. The Together API key never touches this script (lives in graft-build.sh); --dry-run computes without launching.
+
+## Related
+
+- uses [[auto-loop-orchestration]] — Runs as a SessionStart hook in the loop, writing logs/graft-freshness.json for the cockpit.
 <!-- context:generated:end -->
 
 ## Notes
