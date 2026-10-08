@@ -1,20 +1,17 @@
 ---
 name: KİK decision reader
 slug: ki-k-decision-reader
-type: system
+type: file
 sources:
   - path: scripts/ops/kik-decision-read.py
     hash: 4f2060cbaaa784433de9720f1e9a3bfb3ba6c06cab00fae0efa0a426e5c926de
 sources_digest: d0430e1b2184f3b5ab5ef2ec2df0217a8110eb3508d564651dace20265543677
 links:
-  - to: browser-extraction-harness
-    relation: uses
-    description: Alternative single-call path for fetching decision pages.
   - to: content-hash-provenance
-    relation: implements
+    relation: uses
     description: >-
-      Dynamically imports decision_text_hash.py to guarantee hash comparability
-      with the bridge.
+      Dynamically imports decision_text_hash.py to compute the canonical hash
+      for comparability with the bridge.
 generator:
   version: 1
 covers:
@@ -43,12 +40,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Fetches a Turkish public procurement decision page in a single call, returning a compact digest (decision number/date, contracting authority, complainant distinguished from excluded firm, operative sentence, canonical content hash). Uses curl with browser user-agent (urllib fails TLS on macOS), retries up to three times, and extracts exclusion sentences only after dropping quoted legislation so a quoted article is never mistaken for a real exclusion.
+Fetches a Turkish public procurement decision page in a single call and returns a compact digest, avoiding the multi-turn browser round-trips that killed agent cycles. Uses curl with browser UA (urllib fails TLS on macOS), retries on short responses, extracts exclusion sentences only after dropping quoted legislation so a quoted article is never mistaken for a real exclusion, and recomputes the hash via dynamic import of decision_text_hash.py to guarantee comparability.
 
 ## Related
 
-- uses [[browser-extraction-harness]] — Alternative single-call path for fetching decision pages.
-- implements [[content-hash-provenance]] — Dynamically imports decision_text_hash.py to guarantee hash comparability with the bridge.
+- uses [[content-hash-provenance]] — Dynamically imports decision_text_hash.py to compute the canonical hash for comparability with the bridge.
 <!-- context:generated:end -->
 
 ## Notes

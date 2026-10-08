@@ -1,50 +1,27 @@
 ---
-name: RFQ send pipeline
+name: RFQ Send Pipeline
 slug: rfq-send-pipeline
 type: system
 sources:
   - path: scripts/ops/rfq_template.py
     hash: 92801930c70894455bd37f93981ec701390c49b34760c88280fb0ff975bbe5e8
-  - path: scripts/ops/rfq-reply-watch.py
-    hash: a6ab97903f7cb5a67e749e16ded1a76ba0e022f2faf2e19ce7b0ad094ab441a7
   - path: scripts/ops/rfq-send.py
     hash: 09815061d704b6bd2034469e3bfe3dfac7417f25761ea9ae845be4c5367fd225
-sources_digest: 07ca8589e6cadd0d9c4f2ebb8320ea4d59f8be3a891bd9bab62ae638d7dcb348
+sources_digest: cf3477a985d90fc7d5a49be33824fed5f260b7c47dd3c8afac8fc60c3c8b6244
 links:
-  - to: airtable-ops-watchers
-    relation: part_of
+  - to: fail-closed-eligibility-gates
+    relation: implements
     description: >-
-      rfq-reply-watch.py shares the advisory watcher pattern
-      (fetch/classify/notify, state file, never writes back).
-  - to: airtable-write-guard
-    relation: uses
+      rfq-send.py's decide() is a fail-closed eligibility gate sharing the same
+      philosophy (any check that cannot complete is a REFUSE) as send-gate.py.
+  - to: operator-alerting-watchers
+    relation: produces
     description: >-
-      rfq-send.py patches Airtable status via the guarded write path that
-      refuses unknown fields and requires --force/--replace.
+      rfq-send.py marks successful sends in Airtable, which rfq-reply-watch.py
+      then watches for replies or silence.
 generator:
   version: 1
 covers:
-  - symbol: api_key
-    kind: function
-    at: 'scripts/ops/rfq-reply-watch.py:L36-L46'
-  - symbol: fetch
-    kind: function
-    at: 'scripts/ops/rfq-reply-watch.py:L49-L64'
-  - symbol: notify
-    kind: function
-    at: 'scripts/ops/rfq-reply-watch.py:L67-L80'
-  - symbol: first_ts
-    kind: function
-    at: 'scripts/ops/rfq-reply-watch.py:L83-L88'
-  - symbol: hours_since
-    kind: function
-    at: 'scripts/ops/rfq-reply-watch.py:L91-L106'
-  - symbol: main
-    kind: function
-    at: 'scripts/ops/rfq-reply-watch.py:L109-L134'
-  - symbol: classify
-    kind: function
-    at: 'scripts/ops/rfq-reply-watch.py:L137-L195'
   - symbol: _load_key
     kind: function
     at: 'scripts/ops/rfq-send.py:L61-L82'
@@ -118,12 +95,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The fail-closed machinery for sending anonymous OPEX RFQ emails to vendors on behalf of a hidden client. rfq-send.py is the only writer: it gates eligibility (opt-out, already-sent, caps, anonymity denylist, and the manually-set §15 Sponsor İzni checkbox), renders content from rfq_template.py, delivers via ForwardEmail, and patches Airtable status. rfq-reply-watch.py is the advisory half that only detects replies/silence and never writes back.
+The anonymous OPEX RFQ email pipeline: rfq-send.py is a fail-closed CLI that reads/writes the dedicated Wowcar OPEX RFQ Airtable table and delivers via ForwardEmail's /v1/emails endpoint, gated by an eligibility decision; rfq_template.py separates presentation (subject/body/HTML, logo CID attachment) from send logic. Anonymity is enforced by a denylist scan, the §15 'Sponsor İzni' gate is deliberately last and cannot be set programmatically, caps are computed by scanning all rows, and form-only vendors are refused because the machine never fills web forms. Gmail does not render base64 data-URIs in signatures, so the logo is attached as a CID.
 
 ## Related
 
-- part of [[airtable-ops-watchers]] — rfq-reply-watch.py shares the advisory watcher pattern (fetch/classify/notify, state file, never writes back).
-- uses [[airtable-write-guard]] — rfq-send.py patches Airtable status via the guarded write path that refuses unknown fields and requires --force/--replace.
+- implements [[fail-closed-eligibility-gates]] — rfq-send.py's decide() is a fail-closed eligibility gate sharing the same philosophy (any check that cannot complete is a REFUSE) as send-gate.py.
+- produces [[operator-alerting-watchers]] — rfq-send.py marks successful sends in Airtable, which rfq-reply-watch.py then watches for replies or silence.
 <!-- context:generated:end -->
 
 ## Notes

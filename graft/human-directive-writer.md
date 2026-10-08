@@ -7,11 +7,16 @@ sources:
     hash: 447057795ab4776c589695bd00450009df0af8fff481fa7a68c89244ca93a9a3
 sources_digest: f4f863d4df3fc313e0dd21bd4e126bc92b8f46cf056589dd04f736eba34c9ebd
 links:
+  - to: directive-staleness-watcher
+    relation: uses
+    description: >-
+      The staleness watcher reads the directive's ## Status and ## Updated
+      sections and reports the last write-refusal from directive-audit.log.
   - to: operator-escalation-gate
     relation: uses
     description: >-
-      operator_request_notify.py requires a human-directive.md reference plus
-      verifiable artifact to resolve OPREQ requests.
+      Resolution verification requires a human-directive.md reference plus a
+      verifiable artifact, rejecting free-text self-claims.
 generator:
   version: 1
 covers:
@@ -88,11 +93,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The sole writer for memories/human-directive.md, enforcing two fail-closed rules: in-flight PENDING directives are never clobbered without --allow-pending, and the directive body is immutable after acceptance (only ## Status changes, via compare-and-swap verifying body hash). Every write goes through lock → read → in-flight gate → backup → atomic rename → verify → audit → notify; baseline/reconcile are hard-refused and operator-only via host-side script.
+Sole writer for memories/human-directive.md, enforcing two fail-closed rules: in-flight PENDING directives are never clobbered without --allow-pending, and the directive body is immutable after acceptance (only ## Status changes, via compare-and-swap verifying the body hash). Every write goes through lock → read → in-flight gate → backup → atomic rename → verify → audit → notify; baseline/reconcile are hard-refused and operator-only via host-side script.
 
 ## Related
 
-- uses [[operator-escalation-gate]] — operator_request_notify.py requires a human-directive.md reference plus verifiable artifact to resolve OPREQ requests.
+- uses [[directive-staleness-watcher]] — The staleness watcher reads the directive's ## Status and ## Updated sections and reports the last write-refusal from directive-audit.log.
+- uses [[operator-escalation-gate]] — Resolution verification requires a human-directive.md reference plus a verifiable artifact, rejecting free-text self-claims.
 <!-- context:generated:end -->
 
 ## Notes

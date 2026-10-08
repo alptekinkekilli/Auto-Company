@@ -1,7 +1,7 @@
 ---
 name: Linear workstream tracker
 slug: linear-workstream-tracker
-type: system
+type: file
 sources:
   - path: scripts/ops/linear-track.py
     hash: 5a0cc4bf3713dd3351302a4e9ed446432c92217afdbefd6fa9ee87a9ccd4f730
@@ -44,7 +44,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Enforces a workstream discipline for Linear: appends checklist items to one long-lived 'track' issue per workstream instead of opening a new issue per finding. cmd_done refuses ambiguous matches, cmd_new only creates a real issue for three hardcoded justifications (independent-owner, own-lifecycle, durable-capability). Handles Linear's uppercase - [X] normalization and Keychain fallback for GUI-launched processes that never get the interactive-shell env var.
+Enforces a workstream discipline for Linear: appends checklist items to one long-lived 'track' issue per workstream instead of opening a new issue per finding. cmd_new only creates a real issue if --why matches one of three hardcoded justifications (independent-owner, own-lifecycle, durable-capability). Handles Linear's normalization of ticked boxes to uppercase - [X], and uses Keychain fallback because GUI-launched processes never get the interactive-shell env var.
 <!-- context:generated:end -->
 
 ## Notes

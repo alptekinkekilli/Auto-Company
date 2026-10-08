@@ -9,9 +9,11 @@ sources:
     hash: 60fdd2addf2f53741d03e21002a00b6ee9d8895af1fae9746a51308e67672b67
 sources_digest: 5c486cb9b9e24ea7acf023003a03ae50970460766baf723ea3eb1774622a9ed8
 links:
-  - to: auto-loop-orchestration
-    relation: configures
-    description: Boot probe gates loop startup on MCP server health and denylist coverage.
+  - to: cost-audit
+    relation: uses
+    description: >-
+      Cost audit reads the MCP schema cache and resolves JCODE_TOOLS_DENY to
+      compare advertised-vs-called tool surface.
 generator:
   version: 1
 covers:
@@ -76,11 +78,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Two cooperating scripts: jcode-mcp-config.py generates ~/.jcode/mcp.json from project-local .mcp.json (wrapping HTTP/SSE servers in mcp-remote stdio bridge, applying hard-coded overrides for linear/airtable hosted endpoints, leaving secrets unexpanded in argv to avoid ps leaks), and jcode-mcp-probe.py deterministically verifies each server via JSON-RPC 2.0 over stdio with five fail-closed gates including a mandatory read-only tools/call per server (tools/list alone proved insufficient — Context7 passed boot for days while never being called).
+Two cooperating tools: jcode-mcp-config.py generates ~/.jcode/mcp.json from project-local .mcp.json (wrapping HTTP/SSE servers in mcp-remote stdio bridge, applying hard-coded overrides for linear/airtable, refusing to write missing REQUIRED servers, leaving secrets unexpanded in argv to avoid ps leaks), and jcode-mcp-probe.py is a deterministic boot probe that speaks JSON-RPC 2.0 over stdio and enforces five fail-closed gates including live destructive-tool matching and a mandatory read-only readcheck per server (tools/list alone proved insufficient — Context7 passed boot for days while never being called).
 
 ## Related
 
-- configures [[auto-loop-orchestration]] — Boot probe gates loop startup on MCP server health and denylist coverage.
+- uses [[cost-audit]] — Cost audit reads the MCP schema cache and resolves JCODE_TOOLS_DENY to compare advertised-vs-called tool surface.
 <!-- context:generated:end -->
 
 ## Notes

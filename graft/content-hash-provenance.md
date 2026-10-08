@@ -9,11 +9,12 @@ sources:
     hash: 4f2060cbaaa784433de9720f1e9a3bfb3ba6c06cab00fae0efa0a426e5c926de
 sources_digest: 29bce193d5c60bd9e7bf52e9c353d21de59f11e0b8c1f585378295f1c8433681
 links:
-  - to: ki-k-decision-reader
-    relation: implements
+  - to: bridge-leak-scanner
+    relation: validates
     description: >-
-      kik-decision-read.py dynamically imports this module to guarantee hash
-      comparability with the bridge.
+      The leak scanner passes content_hash fields as public evidence, and
+      kik-decision-read recomputes the hash via dynamic import to match the
+      bridge.
 generator:
   version: 1
 covers:
@@ -54,11 +55,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The canonical content-hash implementation for KİK decision pages, existing because raw HTML from the ASP.NET endpoint varies by client (User-Agent, __VIEWSTATE). The normalization pipeline order is load-bearing at every step (drop script/style, replace tags with single space, unescape entities after tag removal, collapse whitespace) and the digest is the first 16 hex chars of SHA-256 of normalized text plus char count. This file is deliberately the single source of truth — a hash produced any other way is not comparable and must not be written to the bridge, a lesson from a 2026-07-29 incident where an underdetermined spec caused a legitimate evidence quarantine.
+The canonical SHA-256 content hash for KİK decision pages, computed by a load-bearing normalization pipeline (drop script/style, replace tags with single space, unescape entities after tag removal, collapse whitespace) because raw HTML varies by client/__VIEWSTATE. This file is the single source of truth — a hash produced any other way is not comparable and must not be written to the bridge, a lesson from a 2026-07-29 underdetermined-spec incident. The same hash is recomputed by kik-decision-read.py via dynamic import to guarantee comparability.
 
 ## Related
 
-- implements [[ki-k-decision-reader]] — kik-decision-read.py dynamically imports this module to guarantee hash comparability with the bridge.
+- validates [[bridge-leak-scanner]] — The leak scanner passes content_hash fields as public evidence, and kik-decision-read recomputes the hash via dynamic import to match the bridge.
 <!-- context:generated:end -->
 
 ## Notes

@@ -2976,10 +2976,10 @@ Priorities, in order: (1) the Human Directive, per the rules above; (2) only the
 
 The consensus normally pre-loaded here did not fit this prompt. Your FIRST action this
 cycle: read \`memories/consensus.md\` IN FULL and treat its contents exactly as if they
-had been pre-loaded above. Additionally: a consensus too large to inline means past
-cycles have been hoarding — as part of this cycle's normal work, prune resolved/stale
-material out of \`memories/consensus.md\` into the appropriate \`docs/<role>/\` files so
-it fits again. Consensus is a baton, not an archive.
+had been pre-loaded above. Do NOT prune or rewrite older entries yourself — the harness
+archives them automatically after each cycle (scripts/ops/consensus-prune.py); older
+cycles live in \`docs/operations/consensus-archive-*.md\` — grep by cycle number, never
+read whole. Consensus is a baton, not an archive.
 </consensus>
 
 <state_snapshot>
@@ -3350,6 +3350,26 @@ $(printf '%s' "${RESULT_TEXT:-}" | head -c 600)" >/dev/null 2>&1 || true
         _lg_alarm=$(python3 "$SCRIPT_DIR/../ops/ledger-guard.py" --cycle "$loop_count" --app "$PROJECT_DIR" 2>/dev/null) || true
         if [ -n "$_lg_alarm" ] && [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
             bash "$SCRIPT_DIR/telegram-notify.sh" "$_lg_alarm" >/dev/null 2>&1 || true
+        fi
+    fi
+
+    # CONSENSUS PRUNE (2026-10-08, three-reviewer conditional approval). The [PROMPT-SIZE]
+    # brake fired every cycle from 09-04 because consensus.md alone (127 KB, 40 per-cycle
+    # entries) exceeded the argv cap and the "prune into docs/" instruction was a ritual
+    # nobody performed. consensus-prune.py archives all but the newest KEEP entries into
+    # docs/operations/consensus-archive-YYYY-MM.md byte-exact (idempotent, archive first,
+    # atomic rewrite) and records pre/post hashes that ledger-guard rebases on. Runs AFTER
+    # ledger-guard so the guard's backup holds the pre-prune copy, and only on a cycle that
+    # did not fail (a restored consensus is not pruned). Prints one log line; a 3rd
+    # consecutive skip above threshold is an alarm line forwarded to Telegram — fail-closed
+    # is not allowed to be silent. Kill switch CONSENSUS_PRUNE_ENABLED=0. set -e safe.
+    if [ -z "${cycle_failed_reason:-}" ] && [ -f "$SCRIPT_DIR/../ops/consensus-prune.py" ]; then
+        _cp_out=$(python3 "$SCRIPT_DIR/../ops/consensus-prune.py" --cycle "$loop_count" --app "$PROJECT_DIR" 2>/dev/null) || true
+        if [ -n "$_cp_out" ]; then
+            log "$_cp_out"
+            if printf '%s' "$_cp_out" | grep -q 'CONSENSUS-PRUNE —' && [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+                bash "$SCRIPT_DIR/telegram-notify.sh" "$_cp_out" >/dev/null 2>&1 || true
+            fi
         fi
     fi
 

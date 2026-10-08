@@ -7,9 +7,17 @@ sources:
     hash: a6b475c3d6e94b205066d93a4054681477be96876b0f8eac60b47f13ab2573ef
 sources_digest: 3dc173f8889cdab53470b50d79d2518beedb357a6bcbc9c68f009fdbd555a439
 links:
+  - to: directive-staleness-watcher
+    relation: uses
+    description: Sends PENDING-directive alerts via this script.
+  - to: operator-action-router
+    relation: uses
+    description: Sends the consolidated 'what needs YOU' digest via this script.
   - to: operator-escalation-gate
     relation: uses
-    description: operator_request_notify.py sends notifications through this script.
+    description: >-
+      operator_request_notify.py calls send_telegram/attempt_notify through this
+      channel, marking delivery only on ok:true.
 generator:
   version: 1
 covers: []
@@ -17,11 +25,13 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-Bash wrapper around the Telegram Bot API that is safe to call unconditionally: exits silently if credentials are unset, never returns non-zero, truncates messages to 3900 chars, and disables web page previews. Used by nearly every watcher and gate in the system as the operator alerting channel.
+Bash wrapper around the Telegram Bot API that is safe to call unconditionally: exits silently if credentials are unset, never returns non-zero, truncates to 3900 chars, and ignores all errors. Used by nearly every operational watcher and the directive writer as the operator alerting path.
 
 ## Related
 
-- uses [[operator-escalation-gate]] — operator_request_notify.py sends notifications through this script.
+- uses [[directive-staleness-watcher]] — Sends PENDING-directive alerts via this script.
+- uses [[operator-action-router]] — Sends the consolidated 'what needs YOU' digest via this script.
+- uses [[operator-escalation-gate]] — operator_request_notify.py calls send_telegram/attempt_notify through this channel, marking delivery only on ok:true.
 <!-- context:generated:end -->
 
 ## Notes

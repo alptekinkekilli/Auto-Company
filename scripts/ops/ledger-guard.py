@@ -118,6 +118,30 @@ def _save_state(path: Path, state: dict) -> None:
         pass
 
 
+PRUNE_STATE_REL = "logs/consensus-prune.json"
+_PRUNE_STATE: dict = {}
+
+
+def _rebase_after_prune(prev: dict | None) -> dict | None:
+    """If our consensus baseline is exactly the file consensus-prune.py consumed, compare
+    this cycle against the post-prune metrics it recorded instead.
+
+    Order inside a cycle is guard -> prune, so the baseline we hold is the PRE-prune file
+    and the next cycle's file is post-prune plus the model's new writes. Rebasing the
+    baseline (rather than skipping the comparison) means a real deletion in that same
+    cycle still alarms. Why not INCIDENT_RE: a permanent 'archive note' containing
+    'prune' would blind this guard for consensus forever (three independent reviewers,
+    2026-10-08).
+    """
+    try:
+        post = _PRUNE_STATE.get("post_metrics")
+        if prev and post and _PRUNE_STATE.get("pre_sha16") == prev.get("sha16"):
+            return dict(post)
+    except Exception:
+        pass
+    return prev
+
+
 def _check(name: str, cur: dict | None, prev: dict | None,
            drop_sections: int, drop_rows: int, drop_frac: float) -> str | None:
     """Return a violation string if cur lost content vs prev without an incident marker."""
@@ -173,6 +197,10 @@ def main() -> int:
     state_path = app / STATE_REL
     state = _load_state(state_path)
     prev_metrics = state.get("metrics", {})
+    global _PRUNE_STATE
+    _PRUNE_STATE = _load_state(app / PRUNE_STATE_REL)
+    if "consensus" in prev_metrics:
+        prev_metrics["consensus"] = _rebase_after_prune(prev_metrics["consensus"])
     new_metrics = {}
     violations = []
 

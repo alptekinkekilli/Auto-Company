@@ -10,13 +10,13 @@ links:
   - to: human-directive-writer
     relation: uses
     description: >-
-      Requires a human-directive.md reference plus verifiable artifact to
-      resolve OPREQ requests.
-  - to: operator-action-router
-    relation: produces
+      Resolution verification requires a human-directive.md reference plus a
+      verifiable artifact.
+  - to: telegram-notification-channel
+    relation: uses
     description: >-
-      operator-action-router.py reads open OPREQ entries from
-      memories/operator-requests.md.
+      Sends notifications via send_telegram/attempt_notify, marking delivery
+      only on ok:true.
 generator:
   version: 1
 covers:
@@ -123,12 +123,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The deterministic operator-escalation gate for the company knowledge base: the only component allowed to decide whether an OPREQ block is genuinely new/changed (SHA-256 material_hash), send Telegram notifications (marking delivery only on ok:true), flip OPEN→RESOLVED via type-specific checks (verify_document_procurement enforces checksum-matched files confined to memories/operator-evidence/ with path-traversal protection), and regenerate the Awaiting Operator projection in consensus.md. Always exits 0 so it never breaks the calling loop; secret redaction is shape-based not length-based to avoid stripping request IDs; resolution verification rejects free-text self-claims.
+The deterministic operator-escalation gate for the company knowledge base: the only component allowed to decide whether an OPREQ block is genuinely new/changed (SHA-256 material_hash), send Telegram notifications (marking delivery only on ok:true), flip OPEN→RESOLVED through type-specific deterministic checks (verify_document_procurement enforces checksum-matched files confined to memories/operator-evidence/ with path-traversal protection), and regenerate the Awaiting Operator projection in consensus.md. Always exits 0 so it never breaks the calling loop; secret redaction is shape-based to avoid stripping request IDs; resolution verification rejects free-text self-claims.
 
 ## Related
 
-- uses [[human-directive-writer]] — Requires a human-directive.md reference plus verifiable artifact to resolve OPREQ requests.
-- produces [[operator-action-router]] — operator-action-router.py reads open OPREQ entries from memories/operator-requests.md.
+- uses [[human-directive-writer]] — Resolution verification requires a human-directive.md reference plus a verifiable artifact.
+- uses [[telegram-notification-channel]] — Sends notifications via send_telegram/attempt_notify, marking delivery only on ok:true.
 <!-- context:generated:end -->
 
 ## Notes

@@ -109,7 +109,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Acceptance test for the WowCar revenue vocabulary, checking that the candidate vocabulary (projects/wowcar/generator-source/kod) either remains unchanged or contains exactly 14 anchor terms; the shell harness only standardizes invocation and validates the mode string.
+scripts/ops/wowcar-revenue-vocabulary-acceptance.py checks that the WowCar revenue vocabulary (fixed to projects/wowcar/generator-source/kod) either remains unchanged or contains exactly 14 anchor terms. The shell harness standardizes invocation with strict set -euo pipefail and requires an absolute report path.
 <!-- context:generated:end -->
 
 ## Notes

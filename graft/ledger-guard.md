@@ -4,10 +4,10 @@ slug: ledger-guard
 type: system
 sources:
   - path: scripts/ops/ledger-guard.py
-    hash: 9892f74da9b9b06f9977b053a05717c67eeafc4030ee7dbd2e2bc087fb8c3400
+    hash: 5b3098424eada1d1f669995baf5e1dd76ea4fb724c0c524ddc9986ce361128d7
   - path: tests/test_ledger_guard.py
     hash: d0118c31c5f02cb01c7ad332056d6ec8c8951338d217999eda93e15dce90a354
-sources_digest: 43d871331ac348b9f8d85f7fd50f1ca6129fc137ff6d7ca764693d7af809406c
+sources_digest: 72a2ba53194fd638df2a9b7bd9badd2b16ef5d578842406a874d42deaff02f6a
 links: []
 generator:
   version: 1
@@ -36,12 +36,15 @@ covers:
   - symbol: _save_state
     kind: function
     at: 'scripts/ops/ledger-guard.py:L111-L118'
+  - symbol: _rebase_after_prune
+    kind: function
+    at: 'scripts/ops/ledger-guard.py:L125-L142'
   - symbol: _check
     kind: function
-    at: 'scripts/ops/ledger-guard.py:L121-L146'
+    at: 'scripts/ops/ledger-guard.py:L145-L170'
   - symbol: main
     kind: function
-    at: 'scripts/ops/ledger-guard.py:L149-L212'
+    at: 'scripts/ops/ledger-guard.py:L173-L240'
   - symbol: newapp
     kind: function
     at: 'tests/test_ledger_guard.py:L15-L20'
@@ -61,7 +64,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Monitors a ledger file for unexpected section/row/size changes and emits alarms unless an incident note is present; creates first-run backups, rotates backups honoring LEDGER_GUARD_KEEP, and has a kill switch via LEDGER_GUARD_ENABLED=0.
+scripts/ops/ledger-guard.py monitors a ledger file for unexpected changes (section/row count, size) and emits alarms unless an incident note is present. It creates a backup on first run, rotates backups honoring LEDGER_GUARD_KEEP, and has a kill switch via LEDGER_GUARD_ENABLED=0. Missing-file detection and silent operation on unchanged state are key behaviors.
 <!-- context:generated:end -->
 
 ## Notes

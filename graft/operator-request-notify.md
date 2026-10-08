@@ -5,16 +5,22 @@ type: system
 sources:
   - path: scripts/core/operator_request_notify.py
     hash: 422b3f99a0cf654022883399da8d8ae7b28d7a6b7bffc2ddfc68dd4d987217ac
+  - path: tests/test_idle_skip.sh
+    hash: 13ce9f0b8801b94a1bc896bd2db53f2fc68c2984b45db8372050ca760e1edb53
   - path: tests/test_operator_request_notify.py
     hash: 07fef3026944da791037a735c7e5cea15cdb4f53eabaecf7affda422400f016f
   - path: tests/test_refusal_format.sh
     hash: 11bf5e9869e2e573b4a897e4df84053e4f58d759d3073a9e058705482cc31ef5
-sources_digest: ba38618d75af7b2d78014ffecbd813b6ab922015e6a25656c9f674ab3186ca1b
+sources_digest: d5c07e83b4788ea533244ac7f6b8e2ef59b8620d9d41a2754982c40a5dc8e1a6
 links:
-  - to: operator-action-router
+  - to: idle-skip-mechanism
     relation: uses
-  - to: refusal-format-contract
+    description: The idle-skip branch always runs this OPREQ ledger step before sleeping.
+  - to: refusal-format
     relation: implements
+    description: >-
+      Parses the REFUSE head line + verbatim body format written by the cockpit
+      panel.
 generator:
   version: 1
 covers:
@@ -244,12 +250,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Orchestrates Telegram notifications for operator requests and enforces deterministic resolution rules per request type: document-procurement needs a SHA-256-matched file under memories/operator-evidence/<id>/, credential needs a PASS log with no secret-shaped tokens, legal/financial/adjudication need a structured Decision line, and expenditure/external-action need a complete Authorization block. Dedup uses a content fingerprint ignoring timestamp-only changes; resolved requests disappear from the consensus projection.
+scripts/core/operator_request_notify.py orchestrates Telegram notifications for operator requests and enforces deterministic resolution rules: document-procurement requires a SHA-256-checksum-matched file under memories/operator-evidence/<id>/; credential requires a PASS log with no secret-shaped tokens; legal/financial/adjudication decisions require a structured 'Decision for OPREQ-<id>: <word> — <rationale>' line; expenditure-approval/external-action require a complete Authorization block. Notifications are deduped by content fingerprint (ignoring timestamp-only changes), re-notified on material edits, and suppressed for HOLD/informational/research-result types.
 
 ## Related
 
-- uses [[operator-action-router]]
-- implements [[refusal-format-contract]]
+- uses [[idle-skip-mechanism]] — The idle-skip branch always runs this OPREQ ledger step before sleeping.
+- implements [[refusal-format]] — Parses the REFUSE head line + verbatim body format written by the cockpit panel.
 <!-- context:generated:end -->
 
 ## Notes

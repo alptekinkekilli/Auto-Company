@@ -1,7 +1,7 @@
 ---
 name: Graft auto-refresh hook
 slug: graft-auto-refresh-hook
-type: system
+type: file
 sources:
   - path: scripts/graft-auto-refresh.py
     hash: 678e4a269c718dc9043afa096157f5d835cb3099883d31954de70ff10a4bfe33
@@ -35,7 +35,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-SessionStart hook that conditionally triggers a paid deep build of graft cards only when git history shows genuine staleness (commits-behind > 40 AND last graft commit age > 24h). Deliberately fail-open (always exits 0), non-blocking (launches detached), with lock and marker files preventing concurrent/rapid relaunches. The Together API key never touches this script (lives in graft-build.sh).
+SessionStart hook that triggers a paid deep graft-card build only when git history shows genuine staleness (commits-behind > 40 AND last graft commit age > 24h), using a lock file and 30-minute relaunch marker. Deliberately fail-open (always exits 0), non-blocking (detached via start_new_session), and never touches the Together API key (it lives in graft-build.sh).
 <!-- context:generated:end -->
 
 ## Notes

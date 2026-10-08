@@ -8,7 +8,12 @@ sources:
   - path: tests/test_tool_usage_audit.sh
     hash: 4bdf9378fc2af04ed89fc9559aa1fcc8520846c6847f13302f613ec896bfde6d
 sources_digest: a34a96243cdbd57c7896fc7d5f5a4dde3fcdd8a6a1bca52ea9921948d1a6dab2
-links: []
+links:
+  - to: cycle-counter-persistence
+    relation: depends_on
+    description: >-
+      Re-audits rewritten cycle files because the counter resets on container
+      restart.
 generator:
   version: 1
 covers:
@@ -28,7 +33,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Categorizes jcode NDJSON event streams (handling fragmented tool_input deltas split mid-token), records per-MCP-tool-name counts only for MCP tools, backfills new cycle files, re-audits rewritten files rather than deduping by filename, and counts browse-extract.py as browser usage to prevent faking A/B drops.
+scripts/ops/tool-usage-audit.py categorizes jcode NDJSON event streams (handling fragmented tool_input deltas split mid-token), records per-MCP-tool-name counts only for MCP tools, and is idempotent (second run appends nothing). It backfills new cycle files, re-audits rewritten cycle files (cycle counter resets on container restart) rather than deduping by filename, and counts the browse-extract.py harness as browser usage to prevent faking A/B drops.
+
+## Related
+
+- depends on [[cycle-counter-persistence]] — Re-audits rewritten cycle files because the counter resets on container restart.
 <!-- context:generated:end -->
 
 ## Notes

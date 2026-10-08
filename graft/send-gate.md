@@ -9,8 +9,9 @@ sources:
     hash: 4d0f03bd1b3e73a289e87cf0a56b25499b131e48fac01098b3f1d81755cb190d
 sources_digest: 260cbac1d830524fefee8831ec62d8032fb6948e871229aae8fb6af3055fb10f
 links:
-  - to: g4-check
-    relation: uses
+  - to: prod-mechanism-guard
+    relation: part_of
+    description: send-gate.py is a protected production surface.
 generator:
   version: 1
 covers:
@@ -54,11 +55,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Fail-closed refusal policy for outreach sends, tested offline with stubbed air()/g4_live(): daily/total caps, duplicate/opt-out detection, non-Qualified status, TEST rows excluded by STATUS, GROUP_ROUTED special case, body-leak scanner for internal markers, follow-up mode, exact normalized firm-name matching for g4_live, and phase-check scoping to first-contact sends. Refuses on any unknown or error.
+scripts/ops/send-gate.py is the fail-closed outreach refusal gate, tested entirely offline with stubbed air()/g4_live() calls. It enforces daily/total caps, duplicate outreach, opt-out, non-Qualified status, missing email, G4 failure, TEST-row exclusion by STATUS, unrendered rows, GROUP_ROUTED special case, self-contradictory rows, exclusion-ground length/English markers, procurement-phase mismatch, a body-leak scanner for internal markers, unsplit rows, follow-up mode, exact normalized firm-name matching for g4_live, and Website fallback only when the bridge row names no domain.
 
 ## Related
 
-- uses [[g4-check]]
+- part of [[prod-mechanism-guard]] — send-gate.py is a protected production surface.
 <!-- context:generated:end -->
 
 ## Notes

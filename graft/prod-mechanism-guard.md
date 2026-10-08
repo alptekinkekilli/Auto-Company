@@ -1,5 +1,5 @@
 ---
-name: Prod-mechanism guard
+name: prod mechanism guard
 slug: prod-mechanism-guard
 type: system
 sources:
@@ -7,13 +7,13 @@ sources:
     hash: e3d5c01038affa27aaed85106b6b8ff0705c6be14fa3b2caa1c21144fde5acee
   - path: tests/test_prod_mechanism_guard.sh
     hash: 1c8df67eca679e21cbbe4ea2daac7f761fc952f17b25f99d2673a4782ffa6824
-sources_digest: 85f0fc7428c6e4e3dfe8a3574ea24ed99ff361f071029bc7d1a9cbef79456bc1
+  - path: tests/test_rfq_send.sh
+    hash: da4d25d4be3529f89c4c62e9b7099278b95d98a4336a9762bfe6c01e31030a97
+sources_digest: f3048e0e552e08587e98750fa82cfc6aaf3415016df85a47fd6ab4b79c70696f
 links:
-  - to: auto-loop-harness
-    relation: validates
-    description: Protects the loop's own surfaces from unplanned edits.
   - to: send-gate
     relation: validates
+    description: rfq-send.py must be registered in the guard and pass --check-sync.
 generator:
   version: 1
 covers:
@@ -30,12 +30,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A PreToolUse tripwire hook that mechanically blocks unplanned writes to protected production surfaces (auto-loop.sh, dashboard/server.py, Dockerfile, runtime.env) unless a fresh .prod-change-approved marker exists. Fail-open on malformed stdin so harness format changes don't lock all edits; no-ops entirely when CLAUDE_PROJECT_DIR points to /app, deferring to PROMPT.md's OPREQ authorization machine. A tripwire, not a boundary — sed -i in Bash bypasses it.
+scripts/prod-mechanism-guard.py is a PreToolUse hook that blocks edits to production-critical surfaces (auto-loop.sh, send-gate.py, deploy/runtime.env, etc.) with exit code 2, granting a 3-hour override via a fresh .claude/.prod-change-approved marker (stale markers rejected via os.utime). It fails open on malformed JSON, no-ops on container paths like /app, and --check-sync parses CLAUDE.md's '## Prod-Mechanism Change Rule' to detect drift between documented and actual protected lists.
 
 ## Related
 
-- validates [[auto-loop-harness]] — Protects the loop's own surfaces from unplanned edits.
-- validates [[send-gate]]
+- validates [[send-gate]] — rfq-send.py must be registered in the guard and pass --check-sync.
 <!-- context:generated:end -->
 
 ## Notes

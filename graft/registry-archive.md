@@ -43,7 +43,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Archives stale dated sections from a candidate registry markdown while preserving a protected live span (from ## Selected through ## Exhausted patterns / lessons) byte-identical; dry-run writes nothing, apply moves notes and frozen-pattern sections verbatim into a monthly archive, and --check stays silent when nothing is archivable.
+scripts/ops/registry-archive.py archives stale dated sections from a candidate registry markdown file while preserving a protected live span (from '## Selected' through the end of '## Exhausted patterns / lessons') byte-identical. It moves notes and frozen-pattern sections verbatim into a monthly archive, inserts pointer lines, is idempotent, stays silent in --check when nothing is archivable, and refuses malformed month arguments. Frozen-pattern sections inside the protected region are never moved.
 <!-- context:generated:end -->
 
 ## Notes

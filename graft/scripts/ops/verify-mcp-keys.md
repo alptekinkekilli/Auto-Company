@@ -1,4 +1,4 @@
-# scripts/ops/verify-mcp-keys.py · [[auto-loop-harness]] [[mcp-verification]]
+# scripts/ops/verify-mcp-keys.py · [[mcp-runtime-verification]]
 
 Post-deploy check that each MCP server's key is present and well-shaped in the loop process's own environment, without ever printing a secret.
 

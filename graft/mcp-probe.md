@@ -11,8 +11,11 @@ sources:
     hash: 07482a8311b81667003a304c3741feed20e311f1e28263a5bb3bcc5599e962ce
 sources_digest: 6ff1872f4bc57b780d21f82bde755d58401545251d18bfb0f129b93c13091014
 links:
-  - to: mcp-config-sync-invariant
+  - to: mcp-config-sync
     relation: validates
+    description: >-
+      The probe validates the generated config against the manifest and
+      readcheck requirements.
 generator:
   version: 1
 covers:
@@ -65,11 +68,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Deterministic preflight probe (jcode-mcp-probe.py) that validates MCP servers against a mock stdio server with no model/network: exact-match success, missing/extra servers, destructive-tool denylist coverage, and readcheck requirements. Requires at least one proven readcheck per server (with exemptions like browseros) and that the manifest's destructive tool list exactly matches live tools.
+scripts/core/jcode-mcp-probe.py deterministically probes MCP stdio servers (no model/network) to verify the live server set matches the manifest, destructive tools match exactly, the denylist covers base and per-server tools, and each non-exempt server has at least one proven readcheck. Failures include missing/extra servers, unexpected destructive tools, readcheck isError/error-prefixed content, and server death.
 
 ## Related
 
-- validates [[mcp-config-sync-invariant]]
+- validates [[mcp-config-sync]] — The probe validates the generated config against the manifest and readcheck requirements.
 <!-- context:generated:end -->
 
 ## Notes

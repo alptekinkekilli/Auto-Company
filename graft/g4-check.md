@@ -1,5 +1,5 @@
 ---
-name: g4 check
+name: G4 check
 slug: g4-check
 type: system
 sources:
@@ -11,6 +11,7 @@ sources_digest: 542228c29abd6900d4324bc37cd02aeb0e7333c24f02e4c7a73a5a887d54d8a6
 links:
   - to: send-gate
     relation: uses
+    description: send-gate.py calls g4_live for firm-name matching.
 generator:
   version: 1
 covers:
@@ -51,11 +52,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Pure decision logic matching register addresses/registry IDs/domains against website data, with Turkish dotted/dotless İ-ı folding, a coincidence guard rejecting different addresses on the same street pattern, and context-dependent number matching (10-digit vergi no accepted bare, 6-digit sicil requires the word 'sicil' nearby).
+scripts/ops/g4-check.py is the pure decision logic for firm-address/registry anchoring: address_anchor matches register vs website addresses, registry_id_anchor matches MERSİS/vergi no/ticaret sicil numbers, and domains_in extracts domains while skipping authority sources. Turkish dotted/dotless İ-ı folding must not break matches; a different address on the same street pattern must be rejected (coincidence guard); shorter numbers need more context (10-digit vergi no accepted bare, 6-digit sicil requires the word 'sicil' nearby).
 
 ## Related
 
-- uses [[send-gate]]
+- uses [[send-gate]] — send-gate.py calls g4_live for firm-name matching.
 <!-- context:generated:end -->
 
 ## Notes

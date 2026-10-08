@@ -25,7 +25,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Watcher that fires only above threshold and respects cooldown, distinguishing an empty bridge queue with many attribution-Held firms as a company gap (not an operator gap); detects EKAP-only queues (a v1 blind spot) and clears state when the queue drains so the next backlog alerts immediately.
+scripts/ops/registry-queue-watch.py (APP-277) fires only above threshold and respects cooldown, and never misattributes a bottleneck: an empty bridge queue with many attribution-Held firms is reported as a company gap, not an operator gap. It distinguishes EKAP-only queues (a v1 blind spot), persists cooldown in .registry-queue-state.json, and clears state when the queue drains so the next backlog alerts immediately.
 <!-- context:generated:end -->
 
 ## Notes

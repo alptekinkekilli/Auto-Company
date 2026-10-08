@@ -1,4 +1,4 @@
-# scripts/ops/turn-bloat-brake.py · [[auto-loop-harness]] [[turn-bloat-brake]]
+# scripts/ops/turn-bloat-brake.py · [[cycle-escalation-brakes]] [[turn-bloat-brake]]
 
 CLI tool that tracks consecutive BLOATED cycles and escalates to a hard persist-and-end mandate once a streak crosses a threshold, resetting on any non-BLOATED verdict.
 

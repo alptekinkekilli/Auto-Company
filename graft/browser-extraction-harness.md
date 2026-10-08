@@ -1,15 +1,12 @@
 ---
 name: Browser extraction harness
 slug: browser-extraction-harness
-type: system
+type: file
 sources:
   - path: scripts/ops/browse-extract.py
     hash: ec67b37ee0a24df3eb9d5b06f16e7172c456153e7c7b8bd61edc2b54f7543aa1
 sources_digest: 7514f4be06d24fc6714b50b6a7ae6ea56f424c1b9ce6bc87210364785a9290f3
-links:
-  - to: ki-k-decision-reader
-    relation: uses
-    description: Alternative single-call path for fetching decision pages.
+links: []
 generator:
   version: 1
 covers:
@@ -44,11 +41,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Collapses the multi-step MCP browse-and-extract workflow into a single bash invocation, cutting context re-billing from ~5-9 chat turns per page to one. Walks URLs in one background tab via BrowserOS MCP gateway, runs fixed wait plus optional server-side grep over rendered content (so SPAs are searched post-render), and clips output. Read-only by design, reports timed-out wait as waited=timeout so zero grep matches are treated as inconclusive.
-
-## Related
-
-- uses [[ki-k-decision-reader]] — Alternative single-call path for fetching decision pages.
+Collapses the multi-step MCP browse-and-extract workflow (open tab, navigate, wait, grep, read) into a single bash invocation, cutting context re-billing from ~5-9 chat turns per page to one. Read-only by design, runs server-side grep over rendered content so SPAs are searched post-render, reports timed-out waits as inconclusive, and closes the tab even on error unless --keep-tab.
 <!-- context:generated:end -->
 
 ## Notes

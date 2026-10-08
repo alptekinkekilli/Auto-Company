@@ -4,13 +4,16 @@ slug: mixed-harness-attribution
 type: concept
 sources:
   - path: scripts/core/auto-loop.sh
-    hash: b3850b8050b576a46bfa19953ae0492889b603967275721a09344b9589552d56
+    hash: 429ad6c9ab94694e7399685cf7b7f63d5d8c387141baef14d1adb065cdca6292
   - path: tests/test_mixed_harness.sh
     hash: bd8a1f81df957e0bfdfacf44982a2274a58809d5f9bd8618c64c3efeecb868cc
-sources_digest: 62a3c4f6dbcb58f9de9410deea3e6471baef56c19fd63ec4821fb443e84e4b8c
+sources_digest: a6f74885e019dce4ee1f3a8a0a8c876891463e88332a6f1e136eb7a2a6f2ea74
 links:
   - to: auto-loop-core-engine
     relation: part_of
+    description: >-
+      run_engine_cycle() and extract_cycle_metadata() implement this in
+      auto-loop.sh.
 generator:
   version: 1
 covers: []
@@ -18,11 +21,11 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-When claude→jcode and codex→cli run in the same loop, per-cycle CYCLE_HARNESS_USED/CYCLE_PROVIDER_USED override any global LOOP_HARNESS; stale jcode cost must not leak into subsequent CLI cycles, and the REVISE-2 gate A5 persists a claude attempt's cost under its own run ID before a codex retry. Unmeasured/zero-cost jcode cycles fail and latch.
+When claude→jcode and codex→cli run in the same loop, per-cycle variables CYCLE_HARNESS_USED and CYCLE_PROVIDER_USED override any global LOOP_HARNESS. Stale jcode cost must not leak into subsequent CLI cycles; unmeasured or zero-cost jcode cycles fail and latch; unparseable attempt costs block the retry; and the REVISE-2 gate A5 persists a claude attempt's cost under its own run ID before a codex retry.
 
 ## Related
 
-- part of [[auto-loop-core-engine]]
+- part of [[auto-loop-core-engine]] — run_engine_cycle() and extract_cycle_metadata() implement this in auto-loop.sh.
 <!-- context:generated:end -->
 
 ## Notes

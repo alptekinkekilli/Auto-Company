@@ -9,10 +9,9 @@ sources:
     hash: 56e9073d5a9447df622cb3e0873d553053a3b16089534d427c177db772b933dd
 sources_digest: a00d09651be48cf7015196cad5672555ff241c03a2b27887a7ef361af457aa42
 links:
-  - to: operator-action-router
-    relation: uses
-  - to: refusal-format-contract
+  - to: refusal-format
     relation: produces
+    description: The operator-decision panel writes the refusal format.
 generator:
   version: 1
 covers:
@@ -389,12 +388,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Serves the cockpit dashboard: status parsing, action dispatch, engine runtime state, settings resolution, cost summary, and log tailing. Parses the persistent auto-loop.log to reflect the latest boot (including escalated cycles and legacy tier lines), anchors spend windows on ccusage blockStart with rolling fallback, and splits weekly cost on Monday-UTC.
+dashboard/server.py is the cockpit web server: it parses the persistent auto-loop.log to reflect the latest boot (including escalated cycles and legacy tier lines), resolves settings, computes cost summaries with spend-window anchoring on ccusage blockStart (rolling fallback), tails log files (multibyte-safe, banner recovery), and splits weekly cost on Monday-UTC. It imports a sibling sentry_client, which tests must account for when loading via importlib.
 
 ## Related
 
-- uses [[operator-action-router]]
-- produces [[refusal-format-contract]]
+- produces [[refusal-format]] — The operator-decision panel writes the refusal format.
 <!-- context:generated:end -->
 
 ## Notes

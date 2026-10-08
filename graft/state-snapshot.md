@@ -1,5 +1,5 @@
 ---
-name: State snapshot
+name: state snapshot
 slug: state-snapshot
 type: system
 sources:
@@ -9,11 +9,9 @@ sources:
     hash: 44428d24f7cb21d69c1f03477dd4b07ce31b98c94879131f75d58d146aa08729
 sources_digest: b22d6b1127d5b052b726fc0dc5a244376cf2f7f1b8d621a83596632c9199dcd2
 links:
-  - to: auto-loop-core-engine
-    relation: produces
-  - to: work-window-brake
-    relation: produces
-    description: The DELTA line is the input the work-window brake parses.
+  - to: idle-skip-mechanism
+    relation: uses
+    description: 'The DELTA: none text drives idle detection.'
 generator:
   version: 1
 covers:
@@ -36,12 +34,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A one-call probe that collapses the per-cycle fan-out of state checks into a single turn, hashing five watched surfaces (directives, OPREQ ledger, Wowcar sources) and computing a DELTA against the previous snapshot. Always exits 0 so a probe failure never kills the cycle; 'none' does not mean 'nothing to do' — standing orders still apply. Implements OPREQ-INFRA-ANALYST-ROUTING-001 Option B by making the auditor report hash delta-visible.
+scripts/ops/state-snapshot.py produces the DELTA change-detection snapshot: it parses directive status/sha16, OPREQ open counts, and computes DELTA outputs (first-run, none, named changes, error exclusion). A missing ledger prints an error but still exits 0, and errored fields are excluded from the next DELTA. All fields are local since a 2026-08-24 re-charter (bridge/send/reply fields retired).
 
 ## Related
 
-- produces [[auto-loop-core-engine]]
-- produces [[work-window-brake]] — The DELTA line is the input the work-window brake parses.
+- uses [[idle-skip-mechanism]] — The DELTA: none text drives idle detection.
 <!-- context:generated:end -->
 
 ## Notes

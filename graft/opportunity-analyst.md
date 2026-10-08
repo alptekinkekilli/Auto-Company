@@ -13,16 +13,19 @@ sources:
     hash: 9c45147f1730fc30545b94a30428d54e0bd40f04506aa3db00614880ec93d677
 sources_digest: 466cd5357bc86cd54e0c0bc2a6c4b3756df89d6f333d6ec3e184072f3ff7d3a8
 links:
-  - to: auto-loop-daemon
+  - to: autonomous-loop-orchestrator
     relation: produces
-    description: >-
-      Writes analysis-directive.md and candidate-registry.md that inform the
-      loop's directives.
-  - to: directive-writer
+    description: The analyst's report and directive feed the loop's human-directive.md.
+  - to: directive-write-gate
     relation: uses
     description: >-
-      Restores human-directive.md via directive_writer.py with snapshot/hash
-      guardrails.
+      Calls directive_writer.py for safe restore and promote_directive.py as the
+      promotion gate.
+  - to: registry-merge-tool
+    relation: uses
+    description: >-
+      merge_registry.py splices the live decision-state span of
+      candidate-registry.md with invariant checks.
 generator:
   version: 1
 covers:
@@ -87,12 +90,13 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Independent 'second-brain' (APP-221) that invokes Codex (gpt-5.6-sol) or jcode (claude-opus-5) with the autocompany-opportunity-director skill to audit the Tender Track / Wowcar portfolio and produce a decision report plus candidate-registry update. Never auto-applies directives: writes analysis-directive.md as draft only, splices only the live span of candidate-registry.md via merge_registry.py, and runs a deterministic promotion gate. Records thread/session IDs to logs for budget exclusion. The 2026-08-24 re-charter retires registry merge and directive promotion for the jcode variant, which now writes only analysis-directive.md in audit-only mode.
+An independent 'second-brain' (APP-221) that invokes an AI model (Codex or jcode) with the autocompany-opportunity-director skill to audit the Tender Track portfolio and produce a decision report plus candidate-registry update. Two variants exist: the legacy codex path (opportunity-analyst.sh) with three passes (report, registry merge, promotion gate) and the jcode variant (opportunity-analyst-jcode.sh) that since the 2026-07-31 cutover and 2026-08-24 re-charter writes only analysis-directive.md in audit-only mode, retiring the registry merge and promotion passes. Never auto-applies directives; records session IDs for budget exclusion.
 
 ## Related
 
-- produces [[auto-loop-daemon]] — Writes analysis-directive.md and candidate-registry.md that inform the loop's directives.
-- uses [[directive-writer]] — Restores human-directive.md via directive_writer.py with snapshot/hash guardrails.
+- produces [[autonomous-loop-orchestrator]] — The analyst's report and directive feed the loop's human-directive.md.
+- uses [[directive-write-gate]] — Calls directive_writer.py for safe restore and promote_directive.py as the promotion gate.
+- uses [[registry-merge-tool]] — merge_registry.py splices the live decision-state span of candidate-registry.md with invariant checks.
 <!-- context:generated:end -->
 
 ## Notes

@@ -10,7 +10,8 @@ sources:
 sources_digest: b299afbc28e7c74d221a99c8d8786bdf203e494016527d928a64c829a29f6ef0
 links:
   - to: work-window-brake
-    relation: depends_on
+    relation: uses
+    description: The watchdog layers on top of the work-window state.
 generator:
   version: 1
 covers:
@@ -39,11 +40,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Alarm layer detecting consecutive empty work cycles while the window is open; emits an alarm only once when the consecutive count crosses the threshold (not on every violation), resets on real work, has an escape clause for enumerated blockers, and a failed cycle is not counted as a violation.
+scripts/ops/work-window-watchdog.py is an alarm layer detecting consecutive empty work cycles while the work window is open. It emits an alarm only once when the consecutive count crosses the threshold (default overridable via WORK_WINDOW_WATCHDOG_THRESHOLD), not on every subsequent violation, resets on real work, and does not count a 'failed' cycle as a violation. An escape clause covers enumerated blockers.
 
 ## Related
 
-- depends on [[work-window-brake]]
+- uses [[work-window-brake]] — The watchdog layers on top of the work-window state.
 <!-- context:generated:end -->
 
 ## Notes

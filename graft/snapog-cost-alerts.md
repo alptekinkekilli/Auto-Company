@@ -15,12 +15,11 @@ sources:
     hash: 518ec45652bc5010bbd34856e527e2dc9c2dfa525aea151ff467f3a802c9da81
 sources_digest: fe1d8fd6fcb0f308eb0c4072f436e2986ea169f87521e188c20ca981540b20fa
 links:
-  - to: snapog-schema
-    relation: uses
-    description: Queries usage_events and api_keys for metrics.
-  - to: snapog-worker
+  - to: snapog-service
     relation: part_of
-    description: Scheduled cron entry point within the worker.
+    description: >-
+      The cron entry point lives in the same Worker; scheduled handler calls
+      runCostAlertCheck.
 generator:
   version: 1
 covers:
@@ -70,12 +69,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Cron-triggered cost-alerting system (every 6h) running five independent checks against D1 and R2 (via a thin Cloudflare Analytics GraphQL client). Thresholds isolated in one file (ALERT_THRESHOLDS) sourced from the CFO cost model so numbers can be revised without touching check logic; severity escalates to critical at 1.5x. Checks are deliberately isolated — a thrown error is logged and treated as no alert to prevent false positives. Webhook delivery is format-agnostic, falls back to log-only when ALERT_WEBHOOK_URL unset, and never throws on delivery failure.
+A cron-triggered (every 6h) cost-alerting pipeline with five isolated checks (D1 writes/day, 14-day cache hit rate, new signups, active users, R2 storage via a thin GraphQL client). Thresholds live in one file sourced from the CFO cost model so they can be revised without touching check logic; severity escalates to critical at 1.5x. Checks fail open (errors become no-alert) and delivery is log-only when ALERT_WEBHOOK_URL is unset.
 
 ## Related
 
-- uses [[snapog-schema]] — Queries usage_events and api_keys for metrics.
-- part of [[snapog-worker]] — Scheduled cron entry point within the worker.
+- part of [[snapog-service]] — The cron entry point lives in the same Worker; scheduled handler calls runCostAlertCheck.
 <!-- context:generated:end -->
 
 ## Notes

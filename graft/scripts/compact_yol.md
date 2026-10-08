@@ -1,4 +1,4 @@
-# scripts/compact_yol.py · [[compact-path-canonicalization]] [[compact-ritual]] [[compact-ritual-hooks]]
+# scripts/compact_yol.py · [[compact-ritual]] [[compact-ritual-tooling]]
 
 Module that derives repo-specific /tmp paths for compact ritual files so concurrent projects never read each other's resume/preflight state.
 

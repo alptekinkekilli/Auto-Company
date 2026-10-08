@@ -11,6 +11,7 @@ sources_digest: 9bab211188e6b3ffdbb951a4b1dfcd62caafd3baa64b00f118f99962ad90898b
 links:
   - to: turn-economy-audit
     relation: uses
+    description: Consumes the BLOATED verdicts produced by turn-audit.
 generator:
   version: 1
 covers:
@@ -48,11 +49,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Tracks consecutive BLOATED verdicts per app and triggers an alarm plus hard feedback after a configurable streak threshold (default K=3); streak increments only on BLOATED, resets on ok/CHATTY, fires once on crossing, and has a kill switch.
+scripts/ops/turn-bloat-brake.py tracks consecutive BLOATED verdicts per app and triggers an alarm and hard feedback after a configurable streak threshold (default K=3, overridable via TURN_BLOAT_STREAK). The streak increments only on BLOATED, resets on ok/CHATTY, fires exactly once when crossing the threshold, suppresses repeat alarms, and a kill switch (TURN_BLOAT_ENABLED=0) prevents state writes.
 
 ## Related
 
-- uses [[turn-economy-audit]]
+- uses [[turn-economy-audit]] — Consumes the BLOATED verdicts produced by turn-audit.
 <!-- context:generated:end -->
 
 ## Notes

@@ -1,7 +1,7 @@
 ---
 name: Operator action router
 slug: operator-action-router
-type: system
+type: file
 sources:
   - path: scripts/ops/operator-action-router.py
     hash: 25fd8206f44d0baa7b87a910d0d1846fe5ef1b155289d1a769994aff6817587e
@@ -11,12 +11,10 @@ sources_digest: eeb9735b11ba0ec109f87f095cfa8affc6afd00ebf34698caca0a50d1304a1aa
 links:
   - to: operator-escalation-gate
     relation: uses
-    description: Reads open OPREQ entries from memories/operator-requests.md.
-  - to: operator-request-notify
-    relation: produces
+    description: Parses the same OPREQ ledger in memories/operator-requests.md.
   - to: telegram-notification-channel
     relation: uses
-    description: Sends digest via telegram-notify.sh.
+    description: Sends the digest via scripts/core/telegram-notify.sh.
 generator:
   version: 1
 covers:
@@ -72,13 +70,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Telegram firehose digest consolidating the operator's actionable items into a single 'what needs YOU' message, covering only locally-truthful signals: LOOP_HOLD latch, open OPREQ entries, and PENDING directive past a floor age. Hashes the open set's stable identity and only speaks when the set changes or ROUTER_REPEAT_HOURS elapses; age is excluded from the directive identity to avoid hourly re-alerts; state clears when the set empties so the next open item alerts immediately.
+Telegram firehose digest consolidating the operator's actionable items into a single 'what needs YOU' message, covering only locally-truthful signals: LOOP_HOLD latch, open OPREQ entries, and a PENDING directive past a floor age. Hashes the open set's stable identity and only speaks when the set changes or ROUTER_REPEAT_HOURS elapses; age is excluded from the directive identity to avoid hourly re-alerts, and state clears when the set empties so the next open item alerts immediately.
 
 ## Related
 
-- uses [[operator-escalation-gate]] — Reads open OPREQ entries from memories/operator-requests.md.
-- produces [[operator-request-notify]]
-- uses [[telegram-notification-channel]] — Sends digest via telegram-notify.sh.
+- uses [[operator-escalation-gate]] — Parses the same OPREQ ledger in memories/operator-requests.md.
+- uses [[telegram-notification-channel]] — Sends the digest via scripts/core/telegram-notify.sh.
 <!-- context:generated:end -->
 
 ## Notes

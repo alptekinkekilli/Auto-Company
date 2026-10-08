@@ -31,7 +31,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Implements the turn-economy policy (section 4): session parsing, turn/message counting, cache accounting, and verdict thresholds (CHATTY/BLOATED/ok) with boundary values pinned to prevent silent recalibration drift.
+scripts/ops/turn-audit.py implements the turn-economy policy (section 4): session parsing, turn/message counting, cache accounting, and verdict thresholds (CHATTY/BLOATED/ok) with boundary values pinned (55 vs 56 turns, 66 turns, duration-based bloating) to prevent silent recalibration drift. The --summary-last flag selects the newest session. Threshold bars were recalibrated to p80/p90 with watchdog proximity and cost rationale.
 <!-- context:generated:end -->
 
 ## Notes

@@ -11,8 +11,9 @@ sources:
     hash: 21c4be05f1922a08fa185aaa94f73941a785d5f380b7770431bdee7bf78115d6
 sources_digest: 180b81c101d03061f68fb213f66f64bd3983edca109c0019c3e995995fdd477a
 links:
-  - to: mcp-config-sync-invariant
+  - to: mcp-config-sync
     relation: part_of
+    description: The key-fallback behavior is part of the MCP config generation.
 generator:
   version: 1
 covers:
@@ -32,11 +33,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The .mcp.json config embeds a Keychain fallback that fires on macOS when a literal ${VAR} placeholder or unset variable arrives, but never inside the container where the `security` binary is absent. Secrets are placed in the server spec's env block (never argv) to avoid ps leaks; the generator refuses to write a partial config when a required variable is unset.
+The .mcp.json MCP server config uses a Keychain fallback on macOS (via the `security` binary) that must never fire inside the container where `security` does not exist. A literal `${VAR}` placeholder or an unset variable triggers the Keychain; a real key passes through untouched. Secrets are deliberately placed in the ENV block rather than argv to avoid leaking via `ps` — a property pinned by tests that stub a hermetic `security` binary.
 
 ## Related
 
-- part of [[mcp-config-sync-invariant]]
+- part of [[mcp-config-sync]] — The key-fallback behavior is part of the MCP config generation.
 <!-- context:generated:end -->
 
 ## Notes

@@ -1,4 +1,4 @@
-# scripts/ops/idle-skip-note.py · [[idle-skip-mechanism]] [[idle-skip-note-recorder]]
+# scripts/ops/idle-skip-note.py · [[auto-loop-orchestration]] [[idle-skip-audit-trail]] [[idle-skip-mechanism]]
 
 Records a model-free idle-skip as one line per UTC day in consensus.md, updated in place and written atomically, so the loop leaves auditable 'checked, nothing moved' evidence without bloating the prompt.
 

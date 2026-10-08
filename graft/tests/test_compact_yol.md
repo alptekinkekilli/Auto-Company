@@ -1,4 +1,4 @@
-# tests/test_compact_yol.py · [[test-harnesses]]
+# tests/test_compact_yol.py · [[compact-ritual]]
 
 Test suite verifying compact_yol derives ritual file paths from repo name and never raises exceptions.
 

@@ -1,5 +1,5 @@
 ---
-name: Wowcar revenue relabel acceptance
+name: Wowcar Revenue Relabel Acceptance
 slug: wowcar-revenue-relabel-acceptance
 type: system
 sources:
@@ -7,11 +7,11 @@ sources:
     hash: bc164912338c15636cc9183c9327a6f77fdab6aebc86e2747f197f01f824fab2
 sources_digest: 4ac41bf99d27b7821e402c8d05774f95ac477ff958d361739e49e65a248d1add
 links:
-  - to: state-snapshot
+  - to: state-snapshot-consensus
     relation: uses
     description: >-
-      Shares the same hashing discipline (SHA-256 manifest, canonical digests)
-      used to detect Wowcar source changes.
+      The Wowcar source tree hash in state-snapshot.py covers the same
+      projects/wowcar/ files this harness pins as baseline.
 generator:
   version: 1
 covers:
@@ -112,11 +112,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A fail-closed acceptance harness pinning the live Wowcar repo as an immutable baseline and proving a candidate copy with eight approved vocabulary edits plus six column-width adjustments produces byte-identical outputs. Hard-pins CPython 3.13.5, LibreOffice, and exact library versions; verifies the whole tree against a SHA-256 manifest; reverses edits deterministically to prove byte-equality.
+A fail-closed acceptance harness for a temporary Wowcar revenue relabel, pinning the live repository as an immutable baseline and proving a candidate copy with eight approved vocabulary edits (replacing 'Faiz geliri' with 'Vade farkı geliri') plus six column-width adjustments produces byte-identical outputs. It hard-pins CPython 3.13.5, LibreOffice, and exact library versions, compares the tree against a pinned SHA-256 manifest, reverses edits deterministically to prove byte-equality, and runs the build/recalc/test/capraz chain plus a numeric probe. Deterministic environment settings (PYTHONHASHSEED=0, PYTHONDONTWRITEBYTECODE=1) and exact form-distribution/anchor counts make the edits verifiable.
 
 ## Related
 
-- uses [[state-snapshot]] — Shares the same hashing discipline (SHA-256 manifest, canonical digests) used to detect Wowcar source changes.
+- uses [[state-snapshot-consensus]] — The Wowcar source tree hash in state-snapshot.py covers the same projects/wowcar/ files this harness pins as baseline.
 <!-- context:generated:end -->
 
 ## Notes

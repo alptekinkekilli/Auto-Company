@@ -1,5 +1,5 @@
 ---
-name: Compact ritual
+name: Compact Ritual
 slug: compact-ritual
 type: system
 sources:
@@ -13,13 +13,20 @@ sources:
     hash: 721ece8bebbdbef80a1b67bb8573a3083b213175e0bda2277a9c46b976c300e1
   - path: scripts/session-brief.py
     hash: f71655446ca0f9824d90922f64f2bbb113d24b5fc01df2dd8ff3fdfa99827dae
-sources_digest: 8904b3b66b2a02bfb4a1c298774e4cbe51c53b421aa0c5ab81e9035faefa1c2e
+  - path: tests/test_compact_anchor_sync.py
+    hash: 1f6ccedb49c760b6902820e32ca23f00f80927518fff9288ab1273aca4711378
+  - path: tests/test_compact_ritual_hardening.sh
+    hash: 2d94865ee02e9d01b5770928d95abef8e3f9157576dc40326fb74e8a164408f9
+  - path: tests/test_compact_yol.py
+    hash: 707405adc7816737d22c7079fe2e3484cb6959a80f4b4323acb76f44d4074e49
+sources_digest: 6b3a535d4cd70b2cb1cc9c7e020b4c3d40e781ce37ab67eef2af1eff5ecfa371
 links:
   - to: auto-loop-harness
     relation: uses
     description: >-
-      The compact ritual runs as part of the loop lifecycle; session-brief.py is
-      a SessionStart hook.
+      session-brief.py is a SessionStart hook that injects a measured session
+      brief at startup/resume/compact, reading the resume path and freshness
+      from compact_yol.
 generator:
   version: 1
 covers:
@@ -68,15 +75,48 @@ covers:
   - symbol: main
     kind: function
     at: 'scripts/session-brief.py:L31-L78'
+  - symbol: _load
+    kind: function
+    at: 'tests/test_compact_anchor_sync.py:L41-L45'
+  - symbol: check
+    kind: function
+    at: 'tests/test_compact_anchor_sync.py:L48-L53'
+  - symbol: test_hepsi_gecti
+    kind: function
+    at: 'tests/test_compact_anchor_sync.py:L88-L89'
+  - symbol: check
+    kind: function
+    at: 'tests/test_compact_yol.py:L31-L36'
+  - symbol: _load
+    kind: function
+    at: 'tests/test_compact_yol.py:L39-L43'
+  - symbol: git
+    kind: function
+    at: 'tests/test_compact_yol.py:L46-L49'
+  - symbol: yeni_repo
+    kind: function
+    at: 'tests/test_compact_yol.py:L52-L59'
+  - symbol: temiz_env
+    kind: function
+    at: 'tests/test_compact_yol.py:L62-L63'
+  - symbol: zaman_asimi
+    kind: function
+    at: 'tests/test_compact_yol.py:L120-L122'
+  - symbol: git_yok
+    kind: function
+    at: 'tests/test_compact_yol.py:L124-L125'
+  - symbol: test_hepsi_gecti
+    kind: function
+    at: 'tests/test_compact_yol.py:L163-L164'
 ---
 <!-- context:generated:start -->
 ## Summary
 
-The context-compaction machinery: compact_yol.py derives ritual file paths from repository names to prevent cross-project collisions in shared /tmp paths; compact-preflight.py, compact-resume-lint.py, and compact-postcheck.py enforce that a resume is stale by mtime AND lint-passing, and that all anchors are present. session-brief.py is the SessionStart hook that injects a measured brief and never blocks the session.
+The context-compaction ritual: preflight, resume-lint, postcheck, and path resolution. compact-preflight.py treats a resume as stale not only by mtime but also by running compact-resume-lint.py (so a fresh but lint-failing resume is flagged); compact-postcheck.py computes missing anchors and writes a JSON line to the history log; compact_yol.py derives ritual file paths from repository names to prevent cross-project collisions in shared /tmp paths, degrading gracefully to directory-name fallbacks on git timeouts. Core anchor strings (İLK İŞ, KARAR, DOĞRULANMAMIŞ, BEKLEYEN, İZLEYİCİ) must stay identical across the lint script, postcheck, the resume template, and the hardening test fixture — a hardcoded BEKLENEN tuple makes any intentional change explicit for reviewers.
 
 ## Related
 
-- uses [[auto-loop-harness]] — The compact ritual runs as part of the loop lifecycle; session-brief.py is a SessionStart hook.
+- uses [[auto-loop-harness]] — session-brief.py is a SessionStart hook that injects a measured session brief at startup/resume/compact, reading the resume path and freshness from compact_yol.
 <!-- context:generated:end -->
 
 ## Notes
