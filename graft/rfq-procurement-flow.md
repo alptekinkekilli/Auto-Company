@@ -1,5 +1,5 @@
 ---
-name: RFQ procurement flow
+name: RFQ Procurement Flow
 slug: rfq-procurement-flow
 type: system
 sources:
@@ -11,14 +11,16 @@ sources:
     hash: 09815061d704b6bd2034469e3bfe3dfac7417f25761ea9ae845be4c5367fd225
 sources_digest: 07ca8589e6cadd0d9c4f2ebb8320ea4d59f8be3a891bd9bab62ae638d7dcb348
 links:
-  - to: airtable-read-write-guards
-    relation: uses
-    description: Reads/writes the Wowcar OPEX RFQ Airtable table through the wrappers.
-  - to: operator-alerting-watchers
+  - to: fail-closed-operational-brakes
+    relation: part_of
+    description: >-
+      rfq-send.py's eligibility gate is a fail-closed brake: any check that
+      cannot complete is a REFUSE, never an ALLOW.
+  - to: telegram-notification-bridge
     relation: uses
     description: >-
-      rfq-reply-watch.py shares the notify/state-file pattern with the other
-      watchers.
+      rfq-reply-watch.py notifies operators of new replies or silence via
+      telegram-notify.sh.
 generator:
   version: 1
 covers:
@@ -116,12 +118,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The anonymous OPEX RFQ email flow for a hidden client: rfq-send.py is a fail-closed CLI that decides eligibility (opt-out, already-sent, caps, anonymity denylist scan for 'wowcar', and the §15 'Sponsor İzni' checkbox which must be manually TRUE and is deliberately last and unsettable programmatically), renders content from rfq_template.py, and delivers via ForwardEmail. rfq-reply-watch.py is the advisory half that detects new replies or silence (never writes back), and rfq_template.py separates presentation (anonymized scope, logo as CID attachment because Gmail doesn't render base64 data-URIs) from send logic. Form-only vendors are refused because the machine never fills web forms.
+The anonymous OPEX RFQ email flow for the hidden Wowcar client: rfq-send.py is the fail-closed sender (eligibility gate, anonymity denylist scan, §15 Sponsor İzni checkbox that cannot be set programmatically, daily/total caps, ForwardEmail delivery), rfq_template.py holds content templates with a CID logo attachment, and rfq-reply-watch.py is the advisory watcher for replies/silence. A Cloudflare Worker writes incoming vendor replies into the RFQ Airtable table; the watcher never writes back.
 
 ## Related
 
-- uses [[airtable-read-write-guards]] — Reads/writes the Wowcar OPEX RFQ Airtable table through the wrappers.
-- uses [[operator-alerting-watchers]] — rfq-reply-watch.py shares the notify/state-file pattern with the other watchers.
+- part of [[fail-closed-operational-brakes]] — rfq-send.py's eligibility gate is a fail-closed brake: any check that cannot complete is a REFUSE, never an ALLOW.
+- uses [[telegram-notification-bridge]] — rfq-reply-watch.py notifies operators of new replies or silence via telegram-notify.sh.
 <!-- context:generated:end -->
 
 ## Notes

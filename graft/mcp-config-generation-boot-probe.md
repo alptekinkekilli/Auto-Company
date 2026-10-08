@@ -1,5 +1,5 @@
 ---
-name: MCP config generation & boot probe
+name: MCP config generation + boot probe
 slug: mcp-config-generation-boot-probe
 type: system
 sources:
@@ -9,12 +9,11 @@ sources:
     hash: 60fdd2addf2f53741d03e21002a00b6ee9d8895af1fae9746a51308e67672b67
 sources_digest: 5c486cb9b9e24ea7acf023003a03ae50970460766baf723ea3eb1774622a9ed8
 links:
-  - to: context7-compliance-checker
-    relation: validates
+  - to: cost-auditor
+    relation: produces
     description: >-
-      context7-check.py inspects cycle ndjson logs to detect code importing
-      external libraries without first calling Context7, complementing the boot
-      probe.
+      Cost-audit reads the MCP schema cache and JCODE_TOOLS_DENY to report
+      advertised-vs-called tool surface.
 generator:
   version: 1
 covers:
@@ -79,11 +78,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Two stdlib-only components that make jcode's MCP layer deterministic and verifiable. jcode-mcp-config.py generates ~/.jcode/mcp.json from project .mcp.json (jcode v0.64.2 ignores project config), wrapping HTTP/SSE servers in mcp-remote stdio bridge, applying hard-coded overrides for linear/airtable hosted endpoints, leaving secrets unexpanded in argv to avoid ps leaks, and stamping freshness (epoch+sha256). jcode-mcp-probe.py is a deterministic boot probe that spawns each server and speaks JSON-RPC 2.0 over stdio, enforcing five fail-closed gates (exact server-set match, handshake within timeout, destructive tools exactly matching manifest, JCODE_TOOLS_DENY coverage, readcheck with no protocol error). A documented gotcha: tools/list alone proved insufficient — Context7 passed boot for days while never being called, so a real read call is now mandatory.
+Two-part MCP trust chain: jcode-mcp-config.py generates ~/.jcode/mcp.json from project .mcp.json (wrapping HTTP/SSE servers in mcp-remote stdio bridge, applying hosted-endpoint overrides for linear/airtable, leaving secrets unexpanded in argv to avoid ps leaks, atomic write with freshness stamp), and jcode-mcp-probe.py deterministically verifies it at boot via JSON-RPC 2.0 over stdio. The probe enforces five fail-closed gates including exact server-set match, live destructive tools matching the manifest, and a mandatory read-only readcheck per server — because tools/list alone proved insufficient (Context7 passed boot for days while never being called).
 
 ## Related
 
-- validates [[context7-compliance-checker]] — context7-check.py inspects cycle ndjson logs to detect code importing external libraries without first calling Context7, complementing the boot probe.
+- produces [[cost-auditor]] — Cost-audit reads the MCP schema cache and JCODE_TOOLS_DENY to report advertised-vs-called tool surface.
 <!-- context:generated:end -->
 
 ## Notes

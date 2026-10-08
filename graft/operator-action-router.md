@@ -1,7 +1,7 @@
 ---
 name: Operator action router
 slug: operator-action-router
-type: file
+type: system
 sources:
   - path: scripts/ops/operator-action-router.py
     hash: 25fd8206f44d0baa7b87a910d0d1846fe5ef1b155289d1a769994aff6817587e
@@ -9,14 +9,15 @@ sources:
     hash: 20f6bd56ba2238d0242627275af5749560272630a1212f9f9f22159d655d99ae
 sources_digest: eeb9735b11ba0ec109f87f095cfa8affc6afd00ebf34698caca0a50d1304a1aa
 links:
-  - to: loop-lifecycle-monitoring-core-shell
-    relation: uses
-    description: >-
-      Depends on scripts/core/telegram-notify.sh and sources logs/runtime.env
-      for credentials.
+  - to: operator-escalation-gate-operator-request-notify
+    relation: depends_on
+    description: Parses the same operator-requests.md ledger format.
   - to: operator-request-notification
     relation: uses
     description: The router feeds the notification digest
+  - to: telegram-notify
+    relation: uses
+    description: Sends the digest via telegram-notify.sh with credentials from runtime.env.
 generator:
   version: 1
 covers:
@@ -72,12 +73,13 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Telegram firehose digest consolidating the operator's actionable items into a single 'what needs YOU' message, covering only locally-truthful signals: a LOOP_HOLD latch, open OPREQ entries, and a PENDING directive past a floor age. Hashes the open set's stable identity into state and only speaks when the set changes or ROUTER_REPEAT_HOURS elapses. Deliberately excludes Airtable-backed queues and Sentry liveness (need network calls or run outside the container); age is excluded from the directive identity to avoid hourly re-alerts; state clears when the set empties so the next open item alerts immediately.
+Telegram firehose digest consolidating actionable items into one 'what needs YOU' message from locally-truthful signals only: LOOP_HOLD latch, open OPREQ entries, and a PENDING directive past a floor age. Hashes the open set's stable identity and only speaks when the set changes or repeat-hours elapse; age is excluded from the directive identity to avoid hourly re-alerts, and state clears when the set empties so the next item alerts immediately.
 
 ## Related
 
-- uses [[loop-lifecycle-monitoring-core-shell]] — Depends on scripts/core/telegram-notify.sh and sources logs/runtime.env for credentials.
+- depends on [[operator-escalation-gate-operator-request-notify]] — Parses the same operator-requests.md ledger format.
 - uses [[operator-request-notification]] — The router feeds the notification digest
+- uses [[telegram-notify]] — Sends the digest via telegram-notify.sh with credentials from runtime.env.
 <!-- context:generated:end -->
 
 ## Notes

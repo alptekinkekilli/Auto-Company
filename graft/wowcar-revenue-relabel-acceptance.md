@@ -1,5 +1,5 @@
 ---
-name: Wowcar revenue relabel acceptance
+name: Wowcar Revenue Relabel Acceptance
 slug: wowcar-revenue-relabel-acceptance
 type: file
 sources:
@@ -7,11 +7,9 @@ sources:
     hash: bc164912338c15636cc9183c9327a6f77fdab6aebc86e2747f197f01f824fab2
 sources_digest: 4ac41bf99d27b7821e402c8d05774f95ac477ff958d361739e49e65a248d1add
 links:
-  - to: state-snapshot-delta-probing
-    relation: uses
-    description: >-
-      The Wowcar source tree hash in state-snapshot.py tracks the same repo this
-      harness pins as baseline.
+  - to: auto-company-ops-scripts
+    relation: part_of
+    description: An ops acceptance harness for a temporary Wowcar revenue relabel.
 generator:
   version: 1
 covers:
@@ -112,11 +110,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-wowcar-revenue-vocabulary-acceptance.py is a fail-closed acceptance harness pinning the live Wowcar repo as an immutable baseline (SHA-256 manifest + canonical JSON root digest) and proving a candidate copy with eight approved vocabulary edits plus six column-width adjustments produces byte-identical outputs. Hard-pins CPython 3.13.5, LibreOffice 25.2.3.2, and exact library versions; reverses edits deterministically to prove byte-equality; runs the full build/recalc/test/capraz chain and a numeric model sweep. Uses PYTHONHASHSEED=0 and PYTHONDONTWRITEBYTECODE=1 for determinism.
+A fail-closed acceptance harness (wowcar-revenue-vocabulary-acceptance.py) that pins the live Wowcar repo as an immutable baseline (SHA-256 manifest, pinned CPython/LibreOffice/library versions) and proves a candidate copy with eight approved vocabulary edits plus six column-width adjustments produces byte-identical outputs. It reverses edits deterministically to prove byte-equality, runs the full build chain, and normalizes numeric leaves.
 
 ## Related
 
-- uses [[state-snapshot-delta-probing]] — The Wowcar source tree hash in state-snapshot.py tracks the same repo this harness pins as baseline.
+- part of [[auto-company-ops-scripts]] — An ops acceptance harness for a temporary Wowcar revenue relabel.
 <!-- context:generated:end -->
 
 ## Notes

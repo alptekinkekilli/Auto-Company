@@ -1,4 +1,4 @@
-# scripts/ops/airtable-write.py · [[airtable-scoped-read-write-wrappers]] [[fail-closed-atomic-state-writes]]
+# scripts/ops/airtable-write.py · [[airtable-read-write-wrappers]]
 
 CLI tool that performs single-record Airtable writes with mandatory before/after read-back, dry-run-by-default, and data-loss guards so operator-side corrections never silently destroy or strand data.
 

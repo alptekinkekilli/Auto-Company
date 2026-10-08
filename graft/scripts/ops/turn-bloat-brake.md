@@ -1,4 +1,4 @@
-# scripts/ops/turn-bloat-brake.py · [[operational-guard-tripwires]] [[work-window-bloat-brakes]]
+# scripts/ops/turn-bloat-brake.py · [[auto-company-ops-scripts]] [[fail-closed-operational-brakes]] [[telegram-notification-bridge]]
 
 CLI tool that tracks consecutive BLOATED cycles and escalates to a hard persist-and-end mandate once a streak crosses a threshold, resetting on any non-BLOATED verdict.
 

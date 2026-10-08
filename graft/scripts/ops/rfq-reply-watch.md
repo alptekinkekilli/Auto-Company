@@ -1,4 +1,4 @@
-# scripts/ops/rfq-reply-watch.py · [[operator-alerting-watchers]] [[rfq-procurement-flow]]
+# scripts/ops/rfq-reply-watch.py · [[auto-company-ops-scripts]] [[rfq-procurement-flow]] [[telegram-notification-bridge]]
 
 Advisory RFQ reply watcher that notices new vendor replies and long silences on the OPEX RFQ table and notifies the operator without ever writing to Airtable.
 

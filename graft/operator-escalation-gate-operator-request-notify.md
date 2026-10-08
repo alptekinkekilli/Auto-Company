@@ -1,17 +1,20 @@
 ---
 name: Operator escalation gate (operator_request_notify)
 slug: operator-escalation-gate-operator-request-notify
-type: file
+type: system
 sources:
   - path: scripts/core/operator_request_notify.py
     hash: 422b3f99a0cf654022883399da8d8ae7b28d7a6b7bffc2ddfc68dd4d987217ac
 sources_digest: 7f77a59f480f9b1823884e1b689d9e56d5ce8506070183f94139e8dc343ae4ac
 links:
+  - to: directive-writer-human-directive-md
+    relation: uses
+    description: Resolution verification requires a human-directive.md reference.
   - to: operator-action-router
     relation: uses
     description: >-
-      operator-action-router.py parses open OPREQ entries from
-      memories/operator-requests.md to build the firehose digest.
+      Router parses the same operator-requests.md ledger to build the firehose
+      digest.
 generator:
   version: 1
 covers:
@@ -118,11 +121,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Deterministic operator-escalation gate for the company knowledge base: the only component allowed to decide whether an OPREQ block is genuinely new/changed (SHA-256 material_hash fingerprint), send Telegram notifications (marking delivery only on ok:true with retry/backoff), flip OPEN→RESOLVED via type-specific deterministic checks (verify_document_procurement enforces checksum-matched non-empty files confined to memories/operator-evidence/ with path-traversal protection), and regenerate the ## Awaiting Operator projection in consensus.md. Only seven ALLOWED_TYPES ever trigger notifications; always exits 0 so it never breaks the loop; secret redaction is shape-based (mixing case/digits or hex-like) not length-based to avoid stripping request IDs; resolution verification rejects free-text self-claims.
+The only component allowed to decide whether an OPREQ block is genuinely new/changed (SHA-256 material_hash), send Telegram notifications (marking delivery only on ok:true), flip OPEN→RESOLVED via type-specific deterministic checks, and regenerate the Awaiting Operator projection in consensus.md. Always exits 0 so it never breaks the calling loop; resolution verification rejects free-text self-claims, requiring a directive reference plus a verifiable artifact confined to memories/operator-evidence/ with path-traversal protection.
 
 ## Related
 
-- uses [[operator-action-router]] — operator-action-router.py parses open OPREQ entries from memories/operator-requests.md to build the firehose digest.
+- uses [[directive-writer-human-directive-md]] — Resolution verification requires a human-directive.md reference.
+- uses [[operator-action-router]] — Router parses the same operator-requests.md ledger to build the firehose digest.
 <!-- context:generated:end -->
 
 ## Notes

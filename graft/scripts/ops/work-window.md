@@ -1,4 +1,4 @@
-# scripts/ops/work-window.py · [[operational-guard-tripwires]] [[work-window-bloat-brakes]]
+# scripts/ops/work-window.py · [[fail-closed-operational-brakes]] [[state-snapshot-delta]]
 
 A fail-closed brake that opens a K-cycle work window whenever a tracked surface changes, forcing the harness to advance one queued item instead of emitting a valid empty-cycle confirmation.
 

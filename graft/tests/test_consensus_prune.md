@@ -1,6 +1,6 @@
-# tests/test_consensus_prune.py · [[operational-guard-tripwires]]
+# tests/test_consensus_prune.py · [[registry-archive-consensus-pruning]]
 
-End-to-end test suite for the consensus-prune script, covering archiving, no-op thresholds, skip guards, kill switch, dry-run, dedupe, and ledger-guard integration.
+End-to-end test suite for the consensus-prune.py script, covering archiving, thresholds, skip conditions, kill switch, dry-run, dedupe, and ledger-guard integration.
 
 - check · function · L17-L20 — Records a pass/fail result for a named test assertion and accumulates failures for the final summary.
 - newapp · function · L23-L26 — Creates a fresh temporary app directory with the expected memories/logs/docs/operations subdirectories for a test run.

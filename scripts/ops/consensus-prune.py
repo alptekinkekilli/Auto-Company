@@ -49,7 +49,12 @@ ARCHIVE_DIR_REL = "docs/operations"
 SECTION_HEADER = "## What We Did This Cycle"
 ENTRY_RE = re.compile(r"^- \*\*Cycle\s+(\d+)")
 TOP_BULLET_RE = re.compile(r"^- ")
-NOTE_RE = re.compile(r"^- _Archive note \(cycle \d+\):.*_\s*$")
+# Prefix-only on purpose (2026-10-08, first prod week): the model wrote its own multi-line
+# "- _Archive note (cycle 753): older ... entries for cycles 744-752 remain inline" and the
+# strict `..._$` form refused the whole section for 24 cycles. Any line starting like an
+# archive note — ours or the model's — is a note; its continuation lines are dropped with it
+# and ONE fresh note is written back.
+NOTE_RE = re.compile(r"^- _Archive note \(cycle \d+\):")
 REQUIRED = ("# Auto Company Consensus", "## Next Action", "## Company State")
 # Mirror of ledger-guard.INCIDENT_RE — the note must NOT match it (tested).
 INCIDENT_WORDS_RE = re.compile(
@@ -152,19 +157,26 @@ def _parse_entries(body: list[str]) -> tuple[list[str], list[tuple[int, list[str
     entries: list[tuple[int, list[str]]] = []
     cur: list[str] | None = None
     cur_n = None
+    in_note = False  # dropping an old archive note and its continuation lines
     for ln in body:
         m = ENTRY_RE.match(ln)
         if m:
             if cur is not None:
                 entries.append((cur_n, cur))
             cur_n, cur = int(m.group(1)), [ln]
+            in_note = False
             continue
         if NOTE_RE.match(ln):
             if cur is not None:
                 entries.append((cur_n, cur)); cur = None; cur_n = None
+            in_note = True
             continue  # old note dropped; a single fresh one is re-added
         if TOP_BULLET_RE.match(ln):
             raise Skip(f"unrecognised top-level bullet: {ln.strip()[:60]!r}")
+        if in_note:
+            if ln.strip() == "":
+                in_note = False  # blank line ends the note block
+            continue
         if cur is None:
             preamble.append(ln)
         else:

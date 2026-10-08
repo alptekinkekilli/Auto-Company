@@ -1,4 +1,4 @@
-# scripts/core/bridge_leak_scan.py · [[session-leak-scanner-bridge-leak-scan]] [[trust-gating-canary-pattern]]
+# scripts/core/bridge_leak_scan.py · [[session-leak-scanner-bridge-leak-scan]]
 
 Value-sensitive scanner that flags session/credential leaks in EKAP Bridge records only when a secret key appears with a real value, avoiding word-presence false positives.
 

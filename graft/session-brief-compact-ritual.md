@@ -1,5 +1,5 @@
 ---
-name: Session brief & compact ritual
+name: Session Brief & Compact Ritual
 slug: session-brief-compact-ritual
 type: system
 sources:
@@ -13,11 +13,11 @@ sources:
     hash: 707405adc7816737d22c7079fe2e3484cb6959a80f4b4323acb76f44d4074e49
 sources_digest: 3c62da0ecfdd1d5ea8e18f21665f42588364eb13f72704b2fba22d19992c35a0
 links:
-  - to: production-surface-protection
+  - to: auto-loop-harness
     relation: uses
     description: >-
-      The compact ritual's marker/approval mechanism is the unlock path for
-      protected writes.
+      session-brief runs as a SessionStart hook; compact ritual runs at compact
+      events.
 generator:
   version: 1
 covers:
@@ -64,11 +64,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-session-brief.py is a SessionStart hook injecting a measured real-time brief (git state, resume file age/freshness, optional .claude/brief-extra.sh) that never blocks the session (8s timeouts, silent on error) and injects only the resume path and freshness, not content. The compact ritual is hardened: compact_yol.py derives ritual file paths from repo names to prevent cross-project /tmp collisions (worktrees append branch suffix, git failures degrade to dir-name fallback), compact-preflight.py treats a resume as stale by running compact-resume-lint.py (not just mtime), and compact-postcheck.py computes missing anchors. Core anchor strings must stay identical across four locations, enforced by a sync test.
+The session-start and compact-resume machinery: session-brief.py injects a measured real-time brief (git state, resume freshness, optional brief-extra.sh) at startup/resume/compact, never blocking the session and never injecting resume content — only its path and freshness. The compact ritual (compact_yol.py path derivation, compact-resume-lint.py, compact-postcheck.py, compact-preflight.py) enforces that core anchor strings stay identical across four locations and that a fresh-but-lint-failing resume is flagged stale.
 
 ## Related
 
-- uses [[production-surface-protection]] — The compact ritual's marker/approval mechanism is the unlock path for protected writes.
+- uses [[auto-loop-harness]] — session-brief runs as a SessionStart hook; compact ritual runs at compact events.
 <!-- context:generated:end -->
 
 ## Notes

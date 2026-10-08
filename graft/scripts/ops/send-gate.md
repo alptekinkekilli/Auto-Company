@@ -1,4 +1,4 @@
-# scripts/ops/send-gate.py · [[outreach-eligibility-send-gate]]
+# scripts/ops/send-gate.py · [[fail-closed-operational-brakes]] [[g4-attribution-contact-evidence]]
 
 Fail-closed gate that decides from live evidence whether a firm may be emailed, enforcing caps, no-duplicate, opt-out, and live G4 verification with the operator out of the loop.
 

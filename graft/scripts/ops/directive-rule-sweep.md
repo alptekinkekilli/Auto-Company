@@ -1,4 +1,4 @@
-# scripts/ops/directive-rule-sweep.py · [[directive-governance-watchers]] [[trust-gating-canary-pattern]]
+# scripts/ops/directive-rule-sweep.py · [[directive-rule-sweep]]
 
 Scans directive bodies for rule-shaped lines and flags any whose distinctive tokens do not survive in standing files, reporting candidates for human review while failing loudly when coverage cannot be measured.
 

@@ -176,6 +176,17 @@ check("(n) insufficient line, no alarm, untouched",
       all("insufficient" in o for o in outs) and not any("CONSENSUS-PRUNE —" in o for o in outs)
       and consensus(d).read_bytes() == b0)
 
+# (o) model-written multi-line archive note (prod regression, cycle 753) is dropped, not a skip
+d = newapp()
+model_note = ('- _Archive note (cycle 753): older "What We Did" entries for cycles 744-752 remain inline\n'
+              '  because the harness archives automatically; see docs/operations/consensus-archive-2026-10.md\n\n')
+consensus(d).write_text(doc(BIG, extra_bullet=model_note), encoding="utf-8")
+rc, out = run(d, 754)
+after = consensus(d).read_text(encoding="utf-8")
+check("(o) model note: moved, single fresh note, continuation dropped",
+      "moved" in out and after.count("_Archive note") == 1 and "remain inline" not in after
+      and "because the harness" not in after)
+
 # (l) guard integration: guard(N) -> prune(N) -> model appends -> guard(N+1) silent; real deletion later alarms
 d = newapp(); consensus(d).write_text(doc(BIG), encoding="utf-8")
 g1 = guard(d, 743); p = run(d, 743)[1]
