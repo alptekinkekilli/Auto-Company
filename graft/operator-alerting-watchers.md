@@ -13,7 +13,14 @@ sources_digest: 5c3c228beb25ca54708c6ee339112c30711eb6f9e12a565531de8aa90bda240e
 links:
   - to: airtable-access-wrappers
     relation: uses
-    description: Reads Airtable tables via REST API with pagination
+    description: >-
+      Watchers paginate Airtable tables via the REST API and parse timestamp
+      fields
+  - to: telegram-notification-core
+    relation: uses
+    description: >-
+      Each watcher shells out to scripts/core/telegram-notify.sh to deliver
+      alerts
 generator:
   version: 1
 covers:
@@ -72,11 +79,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A family of advisory, read-only watcher scripts that monitor Airtable queues and notify an operator via Telegram when human attention is warranted. They never write back to Airtable, only to small local JSON state files for escalation throttling (notify once at threshold, then at most once per repeat-hours), and shell out to scripts/core/telegram-notify.sh with secrets from logs/runtime.env. Each deliberately separates 'operator is the bottleneck' from 'we never asked' in its message.
+A family of advisory, read-only watcher scripts that monitor Airtable queues and outreach rows to alert an operator via Telegram when human attention is warranted. They never write back to Airtable, only to small local JSON state files for escalation throttling (notify once at threshold, then at most once per repeat-hours), and shell out to scripts/core/telegram-notify.sh with secrets from logs/runtime.env. Distinct problems are deliberately separated in messages (e.g. 'operator is the bottleneck' vs 'we never asked'), and EKAP/MERSİS pending rows are treated as one shared scarce resource.
 
 ## Related
 
-- uses [[airtable-access-wrappers]] — Reads Airtable tables via REST API with pagination
+- uses [[airtable-access-wrappers]] — Watchers paginate Airtable tables via the REST API and parse timestamp fields
+- uses [[telegram-notification-core]] — Each watcher shells out to scripts/core/telegram-notify.sh to deliver alerts
 <!-- context:generated:end -->
 
 ## Notes

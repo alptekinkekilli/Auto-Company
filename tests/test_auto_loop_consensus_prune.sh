@@ -34,12 +34,13 @@ for n in $(seq 60 -1 21); do
   printf '\n' >> "$f"
 done
 printf '## Next Action\n- go\n' >> "$f"
-out="$(CONSENSUS_PRUNE_KEEP=12 python3 "$CP" --cycle 60 --app "$tmp" 2>/dev/null)"; rc=$?
-chk "helper exit 0 + moved line" "[ '$rc' = '0' ] && printf '%s' \"$out\" | grep -q 'moved to docs/operations/consensus-archive-'"
+# v2 (2026-10-09): What We Did has a byte cap too; lift it so this KEEP=12 fixture still counts entries.
+out="$(CONSENSUS_PRUNE_KEEP=12 CONSENSUS_PRUNE_CAP_WWD=1000000 python3 "$CP" --cycle 60 --app "$tmp" 2>/dev/null)"; rc=$?
+chk "helper exit 0 + moved line" "[ '$rc' = '0' ] && printf '%s' \"$out\" | grep -q 'moved' && printf '%s' \"$out\" | grep -q 'docs/operations/consensus-archive-'"
 chk "archive file exists" "ls '$tmp'/docs/operations/consensus-archive-*.md >/dev/null 2>&1"
 chk "12 entries kept" "[ \"\$(grep -c '^- \\*\\*Cycle' '$f')\" = '12' ]"
 chk "required markers intact" "grep -q '^# Auto Company Consensus' '$f' && grep -q '^## Next Action' '$f' && grep -q '^## Company State' '$f'"
-out2="$(CONSENSUS_PRUNE_KEEP=12 python3 "$CP" --cycle 61 --app "$tmp" 2>/dev/null)"
+out2="$(CONSENSUS_PRUNE_KEEP=12 CONSENSUS_PRUNE_CAP_WWD=1000000 python3 "$CP" --cycle 61 --app "$tmp" 2>/dev/null)"
 chk "second run silent" "[ -z \"$out2\" ]"
 rm -rf "$tmp"
 

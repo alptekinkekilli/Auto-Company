@@ -1,36 +1,53 @@
 #!/usr/bin/env python3
-"""consensus-prune.py — mechanical archive of old "What We Did This Cycle" entries.
+"""consensus-prune.py v2 — mechanical archive of per-cycle narrative in consensus.md.
 
-Why (2026-10-08). The [PROMPT-SIZE] brake in auto-loop.sh fired on EVERY cycle from
-2026-09-04 on: consensus.md had grown to 127 KB (82 KB of it 125 per-cycle entries), the
-brake dropped it from the inline prompt and told the model to "prune stale material into
-docs/" — a ritual no cycle ever performed. This script is that ritual as a harness
-mechanism (loop-brake-design: intent != mechanism; fail-closed but never silent).
+Why (2026-10-08, v1). The [PROMPT-SIZE] brake in auto-loop.sh fired on EVERY cycle from
+2026-09-04 on: consensus.md had grown to 127 KB, the brake dropped it from the inline
+prompt and told the model to "prune stale material into docs/" — a ritual no cycle ever
+performed. This script is that ritual as a harness mechanism (loop-brake-design:
+intent != mechanism; fail-closed for data, fail-open for the loop, never silent).
 
-What it does, once per cycle, AFTER ledger-guard.py (whose rolling backup therefore
-holds the pre-prune copy — the recovery source):
-  1. Reads memories/consensus.md as bytes, strict UTF-8 (a decode error = skip, never
-     errors="replace").
-  2. Finds `## What We Did This Cycle` up to the next `^## ` line. Entries are top-level
-     bullets `- **Cycle N` (separator after N is not part of the pattern) plus their
-     continuation lines. Any other top-level bullet in the section = unknown shape = skip.
-  3. Keeps the KEEP largest cycle NUMBERS (not positions); numbers must be strictly
-     monotonic in file order, else skip.
-  4. Appends the removed entries byte-exact to docs/operations/consensus-archive-YYYY-MM.md
-     under a sha256-stamped header; a block whose sha is already in the archive is not
-     appended again (idempotent). Archive is written and verified BEFORE consensus.
-  5. Rewrites consensus atomically, leaving ONE "Archive note" line at the end of the
-     section (older notes removed). The note deliberately avoids every word in
-     ledger-guard's INCIDENT_RE so it cannot blind the content-loss alarm.
-  6. Writes logs/consensus-prune.json {last_prune_cycle, pre_sha16, post_sha16, ...} —
-     ledger-guard reads it to exempt exactly this one transition, nothing else.
-  7. Counts consecutive skips while the file is over threshold; the 3rd prints an alarm
-     line the harness forwards to Telegram. Fail-closed is not allowed to be quiet.
+Why v2 (2026-10-09, three-reviewer spec). v1 only pruned "What We Did" bullets. Within a
+day the model moved its per-cycle diary elsewhere: `**Cycle N` paragraphs under Next
+Action / Current Phase / Company State, trailing `## Cycle N` top-level sections, and
+duplicate copies of canonical headers at the top of the file (296 KB total). v2 keeps
+v1's safety core and adds section-level and paragraph-level pruning:
 
-Triggers only when the file is >= CONSENSUS_PRUNE_MIN_BYTES (default 70000: the 120 KB
-argv cap minus ~40 KB of non-consensus prompt minus a buffer) AND there is something to
-archive. Env: CONSENSUS_PRUNE_ENABLED=0 (kill switch), CONSENSUS_PRUNE_KEEP (8; logs/runtime.env overrides the process env for every CONSENSUS_PRUNE_* key),
-CONSENSUS_PRUNE_MIN_BYTES (70000), CONSENSUS_PRUNE_SKIP_ALARM (3).
+  1. The file is split at top-level `^## ` lines. The preamble (everything before the
+     first section, i.e. the `# Auto Company Consensus` title) is never touched.
+  2. The PRIMARY BLOCK is the byte-largest run of consecutive sections that are all
+     CANONICAL (exact-text header allowlist) and pairwise distinct. Everything outside
+     it — duplicate canonical copies, `## Cycle N`, `## Execution Controls (Cycle N)`,
+     `## Last Updated (Cycle N)` — is archivable as a whole section (header included,
+     byte-exact). Exception: the KEEP_TAIL largest-numbered ones (first `\\d+` in the
+     header) stay in place; unnumbered ones never stay. (TAIL pass)
+  3. Inside the primary block, Next Action / Current Phase / Company State paragraphs
+     starting `**Cycle N` and "What We Did" bullets `- **Cycle N` are entries. Entries
+     are archived from the SMALLEST cycle number up until the section is under its byte
+     cap (CAP_NA/CP/CS/WWD); at least one entry always remains; What We Did additionally
+     keeps at most KEEP (v1). Non-entry paragraphs/lines stay in place, same order, same
+     bytes. A duplicate cycle number or a code fence inside an entry skips THAT section
+     only. (NA / CP / CS / WWD passes)
+  4. Key Decisions Made is never touched; its size is reported.
+  5. Data safety: every removed block is recorded as (offset, length); before writing,
+     rebuild(stripped, blocks) must equal the original bytes or the run is skipped. The
+     archive (docs/operations/consensus-archive-YYYY-MM.md) is appended and sha-verified
+     BEFORE consensus is rewritten atomically; a block whose sha is already there is not
+     appended twice; consensus is re-hashed right before the write. On any skip the guard
+     state (pre_sha16/post_sha16/post_metrics) is NOT updated.
+  6. Visibility: one log line per run; `insufficient` tag when the result is still over
+     80 KB; a skip-streak alarm line (3 consecutive skips while over threshold) that the
+     harness forwards to Telegram; a bloat warning when one section grew >10 KB across
+     3 runs or a new kind of non-canonical header appears outside the primary block.
+     `--dry-run` prints a per-section before/after byte table and writes nothing.
+
+Runs only when the file is >= CONSENSUS_PRUNE_MIN_BYTES (default 70000). Env (process env,
+overridden by logs/runtime.env for every CONSENSUS_PRUNE_* key — live, no redeploy):
+  CONSENSUS_PRUNE_ENABLED=0                 global kill switch
+  CONSENSUS_PRUNE_TAIL|NA|CP|CS|WWD=0       per-pass kill switches
+  CONSENSUS_PRUNE_CAP_NA=8192 CAP_CP=6144 CAP_CS=6144 CAP_WWD=8192   section byte caps
+  CONSENSUS_PRUNE_KEEP=8 (What We Did secondary bound)  CONSENSUS_PRUNE_KEEP_TAIL=2
+  CONSENSUS_PRUNE_MIN_BYTES=70000  CONSENSUS_PRUNE_SKIP_ALARM=3
 Exit code is always 0 (informational helper; the loop never fails over it).
 """
 from __future__ import annotations
@@ -46,14 +63,27 @@ from pathlib import Path
 STATE_REL = "logs/consensus-prune.json"
 CONSENSUS_REL = "memories/consensus.md"
 ARCHIVE_DIR_REL = "docs/operations"
-SECTION_HEADER = "## What We Did This Cycle"
-ENTRY_RE = re.compile(r"^- \*\*Cycle\s+(\d+)")
+
+CANONICAL = (
+    "## Last Updated", "## Current Phase", "## What We Did This Cycle", "## Key Decisions Made",
+    "## Execution Controls", "## Active Projects", "## Awaiting Operator", "## WTP Evidence",
+    "## Next Action", "## Company State", "## Open Questions",
+)
+H_WWD = "## What We Did This Cycle"
+H_NA = "## Next Action"
+H_CP = "## Current Phase"
+H_CS = "## Company State"
+H_KD = "## Key Decisions Made"
+
+ENTRY_RE = re.compile(r"^- \*\*Cycle\s+(\d+)")        # What We Did bullet entry
+PARA_RE = re.compile(r"^\*\*Cycle\s+(\d+)")           # paragraph entry (NA/CP/CS)
 TOP_BULLET_RE = re.compile(r"^- ")
+HEADER_NUM_RE = re.compile(r"\d+")
+FENCE = "```"
 # Prefix-only on purpose (2026-10-08, first prod week): the model wrote its own multi-line
-# "- _Archive note (cycle 753): older ... entries for cycles 744-752 remain inline" and the
-# strict `..._$` form refused the whole section for 24 cycles. Any line starting like an
-# archive note — ours or the model's — is a note; its continuation lines are dropped with it
-# and ONE fresh note is written back.
+# archive note and the strict `..._$` form refused the whole section for 24 cycles. Any
+# line starting like an archive note — ours or the model's — is a note; its continuation
+# lines are dropped with it and ONE fresh note is written back.
 NOTE_RE = re.compile(r"^- _Archive note \(cycle \d+\):")
 REQUIRED = ("# Auto Company Consensus", "## Next Action", "## Company State")
 # Mirror of ledger-guard.INCIDENT_RE — the note must NOT match it (tested).
@@ -61,15 +91,17 @@ INCIDENT_WORDS_RE = re.compile(
     r"incident|restored|restore|inadvertent|geri getir|kay[ıi]p|lost|erased|truncat|overwr|reconstruct|prune|compacted",
     re.IGNORECASE,
 )
-
+INSUFFICIENT_BYTES = 80000
+HISTORY_RUNS = 4
+BLOAT_BYTES = 10 * 1024
 
 _RUNTIME_ENV: dict = {}
 
 
 def _load_runtime_env(app: Path) -> None:
     """logs/runtime.env is the operator's live override file (same idiom as
-    IDLE_SKIP_ENABLED in auto-loop.sh): a key there beats the process env, so KEEP /
-    MIN_BYTES / ENABLED can be tuned without a redeploy. Flat KEY=VALUE lines only."""
+    IDLE_SKIP_ENABLED in auto-loop.sh): a key there beats the process env, so caps /
+    switches can be tuned without a redeploy. Flat KEY=VALUE lines only."""
     try:
         for ln in (app / "logs/runtime.env").read_text(encoding="utf-8", errors="replace").splitlines():
             ln = ln.strip()
@@ -117,89 +149,204 @@ def _save_state(path: Path, state: dict) -> None:
         pass
 
 
-def _section_sizes(text: str) -> dict:
-    parts = re.split(r"(?m)^(## .*)$", text)
-    out = {}
-    for i in range(1, len(parts), 2):
-        out[parts[i].strip()] = len(parts[i + 1].encode("utf-8"))
-    return out
-
-
 class Skip(Exception):
     pass
 
 
-def _split_section(lines: list[str]) -> tuple[int, int]:
-    """Return (start, end) line indexes of the section body (exclusive end)."""
-    start = None
-    for i, ln in enumerate(lines):
-        if ln.rstrip("\r\n") == SECTION_HEADER:
-            start = i + 1
-            break
-    if start is None:
-        raise Skip("section header not found")
-    end = len(lines)
-    for j in range(start, len(lines)):
-        if lines[j].startswith("## "):
-            end = j
-            break
-    return start, end
+# ----------------------------------------------------------------------------- model
+class Section:
+    """One top-level `## ` section: header line index `start`, exclusive end `end`."""
+
+    def __init__(self, header: str, start: int, end: int, nbytes: int):
+        self.header = header
+        self.start = start
+        self.end = end
+        self.bytes = nbytes
+        self.canonical = header in CANONICAL
+        m = HEADER_NUM_RE.search(header)
+        self.number = int(m.group(0)) if m else None
+        self.primary = False
+
+    @property
+    def kind(self) -> str:
+        return HEADER_NUM_RE.sub("N", self.header)
 
 
-def _parse_entries(body: list[str]) -> tuple[list[str], list[tuple[int, list[str]]], list[str]]:
-    """Split section body into (preamble, entries[(cycle, lines)], tail-notes).
+class Removal:
+    """A contiguous line range [a, b) removed from the file; archived unless `archive` is
+    False (dropped archive notes are rebuilt-checked but not archived)."""
 
-    Any top-level bullet that is not a Cycle entry or an Archive note = unknown shape → Skip.
-    Lines before the first entry are preamble (kept). Archive-note lines are dropped (one
-    fresh note is written back).
-    """
-    preamble: list[str] = []
-    entries: list[tuple[int, list[str]]] = []
-    cur: list[str] | None = None
-    cur_n = None
-    in_note = False  # dropping an old archive note and its continuation lines
-    for ln in body:
+    def __init__(self, a: int, b: int, pass_name: str, section: str, cycle: int | None, archive: bool = True):
+        self.a, self.b = a, b
+        self.pass_name = pass_name
+        self.section = section
+        self.cycle = cycle
+        self.archive = archive
+
+
+def _split_sections(lines: list[str]) -> tuple[int, list[Section]]:
+    """Return (first_section_line, sections). Lines before the first `## ` are preamble."""
+    heads = [i for i, ln in enumerate(lines) if ln.startswith("## ")]
+    secs: list[Section] = []
+    for k, i in enumerate(heads):
+        j = heads[k + 1] if k + 1 < len(heads) else len(lines)
+        nbytes = sum(len(l.encode("utf-8")) for l in lines[i:j])
+        secs.append(Section(lines[i].rstrip("\r\n"), i, j, nbytes))
+    return (heads[0] if heads else len(lines)), secs
+
+
+def _mark_primary(secs: list[Section]) -> list[Section]:
+    """Byte-largest run of consecutive, canonical, pairwise-distinct sections."""
+    best: list[Section] = []
+    run: list[Section] = []
+    seen: set[str] = set()
+
+    def flush():
+        nonlocal best
+        if sum(s.bytes for s in run) > sum(s.bytes for s in best):
+            best = list(run)
+
+    for s in secs:
+        if s.canonical and s.header not in seen:
+            run.append(s); seen.add(s.header)
+            continue
+        flush(); run, seen = [], set()
+        if s.canonical:
+            run.append(s); seen.add(s.header)
+    flush()
+    for s in best:
+        s.primary = True
+    return best
+
+
+# ----------------------------------------------------------------------------- passes
+def _tail_pass(secs: list[Section], keep_tail: int) -> list[Removal]:
+    others = [s for s in secs if not s.primary]
+    numbered = sorted((s for s in others if s.number is not None), key=lambda s: s.number, reverse=True)
+    stay = {id(s) for s in numbered[:keep_tail]}
+    return [Removal(s.start, s.end, "tail", s.header, s.number) for s in others if id(s) not in stay]
+
+
+def _entries_wwd(lines: list[str], sec: Section) -> tuple[list[tuple[int, int, int]], list[Removal]]:
+    """What We Did (v1 shape): entries = `- **Cycle N` bullets + continuation lines; any
+    other top-level bullet = unknown shape = Skip; old archive notes are dropped."""
+    entries: list[tuple[int, int, int]] = []  # (cycle, a, b)
+    drops: list[Removal] = []
+    cur_a = None; cur_n = None
+    note_a = None
+    i = sec.start + 1
+    while i < sec.end:
+        ln = lines[i]
         m = ENTRY_RE.match(ln)
         if m:
-            if cur is not None:
-                entries.append((cur_n, cur))
-            cur_n, cur = int(m.group(1)), [ln]
-            in_note = False
-            continue
-        if NOTE_RE.match(ln):
-            if cur is not None:
-                entries.append((cur_n, cur)); cur = None; cur_n = None
-            in_note = True
-            continue  # old note dropped; a single fresh one is re-added
-        if TOP_BULLET_RE.match(ln):
+            if cur_a is not None:
+                entries.append((cur_n, cur_a, i))
+            if note_a is not None:
+                drops.append(Removal(note_a, i, "wwd", sec.header, None, archive=False)); note_a = None
+            cur_n, cur_a = int(m.group(1)), i
+        elif NOTE_RE.match(ln):
+            if cur_a is not None:
+                entries.append((cur_n, cur_a, i)); cur_a = None
+            if note_a is not None:
+                drops.append(Removal(note_a, i, "wwd", sec.header, None, archive=False))
+            note_a = i
+        elif TOP_BULLET_RE.match(ln):
             raise Skip(f"unrecognised top-level bullet: {ln.strip()[:60]!r}")
-        if in_note:
-            if ln.strip() == "":
-                in_note = False  # blank line ends the note block
-            continue
-        if cur is None:
-            preamble.append(ln)
-        else:
-            cur.append(ln)
-    if cur is not None:
-        entries.append((cur_n, cur))
-    return preamble, entries, []
+        elif note_a is not None and ln.strip() == "":
+            drops.append(Removal(note_a, i, "wwd", sec.header, None, archive=False)); note_a = None
+        i += 1
+    if cur_a is not None:
+        entries.append((cur_n, cur_a, sec.end))
+    if note_a is not None:
+        drops.append(Removal(note_a, sec.end, "wwd", sec.header, None, archive=False))
+    return entries, drops
 
 
-def _check_monotonic(entries: list[tuple[int, list[str]]]) -> None:
-    nums = [n for n, _ in entries]
+def _entries_para(lines: list[str], sec: Section) -> list[tuple[int, int, int]]:
+    """Paragraph sections: a paragraph is a run of non-blank lines; an entry starts with
+    `**Cycle N` (so `**CORRECTED Cycle N` is not one). The removable block is the
+    paragraph plus the blank lines that follow it, so the neighbours keep their spacing."""
+    entries: list[tuple[int, int, int]] = []
+    i = sec.start + 1
+    while i < sec.end:
+        if lines[i].strip() == "":
+            i += 1; continue
+        a = i
+        while i < sec.end and lines[i].strip() != "":
+            i += 1
+        while i < sec.end and lines[i].strip() == "":
+            i += 1
+        m = PARA_RE.match(lines[a])
+        if m:
+            entries.append((int(m.group(1)), a, i))
+    return entries
+
+
+def _select(lines: list[str], sec: Section, entries: list[tuple[int, int, int]],
+            cap: int, keep: int | None, pass_name: str) -> list[Removal]:
+    """Archive from the smallest cycle number until the section is under `cap` bytes
+    (then under `keep` entries if given). At least one entry always remains."""
+    nums = [n for n, _, _ in entries]
     if len(nums) != len(set(nums)):
-        raise Skip("duplicate cycle numbers in section")
-    desc = all(a > b for a, b in zip(nums, nums[1:]))
-    asc = all(a < b for a, b in zip(nums, nums[1:]))
-    if not (desc or asc):
-        raise Skip("cycle numbers not monotonic")
+        raise Skip(f"{pass_name}: duplicate cycle numbers in section")
+    for _, a, b in entries:
+        if any(FENCE in l for l in lines[a:b]):
+            raise Skip(f"{pass_name}: code fence inside an entry")
+    size = sec.bytes
+    remaining = len(entries)
+    gone: list[Removal] = []
+    for n, a, b in sorted(entries, key=lambda e: e[0]):
+        if remaining <= 1:
+            break
+        over_cap = size > cap
+        over_keep = keep is not None and remaining > keep
+        if not (over_cap or over_keep):
+            break
+        size -= sum(len(l.encode("utf-8")) for l in lines[a:b])
+        remaining -= 1
+        gone.append(Removal(a, b, pass_name, sec.header, n))
+    return gone
 
 
-def _archive_path(app: Path, now: _dt.datetime) -> Path:
-    return app / ARCHIVE_DIR_REL / f"consensus-archive-{now:%Y-%m}.md"
+# ----------------------------------------------------------------------------- rebuild
+def _line_offsets(lines: list[str]) -> list[int]:
+    offs = [0]
+    for l in lines:
+        offs.append(offs[-1] + len(l.encode("utf-8")))
+    return offs
 
 
+def _strip_and_blocks(data: bytes, lines: list[str], removals: list[Removal]) -> tuple[bytes, list[tuple[int, bytes]]]:
+    """Return (stripped_bytes, [(offset, bytes)]) and assert the removals do not overlap."""
+    offs = _line_offsets(lines)
+    rs = sorted(removals, key=lambda r: r.a)
+    blocks: list[tuple[int, bytes]] = []
+    out = bytearray()
+    pos = 0
+    for r in rs:
+        oa, ob = offs[r.a], offs[r.b]
+        if oa < pos:
+            raise Skip("overlapping removals")
+        out += data[pos:oa]
+        blocks.append((oa, data[oa:ob]))
+        pos = ob
+    out += data[pos:]
+    return bytes(out), blocks
+
+
+def _rebuild(stripped: bytes, blocks: list[tuple[int, bytes]]) -> bytes:
+    """Inverse of _strip_and_blocks: re-insert every block at its ORIGINAL offset."""
+    out = bytearray(); pos = 0; spos = 0
+    for off, blk in blocks:  # ascending original offsets
+        take = off - pos
+        out += stripped[spos:spos + take]; spos += take
+        out += blk
+        pos = off + len(blk)
+    out += stripped[spos:]
+    return bytes(out)
+
+
+# ----------------------------------------------------------------------------- main
 def main() -> int:
     import argparse
     ap = argparse.ArgumentParser()
@@ -213,10 +360,15 @@ def main() -> int:
     if _env_flag("CONSENSUS_PRUNE_ENABLED", "1") == "0":
         return 0
 
-    # KEEP default 8 (recalibrated after the first prod run, 2026-10-08: 12 entries = 29 KB
-    # on top of 51 KB of non-entry sections left the prompt at 121.7 KB, 1.7 KB over the
-    # cap). Still above work-window K=5 and turn-bloat K=3.
     keep = _env_int("CONSENSUS_PRUNE_KEEP", 8)
+    keep_tail = _env_int("CONSENSUS_PRUNE_KEEP_TAIL", 2)
+    caps = {
+        "na": _env_int("CONSENSUS_PRUNE_CAP_NA", 8192),
+        "cp": _env_int("CONSENSUS_PRUNE_CAP_CP", 6144),
+        "cs": _env_int("CONSENSUS_PRUNE_CAP_CS", 6144),
+        "wwd": _env_int("CONSENSUS_PRUNE_CAP_WWD", 8192),
+    }
+    on = {k: _env_flag(f"CONSENSUS_PRUNE_{k.upper()}", "1") != "0" for k in ("tail", "na", "cp", "cs", "wwd")}
     min_bytes = _env_int("CONSENSUS_PRUNE_MIN_BYTES", 70000)
     skip_alarm = _env_int("CONSENSUS_PRUNE_SKIP_ALARM", 3)
     cpath = app / CONSENSUS_REL
@@ -225,11 +377,9 @@ def main() -> int:
     streak = int(state.get("skipped_streak", 0) or 0)
 
     def finish_skip(reason: str, over: bool) -> int:
+        # Guard-facing keys (pre_sha16/post_sha16/post_metrics) are never touched here.
         nonlocal streak
-        if over:
-            streak += 1
-        else:
-            streak = 0
+        streak = streak + 1 if over else 0
         if not args.dry_run:
             state["skipped_streak"] = streak
             state["last_cycle"] = args.cycle
@@ -250,10 +400,9 @@ def main() -> int:
         return finish_skip(f"cannot read consensus: {e.__class__.__name__}", True)
     over = len(data) >= min_bytes
     if not over:
-        if streak:
+        if streak and not args.dry_run:
             state["skipped_streak"] = 0
-            if not args.dry_run:
-                _save_state(spath, state)
+            _save_state(spath, state)
         return 0
 
     try:
@@ -262,79 +411,201 @@ def main() -> int:
         return finish_skip("consensus is not valid UTF-8", over)
 
     lines = text.splitlines(keepends=True)
-    try:
-        s, e = _split_section(lines)
-        preamble, entries, _ = _parse_entries(lines[s:e])
-        _check_monotonic(entries)
-    except Skip as ex:
-        return finish_skip(str(ex), over)
+    _, secs = _split_sections(lines)
+    primary = _mark_primary(secs)
+    if not primary:
+        return finish_skip("no canonical section found", over)
+    by_header = {s.header: s for s in primary}
 
-    sizes = _section_sizes(text)
-    wwd_kb = sizes.get(SECTION_HEADER, 0) // 1024
-    kd_kb = sizes.get("## Key Decisions Made", 0) // 1024
-    if len(entries) <= keep:
-        # Nothing left to archive yet the file is over threshold: that is not a prune
-        # failure (no streak), it is the other sections outgrowing their share — the
-        # trigger for a separate Key Decisions / section pass. Logged every cycle on purpose.
+    removals: list[Removal] = []
+    skips: list[str] = []
+    moved = {"tail": 0, "na": 0, "cp": 0, "cs": 0, "wwd": 0}
+    wwd_gone: list[Removal] = []
+
+    if on["tail"]:
+        r = _tail_pass(secs, keep_tail)
+        removals += r; moved["tail"] = len(r)
+
+    for key, header, parser in (("na", H_NA, _entries_para), ("cp", H_CP, _entries_para),
+                                ("cs", H_CS, _entries_para), ("wwd", H_WWD, None)):
+        if not on[key]:
+            continue
+        sec = by_header.get(header)
+        if sec is None:
+            # What We Did is mandatory every cycle (v1 contract): missing = skip reason.
+            # The paragraph sections are optional carriers of diary text: missing = 0 moved.
+            if key == "wwd":
+                skips.append("wwd: section not in primary block")
+            continue
+        try:
+            if key == "wwd":
+                entries, drops = _entries_wwd(lines, sec)
+                gone = _select(lines, sec, entries, caps[key], keep, key)
+                if gone:
+                    removals += gone + drops
+                    wwd_gone = gone
+            else:
+                entries = parser(lines, sec)
+                gone = _select(lines, sec, entries, caps[key], None, key)
+                removals += gone
+            moved[key] = len(gone)
+        except Skip as ex:
+            skips.append(str(ex))
+
+    # per-section before/after sizes (for the table, the log line and the bloat history)
+    removed_lines = set()
+    for r in removals:
+        removed_lines.update(range(r.a, r.b))
+    offs = _line_offsets(lines)
+
+    def after_bytes(s: Section) -> int:
+        return sum(offs[i + 1] - offs[i] for i in range(s.start, s.end) if i not in removed_lines)
+
+    first_primary = primary[0].start
+    last_primary = primary[-1].end
+    head_after = sum(after_bytes(s) for s in secs if not s.primary and s.start < first_primary)
+    tail_after = sum(after_bytes(s) for s in secs if not s.primary and s.start >= last_primary)
+    sizes = {
+        "wwd": after_bytes(by_header[H_WWD]) if H_WWD in by_header else 0,
+        "na": after_bytes(by_header[H_NA]) if H_NA in by_header else 0,
+        "cp": after_bytes(by_header[H_CP]) if H_CP in by_header else 0,
+        "cs": after_bytes(by_header[H_CS]) if H_CS in by_header else 0,
+        "kd": after_bytes(by_header[H_KD]) if H_KD in by_header else 0,
+        "tail": tail_after, "head": head_after,
+    }
+    kinds_now = sorted({s.kind for s in secs if not s.primary})
+
+    def record_history() -> list[str]:
+        """Append this run's sizes to the state history; return bloat warnings."""
+        hist = state.get("section_history") or []
+        hist = (hist + [sizes])[-HISTORY_RUNS:]
+        warns = []
+        if len(hist) >= 3:
+            base = hist[-3]
+            for k, v in sizes.items():
+                if v - int(base.get(k, 0) or 0) > BLOAT_BYTES:
+                    warns.append(f"{k} +{(v - int(base.get(k, 0) or 0)) // 1024}KB in 3 runs")
+        prev_kinds = state.get("noncanonical_kinds")
+        if prev_kinds is not None:
+            new_kinds = [k for k in kinds_now if k not in prev_kinds]
+            if new_kinds:
+                warns.append("new non-canonical header(s) outside primary block: " + ", ".join(new_kinds))
+        state["section_history"] = hist
+        state["noncanonical_kinds"] = kinds_now
+        return warns
+
+    def emit_warns(warns: list[str]) -> None:
+        if warns:
+            sys.stdout.write(f"⚠ CONSENSUS-PRUNE — yeni şişme yeri: " + "; ".join(warns) + "\n")
+
+    if args.dry_run:
+        sys.stdout.write(f"{'section':44s} {'before':>8s} {'after':>8s}\n")
+        for s in secs:
+            tag = "" if s.primary else "  [outside primary]"
+            sys.stdout.write(f"{s.header[:44]:44s} {s.bytes:8d} {after_bytes(s):8d}{tag}\n")
+
+    if not removals:
+        if skips:
+            return finish_skip("; ".join(skips), over)
+        warns = record_history()
         if not args.dry_run:
             state["skipped_streak"] = 0
             state["last_cycle"] = args.cycle
             _save_state(spath, state)
-        sys.stdout.write(f"[CONSENSUS-PRUNE] insufficient: {len(entries)} entries <= keep {keep}, file still "
-                         f"{len(data)//1024}KB (whatwedid={wwd_kb}KB keydecisions={kd_kb}KB) — other sections need their own pass\n")
+        sys.stdout.write(f"[CONSENSUS-PRUNE] insufficient: nothing to archive, file still {len(data)//1024}KB "
+                         f"(wwd={sizes['wwd']//1024}KB na={sizes['na']//1024}KB cp={sizes['cp']//1024}KB "
+                         f"cs={sizes['cs']//1024}KB kd={sizes['kd']//1024}KB tail={sizes['tail']//1024}KB "
+                         f"head={sizes['head']//1024}KB){' [dry-run]' if args.dry_run else ''}\n")
+        emit_warns(warns)
         return 0
 
-    keep_nums = set(sorted((n for n, _ in entries), reverse=True)[:keep])
-    kept = [(n, ls) for n, ls in entries if n in keep_nums]
-    gone = [(n, ls) for n, ls in entries if n not in keep_nums]
-    gone_nums = [n for n, _ in gone]
-    lo, hi = min(gone_nums), max(gone_nums)
-    block_text = "".join("".join(ls) for _, ls in gone)
-    if not block_text.endswith("\n"):
-        block_text += "\n"
-    block_sha = hashlib.sha256(block_text.encode("utf-8")).hexdigest()
-    now = _dt.datetime.now(_dt.timezone.utc)
-    apath = _archive_path(app, now)
-    arel = f"{ARCHIVE_DIR_REL}/{apath.name}"
-    header = (f"\n## Archived at cycle {args.cycle} ({now:%Y-%m-%dT%H:%M:%SZ}) — "
-              f"cycles {lo}..{hi} — {len(gone)} entries — sha256:{block_sha}\n\n")
-    note = (f"- _Archive note (cycle {args.cycle}): {len(gone)} older entries (cycles {lo}..{hi}) "
-            f"moved to {arel}. Not for routine reading — grep by cycle number only._\n")
-    assert not INCIDENT_WORDS_RE.search(note), "archive note must not match INCIDENT_RE"
+    try:
+        stripped, blocks = _strip_and_blocks(data, lines, removals)
+        if _rebuild(stripped, blocks) != data:
+            raise Skip("rebuild invariant failed")
+    except Skip as ex:
+        return finish_skip(str(ex), over)
 
-    new_body = preamble + [l for _, ls in kept for l in ls]
-    if new_body and not new_body[-1].endswith("\n"):
-        new_body[-1] += "\n"
-    if new_body and new_body[-1].strip() != "":
-        new_body.append("\n")
-    new_body.append(note)
-    new_body.append("\n")
-    new_lines = lines[:s] + new_body + lines[e:]
-    new_text = "".join(new_lines)
+    # Archive blocks: one per removed SECTION (tail pass, header included, byte-exact) and
+    # one per pruned section's ENTRIES (removed paragraphs/bullets concatenated in file order).
+    now = _dt.datetime.now(_dt.timezone.utc)
+    apath = app / ARCHIVE_DIR_REL / f"consensus-archive-{now:%Y-%m}.md"
+    arel = f"{ARCHIVE_DIR_REL}/{apath.name}"
+    groups: dict[tuple, list[Removal]] = {}
+    for r in sorted(removals, key=lambda r: r.a):
+        if r.archive:
+            key = (r.pass_name, r.section, r.a if r.pass_name == "tail" else 0)
+            groups.setdefault(key, []).append(r)
+    archive_blocks: list[tuple[str, str]] = []  # (header, body)
+    for (pass_name, section, _), rs in groups.items():
+        body = "".join("".join(lines[r.a:r.b]) for r in rs)
+        if not body.endswith("\n"):
+            body += "\n"
+        sha = hashlib.sha256(body.encode("utf-8")).hexdigest()
+        nums = [r.cycle for r in rs if r.cycle is not None]
+        cyc = f"cycles {min(nums)}..{max(nums)}" if nums else "cycles n/a"
+        kind = "section" if pass_name == "tail" else "entries"
+        header = (f"\n## Archived at cycle {args.cycle} ({now:%Y-%m-%dT%H:%M:%SZ}) — {kind} — "
+                  f"{section[3:]} — {cyc} — {len(rs)} blocks — sha256:{sha}\n\n")
+        archive_blocks.append((header, body))
+
+    new_text = stripped.decode("utf-8")
+    if wwd_gone:
+        nums = [r.cycle for r in wwd_gone]
+        note = (f"- _Archive note (cycle {args.cycle}): {len(wwd_gone)} older entries (cycles {min(nums)}..{max(nums)}) "
+                f"moved to {arel}. Not for routine reading — grep by cycle number only._\n")
+        assert not INCIDENT_WORDS_RE.search(note), "archive note must not match INCIDENT_RE"
+        nl = new_text.splitlines(keepends=True)
+        # Removals are whole-line ranges, so the primary header's index in the stripped
+        # file is its original index minus the removed lines that preceded it.
+        wi = by_header[H_WWD].start - sum(1 for i in removed_lines if i < by_header[H_WWD].start)
+        assert nl[wi].rstrip("\r\n") == H_WWD
+        we = next((j for j in range(wi + 1, len(nl)) if nl[j].startswith("## ")), len(nl))
+        body = nl[wi + 1:we]
+        if body and not body[-1].endswith("\n"):
+            body[-1] += "\n"
+        if body and body[-1].strip() != "":
+            body.append("\n")
+        body += [note, "\n"]
+        nl = nl[:wi + 1] + body + nl[we:]
+        new_text = "".join(nl)
     for req in REQUIRED:
         if req not in new_text:
             return finish_skip(f"result would lose required marker {req!r}", over)
     new_data = new_text.encode("utf-8")
 
-    summary = (f"[CONSENSUS-PRUNE] cycle {args.cycle}: {len(gone)} entries (cycles {lo}..{hi}) moved to "
-               f"{arel}; kept {len(kept)}; {len(data)//1024}KB -> {len(new_data)//1024}KB "
-               f"(whatwedid={wwd_kb}KB keydecisions={kd_kb}KB)")
-    if len(new_data) > 80000:
-        summary += " insufficient: still >80KB after archive — Key Decisions/other sections need their own pass"
+    tail_kb = sum(offs[r.b] - offs[r.a] for r in removals if r.pass_name == "tail") // 1024
+    summary = (f"[CONSENSUS-PRUNE] cycle {args.cycle}: moved tail={moved['tail']} sections ({tail_kb}KB), "
+               f"na={moved['na']} paras, cp={moved['cp']}, cs={moved['cs']}, wwd={moved['wwd']}; "
+               f"before={len(data)//1024}KB after={len(new_data)//1024}KB; sections: "
+               f"wwd={sizes['wwd']//1024}KB na={sizes['na']//1024}KB cp={sizes['cp']//1024}KB "
+               f"cs={sizes['cs']//1024}KB kd={sizes['kd']//1024}KB tail={sizes['tail']//1024}KB "
+               f"head={sizes['head']//1024}KB; archive {arel}")
+    if skips:
+        summary += "; skipped: " + "; ".join(skips)
+    if len(new_data) > INSUFFICIENT_BYTES:
+        summary += " insufficient: still >80KB after archive"
     if args.dry_run:
+        sys.stdout.write(f"{'TOTAL':44s} {len(data):8d} {len(new_data):8d}\n")
         sys.stdout.write(summary + " [dry-run]\n")
+        emit_warns(record_history())
         return 0
 
-    # 1) archive first, verified, idempotent
+    # 1) archive first, verified, idempotent per block
     try:
         apath.parent.mkdir(parents=True, exist_ok=True)
         existing = apath.read_bytes() if apath.is_file() else b""
-        if f"sha256:{block_sha}".encode() not in existing:
-            with open(apath, "ab") as fh:
-                fh.write(header.encode("utf-8") + block_text.encode("utf-8"))
-                fh.flush(); os.fsync(fh.fileno())
-        if f"sha256:{block_sha}".encode() not in apath.read_bytes():
-            return finish_skip("archive verification failed", over)
+        with open(apath, "ab") as fh:
+            for header, body in archive_blocks:
+                sha = header.rsplit("sha256:", 1)[1].strip()
+                if f"sha256:{sha}".encode() not in existing:
+                    fh.write(header.encode("utf-8") + body.encode("utf-8"))
+            fh.flush(); os.fsync(fh.fileno())
+        written = apath.read_bytes()
+        for header, _ in archive_blocks:
+            sha = header.rsplit("sha256:", 1)[1].strip()
+            if f"sha256:{sha}".encode() not in written:
+                return finish_skip("archive verification failed", over)
     except Exception as ex:
         return finish_skip(f"archive write failed: {ex.__class__.__name__}", over)
 
@@ -356,6 +627,7 @@ def main() -> int:
         "sha16": _sha16(new_data),
         "incident": bool(INCIDENT_WORDS_RE.search(new_text)),
     }
+    warns = record_history()
     state.update({
         "last_prune_cycle": args.cycle,
         "pre_sha16": _sha16(data),
@@ -364,12 +636,14 @@ def main() -> int:
         "bytes_before": len(data),
         "bytes_after": len(new_data),
         "archive": arel,
-        "block_sha256": block_sha,
+        "block_sha256": [h.rsplit("sha256:", 1)[1].strip() for h, _ in archive_blocks],
+        "moved": moved,
         "skipped_streak": 0,
         "last_cycle": args.cycle,
     })
     _save_state(spath, state)
     sys.stdout.write(summary + "\n")
+    emit_warns(warns)
     return 0
 
 
@@ -378,5 +652,6 @@ if __name__ == "__main__":
         sys.exit(main())
     except SystemExit:
         raise
-    except Exception:
-        sys.exit(0)  # informational: never fail the loop
+    except Exception as ex:  # fail-open for the loop, fail-closed for the data
+        sys.stdout.write(f"[CONSENSUS-PRUNE] error: {ex.__class__.__name__} — nothing written\n")
+        sys.exit(0)

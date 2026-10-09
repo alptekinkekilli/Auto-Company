@@ -588,6 +588,10 @@ Before the cycle ends, update `memories/consensus.md`:
 - [unresolved question]
 ```
 
+The sections already exist — append under them; never write a header twice; never add
+new top-level sections. Per-cycle narrative goes ONLY under What We Did; Next Action
+holds the queue only; Current Phase the current state only.
+
 The candidate registry (`memories/candidate-registry.md` and
 `memories/registry-archive/`) is frozen historical state — read-only, never edited,
 never re-inlined. Grep it only when a task genuinely needs tender-era history.

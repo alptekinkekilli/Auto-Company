@@ -8,7 +8,12 @@ sources:
   - path: scripts/core/jcode-mcp-probe.py
     hash: 60fdd2addf2f53741d03e21002a00b6ee9d8895af1fae9746a51308e67672b67
 sources_digest: 5c486cb9b9e24ea7acf023003a03ae50970460766baf723ea3eb1774622a9ed8
-links: []
+links:
+  - to: cost-budget-accounting
+    relation: uses
+    description: >-
+      cost-audit reads the MCP schema cache and JCODE_TOOLS_DENY to compare
+      advertised-vs-called tool surface.
 generator:
   version: 1
 covers:
@@ -73,7 +78,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Two cooperating scripts that make jcode speak MCP: jcode-mcp-config.py generates ~/.jcode/mcp.json from project .mcp.json (wrapping HTTP/SSE servers in mcp-remote stdio bridge, applying hard-coded overrides for linear/airtable, refusing to write missing REQUIRED servers, atomic writes with freshness stamp, secrets left unexpanded in argv to avoid ps leaks); jcode-mcp-probe.py then deterministically verifies each server via real JSON-RPC stdio handshake, enforcing five fail-closed gates (exact server-set match, handshake timeout, destructive-tool exact match, JCODE_TOOLS_DENY coverage, readcheck with no protocol error). A documented gotcha: tools/list alone proved insufficient — Context7 passed boot for days while never being called, so a real read call is now mandatory.
+jcode-mcp-config generates ~/.jcode/mcp.json from project .mcp.json (jcode v0.64.2 ignores project config), wrapping HTTP/SSE servers in the mcp-remote stdio bridge, applying hard-coded overrides for linear/airtable hosted endpoints, and leaving secrets unexpanded in argv to avoid ps leaks. jcode-mcp-probe is a deterministic boot probe replacing model-based checks: it spawns each server, speaks JSON-RPC 2.0 over stdio, and enforces five fail-closed gates including a real read-only tools/call per server — because tools/list alone proved insufficient (Context7 passed boot for days while never being called).
+
+## Related
+
+- uses [[cost-budget-accounting]] — cost-audit reads the MCP schema cache and JCODE_TOOLS_DENY to compare advertised-vs-called tool surface.
 <!-- context:generated:end -->
 
 ## Notes

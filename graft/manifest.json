@@ -1,7 +1,7 @@
 {
   "version": 1,
   "model": "openai:deepseek-ai/DeepSeek-V4-Flash-0731:deepinfra",
-  "repoDigest": "11fb97a20694dc5ef3924ed47d8dc4c41f55790eaddfb5da5206942f654c58fc",
+  "repoDigest": "4c6d8dcc26a3bbdae82753e5f5ede97787e83347cbf8fb4ae9b6f1b5876da46c",
   "files": [
     {
       "path": "dashboard/app.js",
@@ -261,7 +261,7 @@
     },
     {
       "path": "scripts/ops/consensus-prune.py",
-      "hash": "721ea1c0b942cae4679c4472f4ec5547e4655cd9e94c12c9ddc8fccd2f922821"
+      "hash": "1a741019d9b78a90dc9121e012850f5bcebd88fbd8527a8b17a4357068ca4684"
     },
     {
       "path": "scripts/ops/context7-check.py",
@@ -429,7 +429,7 @@
     },
     {
       "path": "tests/test_auto_loop_consensus_prune.sh",
-      "hash": "82fd9dfa80c4f0c916c506e6a44db71dbfd6ee1c0421bcedf8d255b77c3bfd7e"
+      "hash": "9d97a8dfec49f5829637619f996e57ab7e0773498a9788855dacc61a10d51375"
     },
     {
       "path": "tests/test_auto_loop_ledger_guard.sh",
@@ -469,7 +469,7 @@
     },
     {
       "path": "tests/test_consensus_prune.py",
-      "hash": "35e0bdc2dd8148ac41d2e6463ee61fdb69732ee19e5835114387210b8558e37e"
+      "hash": "4104c6c0b8293637bbdf9f786cfdce8074d8f1353149932bdb5e989bac71e999"
     },
     {
       "path": "tests/test_context7_check.sh",
@@ -626,18 +626,20 @@
   ],
   "nodes": [
     {
-      "slug": "airtable-access-wrappers",
-      "name": "Airtable Access Wrappers",
-      "type": "system",
+      "slug": "advisory-only-escalation-throttling",
+      "name": "Advisory-Only Escalation Throttling",
+      "type": "concept",
       "sources": [
-        "tests/test_airtable_read.sh",
-        "tests/test_airtable_write.sh"
+        "scripts/ops/registry-queue-watch.py",
+        "scripts/ops/reply-watch.py",
+        "scripts/ops/rfq-reply-watch.py",
+        "scripts/ops/state-snapshot.py"
       ],
-      "sourcesDigest": "f36a07c38e3cd5b13c9c5c2ebd4240613fd28de5db52e96debd23170ea040e77"
+      "sourcesDigest": "a393093e93b55fab13b202ca559c6716a9cb0781125e39dc32728bf5127a0c75"
     },
     {
-      "slug": "airtable-read-write-wrappers",
-      "name": "Airtable read/write wrappers",
+      "slug": "airtable-access-layer",
+      "name": "Airtable access layer",
       "type": "system",
       "sources": [
         "scripts/ops/airtable-read.py",
@@ -646,13 +648,29 @@
       "sourcesDigest": "43a42c7621b93d8e35ed7813326f7b761e954384d076a4d1b176afa770c1b952"
     },
     {
-      "slug": "analyst-engine",
-      "name": "Analyst Engine",
+      "slug": "airtable-access-wrappers",
+      "name": "Airtable Access Wrappers",
       "type": "system",
       "sources": [
-        "tests/test_analyst_engine.sh"
+        "scripts/ops/airtable-read.py",
+        "scripts/ops/airtable-write.py",
+        "tests/test_airtable_read.sh",
+        "tests/test_airtable_write.sh"
       ],
-      "sourcesDigest": "7ca211bb37041821ad7da0e305f3f7fce2c4347757a207495fc1148cbb89f6b0"
+      "sourcesDigest": "2021356891ac463bde76a17510d6206598905cc15d804b9b867e92529075e85e"
+    },
+    {
+      "slug": "atomic-state-file-writes",
+      "name": "Atomic State File Writes",
+      "type": "concept",
+      "sources": [
+        "scripts/ops/consensus-prune.py",
+        "scripts/ops/state-snapshot.py",
+        "scripts/ops/turn-bloat-brake.py",
+        "scripts/ops/work-window-watchdog.py",
+        "scripts/ops/work-window.py"
+      ],
+      "sourcesDigest": "b1d8554a567abb2492d6b74ddc1c3cafea6c0ce78cd446a1e1a3472fdb0fd034"
     },
     {
       "slug": "auto-company-site-functions",
@@ -665,19 +683,37 @@
       "sourcesDigest": "d765296cba06e0858b94642f9c57598b0a01dbdbf1099116ab94c5ce24458b9c"
     },
     {
-      "slug": "auto-loop-harness",
-      "name": "Auto-Loop Harness",
+      "slug": "auto-loop-core-engine",
+      "name": "auto-loop core engine",
       "type": "system",
       "sources": [
-        "tests/test_active_window.sh",
+        "tests/test_cycle_counter.sh",
+        "tests/test_cycle_metadata.sh",
+        "tests/test_discretionary_budget.sh",
+        "tests/test_escalation.sh",
+        "tests/test_idle_skip.sh",
+        "tests/test_mixed_harness.sh",
+        "tests/test_prompt_assembly.sh",
+        "tests/test_prompt_transport.sh",
+        "tests/test_seteshape_lint.py",
+        "tests/test_tier_ladder_daily.sh"
+      ],
+      "sourcesDigest": "90c6de0e07b789f570daebfa6beac8459c60e3fa8f04df4dcaf848757194c5ef"
+    },
+    {
+      "slug": "auto-loop-harness-brakes-and-guards",
+      "name": "Auto-Loop Harness Brakes and Guards",
+      "type": "system",
+      "sources": [
+        "scripts/ops/ledger-guard.py",
+        "scripts/ops/turn-bloat-brake.py",
+        "scripts/ops/work-window-watchdog.py",
+        "scripts/ops/work-window.py",
         "tests/test_auto_loop_consensus_prune.sh",
         "tests/test_auto_loop_ledger_guard.sh",
-        "tests/test_auto_loop_work_window.sh",
-        "tests/test_budget_gates.sh",
-        "tests/test_ccusage_failclosed.sh",
-        "tests/test_codex_spend_sources.sh"
+        "tests/test_auto_loop_work_window.sh"
       ],
-      "sourcesDigest": "effc1772eaeb46b1f07cbaff19f4e4ee4748d43b9719c9ab9cace1be02abe05f"
+      "sourcesDigest": "c4f5118d41500d0932449307073ec7ea86a9d9d90af07cadc375ed10cfc1f040"
     },
     {
       "slug": "autonomous-loop-orchestrator",
@@ -689,32 +725,26 @@
       "sourcesDigest": "903c7dcb6c440915b2bed1d5c8d80f286a371c253704e4713d742468a8760e27"
     },
     {
-      "slug": "browse-and-extract-harness",
-      "name": "Browse-and-extract harness",
-      "type": "file",
-      "sources": [
-        "scripts/ops/browse-extract.py"
-      ],
-      "sourcesDigest": "7514f4be06d24fc6714b50b6a7ae6ea56f424c1b9ce6bc87210364785a9290f3"
-    },
-    {
-      "slug": "browse-extraction",
-      "name": "Browse Extraction",
-      "type": "file",
-      "sources": [
-        "tests/test_browse_extract.sh"
-      ],
-      "sourcesDigest": "079a0bb6c7007bc125906c31ea731cf2348652185ae27922be07b0c00c2cb0c9"
-    },
-    {
-      "slug": "budget-calibration-cost-audit",
-      "name": "Budget calibration & cost audit",
+      "slug": "budget-gates-and-spend-accounting",
+      "name": "Budget Gates and Spend Accounting",
       "type": "system",
       "sources": [
-        "scripts/ops/budget-calibration-report.py",
-        "scripts/ops/cost-audit.py"
+        "scripts/core/auto-loop.sh",
+        "tests/test_budget_gates.sh",
+        "tests/test_ccusage_failclosed.sh",
+        "tests/test_codex_spend_sources.sh"
       ],
-      "sourcesDigest": "7d89f4b122161160f989cec96028c3eccc223d57dd21176db9eeab32b97235ee"
+      "sourcesDigest": "3d35c111515e4a59b1ee2359373bf79bb0171c839b4ec15c85cadb3d78c1239b"
+    },
+    {
+      "slug": "business-hours-window-gate",
+      "name": "Business-Hours Window Gate",
+      "type": "concept",
+      "sources": [
+        "scripts/core/auto-loop.sh",
+        "tests/test_active_window.sh"
+      ],
+      "sourcesDigest": "6b142502aa5946e46dddd9800380b879ea17de62933ca0bb5d10e73daaedeaaa"
     },
     {
       "slug": "cockpit-dashboard",
@@ -728,24 +758,20 @@
       "sourcesDigest": "c3eeec88fbadc17427d51f65b1a682adbd4d4eb429313cc3a6c06273f937d76d"
     },
     {
-      "slug": "compact-ritual-hardening",
-      "name": "Compact Ritual Hardening",
+      "slug": "compact-ritual-and-session-brief",
+      "name": "Compact Ritual and Session Brief",
       "type": "system",
       "sources": [
-        "tests/test_compact_anchor_sync.py",
-        "tests/test_compact_ritual_hardening.sh"
-      ],
-      "sourcesDigest": "f1a266b755b5afa6e87c8dcf1bc900f2cae8a67d610d5091cfb85be4e89497cb"
-    },
-    {
-      "slug": "compact-ritual-path-resolution",
-      "name": "Compact Ritual Path Resolution",
-      "type": "file",
-      "sources": [
         "scripts/compact_yol.py",
+        "scripts/compact-postcheck.py",
+        "scripts/compact-preflight.py",
+        "scripts/compact-resume-lint.py",
+        "scripts/session-brief.py",
+        "tests/test_compact_anchor_sync.py",
+        "tests/test_compact_ritual_hardening.sh",
         "tests/test_compact_yol.py"
       ],
-      "sourcesDigest": "e916153aa1881c244d4fa0d3f3377ed1d95468fb6a004f30dbd84b148c2b8b10"
+      "sourcesDigest": "6b3a535d4cd70b2cb1cc9c7e020b4c3d40e781ce37ab67eef2af1eff5ecfa371"
     },
     {
       "slug": "compact-ritual-tooling",
@@ -761,25 +787,16 @@
       "sourcesDigest": "6e11740780dc883b8f9529d0b785c680a65f78067736607b6fb743ec07d0f06f"
     },
     {
-      "slug": "consensus-pruning",
-      "name": "Consensus Pruning",
-      "type": "system",
-      "sources": [
-        "tests/test_auto_loop_consensus_prune.sh",
-        "tests/test_consensus_prune.py"
-      ],
-      "sourcesDigest": "be3d0ebea0c02c24fa9f967be4388553cf873074178673f7c304f7b7f6bc0912"
-    },
-    {
-      "slug": "consensus-registry-maintenance",
-      "name": "Consensus & registry maintenance",
+      "slug": "consensus-pruning-and-ledger-guard",
+      "name": "Consensus Pruning and Ledger Guard",
       "type": "system",
       "sources": [
         "scripts/ops/consensus-prune.py",
-        "scripts/ops/idle-skip-note.py",
-        "scripts/ops/registry-archive.py"
+        "scripts/ops/ledger-guard.py",
+        "tests/test_auto_loop_consensus_prune.sh",
+        "tests/test_consensus_prune.py"
       ],
-      "sourcesDigest": "5da307c5bc35889c615515b64228d24e1e657711e23677ca1e156f05bc1f0c6b"
+      "sourcesDigest": "8881a08ff6684e858d280c521f146d0730b35123ca4657f1a19bcfdb555697ec"
     },
     {
       "slug": "container-bootstrap",
@@ -791,16 +808,6 @@
       "sourcesDigest": "4859f8b1dfb24f857df1d999107a7d92d7c4d14a2c247976ae81cbb021029d23"
     },
     {
-      "slug": "content-hash-provenance-decision-text-hash",
-      "name": "Content-hash provenance (decision_text_hash)",
-      "type": "concept",
-      "sources": [
-        "scripts/core/decision_text_hash.py",
-        "scripts/ops/kik-decision-read.py"
-      ],
-      "sourcesDigest": "29bce193d5c60bd9e7bf52e9c353d21de59f11e0b8c1f585378295f1c8433681"
-    },
-    {
       "slug": "context-watch-hook",
       "name": "Context Watch Hook",
       "type": "file",
@@ -808,15 +815,6 @@
         "scripts/context-watch.py"
       ],
       "sourcesDigest": "e120476879431ac8f01406f0c7056c596e84ad05a3bdffa80c27718e3d312c80"
-    },
-    {
-      "slug": "context7-compliance-checker",
-      "name": "Context7 compliance checker",
-      "type": "file",
-      "sources": [
-        "scripts/ops/context7-check.py"
-      ],
-      "sourcesDigest": "7b9324b6606ae2451e7e0e246f5f0afc951e0c21403a03d682250a5b8758309e"
     },
     {
       "slug": "context7-docs-wrapper",
@@ -828,36 +826,51 @@
       "sourcesDigest": "d015b3a02ab7360603b113092f672eafcdd3a21270b3ab056880f098f44b12c1"
     },
     {
-      "slug": "context7-import-audit",
-      "name": "Context7 Import Audit",
-      "type": "file",
-      "sources": [
-        "tests/test_context7_check.sh"
-      ],
-      "sourcesDigest": "0491c4407e0fe69bcc8291502ec69f7a3a70a54cb2d14a35aae791d02d5557e2"
-    },
-    {
-      "slug": "cycle-economics-cost-auditing",
-      "name": "Cycle Economics & Cost Auditing",
+      "slug": "cost-budget-accounting",
+      "name": "Cost & budget accounting",
       "type": "system",
       "sources": [
-        "scripts/ops/tool-usage-audit.py",
+        "scripts/core/engine-usage-cost.py",
+        "scripts/ops/budget-calibration-report.py",
+        "scripts/ops/cost-audit.py",
+        "scripts/ops/operator-usage-report.sh"
+      ],
+      "sourcesDigest": "6fb629ee9880123491a0128cf07e0e4887169443c294bae98d7fccfe913ecd86"
+    },
+    {
+      "slug": "cycle-cost-and-turn-economics",
+      "name": "Cycle Cost and Turn Economics",
+      "type": "system",
+      "sources": [
+        "scripts/ops/cost-audit.py",
         "scripts/ops/turn-audit.py",
         "scripts/ops/web-research-cost.py",
         "tests/test_cost_audit_tool_surface.py",
         "tests/test_cost_model_hint.sh"
       ],
-      "sourcesDigest": "a2b9d428313c530fbd674bee4160e9759846f6bb846f5cdceb031744f1ab8472"
+      "sourcesDigest": "7ab230a9de08e9cc4f607a3437fec40e7eeb7f9e23259fb617c393a9459e28e4"
     },
     {
-      "slug": "directive-staleness-rule-sweep",
-      "name": "Directive staleness & rule sweep",
+      "slug": "dashboard-server",
+      "name": "dashboard server",
+      "type": "file",
+      "sources": [
+        "tests/test_dashboard_server.py",
+        "tests/test_refusal_format.sh"
+      ],
+      "sourcesDigest": "252dbbe5313118bae0e236bc0e3d23e6d95cfee0f02c277a0ab420cd92f01df6"
+    },
+    {
+      "slug": "directive-lifecycle-operator-escalation",
+      "name": "Directive lifecycle & operator escalation",
       "type": "system",
       "sources": [
+        "scripts/core/directive_writer.py",
+        "scripts/core/operator_request_notify.py",
         "scripts/ops/directive-rule-sweep.py",
         "scripts/ops/directive-staleness-watch.py"
       ],
-      "sourcesDigest": "72dca44a648f671b33d192ba19637eb703aa6164d5968c3652a46dd92a214e9f"
+      "sourcesDigest": "0fd68ee182963d9965f81323b8f75e93fc5e002e2a5a315e0ad14b79b47efe56"
     },
     {
       "slug": "directive-write-gate",
@@ -871,36 +884,42 @@
       "sourcesDigest": "ea2db531b8f02633a25807fa758b6689a82002f593a1362e2d3238d880e091a5"
     },
     {
-      "slug": "docker-disk-space-guard",
-      "name": "Docker disk-space guard",
+      "slug": "directive-writer-section-refs",
+      "name": "directive writer & section refs",
       "type": "file",
       "sources": [
-        "scripts/ops/docker-prune-safe.sh"
+        "tests/test_directive_section_refs.sh"
       ],
-      "sourcesDigest": "e24fe28b77d7c48047aeb9d7f3037b12372488dca9bbcb6208518f1e5efa731d"
+      "sourcesDigest": "8b661c6cefe4ff5f3a7f27bbb81f63b12029092bb13b454946fa8130a43147a8"
     },
     {
-      "slug": "engine-usage-cost-adapter",
-      "name": "Engine usage cost adapter",
-      "type": "file",
-      "sources": [
-        "scripts/core/engine-usage-cost.py"
-      ],
-      "sourcesDigest": "6ee6a7bfcdad67740cc3e9c82b68d36bdd80cf963fef48f593806b0c3ca5a41c"
-    },
-    {
-      "slug": "evidence-extraction-axis-screening",
-      "name": "Evidence extraction & axis screening",
+      "slug": "evidence-extraction-verification",
+      "name": "Evidence extraction & verification",
       "type": "system",
       "sources": [
+        "scripts/ops/browse-extract.py",
         "scripts/ops/extract-axis-evidence.py"
       ],
-      "sourcesDigest": "4bf6158710472fff59770fd8e5c297877f60bc810d6cb8cf5efc464a05a6a1b0"
+      "sourcesDigest": "fe32c044718f35762e1fb166e5fd82101189a8a900ccc665be4e0a5645260f88"
     },
     {
-      "slug": "final-text-extraction-codex-jcode",
-      "name": "Final-text extraction (codex/jcode)",
-      "type": "system",
+      "slug": "fail-closed-verification-philosophy",
+      "name": "Fail-Closed Verification Philosophy",
+      "type": "concept",
+      "sources": [
+        "scripts/core/auto-loop.sh",
+        "scripts/ops/send-gate.py",
+        "scripts/ops/site-contact-evidence.py",
+        "scripts/ops/work-window.py",
+        "tests/test_ccusage_failclosed.sh",
+        "tests/test_cost_model_hint.sh"
+      ],
+      "sourcesDigest": "c528a0f85c3712608f9ae7195b6ea0313a17aab48a1e62cd4c2c6e026ef0c386"
+    },
+    {
+      "slug": "final-text-extraction-from-event-streams",
+      "name": "Final-text extraction from event streams",
+      "type": "concept",
       "sources": [
         "scripts/core/codex-final-text.py",
         "scripts/core/jcode-final-text.py"
@@ -908,31 +927,22 @@
       "sourcesDigest": "8c86c687652a082aa409b4a8ba8ffb34c64122612918dfab6b3f4384e3425870"
     },
     {
-      "slug": "g4-attribution-evidence",
-      "name": "G4 Attribution Evidence",
-      "type": "system",
+      "slug": "g4-check",
+      "name": "G4 check",
+      "type": "file",
       "sources": [
-        "scripts/ops/site-contact-evidence.py"
+        "tests/test_g4_check.sh"
       ],
-      "sourcesDigest": "5c3ab49bca83c326e54b9e154c81edea67c57863bcee0d19e964759966469ad2"
+      "sourcesDigest": "3479b42197aed3dc935842f570f92dbe979db1741a919d19c8c4fce117d8490d"
     },
     {
-      "slug": "g4-identity-attribution-checker",
-      "name": "G4 identity-attribution checker",
-      "type": "file",
+      "slug": "g4-identity-verification",
+      "name": "G4 identity verification",
+      "type": "system",
       "sources": [
         "scripts/ops/g4-check.py"
       ],
       "sourcesDigest": "e47298fddc2eacfb0ba6a82f12150cbd0deb55432756d5004128f2796ba6b41f"
-    },
-    {
-      "slug": "graft-auto-refresh",
-      "name": "Graft auto-refresh",
-      "type": "file",
-      "sources": [
-        "scripts/graft-auto-refresh.py"
-      ],
-      "sourcesDigest": "349cf6c8fc1b8b2d774551e2842a1220b68910aa7da6e08ac140a57584d3d3b4"
     },
     {
       "slug": "headinspect-service",
@@ -947,13 +957,14 @@
       "sourcesDigest": "cb61b3ccfe05c907fe9c1d45e555e1e03b1607816df1e7ac11b12c3268891960"
     },
     {
-      "slug": "human-directive-writer-directive-writer",
-      "name": "Human directive writer (directive_writer)",
-      "type": "file",
+      "slug": "infrastructure-disk-hygiene",
+      "name": "Infrastructure & disk hygiene",
+      "type": "system",
       "sources": [
-        "scripts/core/directive_writer.py"
+        "scripts/graft-auto-refresh.py",
+        "scripts/ops/docker-prune-safe.sh"
       ],
-      "sourcesDigest": "f4f863d4df3fc313e0dd21bd4e126bc92b8f46cf056589dd04f736eba34c9ebd"
+      "sourcesDigest": "87308da8f3f12a81d7f73588a9b560c95ed87f2442550b00dae0c3b45230ac85"
     },
     {
       "slug": "jcode-pilot-smoke-test",
@@ -965,35 +976,37 @@
       "sourcesDigest": "580997342635860ff744d27a36e889c902bd03a27837c94edb20c5bb745f01b5"
     },
     {
-      "slug": "ki-k-decision-reader",
-      "name": "KİK decision reader",
-      "type": "file",
+      "slug": "ki-k-decision-evidence-pipeline",
+      "name": "KİK decision evidence pipeline",
+      "type": "system",
       "sources": [
+        "scripts/core/decision_text_hash.py",
         "scripts/ops/kik-decision-read.py"
       ],
-      "sourcesDigest": "d0430e1b2184f3b5ab5ef2ec2df0217a8110eb3508d564651dace20265543677"
+      "sourcesDigest": "29bce193d5c60bd9e7bf52e9c353d21de59f11e0b8c1f585378295f1c8433681"
     },
     {
-      "slug": "ledger-integrity-guard",
-      "name": "Ledger integrity guard",
-      "type": "file",
+      "slug": "ledger-guard-state-snapshot",
+      "name": "ledger guard & state snapshot",
+      "type": "system",
       "sources": [
-        "scripts/ops/ledger-guard.py"
+        "tests/test_ledger_guard.py",
+        "tests/test_state_snapshot.sh"
       ],
-      "sourcesDigest": "84864fc2941c2156105255a901608e5ef24d0956cb977c82d01d9bb70567455a"
+      "sourcesDigest": "01d27662926b30dbbb4d7fafb4a46f4c4a14f9ae08f8fe69d3e1f00c61ab61e6"
     },
     {
-      "slug": "linear-workstream-tracker",
-      "name": "Linear workstream tracker",
-      "type": "file",
+      "slug": "linear-workstream-discipline",
+      "name": "Linear workstream discipline",
+      "type": "system",
       "sources": [
         "scripts/ops/linear-track.py"
       ],
       "sourcesDigest": "ab4334d9d2bf19461212de4e4796a9e06c905727151e75e3aa148fac2d49e754"
     },
     {
-      "slug": "loop-lifecycle-monitoring-shell",
-      "name": "Loop lifecycle & monitoring (shell)",
+      "slug": "loop-lifecycle-monitoring",
+      "name": "Loop lifecycle & monitoring",
       "type": "system",
       "sources": [
         "scripts/core/monitor.sh",
@@ -1016,22 +1029,65 @@
       "sourcesDigest": "5c486cb9b9e24ea7acf023003a03ae50970460766baf723ea3eb1774622a9ed8"
     },
     {
-      "slug": "mcp-key-verification",
-      "name": "MCP Key Verification",
-      "type": "file",
+      "slug": "mcp-config-generator",
+      "name": "MCP config generator",
+      "type": "system",
       "sources": [
-        "scripts/ops/verify-mcp-keys.py"
+        "tests/test_jcode_mcp_config.sh",
+        "tests/test_mcp_key_fallback.sh"
       ],
-      "sourcesDigest": "53579789209d19207ea77c4e9195c8f1f5f66496648a6b53cdcedba956c4bec7"
+      "sourcesDigest": "bb7a46e749bf5cf188237332a19c925be341fc7e8c0a5fb8d47959b9490018b8"
     },
     {
-      "slug": "mcp-probe-test-fixture",
-      "name": "MCP Probe Test Fixture",
+      "slug": "mcp-config-sync-invariant",
+      "name": "MCP config sync invariant",
+      "type": "concept",
+      "sources": [
+        "tests/test_mcp_config_manifest_sync.sh",
+        "tests/test_mcp_probe.sh"
+      ],
+      "sourcesDigest": "e36b83fc83b19f37b90da6ed99de2b014d0fbd39beb6704514026a9dfce4fca6"
+    },
+    {
+      "slug": "mcp-key-and-tool-verification",
+      "name": "MCP Key and Tool Verification",
+      "type": "system",
+      "sources": [
+        "scripts/ops/context7-check.py",
+        "scripts/ops/verify-mcp-keys.py",
+        "tests/fixtures/mock_mcp_server.py",
+        "tests/test_context7_check.sh"
+      ],
+      "sourcesDigest": "0dc077d291e00e181165c65ffec1f73d76c37a8e510bc1008570b6e1b86bbf55"
+    },
+    {
+      "slug": "mcp-probe",
+      "name": "MCP probe",
       "type": "file",
       "sources": [
-        "tests/fixtures/mock_mcp_server.py"
+        "tests/test_mcp_probe.sh"
       ],
-      "sourcesDigest": "d41c2c418dd351366a8be5287cd5eda2e5b636c4f854c074f9b15af1153ce6e9"
+      "sourcesDigest": "30360d88aad0bab433575ab05149700a3fb89604ae38e77b068196f3a5916ae8"
+    },
+    {
+      "slug": "memory-ledger-integrity-guards",
+      "name": "Memory & ledger integrity guards",
+      "type": "system",
+      "sources": [
+        "scripts/ops/consensus-prune.py",
+        "scripts/ops/ledger-guard.py",
+        "scripts/ops/registry-archive.py"
+      ],
+      "sourcesDigest": "202c5bb3f9ff580c826d3d8e7eb3f241a5f8c5f9dbef45ffb3f6eec3749ebb43"
+    },
+    {
+      "slug": "operator-action-router",
+      "name": "operator action router",
+      "type": "file",
+      "sources": [
+        "tests/test_operator_action_router.py"
+      ],
+      "sourcesDigest": "aee2ab54d4a0bbf378215c19c8cda9f570c978b79187200193ed2def73fcd9ed"
     },
     {
       "slug": "operator-alerting-watchers",
@@ -1045,8 +1101,8 @@
       "sourcesDigest": "5c3c228beb25ca54708c6ee339112c30711eb6f9e12a565531de8aa90bda240e"
     },
     {
-      "slug": "operator-escalation-notification",
-      "name": "Operator escalation & notification",
+      "slug": "operator-notification-routing",
+      "name": "Operator notification & routing",
       "type": "system",
       "sources": [
         "scripts/core/operator_request_notify.py",
@@ -1056,13 +1112,15 @@
       "sourcesDigest": "3610611a317cf414835331663c1c886895e5d4e1446673d7cbb4e510e54ec2eb"
     },
     {
-      "slug": "operator-usage-reporter",
-      "name": "Operator usage reporter",
-      "type": "file",
+      "slug": "operator-request-notification-resolution",
+      "name": "operator request notification & resolution",
+      "type": "system",
       "sources": [
-        "scripts/ops/operator-usage-report.sh"
+        "tests/test_operator_action_router.py",
+        "tests/test_operator_request_notify.py",
+        "tests/test_refusal_format.sh"
       ],
-      "sourcesDigest": "0af75ce719ac85f974a4e4e7623396c84a6103f8d1b5951c4266ce14366245b4"
+      "sourcesDigest": "84ce987e8f25f3f1d2f0813cb0d8ca7072bf2e7955bc3ee0da67c859d555140c"
     },
     {
       "slug": "opportunity-analyst",
@@ -1077,32 +1135,52 @@
       "sourcesDigest": "466cd5357bc86cd54e0c0bc2a6c4b3756df89d6f333d6ec3e184072f3ff7d3a8"
     },
     {
-      "slug": "opportunity-analyst-cron",
-      "name": "Opportunity Analyst cron",
-      "type": "file",
+      "slug": "outcome-rfq-reply-watchers",
+      "name": "outcome & RFQ reply watchers",
+      "type": "system",
       "sources": [
-        "scripts/ops/opportunity-analyst-cron.sh"
+        "tests/test_reply_watch.sh",
+        "tests/test_rfq_reply_watch.sh"
       ],
-      "sourcesDigest": "927a3e73b4ddafbf79191ec84e859e236b432d3379234edb4566977f1c47dddb"
+      "sourcesDigest": "a480ba62577e4c1d6fdaf989bb40d82719827d70225a8166b73c7f8e51470a60"
     },
     {
-      "slug": "outreach-eligibility-gate-send-gate",
-      "name": "Outreach Eligibility Gate (send-gate)",
-      "type": "file",
+      "slug": "outreach-eligibility-gate",
+      "name": "Outreach Eligibility Gate",
+      "type": "system",
       "sources": [
-        "scripts/ops/send-gate.py"
+        "scripts/ops/send-gate.py",
+        "scripts/ops/site-contact-evidence.py"
       ],
-      "sourcesDigest": "5ab131417a8c8279edfc66290905fedf1a1dd1427669fc3449e20dab94f45e26"
+      "sourcesDigest": "83bbebb16355316c1b2fa6ca43df1b89f78e0c91d74840bba712ca314bcb692a"
     },
     {
-      "slug": "production-mechanism-guard",
-      "name": "Production Mechanism Guard",
+      "slug": "prod-mechanism-guard",
+      "name": "prod-mechanism guard",
       "type": "file",
       "sources": [
-        "scripts/prod-mechanism-guard.py",
-        "tests/test_auto_loop_consensus_prune.sh"
+        "tests/test_prod_mechanism_guard.sh",
+        "tests/test_rfq_send.sh"
       ],
-      "sourcesDigest": "263f9d310def4297100620a3e13cbafec2875dee071601a272efb7f353727c6b"
+      "sourcesDigest": "35954dc42d5b690d0b8fe77e00f7b4d6ae3bb8b635aa4b6914085968db398d73"
+    },
+    {
+      "slug": "production-surface-protection",
+      "name": "Production Surface Protection",
+      "type": "system",
+      "sources": [
+        "scripts/prod-mechanism-guard.py"
+      ],
+      "sourcesDigest": "a8778c76c2d84b2d7e9fe72981362b4bad9b3fde2625b2005cf87674c41bea8c"
+    },
+    {
+      "slug": "prompt-transport-contract",
+      "name": "prompt transport contract",
+      "type": "concept",
+      "sources": [
+        "tests/test_prompt_transport.sh"
+      ],
+      "sourcesDigest": "43a23a58000634ae27009c31c7b63ef340a08366539358de968d0fd597edf089"
     },
     {
       "slug": "registry-merge-tool",
@@ -1114,23 +1192,45 @@
       "sourcesDigest": "5ff39050e2ffebfcb89290b663b10deb8e198c076c45e5893acf920e54d83301"
     },
     {
-      "slug": "rfq-email-sending-templating",
-      "name": "RFQ Email Sending & Templating",
+      "slug": "registry-ops",
+      "name": "registry ops",
+      "type": "system",
+      "sources": [
+        "tests/test_registry_archive.sh",
+        "tests/test_registry_queue_watch.sh"
+      ],
+      "sourcesDigest": "f9962eef09d44a692d03d2d45eb468ea161e8eeb9b8bbffb1593f5928b172fdd"
+    },
+    {
+      "slug": "rfq-email-sending-pipeline",
+      "name": "RFQ Email Sending Pipeline",
       "type": "system",
       "sources": [
         "scripts/ops/rfq_template.py",
+        "scripts/ops/rfq-reply-watch.py",
         "scripts/ops/rfq-send.py"
       ],
-      "sourcesDigest": "cf3477a985d90fc7d5a49be33824fed5f260b7c47dd3c8afac8fc60c3c8b6244"
+      "sourcesDigest": "07ca8589e6cadd0d9c4f2ebb8320ea4d59f8be3a891bd9bab62ae638d7dcb348"
     },
     {
-      "slug": "sentry-heartbeat",
-      "name": "Sentry heartbeat",
-      "type": "file",
+      "slug": "send-gate-outreach-policy",
+      "name": "send gate & outreach policy",
+      "type": "system",
       "sources": [
-        "scripts/core/sentry-heartbeat.sh"
+        "tests/test_rfq_send.sh",
+        "tests/test_send_gate.sh"
       ],
-      "sourcesDigest": "478d093a57b8382e12406ee9572a739f3d97a5ae5f0b9987559cfeb7682ede19"
+      "sourcesDigest": "b9c595d31d560e66deb88d9d01033008661c0417a03fba124ffaf1729c7c63a4"
+    },
+    {
+      "slug": "sentry-heartbeat-crash-loop-detection",
+      "name": "Sentry heartbeat & crash-loop detection",
+      "type": "system",
+      "sources": [
+        "scripts/core/sentry-heartbeat.sh",
+        "scripts/ops/opportunity-analyst-cron.sh"
+      ],
+      "sourcesDigest": "bf5b5c828a4a386d38abc121e6c8299b54474a9ae09c8400479a6ca1629be2d9"
     },
     {
       "slug": "sentry-reporter",
@@ -1142,32 +1242,24 @@
       "sourcesDigest": "d14955d1810e44ac017b77743809ea9e510da96b9f40c625eb3bfe88e5d2372d"
     },
     {
-      "slug": "session-brief-hook",
-      "name": "Session Brief Hook",
-      "type": "file",
-      "sources": [
-        "scripts/session-brief.py",
-        "tests/test_compact_ritual_hardening.sh"
-      ],
-      "sourcesDigest": "537884ec263537e7af22554f87aa4eab48031fb24ee2c82efc337741dcc5ca8a"
-    },
-    {
-      "slug": "session-leak-scanner-bridge-leak-scan",
-      "name": "Session-leak scanner (bridge_leak_scan)",
-      "type": "file",
-      "sources": [
-        "scripts/core/bridge_leak_scan.py"
-      ],
-      "sourcesDigest": "b640af07b633d17a562a8a5f854a19c94a33c6169c66e46291f8978bc47e1945"
-    },
-    {
-      "slug": "site-contact-evidence-examiner",
-      "name": "Site contact evidence examiner",
+      "slug": "session-leak-scanning-evidence-integrity",
+      "name": "Session-leak scanning & evidence integrity",
       "type": "concept",
       "sources": [
-        "scripts/ops/g4-check.py"
+        "scripts/core/bridge_leak_scan.py",
+        "scripts/core/decision_text_hash.py",
+        "scripts/ops/directive-rule-sweep.py"
       ],
-      "sourcesDigest": "e47298fddc2eacfb0ba6a82f12150cbd0deb55432756d5004128f2796ba6b41f"
+      "sourcesDigest": "73060411436fbe180ce2b7cdfa7e9a860c4cbf430b10ffde948f115f5ff3dbf0"
+    },
+    {
+      "slug": "set-e-shape-lint",
+      "name": "set -e shape lint",
+      "type": "concept",
+      "sources": [
+        "tests/test_seteshape_lint.py"
+      ],
+      "sourcesDigest": "bb485dc41fe2695620287c9f61a662378b47a6f7a52a7d87a6d4b941bd639c6c"
     },
     {
       "slug": "snapog-cost-alerts",
@@ -1229,54 +1321,96 @@
     {
       "slug": "state-snapshot-probe",
       "name": "State Snapshot Probe",
-      "type": "file",
+      "type": "system",
       "sources": [
         "scripts/ops/state-snapshot.py"
       ],
       "sourcesDigest": "b49055f6ad2667278243a5d453a6f3a32f13b362f453588327ababae654d5019"
     },
     {
-      "slug": "turn-bloat-escalation",
-      "name": "Turn Bloat Escalation",
+      "slug": "telegram-notification-core",
+      "name": "Telegram Notification Core",
       "type": "system",
       "sources": [
+        "scripts/ops/registry-queue-watch.py",
+        "scripts/ops/reply-watch.py",
+        "scripts/ops/rfq-reply-watch.py",
         "scripts/ops/turn-bloat-brake.py",
-        "tests/test_auto_loop_ledger_guard.sh"
+        "scripts/ops/work-window-watchdog.py"
       ],
-      "sourcesDigest": "fce482ee58c875edd26b6e5d7f743384f451c7ae0d3a6c5f9a605144e910fae6"
+      "sourcesDigest": "d431d8b8ff18258c3e612e92834f125e30d7c801c7f9c1aa0f8c9d04746ef185"
     },
     {
-      "slug": "turn-economy-trend-bloat-watcher",
-      "name": "Turn-economy trend & bloat watcher",
-      "type": "file",
-      "sources": [
-        "scripts/ops/bloat-trend.py"
-      ],
-      "sourcesDigest": "3e232ea381ef4bec4947e6f0531d443f974034d08c1e18e714de47abbc332a73"
-    },
-    {
-      "slug": "work-window-brake-watchdog",
-      "name": "Work-Window Brake & Watchdog",
+      "slug": "tool-usage-and-turn-ledgers",
+      "name": "Tool Usage and Turn Ledgers",
       "type": "system",
       "sources": [
-        "scripts/ops/work-window-watchdog.py",
-        "scripts/ops/work-window.py",
-        "tests/test_auto_loop_work_window.sh"
+        "scripts/ops/tool-usage-audit.py",
+        "scripts/ops/turn-audit.py"
       ],
-      "sourcesDigest": "018327e9f5bfa9b608840268a3baab5c8fbfc5e07b656469982956b950619b56"
+      "sourcesDigest": "d7be2b5067a49c007c7c9c1420a8e39b4d682342d8a075c2e519b580a6b0a037"
     },
     {
-      "slug": "wowcar-revenue-vocabulary-acceptance",
-      "name": "Wowcar Revenue Vocabulary Acceptance",
+      "slug": "tool-usage-audit",
+      "name": "tool usage audit",
       "type": "file",
+      "sources": [
+        "tests/test_tool_usage_audit.sh"
+      ],
+      "sourcesDigest": "cba460eef4963bdc24ab59d1ddd5c9e0777b7c6fa78ddf2ea20f94c8ce1e9ab6"
+    },
+    {
+      "slug": "turn-economy-bloat-brake",
+      "name": "turn economy & bloat brake",
+      "type": "system",
+      "sources": [
+        "tests/test_turn_audit.sh",
+        "tests/test_turn_bloat_brake.py"
+      ],
+      "sourcesDigest": "2e94fa5b7b9400debe79e6c573c421ac60369358f27f55e7554a08b1a2377a5e"
+    },
+    {
+      "slug": "turn-economy-compliance-watchers",
+      "name": "Turn-economy & compliance watchers",
+      "type": "system",
+      "sources": [
+        "scripts/ops/bloat-trend.py",
+        "scripts/ops/context7-check.py",
+        "scripts/ops/idle-skip-note.py"
+      ],
+      "sourcesDigest": "40e277fb6f3746592e7b31a026c53e76bd26efc483c1458b2568e7e1097b1dae"
+    },
+    {
+      "slug": "work-window-watchdog",
+      "name": "work window & watchdog",
+      "type": "system",
+      "sources": [
+        "tests/test_work_window_watchdog.py",
+        "tests/test_work_window.py"
+      ],
+      "sourcesDigest": "6dfb4eb33d5e7c7ee8841a9b89922ac9763145071265d0b39d705106ef95fb77"
+    },
+    {
+      "slug": "wowcar-revenue-relabel-acceptance",
+      "name": "Wowcar Revenue Relabel Acceptance",
+      "type": "system",
       "sources": [
         "scripts/ops/wowcar-revenue-vocabulary-acceptance.py"
       ],
       "sourcesDigest": "4ac41bf99d27b7821e402c8d05774f95ac477ff958d361739e49e65a248d1add"
     },
     {
-      "slug": "wsl-daemon-management",
-      "name": "WSL Daemon Management",
+      "slug": "wowcar-revenue-vocabulary-acceptance",
+      "name": "wowcar revenue vocabulary acceptance",
+      "type": "file",
+      "sources": [
+        "tests/test_wowcar_revenue_vocabulary_acceptance.sh"
+      ],
+      "sourcesDigest": "a14e4fe2b5a8ce01c35ef2cd4572b470cf93c226c80dce76da1245e3991423f6"
+    },
+    {
+      "slug": "wsl-systemd-daemon-management",
+      "name": "WSL Systemd Daemon Management",
       "type": "system",
       "sources": [
         "scripts/wsl/install-wsl-daemon.sh",
