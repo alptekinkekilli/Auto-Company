@@ -1,7 +1,7 @@
 ---
 name: Sentry heartbeat
 slug: sentry-heartbeat
-type: system
+type: file
 sources:
   - path: scripts/core/sentry-heartbeat.sh
     hash: 874eccbdbde7e82f3b3f97f023c1503321380b2c7a28754386d1fb7b366ac12f
@@ -14,7 +14,7 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-Background Sentry Crons heartbeat proving the container process tree is alive independently of the dashboard or loop cycle, specifically to catch crash-loops (APP-250) that application-level error reporting misses. Only reports 'ok' if BOTH dashboard /api/status and loop PID are alive, reporting 'error' immediately otherwise to avoid false positives during fast restart storms (APP-240). Strictly best-effort with an 8s startup grace window.
+Background heartbeat for Sentry Crons proving the container process tree is alive independently of the dashboard or loop cycle, specifically to catch crash-loops (APP-250) that app-level error reporting misses. Only reports 'ok' if BOTH the dashboard /api/status and the loop PID are alive (to avoid false positives during restart storms, APP-240), reports 'error' immediately otherwise, and is strictly best-effort with an 8s startup grace window.
 <!-- context:generated:end -->
 
 ## Notes

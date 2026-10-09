@@ -1,4 +1,4 @@
-# tests/test_consensus_prune.py · [[registry-archive-consensus-pruning]]
+# tests/test_consensus_prune.py · [[consensus-pruning]]
 
 End-to-end test suite for the consensus-prune.py script, covering archiving, thresholds, skip conditions, kill switch, dry-run, dedupe, and ledger-guard integration.
 

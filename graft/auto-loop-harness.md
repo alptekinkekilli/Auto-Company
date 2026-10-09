@@ -3,8 +3,6 @@ name: Auto-Loop Harness
 slug: auto-loop-harness
 type: system
 sources:
-  - path: scripts/wsl/install-wsl-daemon.sh
-    hash: 2b1d8ba1d5064ade6c138f43bd573d49b659b8bf9f5729d3d339a2ace4ee919b
   - path: tests/test_active_window.sh
     hash: fcd17dad9794b155cb623d85a88dd74bf10c12961df71a37f446f030958135fd
   - path: tests/test_auto_loop_consensus_prune.sh
@@ -19,21 +17,20 @@ sources:
     hash: 366b96bee74416db05cc9752919b04304a49f5121d5802920a26641b196ef706
   - path: tests/test_codex_spend_sources.sh
     hash: 38e285a908cfdba71566f50ec2429fed8dc40ccdaaf68886e24e27399bba5bef
-sources_digest: 22cd2a480ea66971e05179ebb8fcf9f58086dddbbbeda1256b50b7156423e5b0
+sources_digest: effc1772eaeb46b1f07cbaff19f4e4ee4748d43b9719c9ab9cace1be02abe05f
 links:
-  - to: cycle-economics-auditing
+  - to: consensus-pruning
     relation: uses
-    description: The harness's budget gates consume ccusage and ledger spend figures.
-  - to: fail-closed-operational-brakes
-    relation: uses
-    description: >-
-      The harness invokes work-window, turn-bloat-brake, ledger-guard, and
-      consensus-prune, gating idle-skip and cycle behavior on their exit codes.
-  - to: prod-mechanism-guard
+    description: Invokes consensus-prune.py after ledger-guard.py
+  - to: production-mechanism-guard
     relation: validates
-    description: >-
-      auto-loop.sh is a protected suffix; prod-mechanism-guard.py blocks
-      unplanned edits to it.
+    description: auto-loop.sh is a protected surface the guard blocks unplanned writes to
+  - to: turn-bloat-escalation
+    relation: uses
+    description: Invokes turn-bloat-brake.py --record/--feedback
+  - to: work-window-brake-watchdog
+    relation: uses
+    description: Calls work-window.py and wires the watchdog post-cycle
 generator:
   version: 1
 covers: []
@@ -41,13 +38,14 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-The central orchestration script scripts/core/auto-loop.sh that drives autonomous cycles: selects the cycle engine, evaluates budget gates (15 behaviors from APP-263), enforces the active-window business-hours gate, records spend from two disjoint sources (ccusage + TOTAL_SPEND_LEDGER, summed not maxed), and wires in the operational brakes and guards. It is a protected production surface (guarded by prod-mechanism-guard.py) and is heavily tested via awk-extracted function harnesses.
+The central orchestration loop (scripts/core/auto-loop.sh) that drives autonomous cycles, with a dense set of fail-closed guards: budget gates (15 behaviors from APP-263), ccusage spend measurement that is fail-closed and never lowers a same-period prior observation, Codex spend summed from two disjoint sources (ccusage + TOTAL_SPEND_LEDGER) rather than max, the work-window brake, consensus pruning, and the turn-bloat brake. Includes the _window_active() business-hours gate with octal-trap handling and fail-open behavior so a typo never parks the company.
 
 ## Related
 
-- uses [[cycle-economics-auditing]] — The harness's budget gates consume ccusage and ledger spend figures.
-- uses [[fail-closed-operational-brakes]] — The harness invokes work-window, turn-bloat-brake, ledger-guard, and consensus-prune, gating idle-skip and cycle behavior on their exit codes.
-- validates [[prod-mechanism-guard]] — auto-loop.sh is a protected suffix; prod-mechanism-guard.py blocks unplanned edits to it.
+- uses [[consensus-pruning]] — Invokes consensus-prune.py after ledger-guard.py
+- validates [[production-mechanism-guard]] — auto-loop.sh is a protected surface the guard blocks unplanned writes to
+- uses [[turn-bloat-escalation]] — Invokes turn-bloat-brake.py --record/--feedback
+- uses [[work-window-brake-watchdog]] — Calls work-window.py and wires the watchdog post-cycle
 <!-- context:generated:end -->
 
 ## Notes

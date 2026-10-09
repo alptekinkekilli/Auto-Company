@@ -671,11 +671,17 @@ def _resolves_block_window(directive_text: str, req_id: str):
     return window[:MAX_WINDOW_CHARS]
 
 
-# Char class is [A-Za-z0-9_ -] (not just [A-Za-z -]) so underscore/digit decision
-# tokens (OPTION_A, base_20k_plus_40pct_28k, …) resolve. Aligns the repo with the
-# widening a cycle applied in-container on 2026-08-25; keep them in sync so a redeploy
-# does not silently narrow this back.
-DECISION_RE = re.compile(r"\s*([A-Za-z][A-Za-z0-9_ -]{2,30}?)\s*[—-]\s*(.{10,})")
+# Char class is [A-Za-z0-9_ .,()=-] (not just [A-Za-z -]) so underscore/digit decision
+# tokens (OPTION_A, base_20k_plus_40pct_28k, …) AND multi-option decision tokens using
+# '.', ',', '=', '(', ')' (e.g. "K2.1=(a)-TAHVIL, K1=SRL, K3=KOSULLU, K4=KOSULLU",
+# Cycle 780, OPREQ-VADEA-ITALIA-KARAR-001) resolve. Aligns the repo with the widening a
+# cycle applied in-container on 2026-08-25; keep them in sync so a redeploy does not
+# silently narrow this back. The split point is still whichever '—'/'-' the lazy match
+# finds first, so the captured decision_word may be a prefix of the operator's full
+# token — harmless, since the FULL line stays verbatim and readable in
+# human-directive.md; this regex only certifies that a word+rationale(>=10 chars) pair
+# exists, it is not the record of what was decided.
+DECISION_RE = re.compile(r"\s*([A-Za-z][A-Za-z0-9_ .,()=-]{2,60}?)\s*[—-]\s*(.{10,})")
 
 
 def verify_legal_or_financial_decision(

@@ -7,9 +7,9 @@ sources:
     hash: d4fc93cf6b456038f23e1e756019a7fa1b47a344b0385bc5cd3d3a5536834733
 sources_digest: 0491c4407e0fe69bcc8291502ec69f7a3a70a54cb2d14a35aae791d02d5557e2
 links:
-  - to: auto-company-ops-scripts
-    relation: validates
-    description: Audits cycles for Context7 documentation lookups on external imports.
+  - to: cycle-economics-cost-auditing
+    relation: uses
+    description: context7 is one of the MCP servers whose usage is counted in tool audits
 generator:
   version: 1
 covers: []
@@ -17,11 +17,11 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-context7-check.py audits assistant cycles to ensure external library imports are accompanied by a Context7 documentation lookup, flagging external imports without a check as CONTEXT7 NO-CHECK. It deliberately must not fire on the project's own stdlib-only ops scripts to avoid false alarms that erode trust, and parses payloads via JSON not regex.
+context7-check.py audits AI assistant cycles to ensure external library imports are accompanied by a Context7 documentation lookup. Must not fire on the project's own ops scripts (stdlib only) to avoid false alarms that erode trust; parses payloads via JSON not regex to tolerate escaped quotes/newlines.
 
 ## Related
 
-- validates [[auto-company-ops-scripts]] — Audits cycles for Context7 documentation lookups on external imports.
+- uses [[cycle-economics-cost-auditing]] — context7 is one of the MCP servers whose usage is counted in tool audits
 <!-- context:generated:end -->
 
 ## Notes

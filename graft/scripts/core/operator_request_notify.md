@@ -1,6 +1,6 @@
-# scripts/core/operator_request_notify.py · [[operator-escalation-gate-operator-request-notify]]
+# scripts/core/operator_request_notify.py · [[operator-escalation-notification]]
 
-Deterministic operator-escalation gate that dedups, notifies via Telegram, and resolves OPREQ ledger requests, and regenerates the consensus.md Awaiting Operator projection.
+Deterministic operator-escalation gate that decides which operator requests are genuinely new/changed (dedup on content fingerprint), sends Telegram notifications only for escalation-worthy types, marks delivery only on Telegram API ok:true, and flips OPEN to RESOLVED only with a directive reference plus type-specific deterministic verification.
 
 - _looks_secret · function · L114-L123 — Decides whether a long opaque token is secret-shaped so only genuinely secret-looking tokens get redacted, not request IDs or doc slugs.
 - now_iso · function · L134-L135 — Returns the current UTC time as an ISO-8601 string for audit stamps.
@@ -27,11 +27,11 @@ Deterministic operator-escalation gate that dedups, notifies via Telegram, and r
 - verify_credential · function · L581-L622 — Verifies a credential resolution against a non-secret verification-log artifact.
 - _directive_window_after · function · L646-L654 — Extracts the directive text window following an anchor label for a given request.
 - _resolves_block_window · function · L657-L671 — Scopes the directive search to the Resolves block for a given request id so a later request doesn't match an earlier one's evidence files.
-- verify_legal_or_financial_decision · function · L681-L703 — Verifies a legal/financial decision resolution from a structured decision the operator wrote in the directive.
-- verify_authorization · function · L706-L732 — Verifies an authorization resolution from a structured operator decision in the directive.
-- refusal_for · function · L748-L772 — Detects an operator REFUSE for a request from the directive and returns the refusal reason.
-- verify_resolution · function · L775-L796 — Flips an OPEN request to RESOLVED only when a human-directive reference plus a type-specific deterministic verification succeeds.
-- _answer_sources · function · L799-L817 — Collects the directive and decisions text sources that may contain an operator answer.
-- process_resolutions · function · L820-L878 — Scans OPEN requests against the directive and decisions text, verifying and flipping resolved ones to RESOLVED.
-- _main_impl · function · L881-L973 — Orchestrates the full run: load ledger/state, process notifications and resolutions, write state and projection, always exiting 0.
-- main · function · L976-L988 — Entry point that resolves the app dir and invokes the main implementation with default send/sleep functions.
+- verify_legal_or_financial_decision · function · L687-L709 — Verifies a legal/financial decision resolution from a structured decision the operator wrote in the directive.
+- verify_authorization · function · L712-L738 — Verifies an authorization resolution from a structured operator decision in the directive.
+- refusal_for · function · L754-L778 — Detects an operator REFUSE for a request from the directive and returns the refusal reason.
+- verify_resolution · function · L781-L802 — Flips an OPEN request to RESOLVED only when a human-directive reference plus a type-specific deterministic verification succeeds.
+- _answer_sources · function · L805-L823 — Collects the directive and decisions text sources that may contain an operator answer.
+- process_resolutions · function · L826-L884 — Scans OPEN requests against the directive and decisions text, verifying and flipping resolved ones to RESOLVED.
+- _main_impl · function · L887-L979 — Orchestrates the full run: load ledger/state, process notifications and resolutions, write state and projection, always exiting 0.
+- main · function · L982-L994 — Entry point that resolves the app dir and invokes the main implementation with default send/sleep functions.

@@ -1,15 +1,12 @@
 ---
 name: KİK decision reader
 slug: ki-k-decision-reader
-type: system
+type: file
 sources:
   - path: scripts/ops/kik-decision-read.py
     hash: 4f2060cbaaa784433de9720f1e9a3bfb3ba6c06cab00fae0efa0a426e5c926de
 sources_digest: d0430e1b2184f3b5ab5ef2ec2df0217a8110eb3508d564651dace20265543677
-links:
-  - to: content-hash-provenance-decision-text-hash
-    relation: uses
-    description: Imports the canonical hash module to guarantee bridge comparability.
+links: []
 generator:
   version: 1
 covers:
@@ -38,11 +35,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Single-call fetcher for Turkish public procurement decision pages that returns a compact digest (decision number/date, authority, complainant vs excluded firm, operative sentence, canonical hash) to avoid multi-turn browser round-trips that killed agent cycles. Uses curl with browser UA (urllib fails TLS on macOS), retries on short/empty responses, and drops quoted legislation before extracting exclusion sentences so a quoted article is never mistaken for a real exclusion.
-
-## Related
-
-- uses [[content-hash-provenance-decision-text-hash]] — Imports the canonical hash module to guarantee bridge comparability.
+Single-call fetcher for Turkish public procurement decision pages that returns a compact digest (decision/meeting numbers, authority, tender ref, complainant vs excluded firm, operative sentence, canonical hash). Uses exact header regexes to avoid dragging in the intervening 'Mahkeme Kararları' block, drops quoted legislation before extracting exclusion sentences so a quoted article is never mistaken for a real exclusion, and retries short/empty responses up to three times.
 <!-- context:generated:end -->
 
 ## Notes

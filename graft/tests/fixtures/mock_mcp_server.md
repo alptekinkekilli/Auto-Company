@@ -1,4 +1,4 @@
-# tests/fixtures/mock_mcp_server.py · [[mcp-tooling-verification]]
+# tests/fixtures/mock_mcp_server.py · [[mcp-probe-test-fixture]]
 
 A mock MCP stdio server that answers newline-delimited JSON-RPC initialize, tools/list, and tools/call requests, configurable via environment variables to simulate tool availability, error results, and unreachable servers.
 

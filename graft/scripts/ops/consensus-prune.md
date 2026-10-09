@@ -1,4 +1,4 @@
-# scripts/ops/consensus-prune.py · [[consensus-pruning-ledger-guard]]
+# scripts/ops/consensus-prune.py · [[consensus-registry-maintenance]]
 
 Harness mechanism that mechanically archives old 'What We Did This Cycle' entries from consensus.md into a dated docs/ archive to keep the file under the prompt-size cap, fail-closed but never silent.
 

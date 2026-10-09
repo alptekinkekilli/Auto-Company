@@ -64,7 +64,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Scoped, auditable Airtable access replacing ad-hoc curl that leaked API keys. The read wrapper refuses unscoped pulls (which averaged 28KB/call and cost $2.41 in context re-reads), auto-switches to POST /listRecords past a 15,000-char URL threshold, and reports byte cost. The write wrapper reads-then-PATCHes-then-verifies one record per invocation, with dry-run default, --allow-clear for non-empty fields, and --replace for substantial existing strings to prevent accidental data loss. Secrets come from runtime.env or macOS Keychain, never argv.
+Scoped, auditable Airtable access outside the MCP cycle. airtable-read.py refuses unscoped reads (naming the fixing flag), paginates with automatic switch to POST /listRecords past a 15k-char URL threshold, clips cells with a marker, and reports byte cost; airtable-write.py is a sanctioned single-record PATCH path (dry-run default, --allow-clear for non-empty fields, --replace for >300-char strings) that reads back and verifies, replacing ad-hoc curl commands that leaked API keys. Both load secrets from runtime.env or macOS Keychain, never argv.
 <!-- context:generated:end -->
 
 ## Notes

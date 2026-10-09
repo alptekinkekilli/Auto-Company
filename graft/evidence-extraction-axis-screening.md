@@ -14,7 +14,7 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-Extracts every screened axis heading and body from discovery-scan markdown, replacing a broken shell version that dropped kill reasons and missed 19 axes due to a narrow heading regex. Fails closed: any unreadable file, empty body, or heading/body count mismatch triggers non-zero exit with diagnostics so output never silently omits evidence.
+Two scripts supporting research evidence handling: extract-axis-evidence.py extracts every screened axis heading and body from discovery-scan markdown files, failing closed on any unreadable file, empty body, or heading/body count mismatch so output never silently omits evidence (replacing a broken shell version that dropped kill reasons and missed 19 axes); kik-decision-read.py (covered separately) fetches procurement decisions. Both are stdlib-only and strict-validation-over-silent-success.
 <!-- context:generated:end -->
 
 ## Notes

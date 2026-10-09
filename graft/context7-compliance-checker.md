@@ -1,7 +1,7 @@
 ---
 name: Context7 compliance checker
 slug: context7-compliance-checker
-type: system
+type: file
 sources:
   - path: scripts/ops/context7-check.py
     hash: 4687b776e558caf660fad0d984e405c6a9498525648273569ac9a5feb544797e
@@ -29,7 +29,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-Detects whether an agent wrote code importing an external library without first calling the Context7 MCP tool, by parsing per-cycle ndjson logs. Deliberately avoids prefiltering on exact JSON strings (which caused silent false negatives), parses JSON lines rather than regexing code payloads, treats missing stdlib entries as false positives only, and reports to the LOG rather than blocking.
+Compliance checker inspecting per-cycle ndjson logs to detect whether an agent wrote code importing an external library without first calling the Context7 MCP tool. Deliberately avoids prefiltering on exact JSON strings (which caused silent false negatives), parses JSON lines rather than regexing code payloads, treats missing stdlib entries as false positives only, and reports to the LOG rather than blocking.
 <!-- context:generated:end -->
 
 ## Notes

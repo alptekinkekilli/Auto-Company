@@ -8,12 +8,7 @@ sources:
   - path: scripts/ops/kik-decision-read.py
     hash: 4f2060cbaaa784433de9720f1e9a3bfb3ba6c06cab00fae0efa0a426e5c926de
 sources_digest: 29bce193d5c60bd9e7bf52e9c353d21de59f11e0b8c1f585378295f1c8433681
-links:
-  - to: ki-k-decision-reader
-    relation: implements
-    description: >-
-      kik-decision-read.py dynamically imports this module to guarantee its
-      recorded hash is comparable to the bridge's value.
+links: []
 generator:
   version: 1
 covers:
@@ -54,11 +49,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The single source of truth for KİK decision page hashing. Normalization order is load-bearing at every step (drop script/style, replace tags with single space not empty, unescape entities after tag removal, collapse whitespace) because raw HTML varies by client/__VIEWSTATE. A hash produced any other way is not comparable and must not be written to the bridge — a lesson from a 2026-07-29 underdetermined-spec incident that caused a legitimate evidence quarantine.
-
-## Related
-
-- implements [[ki-k-decision-reader]] — kik-decision-read.py dynamically imports this module to guarantee its recorded hash is comparable to the bridge's value.
+The canonical, single-source-of-truth content hash for KİK decision pages. Normalization order is load-bearing (decode→drop script/style→tags to single space→unescape entities after tag removal→NBSP→collapse) because raw ASP.NET HTML varies by client; a hash produced any other way is not comparable and must not be written to the bridge. Includes a curl fallback because some Python builds fail TLS against ekap.kik.gov.tr.
 <!-- context:generated:end -->
 
 ## Notes
