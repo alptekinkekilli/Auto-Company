@@ -1,7 +1,7 @@
-# scripts/core/engine-usage-cost.py · [[cost-budget-accounting]]
+# scripts/core/engine-usage-cost.py · [[engine-output-extraction]]
 
-CLI adapter that converts token usage (Claude API or jcode ndjson) into notional USD at Anthropic list prices so the APP-263 budget gates keep seeing real numbers, with a conservative unknown-model fallback that never reports zero.
+CLI adapter that converts token usage (from Claude API JSON or jcode ndjson streams) into notional USD at Anthropic list prices, with a conservative unknown-model fallback so budget gates never silently read zero.
 
-- _n · function · L66-L69 — None-safe integer coercion so OpenAI-provider tokens events with null cache fields don't raise.
-- cost_for · function · L72-L110 — Computes notional USD from token counts, honoring per-TTL cache-write breakdowns and pricing unknown models at the max known row times a conservative factor (or hard-failing under STRICT).
-- main · function · L113-L191 — Parses input (usage JSON or summed ndjson tokens events), resolves the actual model from the done event or hint, and emits the cost line with exit codes for bad input and unknown models.
+- _n · function · L75-L78 — None-safe integer coercion so OpenAI-provider tokens events with null cache fields don't raise.
+- cost_for · function · L81-L123 — Computes notional USD cost from a token-usage dict, pricing known models from the PRICES table and unknown models at the max row times a conservative factor (or hard-failing under STRICT=1), including cache read/write multipliers.
+- main · function · L126-L204 — Parses input (usage JSON or summed ndjson tokens events), resolves the actual model from the done event or hint, and emits the cost line with exit codes for bad input and unknown models.

@@ -1,4 +1,4 @@
-# tests/test_consensus_prune.py · [[consensus-pruning-and-ledger-guard]]
+# tests/test_consensus_prune.py
 
 Test suite for the consensus-prune.py script covering v1 and v2 pruning behaviors, invariants, guard integration, and edge cases.
 

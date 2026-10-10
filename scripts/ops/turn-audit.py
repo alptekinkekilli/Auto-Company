@@ -113,9 +113,12 @@ def scan(path):
 
 
 def floor_usd(s):
-    # sonnet-5 $/Mtok: cache-write(1h) 6, cache-read 0.30 — in/out are redacted in
-    # the log, so this is a FLOOR, not the bill.
-    return (s["cache_write"] * 6 + s["cache_read"] * 0.30) / 1e6
+    # Sonnet 5 / 5.5 official tariff (platform.claude.com pricing, 2026-10-11): input
+    # $2/M → cache-write(1h) 2x = $4/M; cache-read 0.05x (Sonnet 5.5) = $0.10/M. The
+    # previous 6 / 0.30 figures were the old 3/15 assumption. In/out tokens are
+    # redacted in the log, so this is a FLOOR, not the bill — and on Sonnet 5 (read
+    # 0.10x) it under-counts cache reads by half on purpose: floor stays a floor.
+    return (s["cache_write"] * 4 + s["cache_read"] * 0.10) / 1e6
 
 
 def summary_line(sid, s):

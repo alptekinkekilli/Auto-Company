@@ -15,11 +15,11 @@ sources:
     hash: 721ece8bebbdbef80a1b67bb8573a3083b213175e0bda2277a9c46b976c300e1
 sources_digest: 6e11740780dc883b8f9529d0b785c680a65f78067736607b6fb743ec07d0f06f
 links:
-  - to: autonomous-loop-orchestrator
+  - to: auto-loop-orchestrator
     relation: uses
     description: >-
-      compact-report.py does a single SSH round-trip to read the cockpit state
-      file and tail telemetry for loop health.
+      compact-report.py reads the cockpit state file and loop telemetry via SSH
+      to report operational health
 generator:
   version: 1
 covers:
@@ -96,11 +96,11 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-A set of hooks and scripts that mechanize the Claude Code compact ritual: repo-specific temp paths (compact_yol.py, replacing shared /tmp that caused cross-project collisions), a preflight that scans git state and validates resume freshness (blocking auto-compact once via a 30-min TTL marker), a resume linter enforcing the 'foreign-reader test' (no stale numeric measurements, mandatory sections), a postcheck canary verifying critical anchors survive into the summary, and an operational digest reporting repo↔prod sync, OPREQ, directives, holds, and loop health. All fail-open and never block manual compacts.
+A set of Claude Code hook scripts that mechanize the 'compact' ritual: repo-specific temp paths (compact_yol.py, replacing shared /tmp paths that caused cross-project collisions), a preflight check that scans git repos for uncommitted/unpushed/stash risk and validates resume freshness (one-shot auto-block with 30-min TTL marker), a resume linter enforcing the 'foreign-reader test' (no stale numeric measurements, mandatory template sections, regexes derived from real past incidents), a post-compact audit checking the summary carries five mandatory anchor sections (canary, not proof), and an operational digest reporting repo↔prod sync, OPREQ, directives, holds, and loop health via a single SSH round-trip. All fail open and never block compact except the deliberate one-shot preflight auto-block.
 
 ## Related
 
-- uses [[autonomous-loop-orchestrator]] — compact-report.py does a single SSH round-trip to read the cockpit state file and tail telemetry for loop health.
+- uses [[auto-loop-orchestrator]] — compact-report.py reads the cockpit state file and loop telemetry via SSH to report operational health
 <!-- context:generated:end -->
 
 ## Notes

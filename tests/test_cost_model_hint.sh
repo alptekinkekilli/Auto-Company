@@ -63,5 +63,28 @@ contains     "actual model kept"  "$out" '"model": "claude-sonnet-5"'
 not_contains "no hint marker"     "$out" "requested-model HINT"
 contains     "stays calibrated"   "$out" '"estimated": false'
 
+echo "--- 5: Sonnet 5 priced at the official 2/10 list (2026-10-11 recalibration) ---"
+# 1000 in*2 + 500 out*10 + 2M read*2*0.10 + 100k write*2*2.0 = 2000+5000+400000+400000 = 0.807
+out=$(python3 "$ADAPTER" --ndjson-file "$WORK/complete.ndjson")
+s5_cost=$(cost_of "$out")
+if [ "$s5_cost" = "0.807" ]; then echo "  PASS sonnet-5 = 0.807"; else echo "  FAIL sonnet-5 cost $s5_cost != 0.807"; fail=1; fi
+contains "basis v2" "$out" "list-price table v2"
+
+echo "--- 6: Sonnet 5.5 — same in/out, cache READ at 0.05x (row-level multiplier) ---"
+# 2000 + 5000 + 2M*2*0.05 (=200000) + 400000 = 0.607
+printf '%s\n{"type":"done","model":"claude-sonnet-5-5"}\n' "$TOK" > "$WORK/s55.ndjson"
+out=$(python3 "$ADAPTER" --ndjson-file "$WORK/s55.ndjson")
+s55_cost=$(cost_of "$out")
+contains "model kept"       "$out" '"model": "claude-sonnet-5-5"'
+contains "calibrated row"   "$out" '"estimated": false'
+if [ "$s55_cost" = "0.607" ]; then echo "  PASS sonnet-5-5 = 0.607"; else echo "  FAIL sonnet-5-5 cost $s55_cost != 0.607"; fail=1; fi
+
+echo "--- 7: rows without a third element keep the uniform 0.10x read multiplier ---"
+printf '%s\n{"type":"done","model":"claude-haiku-4-5"}\n' "$TOK" > "$WORK/haiku.ndjson"
+out=$(python3 "$ADAPTER" --ndjson-file "$WORK/haiku.ndjson")
+# 1000*1 + 500*5 + 2M*1*0.10 + 100k*1*2.0 = 1000+2500+200000+200000 = 0.4035
+h_cost=$(cost_of "$out")
+if [ "$h_cost" = "0.4035" ]; then echo "  PASS haiku unchanged = 0.4035"; else echo "  FAIL haiku cost $h_cost != 0.4035"; fail=1; fi
+
 echo
 if [ "$fail" = "0" ]; then echo "ALL PASS"; else echo "FAILURES"; exit 1; fi

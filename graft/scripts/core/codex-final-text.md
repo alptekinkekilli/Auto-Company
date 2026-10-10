@@ -1,4 +1,4 @@
-# scripts/core/codex-final-text.py · [[final-text-extraction-from-event-streams]]
+# scripts/core/codex-final-text.py · [[engine-output-extraction]]
 
 Standalone script that extracts the assistant's final message text from a codex exec JSONL event stream, failing soft so callers can fall back to raw content.
 

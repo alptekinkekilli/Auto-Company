@@ -1,4 +1,4 @@
-# scripts/ops/work-window.py · [[atomic-state-file-writes]] [[auto-loop-harness-brakes-and-guards]] [[fail-closed-verification-philosophy]]
+# scripts/ops/work-window.py
 
 A fail-closed brake that opens a K-cycle work window whenever a tracked surface changes, forcing the harness to advance one queued item instead of emitting a valid empty-cycle confirmation.
 

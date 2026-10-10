@@ -6,10 +6,7 @@ sources:
   - path: tests/test_operator_action_router.py
     hash: 20f6bd56ba2238d0242627275af5749560272630a1212f9f9f22159d655d99ae
 sources_digest: aee2ab54d4a0bbf378215c19c8cda9f570c978b79187200193ed2def73fcd9ed
-links:
-  - to: operator-request-notification-resolution
-    relation: uses
-    description: Both read the same memories/ state files
+links: []
 generator:
   version: 1
 covers:
@@ -26,11 +23,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-scripts/ops/operator-action-router.py collects and renders a priority-ordered digest (hold > opreq > directive) with staleness floors for directives, dedup within a repeat window, state clearing on empty sets, and fail-soft behavior when memories/ is missing. It persists state and dedup on the real code path, and renders a Turkish header/footer digest.
-
-## Related
-
-- uses [[operator-request-notification-resolution]] — Both read the same memories/ state files
+operator-action-router.py collects and renders operator-facing items with priority ordering (hold > opreq > directive), staleness floors for directives, dedup within a repeat window, state clearing on empty sets, and fail-soft behavior when memories/ is missing. Renders a digest with Turkish header/footer text.
 <!-- context:generated:end -->
 
 ## Notes

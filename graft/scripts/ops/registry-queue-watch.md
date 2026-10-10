@@ -1,4 +1,4 @@
-# scripts/ops/registry-queue-watch.py · [[advisory-only-escalation-throttling]] [[operator-alerting-watchers]] [[telegram-notification-core]]
+# scripts/ops/registry-queue-watch.py · [[runtime-env-secret-handling]] [[workstream-queue-discipline]]
 
 Advisory watcher that tells the operator when Registry/EKAP bridge queues have resolvable PENDING requests or when firms are Held on attribution with no bridge request ever queued, throttling notifications via a state file.
 

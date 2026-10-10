@@ -31,13 +31,22 @@ import json
 import os
 import sys
 
-# USD per MTok: (input, output). Cache multipliers are Anthropic-standard and
-# uniform across models: write(5m)=1.25x input, write(1h)=2x input,
-# read=0.1x input. Keep this table SHORT and verified — an entry here is a
-# claim the validator has checked against claude CLI's own accounting.
+# USD per MTok: (input, output[, cache_read_multiplier]). Cache multipliers are
+# Anthropic-standard: write(5m)=1.25x input, write(1h)=2x input, read=0.1x input —
+# EXCEPT where a row carries its own third element (Sonnet 5.5 reads at 0.05x).
+# Keep this table SHORT and verified — an entry here is a claim checked against
+# the official price list or the CLI's own accounting.
+#
+# Sonnet rows re-calibrated 2026-10-11 from platform.claude.com/docs/en/about-claude/pricing:
+# Sonnet 5 is $2/$10 (the "introductory" price was made permanent — pricing footnote 3;
+# the 3/15 row here over-counted every Sonnet cycle by 50% since 2026-07). Sonnet 5.5 is
+# the same $2/$10 with cache READ at 0.05x ($0.10/M vs $0.20/M) — footnote 2 — and a
+# 512-token minimum cacheable prompt (Sonnet 5: 1024). Not calibrated against a kept
+# ndjson yet; first sonnet-5-5 prod cycle's done.usage is the calibration point.
 PRICES = {
-    "claude-sonnet-5":            (3.00, 15.00),
-    "claude-sonnet-5-20250929":   (3.00, 15.00),
+    "claude-sonnet-5":            (2.00, 10.00),
+    "claude-sonnet-5-20250929":   (2.00, 10.00),
+    "claude-sonnet-5-5":          (2.00, 10.00, 0.05),
     "claude-haiku-4-5":           (1.00, 5.00),
     "claude-haiku-4-5-20251001":  (1.00, 5.00),
     # Opus tier at the long-standing Opus list price (opus-4.x era). ASSUMED, not
@@ -82,8 +91,12 @@ def cost_for(model: str, u: dict) -> dict:
         c_w = 0  # priced via the breakdown instead
 
     known = model in PRICES
+    cache_r = CACHE_R
     if known:
-        p_in, p_out = PRICES[model]
+        row = PRICES[model]
+        p_in, p_out = row[0], row[1]
+        if len(row) > 2:
+            cache_r = row[2]
         estimated = False
     else:
         if os.environ.get("STRICT") == "1":
@@ -96,7 +109,7 @@ def cost_for(model: str, u: dict) -> dict:
     usd = (
         inp * p_in
         + out * p_out
-        + c_r * p_in * CACHE_R
+        + c_r * p_in * cache_r
         + c_w * p_in * CACHE_W_DEFAULT
         + w5 * p_in * CACHE_W_5M
         + w1 * p_in * CACHE_W_1H
@@ -105,7 +118,7 @@ def cost_for(model: str, u: dict) -> dict:
         "model": model,
         "cost_usd": round(usd, 8),
         "estimated": estimated,
-        "basis": "list-price table v1"
+        "basis": "list-price table v2"
         + ("" if known else f" (UNKNOWN MODEL — max row x{CONSERVATIVE_FACTOR})"),
     }
 

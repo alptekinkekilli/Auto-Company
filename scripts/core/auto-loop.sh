@@ -246,7 +246,7 @@ JCODE_TOOLS_ALLOW="${JCODE_TOOLS_ALLOW:-}"
 # denied — census-verified (cycle-ndjson + browseros tools/list). browseros core 8 kept
 # (tabs,navigate,snapshot,act,read,grep,wait,evaluate); servers stay REQUIRED-connected, only
 # these tools drop from the advertised prefix. Fail-safe superset per probe rule 4.
-JCODE_TOOLS_DENY="${JCODE_TOOLS_DENY:-mcp,gmail,browser,swarm,selfdev,memory,side_panel,bg,initiative,open,mcp__airtable__list_records_for_table,mcp__airtable__delete_records_for_table,mcp__airtable__delete_table,mcp__airtable__delete_automation,mcp__airtable__delete_interface,mcp__airtable__delete_page,mcp__airtable__revert_action,mcp__linear__delete_attachment,mcp__linear__delete_comment,mcp__linear__delete_diff_comment,mcp__linear__delete_status_update,mcp__linear__create_attachment,mcp__linear__create_attachment_from_upload,mcp__linear__create_issue_label,mcp__linear__extract_images,mcp__linear__merge_diff,mcp__linear__prepare_attachment_upload,mcp__linear__resolve_diff_thread,mcp__linear__save_comment,mcp__linear__save_diff_comment,mcp__linear__save_document,mcp__linear__save_issue,mcp__linear__save_milestone,mcp__linear__save_project,mcp__linear__save_release,mcp__linear__save_release_note,mcp__linear__save_status_update,mcp__linear__submit_diff_review,mcp__browseros__tab_groups,mcp__browseros__diff,mcp__browseros__download,mcp__browseros__upload,mcp__browseros__screenshot,mcp__browseros__pdf,mcp__browseros__windows,mcp__browseros__run,mcp__browseros__connector_mcp_servers,mcp__browseros__discover_server_categories_or_actions,mcp__browseros__get_category_actions,mcp__browseros__get_action_details,mcp__browseros__execute_action,mcp__browseros__search_documentation,mcp__browseros__handle_auth_failure,mcp__context7__resolve-library-id,mcp__context7__query-docs}"
+JCODE_TOOLS_DENY="${JCODE_TOOLS_DENY:-mcp,gmail,browser,swarm,selfdev,memory,side_panel,bg,initiative,open,calendar,applet,compile_remote,maintainer_feedback,jcode_docs,integration_tools,panel,mcp_search,mcp__airtable__list_records_for_table,mcp__airtable__delete_records_for_table,mcp__airtable__delete_table,mcp__airtable__delete_automation,mcp__airtable__delete_interface,mcp__airtable__delete_page,mcp__airtable__revert_action,mcp__linear__delete_attachment,mcp__linear__delete_comment,mcp__linear__delete_diff_comment,mcp__linear__delete_status_update,mcp__linear__create_attachment,mcp__linear__create_attachment_from_upload,mcp__linear__create_issue_label,mcp__linear__extract_images,mcp__linear__merge_diff,mcp__linear__prepare_attachment_upload,mcp__linear__resolve_diff_thread,mcp__linear__save_comment,mcp__linear__save_diff_comment,mcp__linear__save_document,mcp__linear__save_issue,mcp__linear__save_milestone,mcp__linear__save_project,mcp__linear__save_release,mcp__linear__save_release_note,mcp__linear__save_status_update,mcp__linear__submit_diff_review,mcp__browseros__tab_groups,mcp__browseros__diff,mcp__browseros__download,mcp__browseros__upload,mcp__browseros__screenshot,mcp__browseros__pdf,mcp__browseros__windows,mcp__browseros__run,mcp__browseros__connector_mcp_servers,mcp__browseros__discover_server_categories_or_actions,mcp__browseros__get_category_actions,mcp__browseros__get_action_details,mcp__browseros__execute_action,mcp__browseros__search_documentation,mcp__browseros__handle_auth_failure,mcp__context7__resolve-library-id,mcp__context7__query-docs}"
 
 CURRENT_ENGINE_PID=""
 LOOP_HARNESS="$(printf '%s' "${LOOP_HARNESS:-cli}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
@@ -1730,6 +1730,12 @@ run_jcode_cycle() {
             cmd+=("--disable-base-tools" "--tools" "$JCODE_TOOLS_ALLOW")
         fi
         [ -n "$JCODE_TOOLS_DENY" ] && cmd+=("--disabled-tools" "$JCODE_TOOLS_DENY")
+        # jcode >= 0.87 defaults MCP exposure to `auto`, which past a token threshold
+        # hides every MCP tool behind an `mcp_search` discovery step (measured 2026-10-11
+        # on v0.94.0: the model saw `mcp, mcp_search` and no mcp__* names). The cycles,
+        # PROMPT.md and the deny list all address MCP tools BY NAME, so keep the v0.64.2
+        # behaviour explicit: expose them eagerly. The deny list still trims the prefix.
+        cmd+=("--mcp-tools" "eager")
         cmd+=("run" "$prompt" "--quiet" "--no-update" "--no-selfdev" "--ndjson")
         "${cmd[@]}"
     ) > "$events_file" 2> "$output_file" &

@@ -3,8 +3,6 @@ name: auto-loop core engine
 slug: auto-loop-core-engine
 type: system
 sources:
-  - path: tests/test_cycle_counter.sh
-    hash: ab58cfed1b942c55ff2422535c8904c0292904f40786afc3cb7a66774d635065
   - path: tests/test_cycle_metadata.sh
     hash: ed0597fda8cb7dd8c8f45b5dea353e18374e12a7f4b247afab630f455e708c2e
   - path: tests/test_discretionary_budget.sh
@@ -13,6 +11,8 @@ sources:
     hash: 51d700c7d869599d1a6d48913b0097143e7b0c93a520123dd7cf3bb5c8c874fc
   - path: tests/test_idle_skip.sh
     hash: 13ce9f0b8801b94a1bc896bd2db53f2fc68c2984b45db8372050ca760e1edb53
+  - path: tests/test_mcp_config_manifest_sync.sh
+    hash: 372a198973bc97e73dd00c1acafe2fe458887504be2f5ef9849242d6549c1112
   - path: tests/test_mixed_harness.sh
     hash: bd8a1f81df957e0bfdfacf44982a2274a58809d5f9bd8618c64c3efeecb868cc
   - path: tests/test_prompt_assembly.sh
@@ -23,21 +23,19 @@ sources:
     hash: c75dd121edbe7aed5432f718bdfff952149464b77f9ab22baced3682261ebc98
   - path: tests/test_tier_ladder_daily.sh
     hash: d0bfb4ace48e1fa9665e17059be3f618b46fda0dcf432544a6bb16c07a3ed8db
-sources_digest: 90c6de0e07b789f570daebfa6beac8459c60e3fa8f04df4dcaf848757194c5ef
+sources_digest: c56ea89a7fa2c0472265414bb0cd92622c9531e014eca380530afd198a5c3393
 links:
-  - to: mcp-config-sync-invariant
-    relation: depends_on
-    description: JCODE_MCP_CONFIG_REQUIRED preflight list must match the manifest
   - to: prompt-transport-contract
     relation: implements
     description: >-
-      run_claude_cycle_cli/run_codex_cycle_cli/run_jcode_cycle must honor the
-      STDIN/sentinel and size-limit contract
-  - to: set-e-shape-lint
+      run_claude_cycle_cli/run_codex_cycle_cli pass prompts via STDIN (codex
+      uses '-' sentinel) to avoid E2BIG; run_jcode_cycle refuses prompts
+      >=126000 bytes with PROMPT-TOO-LARGE before spawning
+  - to: set-e-fatal-shape-lint
     relation: validates
     description: >-
-      auto-loop.sh is linted for fatal [ test ] && action shapes that propagate
-      exit 1
+      test_seteshape_lint.py scans auto-loop.sh for '[ test ] && action' as last
+      command or before bare return, the APP-240 root cause
 generator:
   version: 1
 covers:
@@ -60,13 +58,12 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The central orchestration loop (scripts/core/auto-loop.sh) that drives cycles, prompt assembly, engine routing (claude/jcode/codex), cycle counter persistence, escalation, tier ladder, idle-skip, and discretionary budget. A large body of tests extract its function bodies verbatim via awk/sed to drive the shipping code rather than copies, so any change to function boundaries or extraction patterns breaks tests loudly.
+The central orchestration loop in scripts/core/auto-loop.sh that drives per-cycle engine execution (claude/codex/jcode), prompt assembly, cycle metadata extraction, tier-ladder budget selection, idle-skip, escalation handling, and mixed-harness cost attribution. Many test suites extract its functions verbatim via awk to test the shipping code rather than copies, and it is a protected production surface.
 
 ## Related
 
-- depends on [[mcp-config-sync-invariant]] — JCODE_MCP_CONFIG_REQUIRED preflight list must match the manifest
-- implements [[prompt-transport-contract]] — run_claude_cycle_cli/run_codex_cycle_cli/run_jcode_cycle must honor the STDIN/sentinel and size-limit contract
-- validates [[set-e-shape-lint]] — auto-loop.sh is linted for fatal [ test ] && action shapes that propagate exit 1
+- implements [[prompt-transport-contract]] — run_claude_cycle_cli/run_codex_cycle_cli pass prompts via STDIN (codex uses '-' sentinel) to avoid E2BIG; run_jcode_cycle refuses prompts >=126000 bytes with PROMPT-TOO-LARGE before spawning
+- validates [[set-e-fatal-shape-lint]] — test_seteshape_lint.py scans auto-loop.sh for '[ test ] && action' as last command or before bare return, the APP-240 root cause
 <!-- context:generated:end -->
 
 ## Notes

@@ -5,13 +5,8 @@ type: file
 sources:
   - path: tests/test_dashboard_server.py
     hash: 56e9073d5a9447df622cb3e0873d553053a3b16089534d427c177db772b933dd
-  - path: tests/test_refusal_format.sh
-    hash: 11bf5e9869e2e573b4a897e4df84053e4f58d759d3073a9e058705482cc31ef5
-sources_digest: 252dbbe5313118bae0e236bc0e3d23e6d95cfee0f02c277a0ab420cd92f01df6
-links:
-  - to: operator-request-notification-resolution
-    relation: produces
-    description: The refusal format written by the cockpit panel is consumed downstream
+sources_digest: 63a62662fcce7233d715d6d0649223dd205080e60e1e648847b818af37ba66ef
+links: []
 generator:
   version: 1
 covers:
@@ -184,11 +179,7 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-dashboard/server.py serves status parsing, action dispatch, engine runtime state, settings resolution, cost summary, and log tailing. It parses the persistent auto-loop.log to reflect the latest boot (including escalated cycles and legacy tier lines), anchors spend windows on ccusage blockStart with rolling fallback, splits weekly cost on Monday-UTC, and imports a sibling sentry_client (tests must insert parent dir into sys.path or collection silently fails).
-
-## Related
-
-- produces [[operator-request-notification-resolution]] — The refusal format written by the cockpit panel is consumed downstream
+dashboard/server.py provides status parsing, action dispatch, engine runtime state, settings resolution, cost summary, and log tailing. Parses persistent auto-loop.log reflecting the latest boot including escalated cycles and legacy tier lines; spend window anchoring on ccusage blockStart with rolling fallback; tail truncation correctness with multibyte safety and banner recovery; Monday-UTC weekly cost split; live budget gate display. Imports a sibling sentry_client requiring sys.path manipulation.
 <!-- context:generated:end -->
 
 ## Notes

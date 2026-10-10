@@ -14,7 +14,7 @@ covers: []
 <!-- context:generated:start -->
 ## Summary
 
-scripts/ops/tool-usage-audit.py categorizes a jcode NDJSON event stream (handling fragmented tool_input deltas split mid-token), with ledger idempotence, backfilling new cycle files, and re-auditing rewritten cycle files (cycle counter resets on container restart) rather than deduping by filename. It counts the browse-extract.py harness as browser usage to prevent faking A/B drops, and --report exits 0 even when the ndjson dir is missing.
+tool-usage-audit.py categorizes jcode NDJSON event streams, handling fragmented tool_input deltas split mid-token, combining script+MCP tool counts (airtable_r/airtable_w, browser harness+MCP), idempotent ledger (second run appends nothing), re-audits rewritten cycle files rather than deduping by filename, --names reports without mutating, --report exits 0 even when ndjson dir missing. Counts browse-extract.py harness as browser usage to prevent faking A/B drops.
 <!-- context:generated:end -->
 
 ## Notes

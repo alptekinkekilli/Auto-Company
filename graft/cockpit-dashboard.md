@@ -11,19 +11,20 @@ sources:
     hash: 999b44bc7671293e78906611b1dfd46bcf6efcc520ed92623a17281766a7fc85
 sources_digest: c3eeec88fbadc17427d51f65b1a682adbd4d4eb429313cc3a6c06273f937d76d
 links:
-  - to: autonomous-loop-orchestrator
-    relation: configures
-    description: >-
-      The dashboard's setHold and directive editor control the loop's hold state
-      and human directive, which auto-loop.sh consumes each cycle.
-  - to: directive-write-gate
+  - to: auto-loop-orchestrator
     relation: uses
     description: >-
-      server.py routes all human-directive.md writes through directive_writer.py
-      which locks and gates on in-flight PENDING directives.
+      dashboard reads loop state and exposes hold control that replaces the
+      container no-op Start/Stop
+  - to: directive-writer-gate
+    relation: uses
+    description: >-
+      server.py routes all human-directive.md writes through
+      scripts/core/directive_writer.py which locks and gates on in-flight
+      PENDING directives
   - to: sentry-reporter
     relation: uses
-    description: server.py reports errors via the external sentry_client library.
+    description: server.py reports errors through the external sentry_client library
 generator:
   version: 1
 covers:
@@ -373,13 +374,13 @@ covers:
 <!-- context:generated:start -->
 ## Summary
 
-The browser-side SPA controller plus its stdlib-only HTTP server and Sentry reporter. Polls /api/status on a timer, renders live state cards, and exposes the only real loop control (setHold) plus directive editing and settings. The server abstracts host platforms (WSL/macOS/Linux), reads/writes state files, and routes directive writes through the deterministic directive_writer.py. All state flows from REST endpoints; no external JS or Python libraries.
+Browser-side SPA controller plus a stdlib-only ThreadingHTTPServer backend that monitors and controls the autonomous loop across Windows/WSL, macOS, and Linux. The frontend polls /api/status and renders live state cards, cost/usage panels, a directive editor, settings form, and log/consensus views; the backend abstracts host-specific script runners and status parsers, reads/writes state files (human-directive.md, operator-requests/decisions, runtime.env), and routes all directive writes through the deterministic directive_writer.py gate. Notable invariants: log files are tailed with a 256KB window because auto-loop.log grows across redeploys; file decoding tries utf-8, utf-8-sig, gb18030, cp936 for Windows; the consensus panel refuses to overwrite while the operator is reading the full file; the ccusage block fails open (hidden when unavailable); and a SETTINGS_SPEC whitelist prevents the panel from ever persisting secrets to runtime.env.
 
 ## Related
 
-- configures [[autonomous-loop-orchestrator]] — The dashboard's setHold and directive editor control the loop's hold state and human directive, which auto-loop.sh consumes each cycle.
-- uses [[directive-write-gate]] — server.py routes all human-directive.md writes through directive_writer.py which locks and gates on in-flight PENDING directives.
-- uses [[sentry-reporter]] — server.py reports errors via the external sentry_client library.
+- uses [[auto-loop-orchestrator]] — dashboard reads loop state and exposes hold control that replaces the container no-op Start/Stop
+- uses [[directive-writer-gate]] — server.py routes all human-directive.md writes through scripts/core/directive_writer.py which locks and gates on in-flight PENDING directives
+- uses [[sentry-reporter]] — server.py reports errors through the external sentry_client library
 <!-- context:generated:end -->
 
 ## Notes

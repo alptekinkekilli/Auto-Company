@@ -1,4 +1,4 @@
-# scripts/ops/directive-rule-sweep.py · [[directive-lifecycle-operator-escalation]] [[session-leak-scanning-evidence-integrity]]
+# scripts/ops/directive-rule-sweep.py · [[human-directive-lifecycle]]
 
 Scans directive bodies for rule-shaped lines and flags any whose distinctive tokens do not survive in standing files, reporting candidates for human review while failing loudly when coverage cannot be measured.
 

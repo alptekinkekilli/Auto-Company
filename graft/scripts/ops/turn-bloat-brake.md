@@ -1,4 +1,4 @@
-# scripts/ops/turn-bloat-brake.py · [[atomic-state-file-writes]] [[auto-loop-harness-brakes-and-guards]] [[telegram-notification-core]]
+# scripts/ops/turn-bloat-brake.py
 
 CLI tool that tracks consecutive BLOATED cycles and escalates to a hard persist-and-end mandate once a streak crosses a threshold, resetting on any non-BLOATED verdict.
 

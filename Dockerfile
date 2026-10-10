@@ -78,7 +78,13 @@ RUN npm install -g wrangler && npm cache clean --force
 # both engines (RUNBOOK-jcode-gecis.md). Checksum-verified, version-pinned.
 # The Linux tarball is a launcher script + `.bin` pair: BOTH must be kept
 # side by side and the symlink must point at the launcher (runbook §1.1).
-ARG JCODE_VERSION=v0.64.2
+# v0.64.2 → v0.94.0 (2026-10-11): v0.64.2 SILENTLY served claude-opus-5 for an id it did
+# not know (canary: requested claude-sonnet-5-5, done.model=claude-opus-5, status_detail
+# empty — the runtime substitution check caught it only because done.model differed).
+# v0.94.0 lists claude-sonnet-5-5 in `model list -p claude` and passes the id through
+# (canary done.model=claude-sonnet-5-5); ndjson event schema and every flag the loop
+# passes (run/--quiet/--no-update/--no-selfdev/--ndjson/--tools/--disabled-tools) unchanged.
+ARG JCODE_VERSION=v0.94.0
 RUN set -eu; \
     cd /tmp; \
     curl -fsSLO "https://github.com/1jehuang/jcode/releases/download/${JCODE_VERSION}/jcode-linux-x86_64.tar.gz"; \

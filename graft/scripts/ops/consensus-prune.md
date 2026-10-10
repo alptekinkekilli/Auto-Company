@@ -1,4 +1,4 @@
-# scripts/ops/consensus-prune.py · [[atomic-state-file-writes]] [[consensus-pruning-and-ledger-guard]] [[memory-ledger-integrity-guards]]
+# scripts/ops/consensus-prune.py · [[consensus-memory-maintenance]]
 
 Harness mechanism that mechanically archives stale per-cycle narrative from consensus.md into docs/operations to keep the file under the [PROMPT-SIZE] threshold, with fail-closed data safety and fail-open loop behavior.
 
